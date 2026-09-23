@@ -10,27 +10,46 @@ permissions:
 
 jobs:
   deploy:
-    if: ${{ secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Check Vercel credentials
+        id: gate
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Vercel deployment is disabled until VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID are configured."
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.enabled == 'true'
 
       - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.enabled == 'true'
         with:
           version: 8.15.9
 
       - uses: actions/setup-node@v4
+        if: steps.gate.outputs.enabled == 'true'
         with:
           node-version: 22
 
       - name: Install
+        if: steps.gate.outputs.enabled == 'true'
         run: pnpm install --no-frozen-lockfile
 
       - name: Build web
+        if: steps.gate.outputs.enabled == 'true'
         run: pnpm --filter @orbit/web build
 
       - name: Deploy
+        if: steps.gate.outputs.enabled == 'true'
         run: pnpm dlx vercel@50.2.1 deploy --prebuilt --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
