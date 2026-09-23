@@ -27,7 +27,7 @@ export default function App() {
     { id: 'content', label: 'استوديو المحتوى', icon: PenTool },
     { id: 'campaigns', label: 'إدارة الحملات والجدولة', icon: Rocket },
     { id: 'inbox', label: 'صندوق المحادثات والـ CRM', icon: Inbox },
-    { id: 'antiban', label: 'درع الحماية وقاطع الدائرة', icon: ShieldCheck, badge: 'Anti-Ban' },
+    { id: 'antiban', label: 'درع الحماية وقاطع الدائرة', icon: ShieldCheck, badge: 'Safety' },
     { id: 'accounts', label: 'الحسابات الاجتماعية', icon: Users },
     { id: 'architecture', label: 'الهندسة والتسعير', icon: Database },
   ] as const;
@@ -59,7 +59,7 @@ export default function App() {
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span className="text-slate-300 font-medium">الوكيل المحلي:</span>
-                <span className="text-emerald-400 font-mono font-bold">متصل (Tauri Core)</span>
+                <span className="text-emerald-400 font-mono font-bold">وضع الويب التجريبي</span>
               </div>
 
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
@@ -71,7 +71,7 @@ export default function App() {
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
                 <Lock className="w-3.5 h-3.5 text-purple-400" />
                 <span className="text-slate-300 font-medium">الجلسات:</span>
-                <span className="text-purple-300 font-mono font-semibold">AES-256 مشفرة محلياً</span>
+                <span className="text-purple-300 font-mono font-semibold">التخزين الحساس: مشفّر محلياً</span>
               </div>
             </div>
           </div>
@@ -130,9 +130,9 @@ export default function App() {
             Orbit Marketing OS — منصة تشغيل تسويق وأتمتة متكاملة • Local-First • بدون خوادم مركزية • خصوصية مطلقة 100%
           </div>
           <div className="flex items-center gap-4 text-slate-400">
-            <span>نماذج الذكاء الاصطناعي: Gemini 3.1 Pro / 3.5 Flash / 3.1 Flash-Lite</span>
+            <span>الذكاء الاصطناعي: مزود محلي عبر Ollama (النموذج قابل للتهيئة)</span>
             <span>•</span>
-            <span className="text-emerald-400 font-mono">حالة النظام: متصل وجاهز للتشغيل</span>
+            <span className="text-emerald-400 font-mono">حالة النظام: طبقة الواجهة جاهزة</span>
           </div>
         </div>
       </footer>
