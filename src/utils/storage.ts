@@ -57,7 +57,7 @@ export async function safeCopy(text: string): Promise<boolean> {
     document.body.removeChild(textArea);
     return successful;
   } catch (err) {
-    console.warn('Fallback copy failed:', err);
+    void err;
     return false;
   }
 }
