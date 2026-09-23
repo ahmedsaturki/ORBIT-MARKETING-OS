@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "ORBIT Marketing OS",
+    "slug": "orbit-marketing-os",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "orbit",
+    "userInterfaceStyle": "dark",
+    "plugins": ["expo-router"],
+    "android": { "package": "com.orbitmarketing.os" },
+    "ios": { "bundleIdentifier": "com.orbitmarketing.os" }
+  }
+}
