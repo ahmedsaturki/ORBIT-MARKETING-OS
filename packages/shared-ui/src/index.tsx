@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, ReactElement } from "react";
 
 export interface ActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   readonly children: ReactNode;
@@ -16,7 +16,7 @@ export function ActionButton({
   tone = "primary",
   className = "",
   ...props
-}: ActionButtonProps): JSX.Element {
+}: ActionButtonProps): ReactElement {
   return (
     <button className={toneClass[tone] + " " + className} {...props}>
       {children}
