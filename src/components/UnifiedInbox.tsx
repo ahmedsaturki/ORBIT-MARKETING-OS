@@ -7,6 +7,10 @@ import { INITIAL_LEADS } from '../data/mockData';
 import { ContactLead, Platform } from '../types';
 import { safeGetStorage, safeSetStorage } from '../utils/storage';
 
+
+function isContactLeadStatus(value: string): value is ContactLead['status'] {
+  return ['new', 'interested', 'offer_sent', 'won', 'lost'].includes(value);
+}
 export default function UnifiedInbox() {
   const [leads, setLeads] = useState<ContactLead[]>(() => {
     return safeGetStorage<ContactLead[]>('orbit_leads', INITIAL_LEADS);
@@ -72,8 +76,7 @@ export default function UnifiedInbox() {
         const data = await res.json();
         setReplyText(data.text || '');
       }
-    } catch (e) {
-      console.error(e);
+    } catch (_e: unknown) {
     } finally {
       setAiGenerating(false);
     }
@@ -187,7 +190,10 @@ export default function UnifiedInbox() {
                 <span className="text-xs text-slate-400">مرحلة البيع:</span>
                 <select
                   value={selectedLead.status}
-                  onChange={(e) => updateLeadStatus(selectedLead.id, e.target.value as any)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (isContactLeadStatus(value)) updateLeadStatus(selectedLead.id, value);
+                  }}
                   className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-teal-500"
                 >
                   <option value="new">عميل جديد (New)</option>
