@@ -1,6 +1,2 @@
 packages:
   - "packages/*"
-  - "packages/desktop"
-  - "packages/mobile"
-  - "packages/web"
-  - "packages/shared-ui"
