@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   Bot, Image as ImageIcon, PenTool, Rocket, Inbox, 
   ShieldCheck, Users, Database, Sparkles, Activity, 
-  Terminal, Laptop, Lock, Globe, ExternalLink
+  Terminal, Laptop, Lock, Globe, Key, ArrowLeftRight,
+  Cpu, Layers, MessageSquare
 } from 'lucide-react';
 
 import AiChatbot from './components/AiChatbot';
@@ -13,9 +14,27 @@ import UnifiedInbox from './components/UnifiedInbox';
 import AntiBanShield from './components/AntiBanShield';
 import AccountsManager from './components/AccountsManager';
 import LocalArchitecture from './components/LocalArchitecture';
+import AutomationEngine from './components/AutomationEngine';
+import CrmPipeline from './components/CrmPipeline';
+import LicensingManager from './components/LicensingManager';
+import CrdtSyncManager from './components/CrdtSyncManager';
+
+type TabType = 
+  | 'chat' 
+  | 'vision' 
+  | 'content' 
+  | 'automation' 
+  | 'campaigns' 
+  | 'inbox' 
+  | 'crm' 
+  | 'antiban' 
+  | 'accounts' 
+  | 'sync' 
+  | 'licensing' 
+  | 'architecture';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'vision' | 'content' | 'campaigns' | 'inbox' | 'antiban' | 'accounts' | 'architecture'>('chat');
+  const [activeTab, setActiveTab] = useState<TabType>('chat');
 
   const handleSendContentToCampaign = (content: string, platform: string) => {
     setActiveTab('campaigns');
@@ -24,12 +43,16 @@ export default function App() {
   const navItems = [
     { id: 'chat', label: 'المساعد الذكي (AI Chatbot)', icon: Bot, badge: 'متعدد الأدوار' },
     { id: 'vision', label: 'تحليل الإعلانات (Vision AI)', icon: ImageIcon, badge: '3.1 Pro' },
-    { id: 'content', label: 'استوديو المحتوى', icon: PenTool },
+    { id: 'content', label: 'استوديو المحتوى و DAM', icon: PenTool },
+    { id: 'automation', label: 'محرك الأتمتة (Stealth Engine)', icon: Cpu, badge: 'Playwright' },
     { id: 'campaigns', label: 'إدارة الحملات والجدولة', icon: Rocket },
-    { id: 'inbox', label: 'صندوق المحادثات والـ CRM', icon: Inbox },
+    { id: 'inbox', label: 'صندوق المحادثات الموحد', icon: Inbox },
+    { id: 'crm', label: 'إدارة علاقات العملاء (CRM)', icon: Users, badge: 'Pipeline' },
     { id: 'antiban', label: 'درع الحماية وقاطع الدائرة', icon: ShieldCheck, badge: 'Anti-Ban' },
-    { id: 'accounts', label: 'الحسابات الاجتماعية', icon: Users },
-    { id: 'architecture', label: 'الهندسة والتسعير', icon: Database },
+    { id: 'accounts', label: 'الحسابات والتشفير', icon: Lock },
+    { id: 'sync', label: 'المزامنة P2P والنسخ', icon: ArrowLeftRight, badge: 'CRDTs' },
+    { id: 'licensing', label: 'نظام التراخيص والتسعير', icon: Key },
+    { id: 'architecture', label: 'هندسة الـ Monorepo', icon: Database },
   ] as const;
 
   return (
@@ -45,12 +68,12 @@ export default function App() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="font-extrabold text-lg tracking-tight text-white">ORBIT MARKETING OS</h1>
+                  <h1 className="font-extrabold text-lg tracking-tight text-white">SOCIAL AUTOMATION OS</h1>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold">
                     v2.4.1 Local-First
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 font-medium">منصة تشغيل تسويق وأتمتة شاملة متعددة القنوات</p>
+                <p className="text-[11px] text-slate-400 font-medium">Local-First Social Media Automation Platform • Zero Cloud Dependency</p>
               </div>
             </div>
 
@@ -58,20 +81,20 @@ export default function App() {
             <div className="hidden lg:flex items-center gap-3 text-xs">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="text-slate-300 font-medium">الوكيل المحلي:</span>
-                <span className="text-emerald-400 font-mono font-bold">متصل (Tauri Core)</span>
+                <span className="text-slate-300 font-medium">المشغل المحلي:</span>
+                <span className="text-emerald-400 font-mono font-bold">Tauri Core (Active)</span>
               </div>
 
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="text-slate-300 font-medium">قاطع الدائرة:</span>
-                <span className="text-emerald-400 font-bold">نشط وآمن (96%)</span>
+                <span className="text-emerald-400 font-bold">0/3 أخطاء (آمن)</span>
               </div>
 
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
-                <Lock className="w-3.5 h-3.5 text-purple-400" />
-                <span className="text-slate-300 font-medium">الجلسات:</span>
-                <span className="text-purple-300 font-mono font-semibold">AES-256 مشفرة محلياً</span>
+                <Key className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-slate-300 font-medium">الترخيص:</span>
+                <span className="text-purple-300 font-mono font-semibold">PRO Offline Verified</span>
               </div>
             </div>
           </div>
@@ -84,8 +107,8 @@ export default function App() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  onClick={() => setActiveTab(item.id as TabType)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                     isActive
                       ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -116,10 +139,14 @@ export default function App() {
         {activeTab === 'chat' && <AiChatbot />}
         {activeTab === 'vision' && <ImageAnalysisStudio />}
         {activeTab === 'content' && <ContentStudio onSendToCampaign={handleSendContentToCampaign} />}
+        {activeTab === 'automation' && <AutomationEngine />}
         {activeTab === 'campaigns' && <CampaignHub />}
         {activeTab === 'inbox' && <UnifiedInbox />}
+        {activeTab === 'crm' && <CrmPipeline onOpenChatWithLead={(lead) => setActiveTab('inbox')} />}
         {activeTab === 'antiban' && <AntiBanShield />}
         {activeTab === 'accounts' && <AccountsManager />}
+        {activeTab === 'sync' && <CrdtSyncManager />}
+        {activeTab === 'licensing' && <LicensingManager />}
         {activeTab === 'architecture' && <LocalArchitecture />}
       </main>
 
@@ -127,12 +154,14 @@ export default function App() {
       <footer className="border-t border-slate-900 bg-slate-950 text-slate-500 text-xs py-4 px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
           <div>
-            Orbit Marketing OS — منصة تشغيل تسويق وأتمتة متكاملة • Local-First • بدون خوادم مركزية • خصوصية مطلقة 100%
+            Social Automation OS — Local-First Social Media Automation Platform • 100% Local Data • AES-256-GCM Encryption • Zero Cloud Dependency
           </div>
-          <div className="flex items-center gap-4 text-slate-400">
-            <span>نماذج الذكاء الاصطناعي: Gemini 3.1 Pro / 3.5 Flash / 3.1 Flash-Lite</span>
+          <div className="flex items-center gap-4 text-slate-400 font-mono">
+            <span>Yjs CRDTs Mesh</span>
             <span>•</span>
-            <span className="text-emerald-400 font-mono">حالة النظام: متصل وجاهز للتشغيل</span>
+            <span>Playwright Stealth</span>
+            <span>•</span>
+            <span className="text-emerald-400">All Systems Operational</span>
           </div>
         </div>
       </footer>

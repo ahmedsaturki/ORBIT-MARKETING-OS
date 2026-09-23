@@ -178,6 +178,8 @@ export const INITIAL_LEADS: ContactLead[] = [
     platform: 'whatsapp',
     phone: '+201123456789',
     status: 'interested',
+    source: 'إعلان واتساب مباشر',
+    tags: ['وكالة تسويق', 'عميل محتمل B2B', 'مهتم بـ Agency'],
     lastMessage: 'محتاج أعرف هل باقة الوكالة تسمح لي بربط 10 حسابات فيسبوك في نفس الوقت؟',
     lastMessageTime: 'منذ 10 دقائق',
     unread: true,
@@ -190,6 +192,8 @@ export const INITIAL_LEADS: ContactLead[] = [
     platform: 'instagram',
     handle: '@sara_boutique_sa',
     status: 'offer_sent',
+    source: 'رسائل إنستغرام التلقائية',
+    tags: ['متجر إلكتروني', 'أزياء', 'مهتم بـ Lifetime'],
     lastMessage: 'أرسلت لك رابط الدفع مع كود الخصم للباقة الاحترافية مدى الحياة.',
     lastMessageTime: 'منذ 35 دقيقة',
     unread: false,
@@ -202,6 +206,8 @@ export const INITIAL_LEADS: ContactLead[] = [
     platform: 'telegram',
     handle: '@tarek_growth',
     status: 'won',
+    source: 'قناة تليجرام VIP',
+    tags: ['مسوق بالعمولة', 'تم الشراء', 'باقة Pro'],
     lastMessage: 'تم تفعيل مفتاح الترخيص بنجاح، الأداة مذهلة جداً وسريعة!',
     lastMessageTime: 'منذ ساعتين',
     unread: false,
@@ -213,14 +219,414 @@ export const INITIAL_LEADS: ContactLead[] = [
     name: 'عمر القحطاني',
     platform: 'facebook',
     handle: 'omar.qht',
+    email: 'omar.qht@outlook.com',
+    phone: '+966501234567',
     status: 'new',
+    source: 'مجموعة رواد الأعمال الخليجية',
+    tags: ['استفسار تقني', 'B2B', 'مهتم محلي'],
     lastMessage: 'السلام عليكم، هل النظام يحتاج خوادم أو يشتغل على اللابتوب فقط؟',
     lastMessageTime: 'منذ 3 ساعات',
     unread: true,
     value: 99,
     notes: 'مهتم بالنسخة المحلية Local-First لضمان الخصوصية.',
+    history: [
+      {
+        id: 'h_1',
+        timestamp: '14:20',
+        type: 'message_received',
+        text: 'السلام عليكم، هل النظام يحتاج خوادم أو يشتغل على اللابتوب فقط؟'
+      }
+    ]
+  },
+  {
+    id: 'lead_5',
+    name: 'د. ياسمين الشريف',
+    platform: 'whatsapp',
+    phone: '+971509876543',
+    email: 'dr.yasmeen@aesthetic-hub.ae',
+    status: 'potential',
+    source: 'إعلان إنستغرام استوديو',
+    tags: ['عيادات تجميل', 'حملات دورية', 'VIP'],
+    lastMessage: 'أريد نظاماً يرسل تذكيرات المواعيد للمراجعين تلقائياً عبر واتساب بدون خطر الحظر.',
+    lastMessageTime: 'منذ 5 ساعات',
+    unread: false,
+    value: 499,
+    notes: 'مجمع عيادات في دبي يحتاج 15 حساباً ورسائل تذكير يومية.',
+    history: [
+      {
+        id: 'h_2',
+        timestamp: '11:15',
+        type: 'message_received',
+        text: 'أريد نظاماً يرسل تذكيرات المواعيد للمراجعين تلقائياً عبر واتساب بدون خطر الحظر.'
+      }
+    ]
+  }
+];
+
+// Feature 2: Platform Automation Rules (Updatable JSON Engine)
+export const DEFAULT_AUTOMATION_RULES: Record<string, any> = {
+  facebook: {
+    platform: 'facebook',
+    version: '3.4.1',
+    lastUpdated: '2026-09-22',
+    selectors: {
+      postBox: 'div[role="textbox"][contenteditable="true"]',
+      commentBox: 'div[aria-label="اكتب تعليقاً..."][contenteditable="true"]',
+      dmInput: 'div[aria-label="الرسالة"][role="textbox"]',
+      sendButton: 'div[aria-label="اضغط مفتاح الإدخال للإرسال"]',
+      mediaUploadInput: 'input[type="file"][accept*="image"]',
+      captchaDetection: 'div[data-pagelet*="checkpoint"], div[id*="recaptcha"]',
+    },
+    timeouts: {
+      elementWaitMs: 8000,
+      typingDelayMs: [60, 140],
+      actionDelaySec: [4, 11],
+    },
+    circuitBreaker: {
+      maxConsecutiveErrors: 3,
+      pauseDurationMinutes: 45,
+    },
+  },
+  whatsapp: {
+    platform: 'whatsapp',
+    version: '2.32.0',
+    lastUpdated: '2026-09-20',
+    selectors: {
+      postBox: 'div[contenteditable="true"][data-tab="10"]',
+      commentBox: 'div[contenteditable="true"][data-tab="10"]',
+      dmInput: 'footer div[contenteditable="true"]',
+      sendButton: 'button[aria-label="إرسال"], span[data-icon="send"]',
+      mediaUploadInput: 'input[accept="image/*,video/mp4,video/3gpp,video/quicktime"]',
+      captchaDetection: 'div[data-animate-modal-popup="true"]',
+    },
+    timeouts: {
+      elementWaitMs: 12000,
+      typingDelayMs: [70, 160],
+      actionDelaySec: [5, 14],
+    },
+    circuitBreaker: {
+      maxConsecutiveErrors: 2,
+      pauseDurationMinutes: 60,
+    },
+  },
+  instagram: {
+    platform: 'instagram',
+    version: '2.18.5',
+    lastUpdated: '2026-09-21',
+    selectors: {
+      postBox: 'textarea[aria-label="اكتب شرحاً توضيحياً..."]',
+      commentBox: 'textarea[aria-label="إضافة تعليق..."]',
+      dmInput: 'div[role="textbox"][aria-label="رسالة"]',
+      sendButton: 'button:has-text("إرسال"), div[role="button"]:has-text("نشر")',
+      mediaUploadInput: 'input[type="file"][multiple]',
+      captchaDetection: 'form#challenge-form',
+    },
+    timeouts: {
+      elementWaitMs: 9000,
+      typingDelayMs: [50, 130],
+      actionDelaySec: [4, 10],
+    },
+    circuitBreaker: {
+      maxConsecutiveErrors: 3,
+      pauseDurationMinutes: 30,
+    },
+  },
+  telegram: {
+    platform: 'telegram',
+    version: '1.9.0',
+    lastUpdated: '2026-09-18',
+    selectors: {
+      postBox: 'div.input-message-input',
+      commentBox: 'div.input-message-input',
+      dmInput: 'div.input-message-input',
+      sendButton: 'button.btn-send',
+      mediaUploadInput: 'input.file-input',
+      captchaDetection: 'div.flood-wait-modal',
+    },
+    timeouts: {
+      elementWaitMs: 6000,
+      typingDelayMs: [40, 110],
+      actionDelaySec: [3, 8],
+    },
+    circuitBreaker: {
+      maxConsecutiveErrors: 4,
+      pauseDurationMinutes: 20,
+    },
+  },
+  linkedin: {
+    platform: 'linkedin',
+    version: '2.4.0',
+    lastUpdated: '2026-09-19',
+    selectors: {
+      postBox: 'div.ql-editor[contenteditable="true"]',
+      commentBox: 'div.comments-comment-box__editor',
+      dmInput: 'div.msg-form__contenteditable',
+      sendButton: 'button.msg-form__send-button',
+      mediaUploadInput: 'input[type="file"][name="file"]',
+      captchaDetection: 'div.checkpoint-challenge',
+    },
+    timeouts: {
+      elementWaitMs: 10000,
+      typingDelayMs: [80, 180],
+      actionDelaySec: [6, 15],
+    },
+    circuitBreaker: {
+      maxConsecutiveErrors: 2,
+      pauseDurationMinutes: 90,
+    },
+  },
+  tiktok: {
+    platform: 'tiktok',
+    version: '1.5.2',
+    lastUpdated: '2026-09-15',
+    selectors: {
+      postBox: 'div.notranslate[contenteditable="true"]',
+      commentBox: 'div.DraftEditor-root',
+      dmInput: 'div[role="textbox"]',
+      sendButton: 'button:has-text("Post")',
+      mediaUploadInput: 'input[type="file"][accept="video/*"]',
+      captchaDetection: 'div#captcha-verify-image',
+    },
+    timeouts: {
+      elementWaitMs: 11000,
+      typingDelayMs: [60, 150],
+      actionDelaySec: [5, 12],
+    },
+    circuitBreaker: {
+      maxConsecutiveErrors: 2,
+      pauseDurationMinutes: 45,
+    },
+  },
+};
+
+// Feature 2 & 4: Initial Tasks Queue
+export const INITIAL_TASK_QUEUE: any[] = [
+  {
+    id: 'task_101',
+    campaignId: 'camp_1',
+    platform: 'facebook',
+    accountId: 'acc_1',
+    actionType: 'post_group',
+    target: 'مجموعة تجار دروب شيبنج مصر (120k)',
+    payload: {
+      text: '🚀 لأصحاب المتاجر: منصة التشغيل المتكاملة تدير إعلاناتك ورسائل عملائك بدون قيود. خصم 40% للأعضاء!',
+    },
+    status: 'running',
+    priority: 'high',
+    retries: 0,
+    maxRetries: 3,
+    scheduledTime: '18:00',
+    executedTime: '18:02:14',
+    delayAppliedSeconds: 6.4,
+  },
+  {
+    id: 'task_102',
+    campaignId: 'camp_1',
+    platform: 'facebook',
+    accountId: 'acc_1',
+    actionType: 'post_group',
+    target: 'تجمع رواد الأعمال والتسويق العربي',
+    payload: {
+      text: '🚀 لأصحاب المتاجر: منصة التشغيل المتكاملة تدير إعلاناتك ورسائل عملائك بدون قيود. خصم 40% للأعضاء!',
+    },
+    status: 'queued',
+    priority: 'high',
+    retries: 0,
+    maxRetries: 3,
+    scheduledTime: '18:08',
+  },
+  {
+    id: 'task_103',
+    campaignId: 'camp_2',
+    platform: 'whatsapp',
+    accountId: 'acc_2',
+    actionType: 'whatsapp_msg',
+    target: '+201123456789 (كريم محمود)',
+    payload: {
+      text: 'أهلاً يا باشا! لاحظنا اهتمامك بباقة الأتمتة الشاملة. كود الخصم جاهز للاستخدام اليوم.',
+      recipient: '+201123456789',
+    },
+    status: 'completed',
+    priority: 'normal',
+    retries: 0,
+    maxRetries: 2,
+    scheduledTime: '15:30',
+    executedTime: '15:31:05',
+    delayAppliedSeconds: 8.2,
+  },
+  {
+    id: 'task_104',
+    campaignId: 'camp_2',
+    platform: 'whatsapp',
+    accountId: 'acc_2',
+    actionType: 'whatsapp_msg',
+    target: '+966501234567 (عمر القحطاني)',
+    payload: {
+      text: 'مرحباً أخي عمر، بخصوص استفسارك عن الخصوصية، التطبيق يعمل بنظام Local-First بالكامل.',
+      recipient: '+966501234567',
+    },
+    status: 'queued',
+    priority: 'normal',
+    retries: 0,
+    maxRetries: 2,
+    scheduledTime: '15:42',
+  },
+  {
+    id: 'task_105',
+    campaignId: 'camp_3',
+    platform: 'telegram',
+    accountId: 'acc_3',
+    actionType: 'telegram_post',
+    target: '@OrbitDealsVIP',
+    payload: {
+      text: '📊 دراسة حالة: زيادة عوائد المبيعات 300% عبر مزامنة النشر مع المتابعة الفورية.',
+    },
+    status: 'completed',
+    priority: 'low',
+    retries: 0,
+    maxRetries: 3,
+    scheduledTime: '12:00',
+    executedTime: '12:00:15',
+    delayAppliedSeconds: 4.1,
   },
 ];
+
+// Feature 3: Digital Asset Management (Local Media Library)
+export const INITIAL_MEDIA_ASSETS: any[] = [
+  {
+    id: 'asset_1',
+    name: 'تصميم عروض الفلاش سيل 50% (Flash Sale)',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80',
+    category: 'E-Commerce',
+    tags: ['أحذية', 'عروض صيفية', 'خصومات', '50%'],
+    sizeMb: 1.4,
+    createdAt: '2026-09-20',
+  },
+  {
+    id: 'asset_2',
+    name: 'بوستر خدمة العملاء وحلول أتمتة واتساب',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&q=80',
+    category: 'B2B Software',
+    tags: ['واتساب', 'أتمتة', 'خدمة عملاء', 'CRM'],
+    sizeMb: 2.1,
+    createdAt: '2026-09-21',
+  },
+  {
+    id: 'asset_3',
+    name: 'قالب فيديو ريلز/تيك توك: 3 أخطاء شائعة بالإعلانات',
+    type: 'template',
+    url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=800&q=80',
+    category: 'Video Hooks',
+    tags: ['ريلز', 'تيك توك', 'نصائح تسويق', 'Hooks'],
+    sizeMb: 0.8,
+    createdAt: '2026-09-22',
+  },
+  {
+    id: 'asset_4',
+    name: 'شعار وهوية وكالة أوربت الرقمية بدقة عالية',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80',
+    category: 'Branding',
+    tags: ['لوجو', 'شعار', 'هوية بصرية', 'Brand'],
+    sizeMb: 3.5,
+    createdAt: '2026-09-19',
+  },
+];
+
+// Feature 7: CRDTs Sync Peers (P2P Local Network & WebRTC)
+export const INITIAL_CRDT_PEERS: any[] = [
+  {
+    id: 'peer_desktop_main',
+    name: 'جهاز المكتب الرئيسي (MacBook Pro M3 Max)',
+    deviceType: 'desktop',
+    status: 'connected',
+    lastSync: 'منذ دقيقة واحدة',
+    ip: '192.168.1.104',
+    vectorClock: 1420,
+  },
+  {
+    id: 'peer_mobile_phone',
+    name: 'الهاتف المحمول (iPhone 15 Pro Max)',
+    deviceType: 'mobile',
+    status: 'connected',
+    lastSync: 'منذ 3 دقائق',
+    ip: '192.168.1.182',
+    vectorClock: 1419,
+  },
+  {
+    id: 'peer_laptop_travel',
+    name: 'لابتوب العمل الميداني (ThinkPad X1)',
+    deviceType: 'desktop',
+    status: 'offline',
+    lastSync: 'منذ يومين',
+    ip: '10.0.0.45',
+    vectorClock: 1205,
+  },
+];
+
+// Feature 8: Licensing System Presets
+export const LICENSE_PRESETS: any[] = [
+  {
+    tier: 'basic',
+    name: 'باقة المبتدئين (Basic)',
+    price: '$99 / $19 شهرياً',
+    maxAccounts: 5,
+    maxDevices: 1,
+    description: 'أتمتة أساسية، CRM متكامل، ونماذج ذكاء اصطناعي مدمجة.',
+    features: ['5 حسابات متزامنة', 'محاكاة السلوك البشري', 'صندوق محادثات موحد', 'تشفير AES-256 محلي'],
+  },
+  {
+    tier: 'pro',
+    name: 'باقة المحترفين (Pro)',
+    price: '$199 / $39 شهرياً',
+    maxAccounts: 15,
+    maxDevices: 3,
+    description: 'تحليلات متقدمة، تعديل قواعد المنصات، دعم البروكسي السكني، ومزامنة P2P.',
+    features: ['15 حساباً نشطاً', 'مزامنة CRDTs عبر 3 أجهزة', 'محرر قواعد المنصات (JSON)', 'دعم بروكسي مخصص لكل حساب'],
+  },
+  {
+    tier: 'agency',
+    name: 'باقة الوكالات (Agency)',
+    price: '$499 / $99 شهرياً',
+    maxAccounts: 9999,
+    maxDevices: 10,
+    description: 'حسابات غير محدودة، وايت ليبل (White Label)، وإدارة صلاحيات فريق العمل.',
+    features: ['حسابات غير محدودة', 'تخصيص الهوية (White Label)', 'توزيع المهام والمحادثات على 10 مستخدمين', 'أولوية في تحديث قواعد المنصات'],
+  },
+  {
+    tier: 'lifetime',
+    name: 'ترخيص مدى الحياة (Lifetime Deal)',
+    price: '$399 دفعة واحدة',
+    maxAccounts: 15,
+    maxDevices: 5,
+    description: 'وصول دائم لكافة التحديثات والمميزات بدون أي اشتراكات دورية.',
+    features: ['15 حساباً للأبد', 'تحديثات مجانية مدى الحياة', '5 مقاعد أجهزة', 'دعم فني خاص ومجتمع مغلق'],
+  },
+];
+
+export const CURRENT_ACTIVE_LICENSE: any = {
+  key: 'ORBIT-PRO-2026-88A7-B91F-LOCAL',
+  tier: 'pro',
+  clientName: 'Ahmed Turki - Agency Growth',
+  activatedAt: '2026-09-01',
+  expiresAt: '2027-09-01',
+  maxAccounts: 15,
+  maxDevices: 3,
+  activeDevices: 2,
+  features: {
+    unlimitedCampaigns: true,
+    aiLocalOllama: true,
+    aiCloudPro: true,
+    customRules: true,
+    whiteLabel: false,
+    crdtSync: true,
+  },
+  hwid: 'HWID-9F81-22BC-441A-70EE',
+  valid: true,
+};
+
 
 // Helper function to safely convert SVG string to base64 Data URI supporting Arabic/UTF-8
 function svgToDataUri(svgString: string): string {
