@@ -70,10 +70,10 @@ export default function ImageAnalysisStudio() {
 
       const data = await res.json();
       setAnalysisResult(data.analysis || 'تم اكتمال الفحص بنجاح بدون تفاصيل إضافية.');
-      setModelUsed(data.modelUsed || 'gemini-3.1-pro-preview');
-    } catch (err: any) {
+      setModelUsed(data.modelUsed || 'ollama-local');
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg(err.message || 'حدث خطأ أثناء التواصل مع نموذج تحليل الصور.');
+      setErrorMsg(err instanceof Error ? err.message : 'حدث خطأ أثناء التواصل مع نموذج تحليل الصور.');
     } finally {
       setLoading(false);
     }
@@ -96,7 +96,7 @@ export default function ImageAnalysisStudio() {
             <div className="flex items-center gap-2 mb-2">
               <span className="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                مدعوم بنموذج Vision الرائد: gemini-3.1-pro-preview
+                مدعوم بنموذج رؤية محلي عبر Ollama (اختياري)
               </span>
             </div>
             <h2 className="text-2xl font-bold text-white">استوديو تحليل وتدقيق الإعلانات والصور</h2>
