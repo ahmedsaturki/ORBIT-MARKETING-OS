@@ -22,6 +22,39 @@ interface AccountView {
   readonly has_encrypted_session: boolean;
 }
 
+interface CampaignView {
+  readonly id: string;
+  readonly name: string;
+  readonly status: string;
+  readonly task_count: number;
+  readonly created_at: string;
+}
+
+interface ContactView {
+  readonly id: string;
+  readonly display_name: string;
+  readonly phone?: string;
+  readonly email?: string;
+  readonly source_platform?: string;
+  readonly status: string;
+  readonly notes?: string;
+  readonly updated_at: string;
+}
+
+interface TaskView {
+  readonly id: string;
+  readonly campaign_id: string;
+  readonly account_id: string;
+  readonly platform: string;
+  readonly kind: string;
+  readonly priority: number;
+  readonly status: string;
+  readonly attempts: number;
+  readonly max_attempts: number;
+  readonly available_at: string;
+  readonly created_at: string;
+}
+
 async function callNative<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   return invoke<T>(command, args);
 }
@@ -43,6 +76,88 @@ export function App(): ReactElement {
   const [backups, setBackups] = useState<readonly string[]>([]);
   const [selectedBackup, setSelectedBackup] = useState("");
   const [backupStatus, setBackupStatus] = useState("");
+  const [campaigns, setCampaigns] = useState<readonly CampaignView[]>([]);
+  const [campaignName, setCampaignName] = useState("");
+  const [campaignAccountId, setCampaignAccountId] = useState("");
+  const [tasks, setTasks] = useState<readonly TaskView[]>([]);
+  const [contacts, setContacts] = useState<readonly ContactView[]>([]);
+  const [contactId, setContactId] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactStatus, setContactStatus] = useState("new");
+  const [contactNotes, setContactNotes] = useState("");
+
+  const loadCampaigns = async (): Promise<void> => {
+    try {
+      setCampaigns(await callNative<CampaignView[]>("campaign_list"));
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل الحملات");
+    }
+  };
+
+  const loadTasks = async (): Promise<void> => {
+    try {
+      setTasks(await callNative<TaskView[]>("task_list", {}));
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل المهام");
+    }
+  };
+
+  const loadContacts = async (): Promise<void> => {
+    try {
+      setContacts(await callNative<ContactView[]>("contact_list", {}));
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل العملاء");
+    }
+  };
+
+  const createCampaign = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    if (!campaignName.trim() || !campaignAccountId) {
+      setError("أدخل اسم الحملة واختر حساباً مستهدفاً");
+      return;
+    }
+    try {
+      setError("");
+      await callNative<CampaignView>("campaign_create", {
+        name: campaignName.trim(),
+        account_ids: [campaignAccountId],
+      });
+      setCampaignName("");
+      await loadCampaigns();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل إنشاء الحملة");
+    }
+  };
+
+  const saveContact = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    if (!contactId.trim() || !contactName.trim()) {
+      setError("أدخل معرف العميل والاسم");
+      return;
+    }
+    try {
+      setError("");
+      const result = await callNative<ContactView>("contact_upsert", {
+        id: contactId.trim(),
+        display_name: contactName.trim(),
+        phone: contactPhone.trim() || null,
+        email: contactEmail.trim() || null,
+        source_platform: null,
+        status: contactStatus,
+        notes: contactNotes.trim() || null,
+      });
+      setContacts((current) => [result, ...current.filter((item) => item.id !== result.id)]);
+      setContactId("");
+      setContactName("");
+      setContactPhone("");
+      setContactEmail("");
+      setContactNotes("");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل حفظ العميل");
+    }
+  };
 
   const loadBackups = async (): Promise<void> => {
     try {
@@ -98,6 +213,9 @@ export function App(): ReactElement {
       setError("");
       setHealth(await callNative<Health>("app_health"));
       await loadAccounts();
+      await loadCampaigns();
+      await loadTasks();
+      await loadContacts();
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل فحص التطبيق المحلي");
     }
@@ -216,6 +334,105 @@ export function App(): ReactElement {
       </section>
 
 
+
+
+      <section className="grid workspace-grid">
+        <div className="card">
+          <h2>الحملات</h2>
+          <p>الحملة تُحفظ محلياً وتُربط بالحسابات المستهدفة داخل SQLite.</p>
+          <form className="vault-form" onSubmit={createCampaign}>
+            <label>
+              اسم الحملة
+              <input value={campaignName} onChange={(event) => setCampaignName(event.target.value)} placeholder="حملة سبتمبر" />
+            </label>
+            <label>
+              الحساب المستهدف
+              <select value={campaignAccountId} onChange={(event) => setCampaignAccountId(event.target.value)}>
+                <option value="">اختر حساباً</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.display_name} • {account.platform}</option>
+                ))}
+              </select>
+            </label>
+            <button className="button primary" type="submit" disabled={!accounts.length}>إنشاء حملة</button>
+          </form>
+          <div className="account-list">
+            {campaigns.slice(0, 8).map((campaign) => (
+              <div className="account-row" key={campaign.id}>
+                <div>
+                  <strong>{campaign.name}</strong>
+                  <div className="account-meta">{campaign.status} • {campaign.task_count} مهام</div>
+                </div>
+              </div>
+            ))}
+            {!campaigns.length ? <div className="result">لا توجد حملات محفوظة.</div> : null}
+          </div>
+        </div>
+
+        <div className="card">
+          <h2>المهام</h2>
+          <p>Queue native: pending / running / succeeded / failed / blocked / cancelled.</p>
+          <div className="account-list">
+            {tasks.slice(0, 10).map((task) => (
+              <div className="account-row" key={task.id}>
+                <div>
+                  <strong>{task.kind} • {task.platform}</strong>
+                  <div className="account-meta">{task.status} • {task.attempts}/{task.max_attempts} • أولوية {task.priority}</div>
+                </div>
+              </div>
+            ))}
+            {!tasks.length ? <div className="result">لا توجد مهام محفوظة.</div> : null}
+          </div>
+        </div>
+
+        <div className="card">
+          <h2>CRM المحلي</h2>
+          <p>سجلات العملاء تُحفظ محلياً مع الحالة والملاحظات.</p>
+          <form className="vault-form" onSubmit={saveContact}>
+            <label>
+              معرف العميل
+              <input value={contactId} onChange={(event) => setContactId(event.target.value)} placeholder="lead-001" />
+            </label>
+            <label>
+              الاسم
+              <input value={contactName} onChange={(event) => setContactName(event.target.value)} />
+            </label>
+            <label>
+              الهاتف
+              <input value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} />
+            </label>
+            <label>
+              البريد الإلكتروني
+              <input value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} type="email" />
+            </label>
+            <label>
+              الحالة
+              <select value={contactStatus} onChange={(event) => setContactStatus(event.target.value)}>
+                <option value="new">جديد</option>
+                <option value="interested">مهتم</option>
+                <option value="sold">تم البيع</option>
+                <option value="lost">خسرنا العميل</option>
+              </select>
+            </label>
+            <label>
+              ملاحظات
+              <textarea value={contactNotes} onChange={(event) => setContactNotes(event.target.value)} rows={3} />
+            </label>
+            <button className="button primary" type="submit">حفظ العميل</button>
+          </form>
+          <div className="account-list">
+            {contacts.slice(0, 8).map((contact) => (
+              <div className="account-row" key={contact.id}>
+                <div>
+                  <strong>{contact.display_name}</strong>
+                  <div className="account-meta">{contact.status} {contact.phone ? "• " + contact.phone : ""}</div>
+                </div>
+              </div>
+            ))}
+            {!contacts.length ? <div className="result">لا توجد جهات اتصال.</div> : null}
+          </div>
+        </div>
+      </section>
 
       <section className="card">
         <h2>النسخ الاحتياطي المشفّر</h2>
