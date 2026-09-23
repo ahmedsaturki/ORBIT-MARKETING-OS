@@ -5,7 +5,7 @@ use aes_gcm::{
 use argon2::Argon2;
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use rand::RngCore;
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 use tauri::Manager;
@@ -29,6 +29,51 @@ CREATE TABLE IF NOT EXISTS accounts (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS campaigns (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS campaign_accounts (
+  campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+  PRIMARY KEY (campaign_id, account_id)
+);
+
+CREATE TABLE IF NOT EXISTS tasks (
+  id TEXT PRIMARY KEY,
+  campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+  platform TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  max_attempts INTEGER NOT NULL DEFAULT 3,
+  available_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS contacts (
+  id TEXT PRIMARY KEY,
+  display_name TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  source_platform TEXT,
+  status TEXT NOT NULL,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_ready
+  ON tasks(status, available_at, priority);
+
+CREATE INDEX IF NOT EXISTS idx_contacts_updated
+  ON contacts(updated_at);
 "#;
 
 #[derive(Debug, Error)]
@@ -68,6 +113,43 @@ struct EncryptedPayload {
 struct VaultWriteResult {
     label: String,
     payload_version: u8,
+}
+
+
+#[derive(Debug, Serialize)]
+struct CampaignView {
+    id: String,
+    name: String,
+    status: String,
+    task_count: i64,
+    created_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct TaskView {
+    id: String,
+    campaign_id: String,
+    account_id: String,
+    platform: String,
+    kind: String,
+    priority: i64,
+    status: String,
+    attempts: i64,
+    max_attempts: i64,
+    available_at: String,
+    created_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ContactView {
+    id: String,
+    display_name: String,
+    phone: Option<String>,
+    email: Option<String>,
+    source_platform: Option<String>,
+    status: String,
+    notes: Option<String>,
+    updated_at: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -344,6 +426,310 @@ fn account_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
     Ok(changed > 0)
 }
 
+
+#[tauri::command]
+fn campaign_create(
+    app: tauri::AppHandle,
+    name: String,
+    account_ids: Vec<String>,
+) -> Result<CampaignView, String> {
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    if account_ids.is_empty() {
+        return Err("at least one account is required".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let campaign_id = format!("camp-{}", uuid_like());
+    let timestamp = chrono_like_timestamp();
+    let transaction = connection
+        .unchecked_transaction()
+        .map_err(|error| error.to_string())?;
+
+    for account_id in &account_ids {
+        transaction
+            .execute(
+                "INSERT INTO campaign_accounts(campaign_id, account_id) VALUES (?1, ?2)",
+                params![campaign_id, validate_label(account_id).map_err(|error| error.to_string())?],
+            )
+            .map_err(|error| error.to_string())?;
+    }
+
+    transaction
+        .execute(
+            "INSERT INTO campaigns(id, name, status, created_at) VALUES (?1, ?2, 'draft', ?3)",
+            params![campaign_id, name, timestamp],
+        )
+        .map_err(|error| error.to_string())?;
+
+    transaction.commit().map_err(|error| error.to_string())?;
+
+    Ok(CampaignView {
+        id: campaign_id,
+        name,
+        status: "draft".to_string(),
+        task_count: 0,
+        created_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn campaign_list(app: tauri::AppHandle) -> Result<Vec<CampaignView>, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT c.id, c.name, c.status, COUNT(t.id), c.created_at
+             FROM campaigns c
+             LEFT JOIN tasks t ON t.campaign_id = c.id
+             GROUP BY c.id
+             ORDER BY c.created_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+
+    let rows = statement
+        .query_map([], |row| {
+            Ok(CampaignView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                status: row.get(2)?,
+                task_count: row.get(3)?,
+                created_at: row.get(4)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn task_enqueue(
+    app: tauri::AppHandle,
+    id: String,
+    campaign_id: String,
+    account_id: String,
+    platform: String,
+    kind: String,
+    priority: i64,
+    available_at: String,
+    max_attempts: i64,
+) -> Result<TaskView, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
+    let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
+    let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
+    let kind = validate_label(&kind).map_err(|error| error.to_string())?;
+    if priority < 0 || max_attempts < 1 || available_at.trim().is_empty() {
+        return Err("invalid task parameters".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let created_at = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO tasks(id, campaign_id, account_id, platform, kind, priority, status, attempts, max_attempts, available_at, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'pending', 0, ?7, ?8, ?9)",
+            params![id, campaign_id, account_id, platform, kind, priority, max_attempts, available_at, created_at],
+        )
+        .map_err(|error| error.to_string())?;
+
+    Ok(TaskView {
+        id,
+        campaign_id,
+        account_id,
+        platform,
+        kind,
+        priority,
+        status: "pending".to_string(),
+        attempts: 0,
+        max_attempts,
+        available_at,
+        created_at,
+    })
+}
+
+#[tauri::command]
+fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView>, String> {
+    let mut connection = open_db(&app).map_err(|error| error.to_string())?;
+    let transaction = connection
+        .transaction()
+        .map_err(|error| error.to_string())?;
+
+    let candidate = transaction
+        .query_row(
+            "SELECT id, campaign_id, account_id, platform, kind, priority, attempts, max_attempts, available_at, created_at
+             FROM tasks
+             WHERE status='pending' AND available_at <= ?1
+             ORDER BY priority DESC, available_at ASC, created_at ASC
+             LIMIT 1",
+            params![now],
+            |row| {
+                Ok(TaskView {
+                    id: row.get(0)?,
+                    campaign_id: row.get(1)?,
+                    account_id: row.get(2)?,
+                    platform: row.get(3)?,
+                    kind: row.get(4)?,
+                    priority: row.get(5)?,
+                    status: "running".to_string(),
+                    attempts: row.get(6)?,
+                    max_attempts: row.get(7)?,
+                    available_at: row.get(8)?,
+                    created_at: row.get(9)?,
+                })
+            },
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+
+    let Some(task) = candidate else {
+        return transaction
+            .commit()
+            .map(|_| None)
+            .map_err(|error| error.to_string());
+    };
+
+    transaction
+        .execute("UPDATE tasks SET status='running' WHERE id=?1 AND status='pending'", params![task.id])
+        .map_err(|error| error.to_string())?;
+    transaction.commit().map_err(|error| error.to_string())?;
+    Ok(Some(task))
+}
+
+#[tauri::command]
+fn task_set_status(
+    app: tauri::AppHandle,
+    id: String,
+    status: String,
+) -> Result<bool, String> {
+    let allowed = ["pending", "running", "succeeded", "failed", "blocked", "cancelled"];
+    if !allowed.contains(&status.as_str()) {
+        return Err("unsupported task status".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let changed = connection
+        .execute("UPDATE tasks SET status=?1 WHERE id=?2", params![status, validate_label(&id).map_err(|error| error.to_string())?])
+        .map_err(|error| error.to_string())?;
+    Ok(changed > 0)
+}
+
+#[tauri::command]
+fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<TaskView>, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT id, campaign_id, account_id, platform, kind, priority, status, attempts, max_attempts, available_at, created_at
+             FROM tasks
+             WHERE (?1 IS NULL OR campaign_id = ?1)
+             ORDER BY priority DESC, available_at ASC",
+        )
+        .map_err(|error| error.to_string())?;
+
+    let rows = statement
+        .query_map(params![campaign_id], |row| {
+            Ok(TaskView {
+                id: row.get(0)?,
+                campaign_id: row.get(1)?,
+                account_id: row.get(2)?,
+                platform: row.get(3)?,
+                kind: row.get(4)?,
+                priority: row.get(5)?,
+                status: row.get(6)?,
+                attempts: row.get(7)?,
+                max_attempts: row.get(8)?,
+                available_at: row.get(9)?,
+                created_at: row.get(10)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn contact_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    display_name: String,
+    phone: Option<String>,
+    email: Option<String>,
+    source_platform: Option<String>,
+    status: String,
+    notes: Option<String>,
+) -> Result<ContactView, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let display_name = validate_label(&display_name).map_err(|error| error.to_string())?;
+    let allowed_status = ["new", "interested", "sold", "lost"];
+    if !allowed_status.contains(&status.as_str()) {
+        return Err("unsupported contact status".to_string());
+    }
+    let timestamp = chrono_like_timestamp();
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    connection
+        .execute(
+            "INSERT INTO contacts(id, display_name, phone, email, source_platform, status, notes, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+             ON CONFLICT(id) DO UPDATE SET
+               display_name=excluded.display_name,
+               phone=excluded.phone,
+               email=excluded.email,
+               source_platform=excluded.source_platform,
+               status=excluded.status,
+               notes=excluded.notes,
+               updated_at=excluded.updated_at",
+            params![id, display_name, phone, email, source_platform, status, notes, timestamp],
+        )
+        .map_err(|error| error.to_string())?;
+
+    Ok(ContactView {
+        id,
+        display_name,
+        phone,
+        email,
+        source_platform,
+        status,
+        notes,
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<ContactView>, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let pattern = search.map(|value| "%" .to_string() + value.trim() + "%");
+    let mut statement = connection
+        .prepare(
+            "SELECT id, display_name, phone, email, source_platform, status, notes, updated_at
+             FROM contacts
+             WHERE (?1 IS NULL OR display_name LIKE ?1 OR phone LIKE ?1 OR email LIKE ?1)
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+
+    let rows = statement
+        .query_map(params![pattern], |row| {
+            Ok(ContactView {
+                id: row.get(0)?,
+                display_name: row.get(1)?,
+                phone: row.get(2)?,
+                email: row.get(3)?,
+                source_platform: row.get(4)?,
+                status: row.get(5)?,
+                notes: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+}
+
+fn uuid_like() -> String {
+    let mut bytes = [0u8; 16];
+    rand::rng().fill_bytes(&mut bytes);
+    B64.encode(bytes).replace('/', "_").replace('+', "-").replace('=', "")
+}
+
 fn chrono_like_timestamp() -> String {
     match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         Ok(duration) => duration.as_secs().to_string(),
@@ -405,7 +791,15 @@ pub fn run() {
             account_upsert,
             account_list,
             account_get_session,
-            account_delete
+            account_delete,
+            campaign_create,
+            campaign_list,
+            task_enqueue,
+            task_claim_next,
+            task_set_status,
+            task_list,
+            contact_upsert,
+            contact_list
         ])
         .run(tauri::generate_context!());
 
