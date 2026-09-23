@@ -1,0 +1,52 @@
+name: Rebuild Rust
+
+on:
+  push:
+    branches: ["rebuild/**"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect Rust workspace
+        id: detect
+        shell: bash
+        run: |
+          if [ -f packages/desktop/src-tauri/Cargo.toml ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Rust
+        if: steps.detect.outputs.present == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+
+      - name: Rust format
+        if: steps.detect.outputs.present == 'true'
+        run: cargo fmt --all -- --check
+        working-directory: packages/desktop/src-tauri
+
+      - name: Rust check
+        if: steps.detect.outputs.present == 'true'
+        run: cargo check --workspace --all-targets
+        working-directory: packages/desktop/src-tauri
+
+      - name: Clippy
+        if: steps.detect.outputs.present == 'true'
+        run: cargo clippy --workspace --all-targets -- -D warnings
+        working-directory: packages/desktop/src-tauri
+
+      - name: Report missing desktop backend
+        if: steps.detect.outputs.present != 'true'
+        run: echo "::notice::Desktop Rust backend is not present yet; Rust gates remain pending until the runtime tranche lands."
