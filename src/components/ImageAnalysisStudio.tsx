@@ -72,7 +72,6 @@ export default function ImageAnalysisStudio() {
       setAnalysisResult(data.analysis || 'تم اكتمال الفحص بنجاح بدون تفاصيل إضافية.');
       setModelUsed(data.modelUsed || 'ollama-local');
     } catch (err: unknown) {
-      console.error(err);
       setErrorMsg(err instanceof Error ? err.message : 'حدث خطأ أثناء التواصل مع نموذج تحليل الصور.');
     } finally {
       setLoading(false);
