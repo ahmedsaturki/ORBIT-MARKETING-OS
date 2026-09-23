@@ -7,7 +7,7 @@ use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use rand::RngCore;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use std::{fs, path::{Path, PathBuf}};
+use std::{fs, path::PathBuf};
 use tauri::Manager;
 use thiserror::Error;
 use zeroize::Zeroizing;
@@ -741,7 +741,8 @@ fn validate_backup_name(name: &str) -> Result<String, AppError> {
     let value = name.trim();
     if value.is_empty()
         || value.len() > 120
-        || value.contains(['/', '\\'])
+        || value.contains('/')
+        || value.contains('\\')
         || value.contains("..")
     {
         return Err(AppError::InvalidLabel);
@@ -755,6 +756,8 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
         return Err(AppError::InvalidPassword.to_string());
     }
 
+    let _connection = open_db(&app).map_err(|error| error.to_string())?;
+    drop(_connection);
     let app_data = app.path().app_data_dir().map_err(|_| AppError::Path.to_string())?;
     let database_path = app_data.join("orbit.sqlite3");
     let backups = backup_directory(&app).map_err(|error| error.to_string())?;
