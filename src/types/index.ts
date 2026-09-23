@@ -56,7 +56,7 @@ export interface RoleConfig {
   name: string;
   badge: string;
   description: string;
-  recommendedModel: 'gemini-3.1-pro-preview' | 'gemini-3.5-flash' | 'gemini-3.1-flash-lite';
+  recommendedModel: 'reasoning' | 'balanced' | 'fast';
   systemPrompt: string;
   starterPrompts: string[];
 }
