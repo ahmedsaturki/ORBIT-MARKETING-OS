@@ -35,5 +35,17 @@ jobs:
       - name: Core build
         run: pnpm --filter @orbit/core build
 
+      - name: Desktop typecheck
+        run: pnpm --filter @orbit/desktop typecheck
+
+      - name: Web typecheck
+        run: pnpm --filter @orbit/web typecheck
+
+      - name: Mobile typecheck
+        run: pnpm --filter @orbit/mobile typecheck
+
       - name: Root typecheck
         run: pnpm typecheck
+
+      - name: Workspace build graph
+        run: pnpm build:all
