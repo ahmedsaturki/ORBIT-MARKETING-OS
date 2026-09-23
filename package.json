@@ -9,7 +9,7 @@
     "start": "tsx server.ts",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js coverage",
+    "clean": "rimraf dist server.js coverage",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "pnpm --filter @orbit/core test",
@@ -39,6 +39,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2",
-    "turbo": "^2.11.2"
+    "turbo": "^2.11.2",
+    "rimraf": "^6.0.1"
   }
 }
