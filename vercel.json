@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm --filter @orbit/web build",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "outputDirectory": "packages/web/out",
+  "framework": "nextjs"
+}
