@@ -1,3 +1,4 @@
 export * from "./aesGcm.js";
 export * from "./executePolicy.js";
+export * from "./keyDerivation.js";
 export * from "./redaction.js";
