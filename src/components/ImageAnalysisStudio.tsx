@@ -244,7 +244,7 @@ export default function ImageAnalysisStudio() {
             <div className="flex items-center justify-between pt-2">
               <span className="text-xs text-slate-400 flex items-center gap-1.5">
                 <Target className="w-3.5 h-3.5 text-purple-400" />
-                النموذج المستخدم: <code className="text-purple-300 font-mono">gemini-3.1-pro-preview</code>
+                النموذج المستخدم: <code className="text-purple-300 font-mono">Ollama Vision</code>
               </span>
               <button
                 type="button"
@@ -317,7 +317,7 @@ export default function ImageAnalysisStudio() {
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-slate-200">جاري قراءة واستيعاب أبعاد وعناصر الإعلان...</h4>
-                    <p className="text-xs text-slate-500 mt-1">يقوم نموذج gemini-3.1-pro-preview بتفكيك التسلسل البصري والنصوص الآن.</p>
+                    <p className="text-xs text-slate-500 mt-1">يقوم نموذج Ollama Vision بتفكيك التسلسل البصري والنصوص الآن.</p>
                   </div>
                 </div>
               ) : analysisResult ? (
