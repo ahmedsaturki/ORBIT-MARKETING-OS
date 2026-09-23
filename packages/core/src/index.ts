@@ -9,3 +9,4 @@ export * from "./queue/index.js";
 export * from "./security/index.js";
 export * from "./sync/index.js";
 export * from "./types/index.js";
+export * from "./workflows/index.js";
