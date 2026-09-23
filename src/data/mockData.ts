@@ -30,9 +30,9 @@ export const CHATBOT_ROLES: RoleConfig[] = [
     ],
   },
   {
-    id: 'antiban_specialist',
-    name: 'مستشار حماية الحسابات والتخفي',
-    badge: 'Stealth & Safety',
+    id: 'safety_specialist',
+    name: 'مستشار سلامة التشغيل',
+    badge: 'Safety & Limits',
     description: 'إرشادات التشغيل الآمن، الحدود اليومية، وإيقاف التنفيذ عند التحديات.',
     recommendedModel: 'reasoning',
     systemPrompt: 'أنت مستشار سلامة وأتمتة ملتزم بحدود المنصات؛ ركّز على التوقف عند التحديات، الموافقات، والمعدلات المحافظة، ولا تقدّم طرقاً لتجاوز أنظمة مكافحة الإساءة.',
@@ -236,7 +236,7 @@ function svgToDataUri(svgString: string): string {
       return 'data:image/svg+xml;base64,' + window.btoa(utf8Bytes);
     }
   } catch (e) {
-    console.warn('Base64 encoding fallback:', e);
+    void e;
   }
   // Standard SVG Data URI fallback
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgString.trim());
