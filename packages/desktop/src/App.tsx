@@ -13,6 +13,15 @@ interface VaultResult {
   readonly payloadVersion: number;
 }
 
+interface AccountView {
+  readonly id: string;
+  readonly platform: string;
+  readonly display_name: string;
+  readonly username?: string;
+  readonly status: string;
+  readonly has_encrypted_session: boolean;
+}
+
 async function callNative<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   return invoke<T>(command, args);
 }
@@ -25,13 +34,65 @@ export function App(): ReactElement {
   const [stored, setStored] = useState(false);
   const [recovered, setRecovered] = useState("");
   const [error, setError] = useState("");
+  const [accounts, setAccounts] = useState<readonly AccountView[]>([]);
+  const [accountId, setAccountId] = useState("");
+  const [accountPlatform, setAccountPlatform] = useState("facebook");
+  const [accountName, setAccountName] = useState("");
+  const [accountUsername, setAccountUsername] = useState("");
+  const [accountSession, setAccountSession] = useState("");
 
-  const checkHealth = async (): Promise<void> => {
+  const loadAccounts = async (): Promise<void> => {
+    try {
+      setError("");
+      setAccounts(await callNative<AccountView[]>("account_list"));
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل الحسابات المحلية");
+    }
+  };
+
+  const checkHealth = async (): Promise<void> =>
     try {
       setError("");
       setHealth(await callNative<Health>("app_health"));
+      await loadAccounts();
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل فحص التطبيق المحلي");
+    }
+  };
+
+  const storeAccount = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    if (!accountId.trim() || !accountName.trim()) {
+      setError("أدخل معرف الحساب واسم الحساب");
+      return;
+    }
+    try {
+      setError("");
+      const result = await callNative<AccountView>("account_upsert", {
+        id: accountId.trim(),
+        platform: accountPlatform,
+        display_name: accountName.trim(),
+        username: accountUsername.trim() || null,
+        session: accountSession || null,
+        password: accountSession ? password : null,
+      });
+      setAccounts((current) => [result, ...current.filter((item) => item.id !== result.id)]);
+      setAccountSession("");
+      setAccountId("");
+      setAccountName("");
+      setAccountUsername("");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل حفظ الحساب المحلي");
+    }
+  };
+
+  const deleteAccount = async (id: string): Promise<void> => {
+    try {
+      setError("");
+      const deleted = await callNative<boolean>("account_delete", { id });
+      if (deleted) setAccounts((current) => current.filter((item) => item.id !== id));
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل حذف الحساب");
     }
   };
 
@@ -109,6 +170,63 @@ export function App(): ReactElement {
           <h2>تحكم صريح</h2>
           <p>عمليات التكامل الخارجية تُفصل عن التخزين المحلي وتحتاج إلى تفويض المستخدم.</p>
         </article>
+      </section>
+
+
+      <section className="card">
+        <h2>الحسابات المحلية</h2>
+        <p>بيانات التعريف تُحفظ في SQLite. أي session blob اختياري يُشفر داخل Rust بـ Argon2id + AES-256-GCM.</p>
+        <form className="vault-form" onSubmit={storeAccount}>
+          <label>
+            معرف الحساب
+            <input value={accountId} onChange={(event) => setAccountId(event.target.value)} placeholder="facebook-main" />
+          </label>
+          <label>
+            المنصة
+            <select value={accountPlatform} onChange={(event) => setAccountPlatform(event.target.value)}>
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+              <option value="telegram">Telegram</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="tiktok">TikTok</option>
+            </select>
+          </label>
+          <label>
+            اسم العرض
+            <input value={accountName} onChange={(event) => setAccountName(event.target.value)} />
+          </label>
+          <label>
+            اسم المستخدم (اختياري)
+            <input value={accountUsername} onChange={(event) => setAccountUsername(event.target.value)} />
+          </label>
+          <label>
+            بيانات جلسة مُصرح بها (اختياري)
+            <input type="password" value={accountSession} onChange={(event) => setAccountSession(event.target.value)} />
+          </label>
+          <button className="button primary" type="submit">حفظ الحساب محلياً</button>
+        </form>
+
+        <div className="account-list">
+          {accounts.length === 0 ? (
+            <div className="result">لا توجد حسابات محفوظة بعد.</div>
+          ) : (
+            accounts.map((account) => (
+              <div className="account-row" key={account.id}>
+                <div>
+                  <strong>{account.display_name}</strong>
+                  <div className="account-meta">
+                    {account.platform} {account.username ? "• @" + account.username : ""} • {account.status}
+                    {account.has_encrypted_session ? " • جلسة مشفرة" : ""}
+                  </div>
+                </div>
+                <button className="button danger" type="button" onClick={() => void deleteAccount(account.id)}>
+                  حذف
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </section>
 
       <form className="card vault-form" onSubmit={storeSecret}>
