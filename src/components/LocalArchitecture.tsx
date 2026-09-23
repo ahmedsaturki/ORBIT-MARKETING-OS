@@ -227,8 +227,8 @@ CREATE TABLE contacts (
                 <ul className="space-y-2.5 text-xs text-slate-200">
                   <li className="flex items-center gap-2">✓ وكيلان محليان (2 Local Agents)</li>
                   <li className="flex items-center gap-2">✓ حتى 15 حساباً اجتماعياً</li>
-                  <li className="flex items-center gap-2">✓ استوديو المحتوى والرؤية الكامل بـ Gemini 3.1 Pro</li>
-                  <li className="flex items-center gap-2">✓ قاطع الدائرة الذكي ومحاكاة السلوك البشري</li>
+                  <li className="flex items-center gap-2">✓ استوديو المحتوى والرؤية عبر مزود AI محلي قابل للتهيئة</li>
+                  <li className="flex items-center gap-2">✓ قاطع دائرة وحدود تشغيل وموافقة مستخدم</li>
                   <li className="flex items-center gap-2">✓ CRM المحادثات الموحد مع مقترحات الذكاء الاصطناعي</li>
                   <li className="flex items-center gap-2">✓ تحديثات القواعد التلقائية</li>
                 </ul>
