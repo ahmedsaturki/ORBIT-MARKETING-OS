@@ -1,0 +1,80 @@
+import { describe, expect, it } from "vitest";
+import { TaskQueue } from "../src/queue/taskQueue.js";
+import type { Task } from "../src/types/index.js";
+
+const baseTask: Task = {
+  id: "task-1",
+  workspaceId: "workspace-1",
+  campaignId: "campaign-1",
+  accountId: "account-1",
+  platform: "facebook",
+  kind: "publish",
+  priority: 10,
+  status: "pending",
+  attempts: 0,
+  maxAttempts: 3,
+  availableAt: "2026-09-24T00:00:00.000Z",
+  idempotencyKey: "campaign-1:account-1:content-1",
+  createdAt: "2026-09-24T00:00:00.000Z",
+};
+
+const queue = () =>
+  new TaskQueue({
+    retryPolicy: { maxAttempts: 3, baseDelayMs: 1000, maxDelayMs: 8000 },
+  });
+
+describe("TaskQueue", () => {
+  it("claims the highest-priority ready task", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+    instance.enqueue({ ...baseTask, id: "task-2", priority: 20, idempotencyKey: "task-2" });
+
+    expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("task-2");
+    expect(instance.get("task-2")?.status).toBe("running");
+  });
+
+  it("does not claim tasks scheduled for the future", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+
+    expect(instance.claimNext("2026-09-23T23:59:59.000Z")).toBeUndefined();
+  });
+
+  it("reschedules a failed running task with exponential backoff", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+
+    const failed = instance.fail("task-1", "2026-09-24T00:00:01.000Z");
+    expect(failed.status).toBe("pending");
+    expect(failed.attempts).toBe(1);
+    expect(failed.availableAt).toBe("2026-09-24T00:00:02.000Z");
+  });
+
+  it("terminally fails after the task-specific attempt limit", () => {
+    const instance = queue();
+    instance.enqueue({ ...baseTask, maxAttempts: 1 });
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+
+    const failed = instance.fail("task-1", "2026-09-24T00:00:01.000Z");
+    expect(failed.status).toBe("failed");
+    expect(failed.attempts).toBe(1);
+  });
+
+  it("rejects invalid state transitions", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+
+    expect(() => instance.succeed("task-1")).toThrow("Only running tasks can transition");
+    expect(() => instance.fail("task-1", "2026-09-24T00:00:01.000Z")).toThrow(
+      "Only running tasks can fail",
+    );
+  });
+
+  it("rejects duplicate task identifiers", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+
+    expect(() => instance.enqueue(baseTask)).toThrow("Task already exists");
+  });
+});
