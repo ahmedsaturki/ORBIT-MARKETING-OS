@@ -445,6 +445,13 @@ fn campaign_create(
         .unchecked_transaction()
         .map_err(|error| error.to_string())?;
 
+    transaction
+        .execute(
+            "INSERT INTO campaigns(id, name, status, created_at) VALUES (?1, ?2, 'draft', ?3)",
+            params![campaign_id, name, timestamp],
+        )
+        .map_err(|error| error.to_string())?;
+
     for account_id in &account_ids {
         transaction
             .execute(
@@ -453,13 +460,6 @@ fn campaign_create(
             )
             .map_err(|error| error.to_string())?;
     }
-
-    transaction
-        .execute(
-            "INSERT INTO campaigns(id, name, status, created_at) VALUES (?1, ?2, 'draft', ?3)",
-            params![campaign_id, name, timestamp],
-        )
-        .map_err(|error| error.to_string())?;
 
     transaction.commit().map_err(|error| error.to_string())?;
 
@@ -696,7 +696,7 @@ fn contact_upsert(
 #[tauri::command]
 fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<ContactView>, String> {
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    let pattern = search.map(|value| "%" .to_string() + value.trim() + "%");
+    let pattern = search.map(|value| "%".to_string() + value.trim() + "%");
     let mut statement = connection
         .prepare(
             "SELECT id, display_name, phone, email, source_platform, status, notes, updated_at
