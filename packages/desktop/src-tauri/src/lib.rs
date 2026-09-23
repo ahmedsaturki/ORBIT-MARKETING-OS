@@ -18,6 +18,17 @@ CREATE TABLE IF NOT EXISTS vault_records (
   payload_json TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS accounts (
+  id TEXT PRIMARY KEY,
+  platform TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  username TEXT,
+  status TEXT NOT NULL,
+  session_payload_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 "#;
 
 #[derive(Debug, Error)]
@@ -57,6 +68,16 @@ struct EncryptedPayload {
 struct VaultWriteResult {
     label: String,
     payload_version: u8,
+}
+
+#[derive(Debug, Serialize)]
+struct AccountView {
+    id: String,
+    platform: String,
+    display_name: String,
+    username: Option<String>,
+    status: String,
+    has_encrypted_session: bool,
 }
 
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
@@ -198,6 +219,131 @@ fn vault_delete(app: tauri::AppHandle, label: String) -> Result<bool, String> {
     Ok(changed > 0)
 }
 
+
+
+fn validate_platform(platform: &str) -> Result<String, AppError> {
+    let value = platform.trim().to_lowercase();
+    let allowed = ["facebook", "instagram", "telegram", "whatsapp", "linkedin", "tiktok"];
+    if allowed.contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err(AppError::InvalidLabel)
+    }
+}
+
+#[tauri::command]
+fn account_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    platform: String,
+    display_name: String,
+    username: Option<String>,
+    session: Option<String>,
+    password: Option<String>,
+) -> Result<AccountView, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
+    let display_name = validate_label(&display_name).map_err(|error| error.to_string())?;
+    let username = username.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
+
+    let session_payload_json = match (session.filter(|value| !value.is_empty()), password.filter(|value| !value.is_empty())) {
+        (Some(value), Some(secret)) => {
+            let payload = seal(&secret, &value).map_err(|error| error.to_string())?;
+            Some(serde_json::to_string(&payload).map_err(|error| error.to_string())?)
+        }
+        (Some(_), None) => return Err(AppError::InvalidPassword.to_string()),
+        _ => None,
+    };
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let timestamp = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO accounts(id, platform, display_name, username, status, session_payload_json, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, 'connected', ?5, ?6, ?6)
+             ON CONFLICT(id) DO UPDATE SET
+               platform=excluded.platform,
+               display_name=excluded.display_name,
+               username=excluded.username,
+               session_payload_json=COALESCE(excluded.session_payload_json, accounts.session_payload_json),
+               updated_at=excluded.updated_at",
+            params![id, platform, display_name, username, session_payload_json, timestamp],
+        )
+        .map_err(|error| error.to_string())?;
+
+    Ok(AccountView {
+        id,
+        platform,
+        display_name,
+        username,
+        status: "connected".to_string(),
+        has_encrypted_session: session_payload_json.is_some(),
+    })
+}
+
+#[tauri::command]
+fn account_list(app: tauri::AppHandle) -> Result<Vec<AccountView>, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare("SELECT id, platform, display_name, username, status, session_payload_json FROM accounts ORDER BY created_at DESC")
+        .map_err(|error| error.to_string())?;
+
+    let rows = statement
+        .query_map([], |row| {
+            Ok(AccountView {
+                id: row.get(0)?,
+                platform: row.get(1)?,
+                display_name: row.get(2)?,
+                username: row.get(3)?,
+                status: row.get(4)?,
+                has_encrypted_session: row.get::<_, Option<String>>(5)?.is_some(),
+            })
+        })
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn account_get_session(
+    app: tauri::AppHandle,
+    id: String,
+    password: String,
+) -> Result<String, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    if password.is_empty() {
+        return Err(AppError::InvalidPassword.to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let payload_json: Option<String> = connection
+        .query_row(
+            "SELECT session_payload_json FROM accounts WHERE id = ?1",
+            params![id],
+            |row| row.get(0),
+        )
+        .map_err(|error| match error {
+            rusqlite::Error::QueryReturnedNoRows => AppError::NotFound.to_string(),
+            other => AppError::Database(other).to_string(),
+        })?;
+
+    let payload_json = payload_json.ok_or_else(|| AppError::NotFound.to_string())?;
+    let payload: EncryptedPayload =
+        serde_json::from_str(&payload_json).map_err(|error| error.to_string())?;
+    open_payload(&password, &payload).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn account_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let changed = connection
+        .execute("DELETE FROM accounts WHERE id = ?1", params![id])
+        .map_err(|error| error.to_string())?;
+    Ok(changed > 0)
+}
+
 fn chrono_like_timestamp() -> String {
     match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         Ok(duration) => duration.as_secs().to_string(),
@@ -213,11 +359,17 @@ mod tests {
     fn encrypts_and_decrypts_round_trip() {
         let payload = match seal("correct-password", "local-secret") {
             Ok(value) => value,
-            Err(error) => panic!("test encryption failed: {error}"),
+            Err(error) => {
+                assert!(false, "test encryption failed: {error}");
+                return;
+            }
         };
         let recovered = match open_payload("correct-password", &payload) {
             Ok(value) => value,
-            Err(error) => panic!("test decryption failed: {error}"),
+            Err(error) => {
+                assert!(false, "test decryption failed: {error}");
+                return;
+            }
         };
         assert_eq!(recovered, "local-secret");
     }
@@ -226,7 +378,10 @@ mod tests {
     fn rejects_wrong_password() {
         let payload = match seal("correct-password", "local-secret") {
             Ok(value) => value,
-            Err(error) => panic!("test encryption failed: {error}"),
+            Err(error) => {
+                assert!(false, "test encryption failed: {error}");
+                return;
+            }
         };
         assert!(open_payload("wrong-password", &payload).is_err());
     }
@@ -242,7 +397,16 @@ mod tests {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let result = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![app_health, vault_put, vault_get, vault_delete])
+        .invoke_handler(tauri::generate_handler![
+            app_health,
+            vault_put,
+            vault_get,
+            vault_delete,
+            account_upsert,
+            account_list,
+            account_get_session,
+            account_delete
+        ])
         .run(tauri::generate_context!());
 
     if let Err(error) = result {
