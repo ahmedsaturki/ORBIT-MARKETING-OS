@@ -10,12 +10,12 @@ import ImageAnalysisStudio from './components/ImageAnalysisStudio';
 import ContentStudio from './components/ContentStudio';
 import CampaignHub from './components/CampaignHub';
 import UnifiedInbox from './components/UnifiedInbox';
-import AntiBanShield from './components/AntiBanShield';
+import SafetyShield from './components/SafetyShield';
 import AccountsManager from './components/AccountsManager';
 import LocalArchitecture from './components/LocalArchitecture';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'vision' | 'content' | 'campaigns' | 'inbox' | 'antiban' | 'accounts' | 'architecture'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'vision' | 'content' | 'campaigns' | 'inbox' | 'safety' | 'accounts' | 'architecture'>('chat');
 
   const handleSendContentToCampaign = (content: string, platform: string) => {
     setActiveTab('campaigns');
@@ -27,7 +27,7 @@ export default function App() {
     { id: 'content', label: 'استوديو المحتوى', icon: PenTool },
     { id: 'campaigns', label: 'إدارة الحملات والجدولة', icon: Rocket },
     { id: 'inbox', label: 'صندوق المحادثات والـ CRM', icon: Inbox },
-    { id: 'antiban', label: 'درع الحماية وقاطع الدائرة', icon: ShieldCheck, badge: 'Safety' },
+    { id: 'safety', label: 'درع الحماية وقاطع الدائرة', icon: ShieldCheck, badge: 'Safety' },
     { id: 'accounts', label: 'الحسابات الاجتماعية', icon: Users },
     { id: 'architecture', label: 'الهندسة والتسعير', icon: Database },
   ] as const;
@@ -118,7 +118,7 @@ export default function App() {
         {activeTab === 'content' && <ContentStudio onSendToCampaign={handleSendContentToCampaign} />}
         {activeTab === 'campaigns' && <CampaignHub />}
         {activeTab === 'inbox' && <UnifiedInbox />}
-        {activeTab === 'antiban' && <AntiBanShield />}
+        {activeTab === 'safety' && <SafetyShield />}
         {activeTab === 'accounts' && <AccountsManager />}
         {activeTab === 'architecture' && <LocalArchitecture />}
       </main>
