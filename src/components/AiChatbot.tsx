@@ -9,7 +9,7 @@ import { safeGetStorage, safeSetStorage, safeCopy } from '../utils/storage';
 
 export default function AiChatbot() {
   const [selectedRole, setSelectedRole] = useState(CHATBOT_ROLES[0].id);
-  const [selectedModel, setSelectedModel] = useState<'gemini-3.1-pro-preview' | 'gemini-3.5-flash' | 'gemini-3.1-flash-lite'>('gemini-3.5-flash');
+  const [selectedModel, setSelectedModel] = useState<'reasoning' | 'balanced' | 'fast'>('balanced');
   const [customPrompt, setCustomPrompt] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -22,7 +22,7 @@ export default function AiChatbot() {
     role: 'model',
     text: 'مرحباً بك في غرفة القيادة التسويقية لـ Orbit Marketing OS! أنا مساعدك الذكي متعدد الأدوار. يمكنك استشارتي في تخطيط الحملات، صياغة نصوص إعلانية محوّلة، ضبط بروتوكولات حماية الحسابات من الحظر، وإغلاق صفقات المبيعات.',
     timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-    modelUsed: 'gemini-3.5-flash',
+    modelUsed: 'ollama-local',
   };
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -76,7 +76,7 @@ export default function AiChatbot() {
           messages: payloadMessages,
           roleId: selectedRole,
           customSystemInstruction: customPrompt,
-          model: selectedModel,
+          profile: selectedModel,
         }),
       });
 
@@ -97,18 +97,18 @@ export default function AiChatbot() {
         role: 'model',
         text: data.text || 'عذراً، لم أتلقَ رداً واضحاً.',
         timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-        modelUsed: data.modelUsed || selectedModel,
+        modelUsed: data.modelUsed || 'ollama-local',
       };
 
       setMessages(prev => [...prev, botMessage]);
-    } catch (err: any) {
-      console.error(err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع أثناء معالجة الطلب.';
       const errorMessage: ChatMessage = {
         id: `err_${Date.now()}`,
         role: 'model',
-        text: `⚠️ تنبيه: ${err?.message || 'حدث خطأ غير متوقع أثناء معالجة الطلب.'}`,
+        text: `⚠️ تنبيه: ${message}`,
         timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-        modelUsed: selectedModel,
+        modelUsed: 'ollama-local',
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -162,46 +162,46 @@ export default function AiChatbot() {
             <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1 text-xs">
               <button
                 type="button"
-                onClick={() => setSelectedModel('gemini-3.1-pro-preview')}
+                onClick={() => setSelectedModel('reasoning')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all font-medium ${
-                  selectedModel === 'gemini-3.1-pro-preview'
+                  selectedModel === 'reasoning'
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title="gemini-3.1-pro-preview للمهام المعقدة والتفكير المعماري والتخطيط"
+                title="وضع التفكير للمهام المعقدة والتخطيط"
               >
                 <Brain className="w-3.5 h-3.5" />
-                <span>3.1 Pro</span>
+                <span>Reasoning</span>
                 <span className="text-[10px] opacity-75 hidden sm:inline">(مهام معقدة)</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setSelectedModel('gemini-3.5-flash')}
+                onClick={() => setSelectedModel('balanced')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all font-medium ${
-                  selectedModel === 'gemini-3.5-flash'
+                  selectedModel === 'balanced'
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title="gemini-3.5-flash للمهام العامة وصناعة المحتوى"
+                title="الوضع المتوازن للمحتوى والمهام العامة"
               >
                 <Cpu className="w-3.5 h-3.5" />
-                <span>3.5 Flash</span>
+                <span>Balanced</span>
                 <span className="text-[10px] opacity-75 hidden sm:inline">(عام)</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setSelectedModel('gemini-3.1-flash-lite')}
+                onClick={() => setSelectedModel('fast')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all font-medium ${
-                  selectedModel === 'gemini-3.1-flash-lite'
+                  selectedModel === 'fast'
                     ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title="gemini-3.1-flash-lite للاستجابة اللحظية الفائقة"
+                title="الوضع السريع للمهام القصيرة"
               >
                 <Zap className="w-3.5 h-3.5" />
-                <span>3.1 Flash-Lite</span>
+                <span>Fast</span>
                 <span className="text-[10px] opacity-75 hidden sm:inline">(سريع)</span>
               </button>
             </div>
@@ -384,7 +384,7 @@ export default function AiChatbot() {
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm disabled:opacity-50 pr-4 pl-10"
             />
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-mono">
-              {selectedModel.replace('gemini-', '')}
+              {selectedModel}
             </div>
           </div>
 
