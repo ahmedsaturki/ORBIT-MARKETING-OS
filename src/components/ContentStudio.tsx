@@ -52,9 +52,8 @@ export default function ContentStudio({ onSendToCampaign }: ContentStudioProps) 
 
       const data = await res.json();
       setGeneratedOutput(data.content || '');
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'حدث خطأ أثناء استدعاء الذكاء الاصطناعي');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ أثناء استدعاء الذكاء الاصطناعي');
     } finally {
       setLoading(false);
     }
