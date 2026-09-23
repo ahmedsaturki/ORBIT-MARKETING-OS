@@ -119,8 +119,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_timestamp
 enum AppError {
     #[error("database error")]
     Database(#[from] rusqlite::Error),
-    #[error("serialization error")]
-    Serialization(#[from] serde_json::Error),
     #[error("invalid vault password")]
     InvalidPassword,
     #[error("encryption error")]
@@ -607,6 +605,20 @@ fn task_enqueue(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let associated: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM campaign_accounts
+               WHERE campaign_id=?1 AND account_id=?2
+             )",
+            params![campaign_id, account_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !associated {
+        return Err("account is not part of campaign".to_string());
+    }
+
     let created_at = chrono_like_timestamp();
     connection
         .execute(
