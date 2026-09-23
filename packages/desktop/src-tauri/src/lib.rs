@@ -7,7 +7,7 @@ use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use rand::RngCore;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use std::{fs, path::PathBuf};
+use std::{fs, path::{Path, PathBuf}};
 use tauri::Manager;
 use thiserror::Error;
 use zeroize::Zeroizing;
@@ -730,6 +730,137 @@ fn uuid_like() -> String {
     B64.encode(bytes).replace('/', "_").replace('+', "-").replace('=', "")
 }
 
+fn backup_directory(app: &tauri::AppHandle) -> Result<PathBuf, AppError> {
+    let app_data = app.path().app_data_dir().map_err(|_| AppError::Path)?;
+    let backups = app_data.join("backups");
+    fs::create_dir_all(&backups)?;
+    Ok(backups)
+}
+
+fn validate_backup_name(name: &str) -> Result<String, AppError> {
+    let value = name.trim();
+    if value.is_empty()
+        || value.len() > 120
+        || value.contains(['/', '\\'])
+        || value.contains("..")
+    {
+        return Err(AppError::InvalidLabel);
+    }
+    Ok(value.to_string())
+}
+
+#[tauri::command]
+fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, String> {
+    if password.is_empty() {
+        return Err(AppError::InvalidPassword.to_string());
+    }
+
+    let app_data = app.path().app_data_dir().map_err(|_| AppError::Path.to_string())?;
+    let database_path = app_data.join("orbit.sqlite3");
+    let backups = backup_directory(&app).map_err(|error| error.to_string())?;
+    let temp_path = backups.join("orbit-backup-source.sqlite3");
+
+    if temp_path.exists() {
+        fs::remove_file(&temp_path).map_err(|error| error.to_string())?;
+    }
+
+    let connection = Connection::open(&database_path).map_err(|error| error.to_string())?;
+    connection
+        .execute("VACUUM INTO ?1", params![temp_path.to_string_lossy().to_string()])
+        .map_err(|error| error.to_string())?;
+    drop(connection);
+
+    let bytes = fs::read(&temp_path).map_err(|error| error.to_string())?;
+    fs::remove_file(&temp_path).map_err(|error| error.to_string())?;
+
+    let payload = seal(&password, &B64.encode(bytes)).map_err(|error| error.to_string())?;
+    let payload_json = serde_json::to_string(&payload).map_err(|error| error.to_string())?;
+    let filename = format!("orbit-{}.orbitbackup", chrono_like_timestamp());
+    let destination = backups.join(&filename);
+    fs::write(&destination, payload_json).map_err(|error| error.to_string())?;
+
+    Ok(filename)
+}
+
+#[tauri::command]
+fn backup_list(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    let backups = backup_directory(&app).map_err(|error| error.to_string())?;
+    let mut names = fs::read_dir(backups)
+        .map_err(|error| error.to_string())?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file())
+        .filter_map(|path| path.file_name().and_then(|name| name.to_str()).map(ToOwned::to_owned))
+        .filter(|name| name.ends_with(".orbitbackup"))
+        .collect::<Vec<_>>();
+    names.sort();
+    names.reverse();
+    Ok(names)
+}
+
+#[tauri::command]
+fn backup_restore(
+    app: tauri::AppHandle,
+    filename: String,
+    password: String,
+) -> Result<bool, String> {
+    if password.is_empty() {
+        return Err(AppError::InvalidPassword.to_string());
+    }
+
+    let filename = validate_backup_name(&filename).map_err(|error| error.to_string())?;
+    if !filename.ends_with(".orbitbackup") {
+        return Err(AppError::InvalidLabel.to_string());
+    }
+
+    let backups = backup_directory(&app).map_err(|error| error.to_string())?;
+    let backup_path = backups.join(&filename);
+    if !backup_path.is_file() {
+        return Err(AppError::NotFound.to_string());
+    }
+
+    let payload_json = fs::read_to_string(&backup_path).map_err(|error| error.to_string())?;
+    let payload: EncryptedPayload =
+        serde_json::from_str(&payload_json).map_err(|error| error.to_string())?;
+    let encoded_database = open_payload(&password, &payload).map_err(|error| error.to_string())?;
+    let database_bytes = B64.decode(encoded_database.as_bytes()).map_err(|_| AppError::InvalidPayload.to_string())?;
+
+    let app_data = app.path().app_data_dir().map_err(|_| AppError::Path.to_string())?;
+    let target = app_data.join("orbit.sqlite3");
+    let temporary = app_data.join("orbit.restore.sqlite3");
+    let previous = app_data.join("orbit.previous.sqlite3");
+
+    fs::write(&temporary, database_bytes).map_err(|error| error.to_string())?;
+
+    let integrity = Connection::open(&temporary)
+        .and_then(|connection| {
+            connection.query_row("PRAGMA integrity_check", [], |row| row.get::<_, String>(0))
+        })
+        .map_err(|error| error.to_string())?;
+    if integrity != "ok" {
+        let _ = fs::remove_file(&temporary);
+        return Err("backup integrity check failed".to_string());
+    }
+
+    if previous.exists() {
+        fs::remove_file(&previous).map_err(|error| error.to_string())?;
+    }
+
+    if target.exists() {
+        fs::rename(&target, &previous).map_err(|error| error.to_string())?;
+    }
+
+    if let Err(error) = fs::rename(&temporary, &target) {
+        if previous.exists() {
+            let _ = fs::rename(&previous, &target);
+        }
+        let _ = fs::remove_file(&temporary);
+        return Err(error.to_string());
+    }
+
+    Ok(true)
+}
+
 fn chrono_like_timestamp() -> String {
     match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         Ok(duration) => duration.as_secs().to_string(),
@@ -799,7 +930,10 @@ pub fn run() {
             task_set_status,
             task_list,
             contact_upsert,
-            contact_list
+            contact_list,
+            backup_create,
+            backup_list,
+            backup_restore
         ])
         .run(tauri::generate_context!());
 
