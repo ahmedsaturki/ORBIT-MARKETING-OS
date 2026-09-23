@@ -64,7 +64,7 @@ export default function UnifiedInbox() {
             },
           ],
           roleId: 'crm_closer',
-          model: 'gemini-3.1-flash-lite',
+          profile: 'fast',
         }),
       });
 
@@ -240,7 +240,7 @@ export default function UnifiedInbox() {
                   {aiGenerating ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>جاري صياغة الرد الذكي من Gemini...</span>
+                      <span>جاري صياغة الرد الذكي محلياً...</span>
                     </>
                   ) : (
                     <>
