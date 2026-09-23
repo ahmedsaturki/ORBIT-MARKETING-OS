@@ -410,17 +410,18 @@ fn account_upsert(
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
+    let status = if session_payload_json.is_some() { "connected" } else { "needs_refresh" };
     connection
         .execute(
             "INSERT INTO accounts(id, platform, display_name, username, status, session_payload_json, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, 'connected', ?5, ?6, ?6)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
              ON CONFLICT(id) DO UPDATE SET
                platform=excluded.platform,
                display_name=excluded.display_name,
                username=excluded.username,
                session_payload_json=COALESCE(excluded.session_payload_json, accounts.session_payload_json),
                updated_at=excluded.updated_at",
-            params![id, platform, display_name, username, session_payload_json, timestamp],
+            params![id, platform, display_name, username, status, session_payload_json, timestamp],
         )
         .map_err(|error| error.to_string())?;
 
@@ -429,7 +430,7 @@ fn account_upsert(
         platform,
         display_name,
         username,
-        status: "connected".to_string(),
+        status: status.to_string(),
         has_encrypted_session: session_payload_json.is_some(),
     })
 }
