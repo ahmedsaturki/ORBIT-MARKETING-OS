@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent, ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { CheckCircle2, KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
 
@@ -16,7 +17,7 @@ async function callNative<T>(command: string, args?: Record<string, unknown>): P
   return invoke<T>(command, args);
 }
 
-export function App(): JSX.Element {
+export function App(): ReactElement {
   const [health, setHealth] = useState<Health | null>(null);
   const [label, setLabel] = useState("demo");
   const [secret, setSecret] = useState("");
