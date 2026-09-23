@@ -1,5 +1,5 @@
 import type { Task } from "../types/index.js";
-import { calculateRetryDelay, type RetryPolicy } from "./retry.js";
+import { calculateRetryDelay, shouldRetry, type RetryPolicy } from "./retry.js";
 
 export interface QueueStats {
   readonly pending: number;
@@ -14,20 +14,31 @@ export interface TaskQueueOptions {
   readonly retryPolicy: RetryPolicy;
 }
 
+/**
+ * Deterministic in-memory queue contract used by the core domain layer.
+ * Persistence and worker transport are intentionally supplied by adapters.
+ */
 export class TaskQueue {
   private readonly tasks = new Map<string, Task>();
 
-  public constructor(private readonly options: TaskQueueOptions) {}
+  public constructor(private readonly options: TaskQueueOptions) {
+    if (options.retryPolicy.maxAttempts < 1) {
+      throw new RangeError("retryPolicy.maxAttempts must be at least 1");
+    }
+  }
 
+  /** Adds a task exactly once. */
   public enqueue(task: Task): void {
     if (this.tasks.has(task.id)) throw new Error("Task already exists: " + task.id);
     this.tasks.set(task.id, task);
   }
 
+  /** Returns a task without mutating queue state. */
   public get(id: string): Task | undefined {
     return this.tasks.get(id);
   }
 
+  /** Claims the highest-priority eligible task and atomically marks it running. */
   public claimNext(now: string): Task | undefined {
     const candidates = [...this.tasks.values()]
       .filter((task) => task.status === "pending" && task.availableAt <= now)
@@ -36,31 +47,35 @@ export class TaskQueue {
     const task = candidates[0];
     if (!task) return undefined;
 
-    const claimed: Task = {
-      ...task,
-      status: "running",
-    };
+    const claimed: Task = { ...task, status: "running" };
     this.tasks.set(claimed.id, claimed);
     return claimed;
   }
 
+  /** Marks a running task successful. */
   public succeed(id: string): Task {
     return this.transition(id, "succeeded");
   }
 
+  /** Blocks a task so workers cannot claim it again. */
   public block(id: string): Task {
     return this.transition(id, "blocked");
   }
 
+  /** Cancels a task so workers cannot claim it again. */
   public cancel(id: string): Task {
     return this.transition(id, "cancelled");
   }
 
+  /** Records a failed attempt and either schedules a retry or terminally fails the task. */
   public fail(id: string, now: string): Task {
     const task = this.requireTask(id);
-    const nextAttempt = task.attempts + 1;
+    if (task.status !== "running") {
+      throw new Error(`Only running tasks can fail: ${id}`);
+    }
 
-    if (nextAttempt >= task.maxAttempts || !this.options.retryPolicy.maxAttempts) {
+    const nextAttempt = task.attempts + 1;
+    if (!shouldRetry(nextAttempt, this.options.retryPolicy) || nextAttempt >= task.maxAttempts) {
       return this.setTask({ ...task, attempts: nextAttempt, status: "failed" });
     }
 
@@ -74,6 +89,7 @@ export class TaskQueue {
     });
   }
 
+  /** Returns a point-in-time count of all queue states. */
   public stats(): QueueStats {
     const result: QueueStats = {
       pending: 0,
@@ -84,11 +100,14 @@ export class TaskQueue {
       cancelled: 0,
     };
     for (const task of this.tasks.values()) {
-      result[task.status] += 1;
+      if (task.status in result) {
+        result[task.status as keyof QueueStats] += 1;
+      }
     }
     return result;
   }
 
+  /** Returns an immutable view of current queue tasks. */
   public snapshot(): readonly Task[] {
     return [...this.tasks.values()];
   }
