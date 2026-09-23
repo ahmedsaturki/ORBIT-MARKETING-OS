@@ -93,7 +93,7 @@ export function App(): ReactElement {
     }
   };
 
-  const checkHealth = async (): Promise<void> =>
+  const checkHealth = async (): Promise<void> => {
     try {
       setError("");
       setHealth(await callNative<Health>("app_health"));
