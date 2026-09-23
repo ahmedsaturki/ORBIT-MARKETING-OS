@@ -40,6 +40,6 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2",
-    "turbo": "^2.5.8"
+    "turbo": "^2.11.2"
   }
 }
