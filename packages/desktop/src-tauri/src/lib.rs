@@ -72,8 +72,47 @@ CREATE TABLE IF NOT EXISTS contacts (
 CREATE INDEX IF NOT EXISTS idx_tasks_ready
   ON tasks(status, available_at, priority);
 
+CREATE TABLE IF NOT EXISTS conversations (
+  id TEXT PRIMARY KEY,
+  contact_id TEXT REFERENCES contacts(id) ON DELETE SET NULL,
+  platform TEXT NOT NULL,
+  external_thread_id TEXT,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(platform, external_thread_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  direction TEXT NOT NULL,
+  body TEXT NOT NULL,
+  sent_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_events (
+  id TEXT PRIMARY KEY,
+  timestamp TEXT NOT NULL,
+  category TEXT NOT NULL,
+  action TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  entity_id TEXT,
+  metadata_json TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_contacts_updated
   ON contacts(updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_updated
+  ON conversations(updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_messages_thread
+  ON messages(conversation_id, sent_at);
+
+CREATE INDEX IF NOT EXISTS idx_audit_timestamp
+  ON audit_events(timestamp);
 "#;
 
 #[derive(Debug, Error)]
@@ -150,6 +189,38 @@ struct ContactView {
     status: String,
     notes: Option<String>,
     updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ConversationView {
+    id: String,
+    contact_id: Option<String>,
+    platform: String,
+    external_thread_id: Option<String>,
+    status: String,
+    message_count: i64,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct MessageView {
+    id: String,
+    conversation_id: String,
+    direction: String,
+    body: String,
+    sent_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct AuditView {
+    id: String,
+    timestamp: String,
+    category: String,
+    action: String,
+    outcome: String,
+    actor: String,
+    entity_id: Option<String>,
+    metadata_json: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -864,6 +935,208 @@ fn backup_restore(
     Ok(true)
 }
 
+fn write_audit(
+    connection: &Connection,
+    category: &str,
+    action: &str,
+    outcome: &str,
+    actor: &str,
+    entity_id: Option<&str>,
+) -> Result<(), rusqlite::Error> {
+    connection.execute(
+        "INSERT INTO audit_events(id, timestamp, category, action, outcome, actor, entity_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![
+            uuid_like(),
+            chrono_like_timestamp(),
+            category,
+            action,
+            outcome,
+            actor,
+            entity_id
+        ],
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
+fn conversation_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    contact_id: Option<String>,
+    platform: String,
+    external_thread_id: Option<String>,
+    status: String,
+) -> Result<ConversationView, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
+    let allowed_status = ["new", "interested", "potential_customer", "complaint", "closed"];
+    if !allowed_status.contains(&status.as_str()) {
+        return Err("unsupported conversation status".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let timestamp = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO conversations(id, contact_id, platform, external_thread_id, status, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
+             ON CONFLICT(id) DO UPDATE SET
+               contact_id=excluded.contact_id,
+               platform=excluded.platform,
+               external_thread_id=excluded.external_thread_id,
+               status=excluded.status,
+               updated_at=excluded.updated_at",
+            params![id, contact_id, platform, external_thread_id, status, timestamp],
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit(&connection, "conversation", "upsert", "success", "user", Some(&id))
+        .map_err(|error| error.to_string())?;
+
+    Ok(ConversationView {
+        id,
+        contact_id,
+        platform,
+        external_thread_id,
+        status,
+        message_count: 0,
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn message_add(
+    app: tauri::AppHandle,
+    id: String,
+    conversation_id: String,
+    direction: String,
+    body: String,
+) -> Result<MessageView, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let conversation_id = validate_label(&conversation_id).map_err(|error| error.to_string())?;
+    let body = body.trim().to_string();
+    if body.is_empty() || body.len() > 10000 {
+        return Err("invalid message body".to_string());
+    }
+    if !["inbound", "outbound"].contains(&direction.as_str()) {
+        return Err("unsupported message direction".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let sent_at = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO messages(id, conversation_id, direction, body, sent_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id, conversation_id, direction, body, sent_at],
+        )
+        .map_err(|error| error.to_string())?;
+    connection
+        .execute(
+            "UPDATE conversations SET updated_at=?1 WHERE id=?2",
+            params![sent_at, conversation_id],
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit(&connection, "message", "add", "success", "user", Some(&id))
+        .map_err(|error| error.to_string())?;
+
+    Ok(MessageView {
+        id,
+        conversation_id,
+        direction,
+        body,
+        sent_at,
+    })
+}
+
+#[tauri::command]
+fn inbox_list(app: tauri::AppHandle) -> Result<Vec<ConversationView>, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT c.id, c.contact_id, c.platform, c.external_thread_id, c.status, COUNT(m.id), c.updated_at
+             FROM conversations c
+             LEFT JOIN messages m ON m.conversation_id=c.id
+             GROUP BY c.id
+             ORDER BY c.updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+
+    let rows = statement
+        .query_map([], |row| {
+            Ok(ConversationView {
+                id: row.get(0)?,
+                contact_id: row.get(1)?,
+                platform: row.get(2)?,
+                external_thread_id: row.get(3)?,
+                status: row.get(4)?,
+                message_count: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn message_list(
+    app: tauri::AppHandle,
+    conversation_id: String,
+) -> Result<Vec<MessageView>, String> {
+    let conversation_id = validate_label(&conversation_id).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT id, conversation_id, direction, body, sent_at
+             FROM messages WHERE conversation_id=?1 ORDER BY sent_at ASC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![conversation_id], |row| {
+            Ok(MessageView {
+                id: row.get(0)?,
+                conversation_id: row.get(1)?,
+                direction: row.get(2)?,
+                body: row.get(3)?,
+                sent_at: row.get(4)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView>, String> {
+    let limit = limit.unwrap_or(100).clamp(1, 500);
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT id, timestamp, category, action, outcome, actor, entity_id, metadata_json
+             FROM audit_events ORDER BY timestamp DESC LIMIT ?1",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![limit], |row| {
+            Ok(AuditView {
+                id: row.get(0)?,
+                timestamp: row.get(1)?,
+                category: row.get(2)?,
+                action: row.get(3)?,
+                outcome: row.get(4)?,
+                actor: row.get(5)?,
+                entity_id: row.get(6)?,
+                metadata_json: row.get(7)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+}
+
 fn chrono_like_timestamp() -> String {
     match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         Ok(duration) => duration.as_secs().to_string(),
@@ -936,7 +1209,12 @@ pub fn run() {
             contact_list,
             backup_create,
             backup_list,
-            backup_restore
+            backup_restore,
+            conversation_upsert,
+            message_add,
+            inbox_list,
+            message_list,
+            audit_list
         ])
         .run(tauri::generate_context!());
 
