@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "feat/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Core tests
+        run: pnpm --filter @orbit/core test
+
+      - name: Core typecheck
+        run: pnpm --filter @orbit/core typecheck
+
+      - name: Core build
+        run: pnpm --filter @orbit/core build
+
+      - name: Root typecheck
+        run: pnpm typecheck
