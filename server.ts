@@ -12,6 +12,8 @@ const app = express();
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
 const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").replace(/\/$/, "");
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.1:8b";
+const OLLAMA_FAST_MODEL = process.env.OLLAMA_FAST_MODEL ?? OLLAMA_MODEL;
+const OLLAMA_REASONING_MODEL = process.env.OLLAMA_REASONING_MODEL ?? OLLAMA_MODEL;
 const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL ?? "";
 
 interface ChatMessageInput {
@@ -25,25 +27,12 @@ interface OllamaTextMessage {
   readonly images?: readonly string[];
 }
 
-interface OllamaResponse {
-  readonly message?: {
-    readonly content?: string;
-  };
-  readonly response?: string;
-  readonly model?: string;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
 function getString(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
-}
-
-function getStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((entry): entry is string => typeof entry === "string");
 }
 
 function sanitizeModelName(value: unknown, fallback: string): string {
@@ -131,7 +120,13 @@ app.post("/api/chat", async (req, res) => {
     const profile = getString(body.profile, "balanced");
     const requestedModel = sanitizeModelName(body.model, OLLAMA_MODEL);
     const selectedModel =
-      profile === "default" || profile === "balanced" ? OLLAMA_MODEL : requestedModel;
+      profile === "reasoning"
+        ? OLLAMA_REASONING_MODEL
+        : profile === "fast"
+          ? OLLAMA_FAST_MODEL
+          : profile === "balanced" || profile === "default"
+            ? OLLAMA_MODEL
+            : requestedModel;
 
     const instruction = ROLE_SYSTEM_INSTRUCTIONS[roleId] ?? ROLE_SYSTEM_INSTRUCTIONS.marketing_strategist;
     const systemContent = customInstruction
@@ -265,6 +260,11 @@ app.get("/api/health", async (_req, res) => {
       service: "Orbit Marketing OS Local Runtime",
       provider: "ollama-local",
       model: OLLAMA_MODEL,
+      profiles: {
+        balanced: OLLAMA_MODEL,
+        fast: OLLAMA_FAST_MODEL,
+        reasoning: OLLAMA_REASONING_MODEL,
+      },
       visionConfigured: Boolean(OLLAMA_VISION_MODEL),
     });
   } catch {
@@ -273,6 +273,11 @@ app.get("/api/health", async (_req, res) => {
       service: "Orbit Marketing OS Local Runtime",
       provider: "ollama-local",
       model: OLLAMA_MODEL,
+      profiles: {
+        balanced: OLLAMA_MODEL,
+        fast: OLLAMA_FAST_MODEL,
+        reasoning: OLLAMA_REASONING_MODEL,
+      },
       visionConfigured: Boolean(OLLAMA_VISION_MODEL),
     });
   }
