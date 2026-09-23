@@ -33,7 +33,7 @@ export default function CampaignHub() {
     const updated = campaigns.map(c => {
       if (c.id === id) {
         const nextStatus = c.status === 'running' ? 'paused' : 'running';
-        return { ...c, status: nextStatus as any };
+        return { ...c, status: nextStatus };
       }
       return c;
     });
@@ -73,7 +73,7 @@ export default function CampaignHub() {
           <div>
             <h2 className="text-xl font-bold text-white">إدارة وجدولة الحملات متعددة المنصات</h2>
             <p className="text-xs text-slate-400">
-              تنظيم طوابير النشر والمراسلة عبر المجموعات والصفحات مع محاكاة السلوك البشري الفعلي.
+              تنظيم المحتوى والمهام المجدولة مع حدود تشغيل واضحة وقاطع دائرة للتوقف عند الأخطاء أو التحديات.
             </p>
           </div>
         </div>
