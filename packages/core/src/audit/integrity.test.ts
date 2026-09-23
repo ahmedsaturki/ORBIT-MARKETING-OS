@@ -24,7 +24,7 @@ describe("AuditIntegrityChain", () => {
     const chain = new AuditIntegrityChain();
     await chain.append(event("1"));
     await chain.append(event("2"));
-    const records = chain.snapshot() as Array<{ event: AuditEvent; previousHash: string; hash: string }>;
+    const records = (chain as unknown as { records: Array<{ event: AuditEvent; previousHash: string; hash: string }> }).records;
     records[0].event.action = "tampered";
     expect(await chain.verify()).toBe(false);
   });
