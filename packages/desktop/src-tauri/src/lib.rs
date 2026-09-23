@@ -199,17 +199,44 @@ fn vault_delete(app: tauri::AppHandle, label: String) -> Result<bool, String> {
 }
 
 fn chrono_like_timestamp() -> String {
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    timestamp.to_string()
+    match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        Ok(duration) => duration.as_secs().to_string(),
+        Err(_) => "0".to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encrypts_and_decrypts_round_trip() {
+        let payload = seal("correct-password", "local-secret").expect("test encryption should succeed");
+        let recovered = open_payload("correct-password", &payload).expect("test decryption should succeed");
+        assert_eq!(recovered, "local-secret");
+    }
+
+    #[test]
+    fn rejects_wrong_password() {
+        let payload = seal("correct-password", "local-secret").expect("test encryption should succeed");
+        assert!(open_payload("wrong-password", &payload).is_err());
+    }
+
+    #[test]
+    fn validates_labels() {
+        assert!(validate_label("vault-entry").is_ok());
+        assert!(validate_label("   ").is_err());
+        assert!(validate_label(&"x".repeat(201)).is_err());
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let result = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![app_health, vault_put, vault_get, vault_delete])
-        .run(tauri::generate_context!())
-        .expect("error while running ORBIT Marketing OS");
+        .run(tauri::generate_context!());
+
+    if let Err(error) = result {
+        eprintln!("failed to run ORBIT Marketing OS: {error}");
+    }
 }
