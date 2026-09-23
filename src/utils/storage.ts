@@ -12,8 +12,7 @@ export function safeGetStorage<T>(key: string, defaultValue: T): T {
     const parsed = JSON.parse(item);
     return parsed !== null && parsed !== undefined ? parsed : defaultValue;
   } catch (err) {
-    console.warn(`Failed to parse localStorage key "${key}":`, err);
-    return defaultValue;
+        return defaultValue;
   }
 }
 
@@ -25,8 +24,7 @@ export function safeSetStorage<T>(key: string, value: T): boolean {
     window.localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch (err) {
-    console.warn(`Failed to set localStorage key "${key}":`, err);
-    return false;
+        return false;
   }
 }
 
