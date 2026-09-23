@@ -1,3 +1,4 @@
+export * from "./accounts/index.js";
 export * from "./audit/index.js";
 export * from "./campaigns/validation.js";
 export * from "./connectors/index.js";
