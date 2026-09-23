@@ -336,6 +336,9 @@ fn vault_put(
         )
         .map_err(|error| error.to_string())?;
 
+    write_audit(&connection, "security", "vault.write", "success", "user", Some(&label))
+        .map_err(|error| error.to_string())?;
+
     Ok(VaultWriteResult {
         label,
         payload_version: payload.version,
@@ -425,6 +428,9 @@ fn account_upsert(
         )
         .map_err(|error| error.to_string())?;
 
+    write_audit(&connection, "account", "upsert", "success", "user", Some(&id))
+        .map_err(|error| error.to_string())?;
+
     Ok(AccountView {
         id,
         platform,
@@ -495,6 +501,10 @@ fn account_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
     let changed = connection
         .execute("DELETE FROM accounts WHERE id = ?1", params![id])
         .map_err(|error| error.to_string())?;
+    if changed > 0 {
+        write_audit(&connection, "account", "delete", "success", "user", Some(&id))
+            .map_err(|error| error.to_string())?;
+    }
     Ok(changed > 0)
 }
 
@@ -534,6 +544,9 @@ fn campaign_create(
     }
 
     transaction.commit().map_err(|error| error.to_string())?;
+
+    write_audit(&connection, "campaign", "create", "success", "user", Some(&campaign_id))
+        .map_err(|error| error.to_string())?;
 
     Ok(CampaignView {
         id: campaign_id,
@@ -603,6 +616,9 @@ fn task_enqueue(
         )
         .map_err(|error| error.to_string())?;
 
+    write_audit(&connection, "task", "enqueue", "success", "user", Some(&id))
+        .map_err(|error| error.to_string())?;
+
     Ok(TaskView {
         id,
         campaign_id,
@@ -663,6 +679,8 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
         .execute("UPDATE tasks SET status='running' WHERE id=?1 AND status='pending'", params![task.id])
         .map_err(|error| error.to_string())?;
     transaction.commit().map_err(|error| error.to_string())?;
+    write_audit(&connection, "task", "claim", "success", "system", Some(&task.id))
+        .map_err(|error| error.to_string())?;
     Ok(Some(task))
 }
 
@@ -678,9 +696,14 @@ fn task_set_status(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
     let changed = connection
-        .execute("UPDATE tasks SET status=?1 WHERE id=?2", params![status, validate_label(&id).map_err(|error| error.to_string())?])
+        .execute("UPDATE tasks SET status=?1 WHERE id=?2", params![status, &entity_id])
         .map_err(|error| error.to_string())?;
+    if changed > 0 {
+        write_audit(&connection, "task", "status", "success", "user", Some(&entity_id))
+            .map_err(|error| error.to_string())?;
+    }
     Ok(changed > 0)
 }
 
@@ -751,6 +774,9 @@ fn contact_upsert(
                updated_at=excluded.updated_at",
             params![id, display_name, phone, email, source_platform, status, notes, timestamp],
         )
+        .map_err(|error| error.to_string())?;
+
+    write_audit(&connection, "contact", "upsert", "success", "user", Some(&id))
         .map_err(|error| error.to_string())?;
 
     Ok(ContactView {
@@ -853,6 +879,8 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
     let filename = format!("orbit-{}.orbitbackup", chrono_like_timestamp());
     let destination = backups.join(&filename);
     fs::write(&destination, payload_json).map_err(|error| error.to_string())?;
+    write_audit(&open_db(&app).map_err(|error| error.to_string())?, "backup", "create", "success", "user", Some(&filename))
+        .map_err(|error| error.to_string())?;
 
     Ok(filename)
 }
