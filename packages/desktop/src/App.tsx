@@ -55,6 +55,16 @@ interface TaskView {
   readonly created_at: string;
 }
 
+interface AuditView {
+  readonly id: string;
+  readonly timestamp: string;
+  readonly category: string;
+  readonly action: string;
+  readonly outcome: string;
+  readonly actor: string;
+  readonly entity_id?: string;
+}
+
 async function callNative<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   return invoke<T>(command, args);
 }
@@ -87,6 +97,7 @@ export function App(): ReactElement {
   const [contactEmail, setContactEmail] = useState("");
   const [contactStatus, setContactStatus] = useState("new");
   const [contactNotes, setContactNotes] = useState("");
+  const [auditEntries, setAuditEntries] = useState<readonly AuditView[]>([]);
 
   const loadCampaigns = async (): Promise<void> => {
     try {
@@ -101,6 +112,14 @@ export function App(): ReactElement {
       setTasks(await callNative<TaskView[]>("task_list", {}));
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تحميل المهام");
+    }
+  };
+
+  const loadAudit = async (): Promise<void> => {
+    try {
+      setAuditEntries(await callNative<AuditView[]>("audit_list", { limit: 25 }));
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل سجل التدقيق");
     }
   };
 
@@ -507,6 +526,27 @@ export function App(): ReactElement {
               </div>
             ))
           )}
+        </div>
+      </section>
+
+
+      <section className="card">
+        <h2>سجل التدقيق</h2>
+        <p>أحداث التشغيل المحلية تُحفظ دون أسرار أو قيم الجلسات الحساسة.</p>
+        <button className="button secondary" type="button" onClick={() => void loadAudit()}>تحديث السجل</button>
+        <div className="account-list">
+          {auditEntries.slice(0, 25).map((entry) => (
+            <div className="account-row" key={entry.id}>
+              <div>
+                <strong>{entry.action}</strong>
+                <div className="account-meta">
+                  {entry.category} • {entry.outcome} • {entry.actor} • {entry.timestamp}
+                  {entry.entity_id ? " • " + entry.entity_id : ""}
+                </div>
+              </div>
+            </div>
+          ))}
+          {!auditEntries.length ? <div className="result">لا توجد أحداث تدقيق بعد.</div> : null}
         </div>
       </section>
 
