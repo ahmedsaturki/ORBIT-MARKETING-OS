@@ -40,8 +40,51 @@ export function App(): ReactElement {
   const [accountName, setAccountName] = useState("");
   const [accountUsername, setAccountUsername] = useState("");
   const [accountSession, setAccountSession] = useState("");
+  const [backups, setBackups] = useState<readonly string[]>([]);
+  const [selectedBackup, setSelectedBackup] = useState("");
+  const [backupStatus, setBackupStatus] = useState("");
 
-  const loadAccounts = async (): Promise<void> => {
+  const loadBackups = async (): Promise<void> => {
+    try {
+      const items = await callNative<string[]>("backup_list");
+      setBackups(items);
+      setSelectedBackup((current) => current || items[0] || "");
+    } catch (caught: unknown) {
+      setBackupStatus(caught instanceof Error ? caught.message : "فشل تحميل النسخ المحلية");
+    }
+  };
+
+  const createBackup = async (): Promise<void> => {
+    if (!password) {
+      setBackupStatus("أدخل كلمة مرور الخزنة أولاً.");
+      return;
+    }
+    try {
+      setBackupStatus("جاري إنشاء نسخة مشفرة...");
+      const filename = await callNative<string>("backup_create", { password });
+      setBackupStatus("تم إنشاء: " + filename);
+      await loadBackups();
+    } catch (caught: unknown) {
+      setBackupStatus(caught instanceof Error ? caught.message : "فشل إنشاء النسخة المشفرة");
+    }
+  };
+
+  const restoreBackup = async (): Promise<void> => {
+    if (!selectedBackup || !password) {
+      setBackupStatus("اختر نسخة وأدخل كلمة المرور.");
+      return;
+    }
+    try {
+      setBackupStatus("جاري فحص النسخة والاسترجاع...");
+      await callNative<boolean>("backup_restore", { filename: selectedBackup, password });
+      setBackupStatus("تم استرجاع النسخة بعد اجتياز integrity check.");
+      await loadAccounts();
+    } catch (caught: unknown) {
+      setBackupStatus(caught instanceof Error ? caught.message : "فشل استرجاع النسخة");
+    }
+  };
+
+  const loadAccounts = async (): Promise<void> {
     try {
       setError("");
       setAccounts(await callNative<AccountView[]>("account_list"));
@@ -172,6 +215,27 @@ export function App(): ReactElement {
         </article>
       </section>
 
+
+
+      <section className="card">
+        <h2>النسخ الاحتياطي المشفّر</h2>
+        <p>نسخ SQLite تُشفّر محلياً قبل حفظها في مجلد backups داخل بيانات التطبيق.</p>
+        <div className="actions">
+          <button className="button primary" type="button" onClick={() => void createBackup()}>إنشاء نسخة</button>
+          <button className="button secondary" type="button" onClick={() => void loadBackups()}>تحديث القائمة</button>
+        </div>
+        <label>
+          النسخة
+          <select value={selectedBackup} onChange={(event) => setSelectedBackup(event.target.value)}>
+            <option value="">اختر نسخة</option>
+            {backups.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+        <button className="button secondary" type="button" onClick={() => void restoreBackup()} disabled={!selectedBackup}>
+          استرجاع بعد الفحص
+        </button>
+        {backupStatus ? <div className="result">{backupStatus}</div> : null}
+      </section>
 
       <section className="card">
         <h2>الحسابات المحلية</h2>
