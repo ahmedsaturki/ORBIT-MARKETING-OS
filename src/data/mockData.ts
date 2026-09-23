@@ -6,7 +6,7 @@ export const CHATBOT_ROLES: RoleConfig[] = [
     name: 'خبير استراتيجيات النمو والتسويق',
     badge: 'Senior Strategist',
     description: 'تحليل المنافسين، تخطيط الحملات متكاملة القنوات، وابتكار عروض بيع فريدة بالسوق العربي.',
-    recommendedModel: 'gemini-3.1-pro-preview',
+    recommendedModel: 'reasoning',
     systemPrompt: 'أنت خبير تسويق واستراتيجيات رقمية مخضرم متخصص في نمو الشركات والمشاريع في الشرق الأوسط ومصر والخليج العربي.',
     starterPrompts: [
       'ضع لي خطة إطلاق حملة بيع كورس/منتج رقمي عبر فيسبوك وواتساب بدون إعلانات ممولة باهظة',
@@ -20,7 +20,7 @@ export const CHATBOT_ROLES: RoleConfig[] = [
     name: 'كاتب نصوص إعلانية محترف (Copywriter)',
     badge: 'Conversion Copy',
     description: 'صياغة عناوين إعلانية خاطفة، رسائل واتساب تسويقية، وسيناريوهات ريلز وتيك توك سريعة التحويل.',
-    recommendedModel: 'gemini-3.5-flash',
+    recommendedModel: 'balanced',
     systemPrompt: 'أنت كاتب إعلانات ونصوص تسويقية استثنائي تعتمد صيغ التحويل المباشر مثل AIDA و PAS بمختلف اللهجات العربية.',
     starterPrompts: [
       'اكتب لي 3 صيغ لرسالة واتساب ترويجية لعرض نهاية الأسبوع مع خطاف قوي وزر إجراء',
@@ -33,9 +33,9 @@ export const CHATBOT_ROLES: RoleConfig[] = [
     id: 'antiban_specialist',
     name: 'مستشار حماية الحسابات والتخفي',
     badge: 'Stealth & Safety',
-    description: 'إرشادات منع الحظر، ضبط التأخيرات العشوائية، إحماء الحسابات وقواعد محاكاة السلوك البشري.',
-    recommendedModel: 'gemini-3.1-pro-preview',
-    systemPrompt: 'أنت مهندس أمان وأتمتة خبير في خوارزميات كشف البوتات لدى Meta وواتساب وتليجرام وبروتوكولات التخفي الذكية.',
+    description: 'إرشادات التشغيل الآمن، الحدود اليومية، وإيقاف التنفيذ عند التحديات.',
+    recommendedModel: 'reasoning',
+    systemPrompt: 'أنت مستشار سلامة وأتمتة ملتزم بحدود المنصات؛ ركّز على التوقف عند التحديات، الموافقات، والمعدلات المحافظة، ولا تقدّم طرقاً لتجاوز أنظمة مكافحة الإساءة.',
     starterPrompts: [
       'ما هي خطوات جدول الإحماء (Warm-up Schedule) لحساب فيسبوك جديد لنشر عروض في المجموعات؟',
       'كيف أضبط التأخيرات الزمنية العشوائية بين الرسائل على واتساب ويب لتفادي قيود الـ Spam؟',
@@ -48,7 +48,7 @@ export const CHATBOT_ROLES: RoleConfig[] = [
     name: 'مسؤول المبيعات وإغلاق الصفقات (Closer)',
     badge: 'Deal Closer',
     description: 'الردود الذكية الفورية على اعتراضات العملاء، التسعير، ومتابعة المحادثات المفتوحة.',
-    recommendedModel: 'gemini-3.1-flash-lite',
+    recommendedModel: 'fast',
     systemPrompt: 'أنت مسؤول مبيعات محترف وسريع البديهة في قنوات الدردشة الفورية، تجيد معالجة الاعتراضات وتحفيز الشراء الفوري.',
     starterPrompts: [
       'العميل يقول: "سعرك غالي مقارنة بالمنافسين"، كيف أرد عليه باحترافية وأقنعه؟',
@@ -324,7 +324,7 @@ export const SAMPLE_MARKETING_IMAGES = [
         <!-- Feature 2 -->
         <rect x="120" y="370" width="560" height="80" rx="16" fill="#042f2e" stroke="#115e59" stroke-width="2"/>
         <text x="640" y="420" font-size="28" text-anchor="middle">🛡️</text>
-        <text x="420" y="405" font-family="sans-serif" font-weight="bold" font-size="20" fill="#f0fdf4" text-anchor="middle">محاكاة سلوك بشري وتأخيرات ذكية ضد الحظر</text>
+        <text x="420" y="405" font-family="sans-serif" font-weight="bold" font-size="20" fill="#f0fdf4" text-anchor="middle">محاكاة سلوك بشري وتأخيرات ذكية مع الالتزام بحدود المنصة</text>
         <text x="420" y="433" font-family="sans-serif" font-size="15" fill="#a7f3d0" text-anchor="middle">تشفير محلي تام لجلساتك بدون رفعها لخوادم خارجية</text>
         
         <!-- Feature 3 -->
