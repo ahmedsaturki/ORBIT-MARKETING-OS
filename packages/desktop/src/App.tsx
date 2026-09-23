@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { CheckCircle2, KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
