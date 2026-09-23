@@ -81,17 +81,12 @@ export class TaskQueue {
 
     const retryDelay = calculateRetryDelay(nextAttempt, this.options.retryPolicy);
     const availableAt = new Date(new Date(now).getTime() + retryDelay).toISOString();
-    return this.setTask({
-      ...task,
-      attempts: nextAttempt,
-      status: "pending",
-      availableAt,
-    });
+    return this.setTask({ ...task, attempts: nextAttempt, status: "pending", availableAt });
   }
 
   /** Returns a point-in-time count of all queue states. */
   public stats(): QueueStats {
-    const result: QueueStats = {
+    const result: Record<keyof QueueStats, number> = {
       pending: 0,
       running: 0,
       succeeded: 0,
@@ -101,19 +96,23 @@ export class TaskQueue {
     };
     for (const task of this.tasks.values()) {
       if (task.status in result) {
-        result[task.status as keyof QueueStats] += 1;
+        const status = task.status as keyof QueueStats;
+        result[status] += 1;
       }
     }
     return result;
   }
 
-  /** Returns an immutable view of current queue tasks. */
+  /** Returns a point-in-time copy of current queue tasks. */
   public snapshot(): readonly Task[] {
     return [...this.tasks.values()];
   }
 
   private transition(id: string, status: Task["status"]): Task {
     const task = this.requireTask(id);
+    if (task.status !== "running") {
+      throw new Error(`Only running tasks can transition: ${id}`);
+    }
     return this.setTask({ ...task, status });
   }
 
