@@ -211,14 +211,23 @@ mod tests {
 
     #[test]
     fn encrypts_and_decrypts_round_trip() {
-        let payload = seal("correct-password", "local-secret").expect("test encryption should succeed");
-        let recovered = open_payload("correct-password", &payload).expect("test decryption should succeed");
+        let payload = match seal("correct-password", "local-secret") {
+            Ok(value) => value,
+            Err(error) => panic!("test encryption failed: {error}"),
+        };
+        let recovered = match open_payload("correct-password", &payload) {
+            Ok(value) => value,
+            Err(error) => panic!("test decryption failed: {error}"),
+        };
         assert_eq!(recovered, "local-secret");
     }
 
     #[test]
     fn rejects_wrong_password() {
-        let payload = seal("correct-password", "local-secret").expect("test encryption should succeed");
+        let payload = match seal("correct-password", "local-secret") {
+            Ok(value) => value,
+            Err(error) => panic!("test encryption failed: {error}"),
+        };
         assert!(open_payload("wrong-password", &payload).is_err());
     }
 
