@@ -1,16 +1,16 @@
 # ORBIT MARKETING OS
 
-Local-first marketing operations platform for content, campaigns, CRM, inbox workflows, and user-authorized platform integrations.
+Local-first social operations platform for content, campaigns, CRM, inbox workflows, analytics, and user-authorized platform integrations.
 
 ## Repository status
 
-This repository is under active incremental migration from an initial React/Vite/Express prototype to a monorepo architecture.
+This repository is under active incremental migration from an initial React/Vite/Express prototype to a production monorepo architecture.
 
-The current implementation branch is:
+The production rebuild branch is:
 
-`feat/foundation-local-first`
+`rebuild/orbit-production`
 
-The branch currently contains the shared `@orbit/core` foundation, security boundaries, local database schema, audit logging, retry policy, execution guardrails, and automated tests.
+The rebuild is acceptance-driven: implementation is not considered complete until it has automated tests, integration evidence, security checks, performance evidence, documentation, and a releasable artifact where applicable.
 
 ## Product boundary
 
@@ -23,7 +23,8 @@ Platform integrations must remain user-authorized and platform-compliant. The pr
 Requirements:
 
 - Node.js 22+
-- pnpm 8.x
+- pnpm 10.17.1
+- Rust stable for the desktop backend
 
 Bootstrap:
 
@@ -34,19 +35,24 @@ pnpm install
 Core checks:
 
 ```bash
-pnpm --filter @orbit/core test
-pnpm --filter @orbit/core typecheck
-pnpm --filter @orbit/core build
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm format:check
 ```
 
-Workspace checks:
+## Quality gates
 
-```bash
-pnpm test:all
-pnpm typecheck:all
-pnpm build:all
-```
+A feature is not release-complete merely because its source code exists. Release evidence must cover:
 
-## Target structure
+- type safety
+- unit/integration/E2E tests
+- security and data-isolation invariants
+- error and recovery paths
+- performance budgets
+- accessibility and RTL behavior
+- packaging and installation
+- release and rollback behavior
+- documentation
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md](docs/ACCEPTANCE_MATRIX_V2.md), and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
