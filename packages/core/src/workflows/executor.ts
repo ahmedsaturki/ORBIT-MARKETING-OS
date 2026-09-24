@@ -131,7 +131,25 @@ export async function executeClaimedTask(
     throw new Error("Only claimed running tasks may be executed.");
   }
 
-  const context = await dependencies.loadContext(task);
+  let context: ExecutionRunContext;
+  try {
+    context = await dependencies.loadContext(task);
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Execution context could not be loaded.";
+    const next = dependencies.queue.fail(task.id, now);
+    audit(dependencies.audit, task, "failure", "execution.context_load_failed", {
+      message,
+      retryScheduled: next.status === "pending",
+    });
+    return {
+      status: "failed",
+      taskId: task.id,
+      message,
+      retryScheduled: next.status === "pending",
+    };
+  }
+
   const decision = evaluateExecutionPolicy({ ...context, task });
 
   if (!decision.allowed) {
