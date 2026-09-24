@@ -3529,6 +3529,7 @@ mod tests {
         assert_eq!(busy_timeout, 5000);
     }
 
+    #[test]
     fn sqlite_integrity_triggers_reject_cross_workspace_relationships() {
         let connection = Connection::open_in_memory()
             .expect("in-memory SQLite should be available");
@@ -3638,6 +3639,7 @@ mod tests {
             .expect("workspace column should exist"));
     }
 
+    #[test]
     fn workspace_role_gate_rejects_insufficient_role() {
         let connection = Connection::open_in_memory()
             .expect("in-memory SQLite should be available");
