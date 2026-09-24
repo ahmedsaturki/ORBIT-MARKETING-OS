@@ -21,7 +21,8 @@
     "test:runtime": "node scripts/runtime-smoke.mjs",
     "test:e2e": "playwright test",
     "verify:release": "node scripts/release-sanity.mjs",
-    "test:performance": "pnpm exec tsx scripts/performance-smoke.mjs"
+    "test:performance": "pnpm exec tsx scripts/performance-smoke.mjs",
+    "preflight:runner": "bash scripts/self-hosted-preflight.sh"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
