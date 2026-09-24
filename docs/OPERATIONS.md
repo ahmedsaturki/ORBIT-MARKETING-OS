@@ -13,7 +13,7 @@ The desktop database is stored in the OS application-data directory. Sensitive v
 
 Run `pnpm runtime:start`. By default it binds to `127.0.0.1`.
 
-Ollama is optional. A degraded Ollama state must not expose credentials or turn the runtime into a remote proxy.
+Ollama is optional. The runtime accepts Ollama only through loopback HTTP, reports a degraded state when it is unavailable, and rejects remote Ollama targets.
 
 ## Mobile control
 
@@ -21,7 +21,7 @@ For same-device/local development, use the localhost runtime address supported b
 
 For LAN control, explicitly set a non-loopback `RUNTIME_HOST` and configure `RUNTIME_AUTH_TOKEN`. Mobile stores this token in OS secure storage, not ordinary application storage.
 
-Do not expose the runtime to the public internet.
+For browser clients, an explicit `RUNTIME_ALLOWED_ORIGINS` entry is required; unconfigured browser origins are rejected even when the runtime is bound to loopback. Do not expose the runtime to the public internet.
 
 ## Recovery
 
