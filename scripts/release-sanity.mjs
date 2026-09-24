@@ -65,14 +65,27 @@ if (!rustToolchain.includes('channel = "1.98.1"')) {
 const ci = await text(".github/workflows/ci.yml");
 if (!ci.includes("pnpm install --frozen-lockfile")) throw new Error("CI frozen install gate missing");
 if (!ci.includes("pnpm audit --audit-level=high")) throw new Error("CI dependency audit gate missing");
+if (!ci.includes("pnpm test:performance")) throw new Error("CI performance smoke gate missing");
 if (!ci.includes("pnpm test:e2e")) throw new Error("CI browser E2E gate missing");
+
+const vercelWorkflow = await text(".github/workflows/vercel-web.yml");
+for (const fragment of [
+  "vercel@59.23.1 pull --yes",
+  "vercel@59.23.1 deploy --dry --format=json",
+  "vercel@59.23.1 build --prod",
+  "vercel@59.23.1 deploy --prebuilt --prod",
+]) {
+  if (!vercelWorkflow.includes(fragment)) throw new Error("Vercel deployment gate missing: " + fragment);
+}
 
 const selfHosted = await text(".github/workflows/self-hosted-verify.yml");
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
+  "github.ref_name == 'rebuild/orbit-production' && github.actor == 'ahmedsaturki'",
   "pnpm install --frozen-lockfile",
   "pnpm --filter @orbit/core test:coverage",
   "pnpm test:runtime",
+  "pnpm test:performance",
   "pnpm test:e2e",
   "cargo fmt --all -- --check",
   "cargo test --workspace --all-targets",
@@ -84,6 +97,7 @@ for (const fragment of [
 const bootstrap = await text(".github/workflows/bootstrap-lockfile.yml");
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
+  "github.ref_name == 'rebuild/orbit-production' && github.actor == 'ahmedsaturki'",
   "pnpm install --lockfile-only --ignore-scripts",
   "cargo generate-lockfile",
   "git add pnpm-lock.yaml packages/desktop/src-tauri/Cargo.lock",
