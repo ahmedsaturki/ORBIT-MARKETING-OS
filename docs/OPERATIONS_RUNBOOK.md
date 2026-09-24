@@ -61,7 +61,7 @@ Production release requires current evidence for install, tests, build, Rust qua
 
 ## Vercel
 
-The intended web project root is packages/web and the framework is Next.js.
+The intended Vercel web project root is the repository root and the framework is Next.js.
 The repository includes both root and package-local Vercel configuration.
 Project-level Root Directory and Framework settings must be verified before a production web claim.
 
