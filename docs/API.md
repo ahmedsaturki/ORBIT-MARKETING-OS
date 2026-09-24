@@ -66,7 +66,7 @@ Optional session material is encrypted locally before persistence.
 
 - `contact_upsert`
 - `contact_list`
-- `conversation_upsert`
+- `conversation_upsert` (requires `account_id`; account platform must match conversation platform)
 - `message_add`
 - `inbox_list`
 - `message_list`
