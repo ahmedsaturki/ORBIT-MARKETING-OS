@@ -1699,7 +1699,8 @@ mod tests {
         let first = collected.first().expect("first row should exist");
         let second = collected.get(1).expect("second row should exist");
 
-        assert_eq!(first.8, "GENESIS");
+        assert_eq!(first.7, None);
+        assert_eq!(first.8, None);
         assert_eq!(first.9, "GENESIS");
         assert_eq!(
             first.10,
