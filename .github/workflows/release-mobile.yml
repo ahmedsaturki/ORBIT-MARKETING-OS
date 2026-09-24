@@ -11,7 +11,7 @@ permissions:
 jobs:
   quality:
     name: Mobile release quality gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
   android-debug:
     name: Android debug validation APK
     needs: quality
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
