@@ -124,3 +124,71 @@ const authChild = spawn("pnpm", ["runtime:start"], {
 });
 let authLogs = "";
 authChild.stdout.on("data", (chunk) => { authLogs += String(chunk); });
+
+authChild.stderr.on("data", (chunk) => { authLogs += String(chunk); });
+
+try {
+  let authReady = false;
+  const authDeadline = Date.now() + 15_000;
+  while (Date.now() < authDeadline) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${authPort}/api/health`);
+      if (response.status === 503) {
+        authReady = true;
+        break;
+      }
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  if (!authReady) throw new Error("LAN runtime did not enforce missing-token block");
+
+  const unauthorized = await fetch(`http://127.0.0.1:${authPort}/api/health`);
+  if (unauthorized.status !== 503) throw new Error("expected 503 without LAN token");
+
+  const wrong = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: { Authorization: "Bearer wrong-token" },
+  });
+  if (wrong.status !== 401) throw new Error("expected 401 with wrong LAN token");
+
+  const oversized = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: { Authorization: "Bearer " + "x".repeat(1025) },
+  });
+  if (oversized.status !== 401) throw new Error("expected 401 for oversized bearer credential");
+
+  const blockedOrigin = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Origin: "https://blocked.example",
+    },
+  });
+  if (blockedOrigin.status !== 403) throw new Error("expected 403 for disallowed browser origin");
+
+  const allowedOrigin = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Origin: "https://allowed.example",
+    },
+  });
+  if (allowedOrigin.status !== 200) throw new Error("expected 200 for allowed browser origin");
+
+  const rateOne = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
+  if (![200, 429].includes(rateOne.status)) throw new Error("unexpected first rate-limit response");
+
+  const rateTwo = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
+  if (rateTwo.status !== 429) throw new Error("expected 429 after exceeding runtime rate limit");
+
+  console.log("runtime LAN perimeter smoke passed");
+} finally {
+  authChild.kill("SIGTERM");
+  await waitForChildExit(authChild);
+  if (authChild.exitCode !== null && authChild.exitCode !== 0) {
+    console.error(authLogs);
+    throw new Error(`LAN runtime exited with code ${authChild.exitCode}`);
+  }
+}
+
+await new Promise((resolve) => ollamaServer.close(() => resolve()));
