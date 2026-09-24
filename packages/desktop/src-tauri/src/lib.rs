@@ -3057,6 +3057,10 @@ pub fn run() {
     let result = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             app_health,
+            workspace_list,
+            workspace_current,
+            workspace_create,
+            workspace_select,
             telegram_execute_task,
             vault_put,
             vault_get,
