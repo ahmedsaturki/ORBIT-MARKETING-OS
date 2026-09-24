@@ -35,11 +35,11 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | REL-01 | Reproducible workspace install | clean CI checkout | PARTIAL | `package-lock.json` + `packages/core/package-lock.json` committed; CI triggered on push (run 36028445859) but jobs blocked by GitHub billing/spending limit — needs first green run after billing fix |
 | REL-02 | Signed desktop artifact | release pipeline evidence | UNVERIFIED | Signing keys/pipeline not configured |
 | REL-03 | Checksums match distributed artifacts | release verification | PARTIAL | `npm run checksums` writes `dist/SHA256SUMS.txt`; CI uploads artifact; distribution-side match pending |
-| OPS-01 | Crash recovery | forced termination test | UNVERIFIED | Persistence layer pending |
+| OPS-01 | Crash recovery | forced termination test | PASS | `test/crash-recovery.test.ts` (child process runs production queue+SQLite code, SIGKILL'd mid-open-transaction; running task → retrying with `interrupted_before_restart`, committed rows survive, uncommitted transaction rolls back, `integrity_check` ok, recovery idempotent on reopen) |
 | OPS-02 | 24h stability | soak-test evidence | UNVERIFIED | Soak run pending |
 | PERF-01 | Startup target | measured benchmark | UNVERIFIED | Benchmark pending |
 | PERF-02 | Memory target | measured benchmark | UNVERIFIED | Benchmark pending |
-| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); 58 tests, clean run ~94.19% lines / 83.87% branches |
+| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); 59 tests, clean run ~94% lines / ~84% branches |
 | QA-02 | Critical E2E paths | Playwright report | UNVERIFIED | Playwright suite pending |
 | DOC-01 | User guide matches product | documentation review | PARTIAL | `README.md` covers install/run/scripts; full user guide pending product freeze |
 | DOC-02 | Security model documented | security review | PASS | `docs/SECURITY_MODEL.md` documents trust boundaries, gates, audit chain, release integrity |
