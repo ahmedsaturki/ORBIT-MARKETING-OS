@@ -6,7 +6,7 @@ Updated: 2026-09-24
 
 Current rebuild HEAD at the latest source revision:
 
-`664d44d6544beba8ede82775f46b9a1ff29ca06b`
+`e43bff0114f93bc0f123afdce49413cb6b6f026e`
 
 The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
 
