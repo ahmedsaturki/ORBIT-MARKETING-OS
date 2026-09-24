@@ -35,6 +35,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Workspace sanity
         run: pnpm verify:workspace
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -44,6 +47,9 @@ jobs:
         run: pnpm lint
       - name: Tests
         run: pnpm test
+      - name: Release sanity
+        run: pnpm verify:release
+
       - name: Build
         run: pnpm build
       - name: Format check
