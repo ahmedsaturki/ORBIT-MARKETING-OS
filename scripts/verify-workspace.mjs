@@ -16,6 +16,7 @@ const requiredFiles = [
   "packages/web/package.json",
   "packages/shared-ui/package.json",
   "packages/desktop/src-tauri/Cargo.toml",
+  "packages/web/public/icon.svg",
 ];
 
 function resolveRoot() {
