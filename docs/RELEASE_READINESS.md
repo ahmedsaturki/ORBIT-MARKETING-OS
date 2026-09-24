@@ -40,3 +40,13 @@ ORBIT does not implement fingerprint spoofing, CAPTCHA bypass, anti-abuse evasio
 ## Release rule
 
 No production-ready or commercial-launch claim is valid until every applicable gate in `docs/ACCEPTANCE_MATRIX_V2.md` and `docs/RELEASE_GATES.md` has current evidence.
+
+
+## Current verified repository facts
+
+The rebuild branch currently contains the intended CI, Rust, release-desktop, and release-mobile workflow definitions, but the latest Actions runs are still failing before any workflow step executes; GitHub reports completed failed jobs with no step records. This is tracked as an execution-infrastructure blocker, not treated as evidence of a source-level build failure.
+
+The current environment used for source work cannot reach the npm registry, so a real `pnpm-lock.yaml` was not fabricated. CI is configured to generate a lockfile on the clean runner and immediately perform a frozen install from it.
+
+An ORBIT Vercel project/deployment is not currently verified, so no production web URL is claimed.
+
