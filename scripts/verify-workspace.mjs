@@ -310,6 +310,12 @@ async function scanProductionSource(dir) {
     if (!/\.(?:ts|tsx|mjs)$/.test(entry.name)) continue;
     if (relative(root, full) === "scripts/verify-workspace.mjs") continue;
     const content = await readFile(full, "utf8");
+    if (/\b(TODO|FIXME|HACK|XXX)\b/i.test(content)) {
+      throw new Error("Production source contains TODO/FIXME/HACK/XXX in " + relative(root, full));
+    }
+    if (/\b(?:PLACEHOLDER|CHANGE_ME|TBD)\b/i.test(content)) {
+      throw new Error("Production source contains placeholder marker in " + relative(root, full));
+    }
     if (forbiddenTypeScriptAny.test(content)) {
       throw new Error("Production source uses implicit any in " + relative(root, full));
     }
