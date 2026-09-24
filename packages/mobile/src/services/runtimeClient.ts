@@ -11,7 +11,14 @@ export async function fetchRuntimeHealth(
   baseUrl: string,
   authToken = "",
 ): Promise<RuntimeHealth> {
-  const normalized = baseUrl.replace(/\/$/, "");
+  const normalized = baseUrl.trim().replace(/\/$/, "");
+  const parsed = new URL(normalized);
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    throw new Error("Runtime URL must use http or https");
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error("Runtime URL must not contain embedded credentials");
+  }
   const token = authToken.trim();
   const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -19,6 +26,7 @@ export async function fetchRuntimeHealth(
   const response = await fetch(normalized + "/api/health", {
     method: "GET",
     headers,
+    signal: AbortSignal.timeout(5_000),
   });
 
   if (!response.ok) {
