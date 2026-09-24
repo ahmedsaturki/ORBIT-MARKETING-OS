@@ -953,32 +953,6 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
                kind, priority, status, attempts, max_attempts, available_at,
                COALESCE(NULLIF(idempotency_key, ''), id), created_at
              FROM tasks_v10_old;
-
-             let legacy_tasks: Vec<(String, String, String)> = {
-                 let mut statement = transaction.prepare(
-                     "SELECT id, available_at, created_at FROM tasks ORDER BY rowid ASC",
-                 )?;
-                 let rows = statement.query_map([], |row| {
-                     Ok((
-                         row.get::<_, String>(0)?,
-                         row.get::<_, String>(1)?,
-                         row.get::<_, String>(2)?,
-                     ))
-                 })?;
-                 rows.collect::<Result<Vec<_>, _>>()?
-             };
-
-             for (id, available_at, created_at) in legacy_tasks {
-                 let normalized_available = normalize_rfc3339_utc(&available_at)
-                     .map_err(|_| rusqlite::Error::InvalidParameterName("invalid legacy available_at".to_string()))?;
-                 let normalized_created = normalize_rfc3339_utc(&created_at)
-                     .map_err(|_| rusqlite::Error::InvalidParameterName("invalid legacy created_at".to_string()))?;
-                 transaction.execute(
-                     "UPDATE tasks SET available_at=?1, created_at=?2 WHERE id=?3",
-                     params![normalized_available, normalized_created, id],
-                 )?;
-             }
-
              DROP TABLE tasks_v10_old;
              CREATE INDEX IF NOT EXISTS idx_tasks_ready
                ON tasks(status, available_at, priority);
@@ -986,9 +960,45 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
                ON tasks(workspace_id, destination_id);
              PRAGMA user_version = 10;"
         )?;
+
+        let legacy_tasks: Vec<(String, String, String, i64, i64)> = {
+            let mut statement = transaction.prepare(
+                "SELECT id, available_at, created_at, attempts, max_attempts
+                 FROM tasks
+                 ORDER BY rowid ASC",
+            )?;
+            let rows = statement.query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, i64>(4)?,
+                ))
+            })?;
+            rows.collect::<Result<Vec<_>, _>>()?
+        };
+
+        for (id, available_at, created_at, attempts, max_attempts) in legacy_tasks {
+            if attempts < 0 || max_attempts < 1 || max_attempts > 10 || attempts > max_attempts {
+                return Err(AppError::InvalidPayload);
+            }
+
+            let normalized_available =
+                normalize_rfc3339_utc(&available_at).map_err(|_| AppError::InvalidPayload)?;
+            let normalized_created =
+                normalize_rfc3339_utc(&created_at).map_err(|_| AppError::InvalidPayload)?;
+
+            transaction.execute(
+                "UPDATE tasks
+                 SET available_at=?1, created_at=?2
+                 WHERE id=?3",
+                params![normalized_available, normalized_created, id],
+            )?;
+        }
+
         transaction.commit()?;
     }
-
 
 }
 
