@@ -27,3 +27,10 @@ Every real connector must:
 ## Release rule
 
 The platform list in the product UI is not evidence that a platform connector is production-ready. A connector becomes release-eligible only after its real authorization flow, controlled runtime tests, failure recovery, challenge handling, audit behavior, and platform-policy review are evidenced.
+
+
+## LinkedIn connector scope
+
+The current LinkedIn adapter targets text publishing through the Posts API. It requires an application-supplied access token, an author URN resolver, explicit user confirmation, and a pinned LinkedIn API version in YYYYMM form. It does not claim inbox, comments, analytics, or media capabilities.
+
+The adapter does not call LinkedIn OIDC userinfo during connection because that is a separate OIDC scope family from the publishing capability.
