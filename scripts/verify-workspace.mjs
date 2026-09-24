@@ -55,6 +55,22 @@ async function assertFile(path) {
 for (const file of requiredFiles) await assertFile(file);
 
 const rootPackage = await readJson("package.json");
+for (const packagePath of [
+  "packages/core/package.json",
+  "packages/desktop/package.json",
+  "packages/mobile/package.json",
+  "packages/web/package.json",
+  "packages/shared-ui/package.json",
+]) {
+  const pkg = await readJson(packagePath);
+  if (pkg.version !== rootPackage.version) {
+    throw new Error("Package version mismatch: " + packagePath);
+  }
+}
+const desktopManifest = await readJson("packages/desktop/src-tauri/tauri.conf.json");
+if (desktopManifest.version !== rootPackage.version) {
+  throw new Error("Tauri version does not match root package version");
+}
 if (rootPackage.packageManager !== "pnpm@10.17.1") {
   throw new Error("Expected root packageManager pnpm@10.17.1");
 }
@@ -485,7 +501,7 @@ if (!rustToolchain.includes('channel = "1.98.1"')) {
   throw new Error("Rust toolchain is not pinned to 1.98.1");
 }
 
-const forbiddenFragments = ["next lint", "typecheck:all", "test:all", "build:all", "app.get(\"*\")", "app.get(\'/*\')"];
+const forbiddenFragments = ["next lint", "typecheck:all", "test:all", "build:all", "app.get(\"*\")", "app.get(\'/*\')", "JSX.Element"];
 
 async function scan(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
