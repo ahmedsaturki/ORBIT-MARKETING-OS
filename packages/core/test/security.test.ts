@@ -75,6 +75,20 @@ describe("execution guardrails", () => {
 });
 
 describe("audit log", () => {
+  it("rejects duplicate event ids", () => {
+    const log = new AuditLog();
+    const event = createAuditEvent({
+      id: "audit-duplicate",
+      timestamp: new Date(0).toISOString(),
+      category: "security",
+      action: "test",
+      outcome: "success",
+      actor: "system",
+    });
+    log.append(event);
+    expect(() => log.append(event)).toThrow("Audit event id already exists");
+  });
+
   it("redacts credential-looking metadata", () => {
     const event = createAuditEvent({
       timestamp: new Date(0).toISOString(),
