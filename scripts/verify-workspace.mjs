@@ -52,6 +52,12 @@ if (webPackage.scripts?.["lint"]?.includes("next lint")) {
   throw new Error("Removed next lint command detected");
 }
 
+await assertFile("packages/web/eslint.config.mjs");
+const webEslint = await readJson("packages/web/package.json");
+if (!webEslint.devDependencies?.eslint || !webEslint.devDependencies?.["eslint-config-next"]) {
+  throw new Error("Web ESLint dependencies are incomplete");
+}
+
 const desktopPackage = await readJson("packages/desktop/package.json");
 if (!desktopPackage.scripts?.build || !desktopPackage.scripts?.typecheck) {
   throw new Error("Desktop build/typecheck scripts are incomplete");
