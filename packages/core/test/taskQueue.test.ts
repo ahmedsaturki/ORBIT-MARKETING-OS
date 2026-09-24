@@ -46,6 +46,32 @@ describe("TaskQueue", () => {
     expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("task-1");
   });
 
+  it("orders equal-priority ready tasks deterministically", () => {
+    const instance = queue();
+    instance.enqueue({
+      ...baseTask,
+      id: "task-z",
+      idempotencyKey: "task-z",
+      createdAt: "2026-09-24T00:00:02.000Z",
+    });
+    instance.enqueue({
+      ...baseTask,
+      id: "task-a",
+      idempotencyKey: "task-a",
+      createdAt: "2026-09-24T00:00:02.000Z",
+    });
+    instance.enqueue({
+      ...baseTask,
+      id: "task-old",
+      idempotencyKey: "task-old",
+      createdAt: "2026-09-24T00:00:01.000Z",
+    });
+
+    expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("task-old");
+    expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("task-a");
+    expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("task-z");
+  });
+
   it("does not claim tasks scheduled for the future", () => {
     const instance = queue();
     instance.enqueue(baseTask);
