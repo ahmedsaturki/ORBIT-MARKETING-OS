@@ -16,10 +16,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return { hasError: true };
   }
 
-  public componentDidCatch(error: unknown, info: ErrorInfo): void {
-    const message = error instanceof Error ? error.message : "Unknown React error";
+  public componentDidCatch(_error: unknown, info: ErrorInfo): void {
     console.error("ORBIT desktop UI error", {
-      message: message.slice(0, 500),
       componentStack: info.componentStack?.slice(0, 1500),
     });
   }
