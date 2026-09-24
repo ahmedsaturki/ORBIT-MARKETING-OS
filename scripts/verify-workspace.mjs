@@ -28,6 +28,7 @@ const requiredFiles = [
   "vercel.json",
   "scripts/vercel-ignore.sh",
   "scripts/vercel-install.sh",
+  "scripts/commit-lockfiles.mjs",
   "packages/core/test/linkedin.test.ts",
   "packages/core/test/executor.test.ts",
   "e2e/web-smoke.spec.ts",
