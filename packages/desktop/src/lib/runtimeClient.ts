@@ -51,7 +51,9 @@ export interface RuntimeImageAnalysisResponse {
 export async function fetchLocalRuntimeHealth(
   baseUrl = DEFAULT_RUNTIME_URL,
 ): Promise<RuntimeHealth> {
-  return requestJson<RuntimeHealth>(baseUrl, "/api/health");
+  const payload = await requestJson<unknown>(baseUrl, "/api/health");
+  if (!isRuntimeHealth(payload)) throw new Error("Invalid local runtime health response");
+  return payload;
 }
 
 export async function sendLocalChat(
@@ -75,7 +77,7 @@ export async function sendLocalChat(
     throw new Error("Chat message list is empty");
   }
 
-  return requestJson<RuntimeChatResponse>(baseUrl, "/api/chat", {
+  const payload = await requestJson<unknown>(baseUrl, "/api/chat", {
     method: "POST",
     body: JSON.stringify({
       messages: cleanMessages,
@@ -83,6 +85,8 @@ export async function sendLocalChat(
       profile,
     }),
   });
+  if (!isRuntimeChatResponse(payload)) throw new Error("Invalid local runtime chat response");
+  return payload;
 }
 
 export async function generateLocalContent(
@@ -93,7 +97,7 @@ export async function generateLocalContent(
     throw new Error("Content topic is required");
   }
 
-  return requestJson<RuntimeContentResponse>(baseUrl, "/api/generate-content", {
+  const payload = await requestJson<unknown>(baseUrl, "/api/generate-content", {
     method: "POST",
     body: JSON.stringify({
       topic: request.topic.trim().slice(0, 2_000),
@@ -102,6 +106,8 @@ export async function generateLocalContent(
       targetAudience: request.targetAudience.trim().slice(0, 500),
     }),
   });
+  if (!isRuntimeContentResponse(payload)) throw new Error("Invalid local runtime content response");
+  return payload;
 }
 
 export async function analyzeLocalImage(
@@ -112,7 +118,7 @@ export async function analyzeLocalImage(
     throw new Error("Image data is required");
   }
 
-  return requestJson<RuntimeImageAnalysisResponse>(baseUrl, "/api/analyze-image", {
+  const payload = await requestJson<unknown>(baseUrl, "/api/analyze-image", {
     method: "POST",
     body: JSON.stringify({
       imageBase64: request.imageBase64,
@@ -120,6 +126,8 @@ export async function analyzeLocalImage(
       ...(request.prompt?.trim() ? { prompt: request.prompt.trim().slice(0, 4_000) } : {}),
     }),
   });
+  if (!isRuntimeImageAnalysisResponse(payload)) throw new Error("Invalid local runtime image-analysis response");
+  return payload;
 }
 
 async function requestJson<T>(
@@ -181,6 +189,32 @@ function normalizeRuntimeUrl(value: string): string {
   }
 
   return url.toString().replace(/\/$/, "");
+}
+
+function isRuntimeHealth(value: unknown): value is RuntimeHealth {
+  if (!isRecord(value)) return false;
+  return (
+    (value.status === "ok" || value.status === "degraded" || value.status === "offline") &&
+    typeof value.service === "string" &&
+    (value.provider === undefined || typeof value.provider === "string") &&
+    (value.model === undefined || typeof value.model === "string") &&
+    (value.visionConfigured === undefined || typeof value.visionConfigured === "boolean")
+  );
+}
+
+function isRuntimeChatResponse(value: unknown): value is RuntimeChatResponse {
+  if (!isRecord(value)) return false;
+  return typeof value.text === "string" && typeof value.modelUsed === "string" && typeof value.provider === "string";
+}
+
+function isRuntimeContentResponse(value: unknown): value is RuntimeContentResponse {
+  if (!isRecord(value)) return false;
+  return typeof value.content === "string" && typeof value.modelUsed === "string" && typeof value.provider === "string";
+}
+
+function isRuntimeImageAnalysisResponse(value: unknown): value is RuntimeImageAnalysisResponse {
+  if (!isRecord(value)) return false;
+  return typeof value.analysis === "string" && typeof value.modelUsed === "string" && typeof value.provider === "string";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
