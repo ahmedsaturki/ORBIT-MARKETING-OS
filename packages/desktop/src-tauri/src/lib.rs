@@ -444,23 +444,21 @@ fn parse_retry_timestamp(retry_after_seconds: u64) -> String {
 
 fn telegram_task_audit(
     connection: &Connection,
+    workspace_id: &str,
     task_id: &str,
     action: &str,
     outcome: &str,
 ) -> Result<(), String> {
-    write_audit(connection, "telegram", action, outcome, "user", Some(task_id))
-        .map_err(|error| error.to_string())
-}
-
-fn has_column(connection: &Connection, table: &str, column: &str) -> Result<bool, rusqlite::Error> {
-    let mut statement = connection.prepare(&format!("PRAGMA table_info({table})"))?;
-    let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
-    for row in rows {
-        if row? == column {
-            return Ok(true);
-        }
-    }
-    Ok(false)
+    write_audit_for_workspace(
+        connection,
+        workspace_id,
+        "telegram",
+        action,
+        outcome,
+        "user",
+        Some(task_id),
+    )
+    .map_err(|error| error.to_string())
 }
 
 fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
@@ -1114,7 +1112,7 @@ async fn telegram_execute_task(
             ) {
                 return Err(error.to_string());
             }
-            telegram_task_audit(&connection, &task_id, "confirmation_required", "blocked")?;
+            telegram_task_audit(&connection, &workspace_id, &task_id, "confirmation_required", "blocked")?;
         }
         return Ok(TelegramExecutionView {
             task_id,
@@ -1182,7 +1180,7 @@ async fn telegram_execute_task(
                 params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &task_id, "account_not_connected", "blocked")?;
+        telegram_task_audit(&connection, &workspace_id, &task_id, "account_not_connected", "blocked")?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_user_action".to_string(),
@@ -1215,7 +1213,7 @@ async fn telegram_execute_task(
                 params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &task_id, "approval_required", "blocked")?;
+        telegram_task_audit(&connection, &workspace_id, &task_id, "approval_required", "blocked")?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_approval".to_string(),
@@ -1279,7 +1277,7 @@ async fn telegram_execute_task(
                 params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &task_id, "send_message", "success")?;
+        telegram_task_audit(&connection, &workspace_id, &task_id, "send_message", "success")?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "succeeded".to_string(),
@@ -1302,7 +1300,7 @@ async fn telegram_execute_task(
                 params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &task_id, "authorization_failed", "blocked")?;
+        telegram_task_audit(&connection, &workspace_id, &task_id, "authorization_failed", "blocked")?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_user_action".to_string(),
@@ -1321,7 +1319,7 @@ async fn telegram_execute_task(
                 params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &task_id, "delivery_status_unknown", "blocked")?;
+        telegram_task_audit(&connection, &workspace_id, &task_id, "delivery_status_unknown", "blocked")?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_user_action".to_string(),
@@ -1344,7 +1342,7 @@ async fn telegram_execute_task(
                 params![retry_at, &task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &task_id, "rate_limited", "blocked")?;
+        telegram_task_audit(&connection, &workspace_id, &task_id, "rate_limited", "blocked")?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "pending".to_string(),
@@ -1369,7 +1367,7 @@ async fn telegram_execute_task(
             params![next_status, next_attempt, next_available, &task_id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
-    telegram_task_audit(&connection, &task_id, "send_failed", "failure")?;
+    telegram_task_audit(&connection, &workspace_id, &task_id, "send_failed", "failure")?;
 
     Ok(TelegramExecutionView {
         task_id,
@@ -2953,15 +2951,15 @@ fn audit_hash(
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
-fn write_audit(
+fn write_audit_for_workspace(
     connection: &Connection,
+    workspace_id: &str,
     category: &str,
     action: &str,
     outcome: &str,
     actor: &str,
     entity_id: Option<&str>,
 ) -> Result<(), rusqlite::Error> {
-    let workspace_id = active_workspace_id();
     connection.execute_batch("BEGIN IMMEDIATE")?;
 
     let result = (|| {
@@ -3024,6 +3022,27 @@ fn write_audit(
         }
     }
 }
+
+fn write_audit(
+    connection: &Connection,
+    category: &str,
+    action: &str,
+    outcome: &str,
+    actor: &str,
+    entity_id: Option<&str>,
+) -> Result<(), rusqlite::Error> {
+    let workspace_id = active_workspace_id();
+    write_audit_for_workspace(
+        connection,
+        &workspace_id,
+        category,
+        action,
+        outcome,
+        actor,
+        entity_id,
+    )
+}
+
 
 
 #[tauri::command]
