@@ -940,7 +940,7 @@ export function App(): ReactElement {
     }
   };
 
-  const loadAccounts = async (): Promise<void> {
+  const loadAccounts = async (): Promise<void> => {
     try {
       setError("");
       setAccounts(await callNative<AccountView[]>("account_list"));
