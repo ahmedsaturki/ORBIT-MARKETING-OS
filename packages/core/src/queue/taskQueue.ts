@@ -41,7 +41,11 @@ export class TaskQueue {
     if (this.idempotencyKeys.has(task.idempotencyKey)) {
       throw new Error("Task idempotency key already exists: " + task.idempotencyKey);
     }
-    const stored = cloneTask(task);
+    const stored = cloneTask({
+      ...task,
+      availableAt: this.normalizeTimestamp(task.availableAt, "availableAt"),
+      createdAt: this.normalizeTimestamp(task.createdAt, "createdAt"),
+    });
     this.tasks.set(task.id, stored);
     this.idempotencyKeys.add(task.idempotencyKey);
   }
@@ -54,9 +58,9 @@ export class TaskQueue {
 
   /** Claims the highest-priority eligible task and atomically marks it running. */
   public claimNext(now: string): Task | undefined {
-    this.validateTimestamp(now, "now");
+    const normalizedNow = this.normalizeTimestamp(now, "now");
     const candidates = [...this.tasks.values()]
-      .filter((task) => task.status === "pending" && task.availableAt <= now)
+      .filter((task) => task.status === "pending" && task.availableAt <= normalizedNow)
       .sort((a, b) => b.priority - a.priority || a.availableAt.localeCompare(b.availableAt));
 
     const task = candidates[0];
@@ -103,14 +107,12 @@ export class TaskQueue {
 
   /** Defers a claimed task without consuming an attempt. */
   public defer(id: string, availableAt: string): Task {
-    if (Number.isNaN(Date.parse(availableAt))) {
-      throw new RangeError("availableAt must be a valid ISO timestamp");
-    }
+    const normalizedAvailableAt = this.normalizeTimestamp(availableAt, "availableAt");
     const task = this.requireTask(id);
     if (task.status !== "running") {
       throw new Error("Only running tasks can defer: " + id);
     }
-    return this.setTask({ ...task, status: "pending", availableAt });
+    return this.setTask({ ...task, status: "pending", availableAt: normalizedAvailableAt });
   }
 
   /** Cancels a task so workers cannot claim it again. */
@@ -120,7 +122,7 @@ export class TaskQueue {
 
   /** Records a failed attempt and either schedules a retry or terminally fails the task. */
   public fail(id: string, now: string): Task {
-    this.validateTimestamp(now, "now");
+    const normalizedNow = this.normalizeTimestamp(now, "now");
     const task = this.requireTask(id);
     if (task.status !== "running") {
       throw new Error(`Only running tasks can fail: ${id}`);
@@ -133,7 +135,7 @@ export class TaskQueue {
     }
 
     const retryDelay = calculateRetryDelay(nextAttempt, this.options.retryPolicy);
-    const availableAt = new Date(new Date(now).getTime() + retryDelay).toISOString();
+    const availableAt = new Date(new Date(normalizedNow).getTime() + retryDelay).toISOString();
     return { ...this.setTask({ ...task, attempts: nextAttempt, status: "pending", availableAt }) };
   }
 
@@ -183,10 +185,12 @@ export class TaskQueue {
     return cloneTask(stored);
   }
 
-  private validateTimestamp(value: string, field: string): void {
-    if (Number.isNaN(Date.parse(value))) {
+  private normalizeTimestamp(value: string, field: string): string {
+    const parsed = Date.parse(value);
+    if (Number.isNaN(parsed)) {
       throw new RangeError(field + " must be a valid ISO timestamp");
     }
+    return new Date(parsed).toISOString();
   }
 
   private validateTask(task: Task): void {
