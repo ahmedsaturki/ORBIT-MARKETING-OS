@@ -4,6 +4,10 @@ export interface RetryPolicy {
   readonly maxDelayMs: number;
 }
 
+function validateRetryPolicy(policy: RetryPolicy): void {
+  validateRetryPolicy(policy);
+}
+
 export function calculateRetryDelay(
   attempt: number,
   policy: RetryPolicy,
@@ -31,5 +35,6 @@ export function shouldRetry(attempt: number, policy: RetryPolicy): boolean {
   if (!Number.isInteger(attempt) || attempt < 0) {
     throw new RangeError("attempt must be a non-negative integer");
   }
+  validateRetryPolicy(policy);
   return attempt < policy.maxAttempts;
 }
