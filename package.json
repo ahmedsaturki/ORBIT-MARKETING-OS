@@ -13,8 +13,9 @@
     "test:core": "npm test --prefix packages/core",
     "typecheck:core": "npm run typecheck --prefix packages/core",
     "checksums": "node scripts/checksums.mjs",
-    "test:e2e": "playwright test",
-    "tauri:build": "node scripts/build-tauri.mjs --release"
+    "test:e2e":  "playwright test",
+    "soak": "tsx scripts/soak.ts",
+    "tauri:build":  "node scripts/build-tauri.mjs --release"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
