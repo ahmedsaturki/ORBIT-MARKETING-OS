@@ -3,8 +3,19 @@ import { spawn } from "node:child_process";
 
 const ollamaPort = "3110";
 
+async function waitForChildExit(child, timeoutMs = 3_000) {
+  if (child.exitCode !== null) return;
+  await Promise.race([
+    new Promise((resolve) => child.once("exit", resolve)),
+    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
+
+
 const { spawnSync } = await import("node:child_process");
 let capturedOllamaBody = null;
+process.once("exit", () => { ollamaServer.close(); });
 const ollamaServer = createServer((req, res) => {
   if (req.method === "GET" && req.url === "/api/tags") {
     res.writeHead(200, { "content-type": "application/json" });
@@ -135,7 +146,7 @@ try {
   }));
 } finally {
   child.kill("SIGTERM");
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await waitForChildExit(child);
   if (child.exitCode !== null && child.exitCode !== 0) {
     console.error(logs);
     throw new Error(`runtime process exited with code ${child.exitCode}`);
@@ -219,7 +230,7 @@ try {
   console.log("runtime LAN perimeter smoke passed");
 } finally {
   authChild.kill("SIGTERM");
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await waitForChildExit(authChild);
   if (authChild.exitCode !== null && authChild.exitCode !== 0) {
     console.error(authLogs);
     throw new Error(`LAN runtime exited with code ${authChild.exitCode}`);
