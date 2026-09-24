@@ -46,4 +46,4 @@ For the connected Vercel project orbit-marketing-os, the intended production Web
 - Build Command: pnpm build when the Root Directory is packages/web, or the repository-level command defined in vercel.json when the Root Directory remains the repository root.
 - Output Directory: out when the Root Directory is packages/web; packages/web/out when building from the repository root.
 
-The connected project currently reports a vite framework in its metadata. Until the project-level Root Directory/framework configuration is corrected, a successful production Web deployment is not considered proven.
+The connected project currently reports a vite framework in its metadata. Until the project-level Root Directory/framework configuration is confirmed as repository root with Next.js, a successful production Web deployment is not considered proven.
