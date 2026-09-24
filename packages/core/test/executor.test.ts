@@ -199,6 +199,31 @@ describe("task execution orchestrator", () => {
     expect(taskQueue.get(task.id)?.status).toBe("blocked");
   });
 
+  it("releases a task when user confirmation is missing", async () => {
+    const task = makeTask();
+    const taskQueue = queue(task);
+    const claimed = taskQueue.claimNext("2026-09-24T00:00:01.000Z");
+    expect(claimed).toBeDefined();
+
+    const result = await executeClaimedTask(
+      {
+        queue: taskQueue,
+        connectors: new ConnectorRegistry(),
+        audit: new AuditLog(),
+        loadContext: async () => context(task),
+      },
+      claimed!,
+      false,
+      "2026-09-24T00:00:01.000Z",
+    );
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reason: "confirmation_required",
+    });
+    expect(taskQueue.get(task.id)?.status).toBe("pending");
+  });
+
   it("blocks external execution before the connector when confirmation is missing", async () => {
     const task = makeTask();
     const taskQueue = queue(task);
@@ -221,7 +246,7 @@ describe("task execution orchestrator", () => {
       status: "blocked",
       reason: "confirmation_required",
     });
-    expect(taskQueue.get(task.id)?.status).toBe("blocked");
+    expect(taskQueue.get(task.id)?.status).toBe("pending");
   });
 
   it("stops on a platform challenge and records a blocked audit event", async () => {
