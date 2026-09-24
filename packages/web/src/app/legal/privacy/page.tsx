@@ -1,6 +1,7 @@
+import type { ReactElement } from "react";
 import Link from "next/link";
 
-export default function PrivacyPage(): JSX.Element {
+export default function PrivacyPage(): ReactElement {
   return (
     <main className="container page prose">
       <Link href="/">← الرئيسية</Link>
