@@ -26,7 +26,7 @@ test.describe("ORBIT public web surface", () => {
   });
 
   test("legal pages are reachable", async ({ page }) => {
-    for (const path of ["/legal/privacy/", "/legal/terms/", "/legal/refunds/"]) {
+    for (const path of ["/legal/privacy/", "/legal/terms/", "/legal/refunds/", "/legal/eula/"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await expect(page.getByRole("link", { name: /الرئيسية/ })).toHaveAttribute("href", "/");
