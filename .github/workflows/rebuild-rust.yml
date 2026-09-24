@@ -2,7 +2,7 @@ name: Rebuild Rust
 
 on:
   push:
-    branches: ["rebuild/**"]
+    branches: ["main", "rebuild/**"]
   pull_request:
     branches: ["main"]
 
