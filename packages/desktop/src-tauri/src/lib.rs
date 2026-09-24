@@ -1391,7 +1391,7 @@ fn task_fail(
     let current: Option<(i64, i64, String, String, String, String, i64, String, String, String, String)> = connection
         .query_row(
             "SELECT attempts, max_attempts, campaign_id, content_id, account_id, platform, kind, priority,
-                    status, idempotency_key, available_at, created_at"
+                    status, idempotency_key, available_at, created_at
              FROM tasks
              WHERE id=?1 AND workspace_id=?2",
             params![&entity_id, DEFAULT_WORKSPACE_ID],
@@ -1480,7 +1480,7 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
     let mut statement = connection
         .prepare(
             "SELECT id, campaign_id, content_id, account_id, platform, kind, priority,
-                    status, attempts, max_attempts, idempotency_key, available_at, created_at"
+                    status, attempts, max_attempts, idempotency_key, available_at, created_at
              FROM tasks
              WHERE workspace_id=?1
                AND (?2 IS NULL OR campaign_id=?2)
