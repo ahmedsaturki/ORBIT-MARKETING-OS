@@ -35,7 +35,7 @@ Legend:
 | Performance/soak | UNVERIFIED | Benchmarks and 24h soak not executed |
 | Desktop signing | BLOCKED | Signing credentials are intentionally absent; validation builds only |
 | Mobile production signing | BLOCKED | Current workflow produces debug validation APK |
-| Vercel production deployment | BLOCKED | Connected project has not produced a verified current production deployment; previous concrete failure was framework/build detection |
+| Vercel production deployment | BLOCKED | Connected `orbit-marketing-os` project exists, but no current production deployment is verified; repository-side config is now canonical at root and requires a committed lockfile |
 | Billing/payment | BLOCKED | No commercial payment provider configuration is verified |
 | Production launch | BLOCKED | Any applicable UNVERIFIED/BLOCKED runtime or distribution gate prevents release claim |
 
