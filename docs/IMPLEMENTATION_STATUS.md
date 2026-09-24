@@ -11,8 +11,12 @@ Updated: 2026-09-24
 - Encryption key derivation is an explicit Argon2id provider boundary; no home-grown password KDF is used in TypeScript.
 - Audit logging now has both redaction and an append-only SHA-256 hash-chain integrity primitive.
 - Core queue and audit integrity invariant tests were added.
-- A Tauri v2 desktop backend exists with local SQLite, Argon2id, AES-256-GCM, encrypted session/vault storage, campaigns/tasks, CRM/inbox, backup/restore, and audit commands.
+- A Tauri v2 desktop backend exists with local SQLite, Argon2id, AES-256-GCM, encrypted session/vault storage, campaigns/tasks, CRM/inbox, backup/restore, audit commands, and a persisted active-workspace context with workspace list/create/select IPC.
 - Rust formatting/check/clippy workflow and repository release/security gates are defined.
+
+## Workspace/RBAC status
+
+Workspace switching is now implemented in the desktop runtime and UI. Typed RBAC contracts are present in `@orbit/core`. End-to-end identity, membership persistence, and enforcement at every IPC command remain release-gated until integration tests prove them.
 
 ## Evidence still required before release
 
