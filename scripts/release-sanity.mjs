@@ -47,6 +47,7 @@ const requiredFiles = [
   ".github/workflows/bootstrap-lockfile.yml",
   ".github/workflows/vercel-web.yml",
   "scripts/self-hosted-preflight.sh",
+  "scripts/security-scan.mjs",
 ];
 
 for (const relative of requiredFiles) {
@@ -66,6 +67,7 @@ if (!rustToolchain.includes('channel = "1.98.1"')) {
 const ci = await text(".github/workflows/ci.yml");
 if (!ci.includes("pnpm install --frozen-lockfile")) throw new Error("CI frozen install gate missing");
 if (!ci.includes("pnpm audit --audit-level=high")) throw new Error("CI dependency audit gate missing");
+if (!ci.includes("pnpm security:scan")) throw new Error("CI secret scan gate missing");
 if (!ci.includes("pnpm test:performance")) throw new Error("CI performance smoke gate missing");
 if (!ci.includes("pnpm test:e2e")) throw new Error("CI browser E2E gate missing");
 
