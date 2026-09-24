@@ -6,6 +6,7 @@ describe("buildCampaignTasks", () => {
     const tasks = buildCampaignTasks(
       {
         id: "camp-1",
+        workspaceId: "workspace-1",
         name: "Launch",
         status: "scheduled",
         accountIds: ["acc-1", "acc-2"],
