@@ -14,6 +14,20 @@ test.describe("ORBIT public web surface", () => {
     );
   });
 
+  test("document direction, language, and focusable controls meet baseline accessibility", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+    const firstLink = page.getByRole("link").first();
+    await firstLink.focus();
+    await expect(firstLink).toBeFocused();
+
+    await page.goto("/pricing/");
+    const links = page.getByRole("link");
+    await expect(links.first()).toBeVisible();
+  });
+
   test("pricing page renders every configured plan without a fake checkout", async ({ page }) => {
     await page.goto("/pricing/");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("الخطط والأسعار");
