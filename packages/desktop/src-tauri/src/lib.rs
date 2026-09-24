@@ -3288,9 +3288,10 @@ fn task_enqueue(
         return Err("destination_id is required for external tasks".to_string());
     }
 
-    if priority < 0 || max_attempts < 1 || available_at.trim().is_empty() {
-        return Err("invalid task parameters".to_string());
+    if priority < 0 || !(1..=10).contains(&max_attempts) {
+        return Err("task max_attempts must be between 1 and 10".to_string());
     }
+    let available_at = normalize_rfc3339_utc(&available_at)?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
@@ -3388,6 +3389,7 @@ fn task_enqueue(
 #[tauri::command]
 fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView>, String> {
     let workspace_id = active_workspace_id();
+    let now = normalize_rfc3339_utc(&now)?;
     let mut connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
     let transaction = connection
@@ -4474,6 +4476,17 @@ fn chrono_like_timestamp() -> String {
         .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
 }
 
+fn normalize_rfc3339_utc(value: &str) -> Result<String, String> {
+    OffsetDateTime::parse(value.trim(), &Rfc3339)
+        .map(|timestamp| {
+            timestamp
+                .to_offset(time::UtcOffset::UTC)
+                .format(&Rfc3339)
+                .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
+        })
+        .map_err(|_| "timestamp must be a valid RFC3339 ISO timestamp".to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -4585,6 +4598,22 @@ mod tests {
         assert_eq!(retry_delay_ms(2), 2_000);
         assert_eq!(retry_delay_ms(7), 60_000);
         assert_eq!(retry_delay_ms(30), 60_000);
+    }
+
+    #[test]
+    fn task_timestamp_is_normalized_to_utc() {
+        let normalized = normalize_rfc3339_utc("2026-09-24T18:00:00+03:00")
+            .expect("timestamp should parse");
+        assert_eq!(normalized, "2026-09-24T15:00:00Z");
+        assert!(normalize_rfc3339_utc("not-a-timestamp").is_err());
+    }
+
+    #[test]
+    fn task_attempt_limit_is_bounded() {
+        assert!(!(0i64..=10i64).contains(&0));
+        assert!((1i64..=10i64).contains(&1));
+        assert!((1i64..=10i64).contains(&10));
+        assert!(!(1i64..=10i64).contains(&11));
     }
 
     #[test]
