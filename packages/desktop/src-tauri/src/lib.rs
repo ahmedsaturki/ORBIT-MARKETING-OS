@@ -4120,7 +4120,7 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
              FROM tasks
              WHERE workspace_id=?1
                AND (?2 IS NULL OR campaign_id=?2)
-             ORDER BY priority DESC, available_at ASC",
+             ORDER BY priority DESC, available_at ASC, created_at ASC, id ASC",
         )
         .map_err(|error| error.to_string())?;
 
