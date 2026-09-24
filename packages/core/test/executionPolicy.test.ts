@@ -50,6 +50,30 @@ const context = {
 };
 
 describe("execution policy", () => {
+  it("blocks cross-workspace execution", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      task: { ...task, workspaceId: "other-workspace" },
+    });
+    expect(decision.reason).toBe("workspace_mismatch");
+  });
+
+  it("blocks task/account reference mismatches", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      task: { ...task, accountId: "other-account" },
+    });
+    expect(decision.reason).toBe("account_mismatch");
+  });
+
+  it("blocks task/platform mismatches", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      task: { ...task, platform: "instagram" },
+    });
+    expect(decision.reason).toBe("task_platform_mismatch");
+  });
+
   it("fails closed without approval", () => {
     const decision = evaluateExecutionPolicy(context);
     expect(decision.allowed).toBe(false);
