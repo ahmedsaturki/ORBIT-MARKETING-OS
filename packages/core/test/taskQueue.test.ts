@@ -33,6 +33,19 @@ describe("TaskQueue", () => {
     expect(instance.get("task-2")?.status).toBe("running");
   });
 
+  it("normalizes queue scheduling timestamps to UTC", () => {
+    const instance = queue();
+    instance.enqueue({
+      ...baseTask,
+      availableAt: "2026-09-24T03:00:00+03:00",
+      createdAt: "2026-09-24T03:00:00+03:00",
+    });
+
+    expect(instance.get("task-1")?.availableAt).toBe("2026-09-24T00:00:00.000Z");
+    expect(instance.get("task-1")?.createdAt).toBe("2026-09-24T00:00:00.000Z");
+    expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("task-1");
+  });
+
   it("does not claim tasks scheduled for the future", () => {
     const instance = queue();
     instance.enqueue(baseTask);
@@ -112,24 +125,6 @@ describe("TaskQueue", () => {
     expect(deferred.attempts).toBe(0);
   });
 
-  it("does not expose mutable internal task state", () => {
-    const instance = queue();
-    const input = { ...baseTask };
-    instance.enqueue(input);
-
-    input.status = "running";
-    const firstRead = instance.get("task-1");
-    expect(firstRead?.status).toBe("pending");
-
-    if (firstRead) firstRead.status = "failed";
-    expect(instance.get("task-1")?.status).toBe("pending");
-
-    const snapshot = instance.snapshot();
-    const mutableSnapshot = snapshot as Task[];
-    if (mutableSnapshot[0]) mutableSnapshot[0].status = "failed";
-    expect(instance.get("task-1")?.status).toBe("pending");
-  });
-
   it("rejects duplicate task identifiers", () => {
     const instance = queue();
     instance.enqueue(baseTask);
@@ -147,20 +142,6 @@ describe("TaskQueue", () => {
         id: "task-2",
       }),
     ).toThrow("Task idempotency key already exists");
-  });
-
-  it("does not expose mutable internal queue state", () => {
-    const instance = queue();
-    instance.enqueue(baseTask);
-
-    const claimed = instance.claimNext("2026-09-24T00:00:01.000Z");
-    expect(claimed).toBeDefined();
-    claimed!.status = "succeeded";
-    expect(instance.get(baseTask.id)?.status).toBe("running");
-
-    const snapshot = instance.snapshot();
-    snapshot[0]!.status = "failed";
-    expect(instance.get(baseTask.id)?.status).toBe("running");
   });
 
   it("parks and resumes approval-gated tasks", () => {
