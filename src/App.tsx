@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import type { ReactElement } from "react";
 
 const githubUrl = "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS";
 
-export default function App(): JSX.Element {
+export default function App(): ReactElement {
   const [online, setOnline] = useState(false);
 
   useEffect(() => {
