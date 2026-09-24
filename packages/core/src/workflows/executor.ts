@@ -144,6 +144,19 @@ export async function executeClaimedTask(
     };
   }
 
+  if (task.kind !== "sync" && !userConfirmed) {
+    dependencies.queue.block(task.id);
+    audit(dependencies.audit, task, "blocked", "execution.confirmation_required", {
+      reason: "confirmation_required",
+    });
+    return {
+      status: "blocked",
+      taskId: task.id,
+      reason: "confirmation_required",
+      message: "Explicit user confirmation is required before an external action.",
+    };
+  }
+
   const connector = dependencies.connectors.get(task.platform);
   if (!connector) {
     dependencies.queue.block(task.id);
