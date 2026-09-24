@@ -58,3 +58,7 @@ For any production incident collect, without exposing secrets:
 - whether the circuit breaker or challenge gate activated.
 
 Never attach passwords, session cookies, access tokens, private keys, or raw secret vault contents to bug reports.
+
+### Remote runtime perimeter
+
+When `RUNTIME_HOST` is non-loopback, keep `RUNTIME_AUTH_TOKEN` set and configure `RUNTIME_ALLOWED_ORIGINS` for any browser client. Native/mobile clients without an `Origin` header can still authenticate with the bearer token. `RUNTIME_RATE_LIMIT` defaults to 120 requests per client address per rolling minute; invalid values fall back to the default.
