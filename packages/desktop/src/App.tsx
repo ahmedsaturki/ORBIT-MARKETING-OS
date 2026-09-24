@@ -55,6 +55,30 @@ interface ApprovalView {
   readonly note: string | null;
 }
 
+interface MediaAssetView {
+  readonly id: string;
+  readonly kind: string;
+  readonly filename: string;
+  readonly mime_type: string;
+  readonly size_bytes: number;
+  readonly sha256: string | null;
+  readonly local_path: string;
+  readonly tags_json: string;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+interface AutomationRulePackView {
+  readonly id: string;
+  readonly platform: string;
+  readonly version: string;
+  readonly schema_version: number;
+  readonly rules_json: string;
+  readonly enabled: boolean;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
 interface ContentVariantView {
   readonly content_id: string;
   readonly platform: string;
@@ -186,6 +210,21 @@ export function App(): ReactElement {
   const [contentVariants, setContentVariants] = useState<readonly ContentVariantView[]>([]);
   const [variantPlatform, setVariantPlatform] = useState("facebook");
   const [variantBody, setVariantBody] = useState("");
+  const [mediaAssets, setMediaAssets] = useState<readonly MediaAssetView[]>([]);
+  const [mediaId, setMediaId] = useState("");
+  const [mediaKind, setMediaKind] = useState("image");
+  const [mediaFilename, setMediaFilename] = useState("");
+  const [mediaMimeType, setMediaMimeType] = useState("image/png");
+  const [mediaSizeBytes, setMediaSizeBytes] = useState("1");
+  const [mediaSha256, setMediaSha256] = useState("");
+  const [mediaLocalPath, setMediaLocalPath] = useState("");
+  const [mediaTags, setMediaTags] = useState("");
+  const [rulePacks, setRulePacks] = useState<readonly AutomationRulePackView[]>([]);
+  const [rulePackId, setRulePackId] = useState("");
+  const [rulePackPlatform, setRulePackPlatform] = useState("facebook");
+  const [rulePackVersion, setRulePackVersion] = useState("1.0.0");
+  const [rulePackRules, setRulePackRules] = useState("[\n  {\n    \"id\": \"publish\",\n    \"taskKinds\": [\"publish\"],\n    \"enabled\": true,\n    \"requiresConfirmation\": true,\n    \"maxAttempts\": 3,\n    \"timeoutMs\": 30000\n  }\n]");
+
   const [contentId, setContentId] = useState("");
   const [contentTitle, setContentTitle] = useState("");
   const [contentBody, setContentBody] = useState("");
@@ -274,6 +313,95 @@ export function App(): ReactElement {
       setCampaigns(await callNative<CampaignView[]>("campaign_list"));
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تحميل الحملات");
+    }
+  };
+
+  const loadMediaAssets = async (): Promise<void> => {
+    try {
+      setMediaAssets(await callNative<MediaAssetView[]>("media_asset_list", {}));
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل مكتبة الوسائط");
+    }
+  };
+
+  const saveMediaAsset = async (): Promise<void> => {
+    const size = Number(mediaSizeBytes);
+    if (
+      !mediaId.trim() ||
+      !mediaFilename.trim() ||
+      !mediaLocalPath.trim() ||
+      !Number.isSafeInteger(size) ||
+      size <= 0
+    ) {
+      setError("أدخل بيانات الوسيط وحجمه ومساره المحلي بشكل صحيح");
+      return;
+    }
+
+    try {
+      setError("");
+      await callNative<MediaAssetView>("media_asset_upsert", {
+        id: mediaId.trim(),
+        kind: mediaKind,
+        filename: mediaFilename.trim(),
+        mime_type: mediaMimeType.trim(),
+        size_bytes: size,
+        sha256: mediaSha256.trim() || null,
+        local_path: mediaLocalPath.trim(),
+        tags_json: JSON.stringify(
+          mediaTags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        ),
+      });
+      setMediaId("");
+      setMediaFilename("");
+      setMediaSha256("");
+      setMediaLocalPath("");
+      setMediaTags("");
+      await loadMediaAssets();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل حفظ الوسيط");
+    }
+  };
+
+  const loadRulePacks = async (): Promise<void> => {
+    try {
+      setRulePacks(await callNative<AutomationRulePackView[]>("automation_rule_pack_list", {}));
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل قواعد الأتمتة");
+    }
+  };
+
+  const saveRulePack = async (): Promise<void> => {
+    if (!rulePackId.trim() || !rulePackVersion.trim() || !rulePackRules.trim()) {
+      setError("أدخل معرف الإصدار وقواعد الأتمتة");
+      return;
+    }
+    try {
+      const parsed: unknown = JSON.parse(rulePackRules);
+      if (!Array.isArray(parsed)) {
+        setError("قواعد الأتمتة يجب أن تكون مصفوفة JSON");
+        return;
+      }
+    } catch {
+      setError("قواعد الأتمتة يجب أن تكون JSON صالحًا");
+      return;
+    }
+
+    try {
+      setError("");
+      await callNative<AutomationRulePackView>("automation_rule_pack_upsert", {
+        id: rulePackId.trim(),
+        platform: rulePackPlatform,
+        version: rulePackVersion.trim(),
+        schema_version: 1,
+        rules_json: rulePackRules,
+        enabled: true,
+      });
+      await loadRulePacks();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل حفظ حزمة قواعد الأتمتة");
     }
   };
 
@@ -744,6 +872,8 @@ export function App(): ReactElement {
       await loadContacts();
       await loadInbox();
       await loadAnalytics();
+      await loadMediaAssets();
+      await loadRulePacks();
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل فحص التطبيق المحلي");
     }
@@ -963,6 +1093,112 @@ export function App(): ReactElement {
 
 
 
+
+      <section className="grid workspace-grid">
+        <div className="card">
+          <h2>مكتبة الوسائط المحلية</h2>
+          <p>يُحفظ Metadata محليًا داخل SQLite. الملف نفسه لا يُرفع إلى أي خدمة تلقائيًا.</p>
+          <div className="vault-form">
+            <label>
+              معرف الوسيط
+              <input value={mediaId} onChange={(event) => setMediaId(event.target.value)} placeholder="media-001" />
+            </label>
+            <label>
+              النوع
+              <select value={mediaKind} onChange={(event) => setMediaKind(event.target.value)}>
+                <option value="image">صورة</option>
+                <option value="video">فيديو</option>
+                <option value="audio">صوت</option>
+                <option value="document">مستند</option>
+              </select>
+            </label>
+            <label>
+              اسم الملف
+              <input value={mediaFilename} onChange={(event) => setMediaFilename(event.target.value)} placeholder="launch.png" />
+            </label>
+            <label>
+              MIME
+              <input value={mediaMimeType} onChange={(event) => setMediaMimeType(event.target.value)} placeholder="image/png" />
+            </label>
+            <label>
+              الحجم بالبايت
+              <input value={mediaSizeBytes} onChange={(event) => setMediaSizeBytes(event.target.value)} inputMode="numeric" />
+            </label>
+            <label>
+              SHA-256 (اختياري)
+              <input value={mediaSha256} onChange={(event) => setMediaSha256(event.target.value)} />
+            </label>
+            <label>
+              المسار المحلي
+              <input value={mediaLocalPath} onChange={(event) => setMediaLocalPath(event.target.value)} placeholder="C:\media\launch.png" />
+            </label>
+            <label>
+              الوسوم
+              <input value={mediaTags} onChange={(event) => setMediaTags(event.target.value)} placeholder="launch, campaign" />
+            </label>
+            <button className="button primary" type="button" onClick={() => void saveMediaAsset()}>
+              حفظ بيانات الوسيط
+            </button>
+          </div>
+          <div className="account-list">
+            {mediaAssets.slice(0, 10).map((asset) => (
+              <div className="account-row" key={asset.id}>
+                <div>
+                  <strong>{asset.filename}</strong>
+                  <div className="account-meta">{asset.kind} • {asset.size_bytes} bytes • {asset.local_path}</div>
+                </div>
+              </div>
+            ))}
+            {!mediaAssets.length ? <div className="result">لا توجد وسائط محفوظة.</div> : null}
+          </div>
+        </div>
+
+        <div className="card">
+          <h2>حزم قواعد الأتمتة</h2>
+          <p>قواعد versioned محفوظة محليًا، والقواعد الخارجية يجب أن تتطلب تأكيد المستخدم.</p>
+          <div className="vault-form">
+            <label>
+              المعرف
+              <input value={rulePackId} onChange={(event) => setRulePackId(event.target.value)} placeholder="facebook-default" />
+            </label>
+            <label>
+              المنصة
+              <select value={rulePackPlatform} onChange={(event) => setRulePackPlatform(event.target.value)}>
+                <option value="facebook">Facebook</option>
+                <option value="instagram">Instagram</option>
+                <option value="telegram">Telegram</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="tiktok">TikTok</option>
+              </select>
+            </label>
+            <label>
+              الإصدار
+              <input value={rulePackVersion} onChange={(event) => setRulePackVersion(event.target.value)} />
+            </label>
+            <label>
+              القواعد JSON
+              <textarea value={rulePackRules} onChange={(event) => setRulePackRules(event.target.value)} rows={10} />
+            </label>
+            <button className="button primary" type="button" onClick={() => void saveRulePack()}>
+              حفظ Rule Pack
+            </button>
+          </div>
+          <div className="account-list">
+            {rulePacks.slice(0, 8).map((pack) => (
+              <div className="account-row" key={pack.id + ":" + pack.platform}>
+                <div>
+                  <strong>{pack.id} • {pack.platform}</strong>
+                  <div className="account-meta">
+                    v{pack.version} • schema {pack.schema_version} • {pack.enabled ? "مفعلة" : "متوقفة"}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!rulePacks.length ? <div className="result">لا توجد Rule Packs محفوظة.</div> : null}
+          </div>
+        </div>
+      </section>
 
       <section className="grid workspace-grid">
         <div className="card">
