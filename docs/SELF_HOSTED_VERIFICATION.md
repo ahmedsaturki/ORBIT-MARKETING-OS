@@ -22,6 +22,14 @@ The runner should end in a connected/listening state before it can accept the wo
 
 ## 2. Prepare the machine
 
+Before the verification workflow can run, generate and commit the real lockfile once:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\\scripts\\bootstrap-lockfile.ps1
+```
+
+Review `pnpm-lock.yaml` and commit it to the rebuild branch. Do not hand-write or fabricate the lockfile.
+
 Required toolchain:
 
 - Node.js 22
