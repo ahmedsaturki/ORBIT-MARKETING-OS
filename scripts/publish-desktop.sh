@@ -7,6 +7,8 @@ cd "$ROOT"
 test -f pnpm-lock.yaml
 test -f packages/desktop/src-tauri/Cargo.lock
 pnpm verify:workspace
+pnpm verify:release
+pnpm security:scan
 pnpm install --frozen-lockfile
 pnpm --filter @orbit/desktop typecheck
 pnpm --filter @orbit/desktop build
