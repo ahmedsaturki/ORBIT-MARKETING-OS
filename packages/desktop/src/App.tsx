@@ -85,6 +85,19 @@ interface MessageView {
   readonly body: string;
   readonly sent_at: string;
 }
+interface LicenseStatus {
+  readonly installed: boolean;
+  readonly valid: boolean;
+  readonly reason: string;
+  readonly license_id?: string;
+  readonly plan?: string;
+  readonly subject?: string;
+  readonly expires_at?: string;
+  readonly max_devices?: number;
+  readonly account_limit?: number;
+  readonly feature_count: number;
+  readonly account_count: number;
+}
 
 async function callNative<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   return invoke<T>(command, args);
@@ -134,6 +147,9 @@ export function App(): ReactElement {
   const [contactNotes, setContactNotes] = useState("");
   const [auditEntries, setAuditEntries] = useState<readonly AuditView[]>([]);
   const [auditIntegrity, setAuditIntegrity] = useState<"unknown" | "valid" | "invalid">("unknown");
+  const [license, setLicense] = useState<LicenseStatus | null>(null);
+  const [licenseToken, setLicenseToken] = useState("");
+  const [licenseMessage, setLicenseMessage] = useState("");
 
   const loadCampaigns = async (): Promise<void> => {
     try {
@@ -464,6 +480,43 @@ export function App(): ReactElement {
       setRecovered(result);
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل فك السجل المشفر");
+    }
+  };
+
+  const loadLicense = async (): Promise<void> => {
+    try {
+      const result = await callNative<LicenseStatus>("license_status");
+      setLicense(result);
+    } catch (caught: unknown) {
+      setLicense(null);
+      setLicenseMessage(caught instanceof Error ? caught.message : "فشل قراءة حالة الترخيص");
+    }
+  };
+
+  const installLicense = async (): Promise<void> => {
+    const token = licenseToken.trim();
+    if (!token) {
+      setLicenseMessage("ألصق license token أولاً.");
+      return;
+    }
+    try {
+      setError("");
+      const result = await callNative<LicenseStatus>("license_install", { token });
+      setLicense(result);
+      setLicenseMessage(result.valid ? "تم التفعيل والتحقق من توقيع الترخيص." : result.reason);
+      if (result.valid) setLicenseToken("");
+    } catch (caught: unknown) {
+      setLicenseMessage(caught instanceof Error ? caught.message : "فشل تثبيت الترخيص");
+    }
+  };
+
+  const removeLicense = async (): Promise<void> => {
+    try {
+      await callNative<boolean>("license_delete");
+      await loadLicense();
+      setLicenseMessage("تم حذف الترخيص المحلي.");
+    } catch (caught: unknown) {
+      setLicenseMessage(caught instanceof Error ? caught.message : "فشل حذف الترخيص");
     }
   };
 
