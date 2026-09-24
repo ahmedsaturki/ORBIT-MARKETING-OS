@@ -1733,13 +1733,71 @@ async fn telegram_execute_task(
     };
 
     let status_code = response.status();
-    let parsed = response
+    let parsed = match response
         .json::<TelegramApiResponse<TelegramSentMessage>>()
         .await
-        .map_err(|_| "Telegram returned an invalid response".to_string())?;
+    {
+        Ok(parsed) => parsed,
+        Err(_) => {
+            connection
+                .execute(
+                    "UPDATE tasks
+                     SET status='awaiting_user_action'
+                     WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                    params![&task_id, &workspace_id],
+                )
+                .map_err(|error| error.to_string())?;
+            telegram_task_audit(
+                &connection,
+                &workspace_id,
+                &task_id,
+                "invalid_response",
+                "blocked",
+            )?;
+            record_execution_failure(&connection, &workspace_id, &account_id)
+                .map_err(|error| error.to_string())?;
+            return Ok(TelegramExecutionView {
+                task_id,
+                status: "awaiting_user_action".to_string(),
+                external_message_id: None,
+                message: format!(
+                    "Telegram returned an invalid response (HTTP {}). Verify delivery before retrying.",
+                    status_code.as_u16()
+                ),
+                retry_at: None,
+            });
+        }
+    };
 
     if parsed.ok {
-        let external_id = parsed.result.map(|value| value.message_id);
+        let Some(sent) = parsed.result else {
+            connection
+                .execute(
+                    "UPDATE tasks
+                     SET status='awaiting_user_action'
+                     WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                    params![&task_id, &workspace_id],
+                )
+                .map_err(|error| error.to_string())?;
+            telegram_task_audit(
+                &connection,
+                &workspace_id,
+                &task_id,
+                "delivery_status_unknown",
+                "blocked",
+            )?;
+            record_execution_failure(&connection, &workspace_id, &account_id)
+                .map_err(|error| error.to_string())?;
+            return Ok(TelegramExecutionView {
+                task_id,
+                status: "awaiting_user_action".to_string(),
+                external_message_id: None,
+                message: "Telegram acknowledged success without a message id. Verify delivery before retrying."
+                    .to_string(),
+                retry_at: None,
+            });
+        };
+        let external_id = sent.message_id;
         connection
             .execute(
                 "UPDATE tasks SET status='succeeded' WHERE id=?1 AND workspace_id=?2 AND status='running'",
