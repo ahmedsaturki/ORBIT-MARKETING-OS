@@ -54,7 +54,7 @@ No production-ready or commercial-launch claim is valid until every applicable g
 
 The rebuild branch currently contains the intended CI, Rust, release-desktop, and release-mobile workflow definitions, but the latest Actions runs are still failing before any workflow step executes; GitHub reports completed failed jobs with no step records. This is tracked as an execution-infrastructure blocker, not treated as evidence of a source-level build failure.
 
-The current source environment cannot reach GitHub/npm through its shell network, so a real pnpm-lock.yaml was not fabricated. CI is configured to generate and validate a lockfile on a clean runner; that evidence remains blocked by the GitHub Actions runner failure.
+The current source environment cannot reach GitHub/npm through its shell network, so a real pnpm-lock.yaml was not fabricated. CI now creates the lockfile before workspace sanity checks, while release workflows continue to require a committed lockfile. CI is configured to generate and validate a lockfile on a clean runner; that evidence remains blocked by the GitHub Actions runner failure.
 
 A Vercel project `orbit-marketing-os` exists. Recent deployments from the rebuild line have failed, with a concrete earlier diagnostic of `NEXT_NO_VERSION` while the project metadata reported `vite`. Repository-side configuration now targets the Next.js app under `packages/web`; the remaining project-level Root Directory/Framework configuration is external and must be verified before claiming a production deployment.
 
