@@ -1,3 +1,5 @@
+# Validation artifact only — this script does not produce a signed store release.
+
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -10,3 +12,5 @@ pnpm install --frozen-lockfile
 pnpm --filter @orbit/mobile typecheck
 pnpm --filter @orbit/mobile test
 pnpm --dir packages/mobile exec expo export --platform web
+
+test -d packages/mobile/dist
