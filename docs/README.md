@@ -11,3 +11,5 @@
 - [Refund policy](REFUND_POLICY.md)
 
 - [Operations Runbook](./OPERATIONS_RUNBOOK.md)
+
+- [Launch Scorecard](./LAUNCH_SCORECARD.md)
