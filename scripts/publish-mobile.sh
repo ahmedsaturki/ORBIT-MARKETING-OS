@@ -4,5 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+test -f pnpm-lock.yaml
+pnpm verify:workspace
+pnpm install --frozen-lockfile
 pnpm --filter @orbit/mobile typecheck
-pnpm --dir packages/mobile expo export --platform all
+pnpm --filter @orbit/mobile test
+pnpm --dir packages/mobile exec expo export --platform web

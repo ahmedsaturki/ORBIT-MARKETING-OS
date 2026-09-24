@@ -13,7 +13,12 @@ if [ "$PNPM_VERSION" != "10.17.1" ]; then
   exit 1
 fi
 
-pnpm install --no-frozen-lockfile
+pnpm install --lockfile-only --ignore-scripts
+test -f pnpm-lock.yaml
+pnpm verify:workspace
+pnpm install --frozen-lockfile
 pnpm typecheck
+pnpm lint
 pnpm test
 pnpm build
+pnpm format:check
