@@ -950,6 +950,7 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     migrate_schema(&connection)?;
     create_integrity_triggers(&connection)?;
     ensure_workspace_context(&connection)?;
+    cleanup_stale_temporary_artifacts(&app_data)?;
     Ok(connection)
 }
 
