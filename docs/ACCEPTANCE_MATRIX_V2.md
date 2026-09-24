@@ -43,6 +43,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | CONN-02 | Unsupported action rejected | negative connector test |
 | CONN-03 | Challenge causes safe stop | browser fixture test |
 | CONN-04 | Native direct execution enforces local daily/circuit safety budgets | Rust unit test + source gate |
+| CONN-05 | LinkedIn Posts API connector is capability/authorization scoped | connector unit fixtures + controlled API test |
 | WEB-01 | PWA manifest/service worker | production browser test |
 | MOB-01 | Mobile control surface | Expo typecheck/build test |
 | REL-01 | Reproducible workspace install | clean CI checkout |
