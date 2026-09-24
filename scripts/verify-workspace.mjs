@@ -292,6 +292,16 @@ if (!rust.includes("fn media_asset_import(")) {
 if (!rust.includes("fn media_asset_delete(")) {
   throw new Error("Media delete command is missing");
 }
+const ruleToggleStart = rust.indexOf("fn automation_rule_pack_set_enabled(");
+const ruleToggleBody = rust.slice(ruleToggleStart, ruleToggleStart + 6000);
+if (
+  ruleToggleStart < 0 ||
+  !ruleToggleBody.includes("if enabled") ||
+  !ruleToggleBody.includes("validate_rule_pack_json")
+) {
+  throw new Error("Enabling an automation rule pack must revalidate the stored rules");
+}
+
 if (!rust.includes("fn automation_rule_pack_set_enabled(")) {
   throw new Error("Rule-pack lifecycle command is missing");
 }
