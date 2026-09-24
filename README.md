@@ -2,6 +2,8 @@
 
 Local-first social operations platform for content, campaigns, CRM, inbox workflows, analytics, and user-authorized platform integrations.
 
+Current real connector coverage: Telegram has a native API path; Facebook, Instagram, WhatsApp, LinkedIn, and TikTok remain contract/fixture surfaces until their real authorization and E2E gates are satisfied.
+
 ## Repository status
 
 This repository is under active incremental migration from an initial React/Vite/Express prototype to a production monorepo architecture.
@@ -60,3 +62,5 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md]
 
 
 Launch control: `docs/LAUNCH_SCORECARD.md`
+
+Zero-cost technical verification fallback: `docs/SELF_HOSTED_VERIFICATION.md`
