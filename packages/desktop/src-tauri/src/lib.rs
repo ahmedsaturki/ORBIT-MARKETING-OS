@@ -12,6 +12,9 @@ use tauri::Manager;
 use thiserror::Error;
 use zeroize::Zeroizing;
 
+const DEFAULT_WORKSPACE_ID: &str = "default";
+const SCHEMA_VERSION: i64 = 2;
+
 const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS vault_records (
   label TEXT PRIMARY KEY,
@@ -21,6 +24,7 @@ CREATE TABLE IF NOT EXISTS vault_records (
 
 CREATE TABLE IF NOT EXISTS accounts (
   id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default',
   platform TEXT NOT NULL,
   display_name TEXT NOT NULL,
   username TEXT,
@@ -32,12 +36,14 @@ CREATE TABLE IF NOT EXISTS accounts (
 
 CREATE TABLE IF NOT EXISTS campaigns (
   id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default',
   name TEXT NOT NULL,
   status TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS campaign_accounts (
+  workspace_id TEXT NOT NULL DEFAULT 'default',
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
   PRIMARY KEY (campaign_id, account_id)
@@ -45,6 +51,7 @@ CREATE TABLE IF NOT EXISTS campaign_accounts (
 
 CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default',
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
   platform TEXT NOT NULL,
@@ -54,11 +61,13 @@ CREATE TABLE IF NOT EXISTS tasks (
   attempts INTEGER NOT NULL DEFAULT 0,
   max_attempts INTEGER NOT NULL DEFAULT 3,
   available_at TEXT NOT NULL,
+  idempotency_key TEXT NOT NULL UNIQUE,
   created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS contacts (
   id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default',
   display_name TEXT NOT NULL,
   phone TEXT,
   email TEXT,
@@ -74,13 +83,14 @@ CREATE INDEX IF NOT EXISTS idx_tasks_ready
 
 CREATE TABLE IF NOT EXISTS conversations (
   id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default',
   contact_id TEXT REFERENCES contacts(id) ON DELETE SET NULL,
   platform TEXT NOT NULL,
   external_thread_id TEXT,
   status TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  UNIQUE(platform, external_thread_id)
+  UNIQUE(workspace_id, platform, external_thread_id)
 );
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -93,6 +103,7 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE TABLE IF NOT EXISTS audit_events (
   id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default',
   timestamp TEXT NOT NULL,
   category TEXT NOT NULL,
   action TEXT NOT NULL,
@@ -231,12 +242,58 @@ struct AccountView {
     has_encrypted_session: bool,
 }
 
+fn has_column(connection: &Connection, table: &str, column: &str) -> Result<bool, rusqlite::Error> {
+    let mut statement = connection.prepare(&format!("PRAGMA table_info({table})"))?;
+    let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
+    for row in rows {
+        if row? == column {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+
+    if version < SCHEMA_VERSION {
+        let migrations = [
+            ("accounts", "workspace_id", "ALTER TABLE accounts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
+            ("campaigns", "workspace_id", "ALTER TABLE campaigns ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
+            ("campaign_accounts", "workspace_id", "ALTER TABLE campaign_accounts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
+            ("tasks", "workspace_id", "ALTER TABLE tasks ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
+            ("tasks", "idempotency_key", "ALTER TABLE tasks ADD COLUMN idempotency_key TEXT"),
+            ("contacts", "workspace_id", "ALTER TABLE contacts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
+            ("conversations", "workspace_id", "ALTER TABLE conversations ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
+            ("audit_events", "workspace_id", "ALTER TABLE audit_events ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
+        ];
+
+        for (table, column, sql) in migrations {
+            if !has_column(connection, table, column)? {
+                connection.execute_batch(sql)?;
+            }
+        }
+
+        connection.execute(
+            "UPDATE tasks SET idempotency_key=id WHERE idempotency_key IS NULL OR idempotency_key=''",
+            [],
+        )?;
+        connection.execute_batch(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_tasks_idempotency ON tasks(idempotency_key);
+             PRAGMA user_version = 2;",
+        )?;
+    }
+
+    Ok(())
+}
+
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     let app_data = app.path().app_data_dir().map_err(|_| AppError::Path)?;
     fs::create_dir_all(&app_data)?;
     let db_path: PathBuf = app_data.join("orbit.sqlite3");
     let connection = Connection::open(db_path)?;
     connection.execute_batch(SCHEMA)?;
+    migrate_schema(&connection)?;
     Ok(connection)
 }
 
