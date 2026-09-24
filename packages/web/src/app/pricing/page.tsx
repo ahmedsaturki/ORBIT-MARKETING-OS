@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import Link from "next/link";
 
 const plans = [
@@ -12,7 +13,7 @@ function checkoutUrl(planName: string): string {
   return process.env[key] ?? "#";
 }
 
-export default function PricingPage(): JSX.Element {
+export default function PricingPage(): ReactElement {
   return (
     <main className="container page">
       <Link href="/">← الرئيسية</Link>
