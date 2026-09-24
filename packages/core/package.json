@@ -37,7 +37,23 @@
       "types": "./dist/audit/index.d.ts",
       "import": "./dist/audit/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./access": {
+      "types": "./dist/access/control.d.ts",
+      "import": "./dist/access/control.js"
+    },
+    "./licensing": {
+      "types": "./dist/licensing/index.d.ts",
+      "import": "./dist/licensing/index.js"
+    },
+    "./sync": {
+      "types": "./dist/sync/index.d.ts",
+      "import": "./dist/sync/index.js"
+    },
+    "./workflows": {
+      "types": "./dist/workflows/index.d.ts",
+      "import": "./dist/workflows/index.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
