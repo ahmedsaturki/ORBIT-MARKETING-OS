@@ -3996,7 +3996,6 @@ fn backup_restore(
         create_integrity_triggers(&restored_connection).map_err(|error| error.to_string())?;
         ensure_workspace_context(&restored_connection).map_err(|error| error.to_string())?;
 
-        let runtime_audit = restored_connection.transaction().map_err(|error| error.to_string())?;
         write_audit(
             &restored_connection,
             "backup",
@@ -4006,7 +4005,6 @@ fn backup_restore(
             Some(&filename),
         )
         .map_err(|error| error.to_string())?;
-        runtime_audit.commit().map_err(|error| error.to_string())?;
         Ok(())
     })();
 
