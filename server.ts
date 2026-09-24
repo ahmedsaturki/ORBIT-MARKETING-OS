@@ -16,6 +16,8 @@ const RUNTIME_AUTH_TOKEN = (process.env.RUNTIME_AUTH_TOKEN ?? "").trim();
 const DEFAULT_RUNTIME_ALLOWED_ORIGINS = [
   "http://tauri.localhost",
   "https://tauri.localhost",
+  "http://127.0.0.1:1420",
+  "http://localhost:1420",
 ] as const;
 
 const RUNTIME_ALLOWED_ORIGINS = new Set([
@@ -249,6 +251,8 @@ const ROLE_SYSTEM_INSTRUCTIONS: Readonly<Record<string, string>> = {
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
+const MAX_CHAT_TOTAL_CHARS = 120_000;
+
 app.post("/api/chat", async (req, res) => {
   try {
     const body: unknown = req.body;
@@ -274,6 +278,13 @@ app.post("/api/chat", async (req, res) => {
 
     if (messages.length === 0) {
       return res.status(400).json({ error: "قائمة الرسائل فارغة أو غير صحيحة" });
+    }
+
+    const totalChatChars = messages.reduce((sum, message) => sum + message.text.length, 0);
+    if (totalChatChars > MAX_CHAT_TOTAL_CHARS) {
+      return res.status(400).json({
+        error: `حجم المحادثة يتجاوز الحد المحلي المسموح (${MAX_CHAT_TOTAL_CHARS} حرفًا).`,
+      });
     }
 
     const roleId = getString(body.roleId, "marketing_strategist");
