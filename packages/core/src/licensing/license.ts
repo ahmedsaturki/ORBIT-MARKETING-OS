@@ -120,10 +120,21 @@ export function parseLicenseToken(token: string): LicenseToken {
   if (!payloadPart || !signaturePart) throw new Error("Invalid license token");
 
   const decoded = decodeJson<LicensePayload & { expiresAt?: string | null }>(payloadPart);
-  const payload: LicensePayload = {
-    ...decoded,
-    ...(decoded.expiresAt === null ? { expiresAt: undefined } : {}),
-  };
+  const payload: LicensePayload =
+    decoded.expiresAt === null || decoded.expiresAt === undefined
+      ? {
+          licenseId: decoded.licenseId,
+          plan: decoded.plan,
+          subject: decoded.subject,
+          issuedAt: decoded.issuedAt,
+          maxDevices: decoded.maxDevices,
+          accountLimit: decoded.accountLimit,
+          features: decoded.features,
+        }
+      : {
+          ...decoded,
+          expiresAt: decoded.expiresAt,
+        };
   validatePayload(payload);
 
   return {
@@ -160,7 +171,7 @@ export async function verifyLicenseToken(
     validatePayload(parsed.payload);
     const key = await crypto.subtle.importKey(
       "raw",
-      publicKeyBytes,
+      publicKeyBytes.slice().buffer as ArrayBuffer,
       { name: "Ed25519" },
       false,
       ["verify"],
@@ -168,7 +179,7 @@ export async function verifyLicenseToken(
     const signatureValid = await crypto.subtle.verify(
       { name: "Ed25519" },
       key,
-      base64UrlToBytes(parsed.signature),
+      base64UrlToBytes(parsed.signature).slice().buffer as ArrayBuffer,
       serializePayload(parsed.payload),
     );
     if (!signatureValid) return { valid: false, reason: "bad_signature" };

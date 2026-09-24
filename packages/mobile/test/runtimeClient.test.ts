@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fetchRuntimeHealth } from "../src/services/runtimeClient.ts";
+import { fetchRuntimeHealth } from "../src/services/runtimeClient";
 
 test("runtime client validates health payload and sends bearer token", async () => {
   const originalFetch = globalThis.fetch;

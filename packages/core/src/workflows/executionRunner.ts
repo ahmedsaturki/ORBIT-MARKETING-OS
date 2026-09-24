@@ -142,11 +142,9 @@ export class ExecutionRunner {
     }
 
     if (outcome.status === "succeeded") {
-      return {
-        status: "succeeded",
-        externalId: outcome.externalId,
-        message: outcome.message,
-      };
+      return outcome.externalId
+        ? { status: "succeeded", externalId: outcome.externalId, message: outcome.message }
+        : { status: "succeeded", message: outcome.message };
     }
 
     if (outcome.status === "blocked") {

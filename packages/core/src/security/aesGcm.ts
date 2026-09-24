@@ -43,9 +43,9 @@ export async function encryptAes256Gcm(
 
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv, tagLength: 128 },
+    { name: "AES-GCM", iv: iv.slice().buffer as ArrayBuffer, tagLength: 128 },
     key,
-    encoder.encode(plaintext),
+    encoder.encode(plaintext).slice().buffer as ArrayBuffer,
   );
 
   return {
@@ -70,9 +70,9 @@ export async function decryptAes256Gcm(
   assertKey(key);
 
   const plaintext = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: base64ToBytes(payload.iv), tagLength: 128 },
+    { name: "AES-GCM", iv: base64ToBytes(payload.iv).slice().buffer as ArrayBuffer, tagLength: 128 },
     key,
-    base64ToBytes(payload.ciphertext),
+    base64ToBytes(payload.ciphertext).slice().buffer as ArrayBuffer,
   );
 
   return decoder.decode(plaintext);

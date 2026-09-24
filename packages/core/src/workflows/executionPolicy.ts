@@ -29,11 +29,17 @@ export interface ExecutionPolicyContext {
   readonly circuitBreakerThreshold: number;
 }
 
-export interface ExecutionPolicyDecision {
-  readonly allowed: boolean;
-  readonly reason: "allowed" | ExecutionBlockReason;
-  readonly message: string;
-}
+export type ExecutionPolicyDecision =
+  | {
+      readonly allowed: true;
+      readonly reason: "allowed";
+      readonly message: string;
+    }
+  | {
+      readonly allowed: false;
+      readonly reason: ExecutionBlockReason;
+      readonly message: string;
+    };
 
 /**
  * Applies deterministic pre-flight safety gates before a connector is allowed

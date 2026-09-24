@@ -190,14 +190,19 @@ export class TelegramConnector implements PlatformConnector {
     body: Readonly<Record<string, string>> | undefined,
     signal?: AbortSignal,
   ): Promise<TelegramRequestResult<T>> {
+    const request: RequestInit = {
+      method: body ? "POST" : "GET",
+      signal: signal ?? AbortSignal.timeout(15_000),
+      ...(body
+        ? {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }
+        : {}),
+    };
     const response = await this.fetchImpl(
       `${this.apiBaseUrl}/bot${encodeURIComponent(token)}/${method}`,
-      {
-        method: body ? "POST" : "GET",
-        headers: body ? { "Content-Type": "application/json" } : undefined,
-        body: body ? JSON.stringify(body) : undefined,
-        signal: signal ?? AbortSignal.timeout(15_000),
-      },
+      request,
     );
 
     let payload: TelegramApiResponse<T>;
