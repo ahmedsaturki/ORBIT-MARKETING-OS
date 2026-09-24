@@ -2,7 +2,7 @@ export type Platform = "facebook" | "instagram" | "telegram" | "whatsapp" | "lin
 
 export type AccountStatus = "connected" | "needs_refresh" | "restricted" | "paused";
 export type CampaignStatus = "draft" | "awaiting_approval" | "scheduled" | "running" | "paused" | "completed" | "failed";
-export type TaskStatus = "pending" | "awaiting_approval" | "running" | "succeeded" | "failed" | "blocked" | "cancelled";
+export type TaskStatus = "pending" | "awaiting_approval" | "awaiting_user_action" | "running" | "succeeded" | "failed" | "blocked" | "cancelled";
 export type ApprovalStatus = "draft" | "pending" | "approved" | "rejected" | "changes_requested";
 export type ConversationStatus = "new" | "interested" | "potential_customer" | "complaint" | "closed";
 export type ContactStatus = "new" | "interested" | "sold" | "lost";
