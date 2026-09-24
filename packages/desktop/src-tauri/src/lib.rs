@@ -471,15 +471,15 @@ fn account_upsert(
     let status = if session_payload_json.is_some() { "connected" } else { "needs_refresh" };
     connection
         .execute(
-            "INSERT INTO accounts(id, platform, display_name, username, status, session_payload_json, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+            "INSERT INTO accounts(id, workspace_id, platform, display_name, username, status, session_payload_json, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
              ON CONFLICT(id) DO UPDATE SET
                platform=excluded.platform,
                display_name=excluded.display_name,
                username=excluded.username,
                session_payload_json=COALESCE(excluded.session_payload_json, accounts.session_payload_json),
                updated_at=excluded.updated_at",
-            params![id, platform, display_name, username, status, session_payload_json, timestamp],
+            params![id, DEFAULT_WORKSPACE_ID, platform, display_name, username, status, session_payload_json, timestamp],
         )
         .map_err(|error| error.to_string())?;
 
@@ -500,11 +500,11 @@ fn account_upsert(
 fn account_list(app: tauri::AppHandle) -> Result<Vec<AccountView>, String> {
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let mut statement = connection
-        .prepare("SELECT id, platform, display_name, username, status, session_payload_json FROM accounts ORDER BY created_at DESC")
+        .prepare("SELECT id, platform, display_name, username, status, session_payload_json FROM accounts WHERE workspace_id=?1 ORDER BY created_at DESC")
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map([], |row| {
+        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
             Ok(AccountView {
                 id: row.get(0)?,
                 platform: row.get(1)?,
@@ -534,8 +534,8 @@ fn account_get_session(
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let payload_json: Option<String> = connection
         .query_row(
-            "SELECT session_payload_json FROM accounts WHERE id = ?1",
-            params![id],
+            "SELECT session_payload_json FROM accounts WHERE id = ?1 AND workspace_id = ?2",
+            params![id, DEFAULT_WORKSPACE_ID],
             |row| row.get(0),
         )
         .map_err(|error| match error {
@@ -554,7 +554,7 @@ fn account_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let changed = connection
-        .execute("DELETE FROM accounts WHERE id = ?1", params![id])
+        .execute("DELETE FROM accounts WHERE id = ?1 AND workspace_id = ?2", params![id, DEFAULT_WORKSPACE_ID])
         .map_err(|error| error.to_string())?;
     if changed > 0 {
         write_audit(&connection, "account", "delete", "success", "user", Some(&id))
