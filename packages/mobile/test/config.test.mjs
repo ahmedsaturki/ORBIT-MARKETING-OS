@@ -13,7 +13,7 @@ test("Expo config declares stable application identity", () => {
   assert.equal(app.expo.scheme, "orbit");
   assert.equal(app.expo.android.package, "com.orbitmarketing.os");
   assert.equal(app.expo.ios.bundleIdentifier, "com.orbitmarketing.os");
-  assert.deepEqual(app.expo.plugins, ["expo-router"]);
+  assert.deepEqual(app.expo.plugins, ["expo-router", "expo-secure-store"]);
 });
 
 test("Expo config is pinned to portrait + dark UI defaults", () => {
