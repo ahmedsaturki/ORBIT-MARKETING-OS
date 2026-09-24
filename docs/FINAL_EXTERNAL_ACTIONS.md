@@ -1,14 +1,14 @@
 # ORBIT — Final External Actions
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 
 The codebase is intentionally not marked production-ready yet. The remaining actions below require access to the user's GitHub/Vercel account or execution environment.
 
 ## A. Enable zero-cost technical verification
 
 1. Open the repository **Settings → Actions → Runners → New self-hosted runner**.
-2. Register the user's owned Windows/Linux/macOS machine.
-3. Ensure the runner is `Online/Idle` and advertises the standard `self-hosted` + `x64` labels used by the workflows. No custom `orbit` label is required.
+2. Register an owned **x64 Linux** self-hosted runner. The workflows require the `self-hosted`, `x64`, and `linux` labels; a Windows-hosted runner will not satisfy these jobs. A Linux environment running under WSL can be used when the GitHub runner itself is installed and reporting Linux labels.
+3. Ensure the runner is `Online/Idle` and advertises `self-hosted`, `x64`, and `linux`. No custom `orbit` label is required.
 4. Confirm the runner is **Idle/Online**.
 5. From **Actions → Bootstrap pnpm lockfile → Run workflow**, select `rebuild/orbit-production`.
 6. Verify that both `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` were committed to the branch.
