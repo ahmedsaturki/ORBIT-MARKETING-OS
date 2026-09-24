@@ -189,6 +189,25 @@ if (webVercel.framework !== "nextjs") throw new Error("Web Vercel framework must
 if (webVercel.outputDirectory !== "out") throw new Error("Web Vercel output directory must be out");
 
 
+const workflowFiles = [
+  ".github/workflows/ci.yml",
+  ".github/workflows/rebuild-rust.yml",
+  ".github/workflows/release-desktop.yml",
+  ".github/workflows/release-mobile.yml",
+  ".github/workflows/vercel-web.yml",
+];
+for (const workflow of workflowFiles) {
+  const content = await readFile(join(root, workflow), "utf8");
+  if (/runs-on:\s*ubuntu-latest/.test(content) && !content.includes("timeout-minutes:")) {
+    throw new Error("Workflow is missing timeout-minutes: " + workflow);
+  }
+}
+await assertFile("rust-toolchain.toml");
+const rustToolchain = await readFile(join(root, "rust-toolchain.toml"), "utf8");
+if (!rustToolchain.includes('channel = "1.98.1"')) {
+  throw new Error("Rust toolchain is not pinned to 1.98.1");
+}
+
 const forbiddenFragments = ["next lint", "typecheck:all", "test:all", "build:all", "app.get(\"*\")", "app.get(\'/*\')"];
 
 async function scan(dir) {
