@@ -16,7 +16,7 @@ export default function PricingPage(): JSX.Element {
   return (
     <main className="container page">
       <Link href="/">← الرئيسية</Link>
-      <p><Link href="/legal/refunds/">سياسة الاسترداد</Link></p>
+      <p><Link href="/legal/refunds/">سياسة الاسترداد</Link> • <Link href="/legal/eula/">اتفاقية الترخيص</Link></p>
       <h1>الخطط والأسعار</h1>
       <p className="muted">الأسعار الحالية هي إعدادات إطلاق قابلة للمراجعة؛ الشراء الفعلي لا يتفعل قبل ربط مزود الدفع والتحقق من الخطة.</p>
 
