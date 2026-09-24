@@ -2277,8 +2277,8 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
 
     let candidate = transaction
         .query_row(
-            "SELECT id, campaign_id, content_id, account_id, platform, kind, priority,
-                    attempts, max_attempts, idempotency_key, available_at, created_at
+            "SELECT id, campaign_id, content_id, destination_id, account_id, platform, kind,
+                    priority, attempts, max_attempts, idempotency_key, available_at, created_at
              FROM tasks
              WHERE workspace_id=?2
                AND status='pending'
