@@ -47,6 +47,16 @@ describe("connector capability boundary", () => {
     ).toThrow("Task platform does not match");
   });
 
+  it("rejects task kinds the connector does not advertise", () => {
+    const connector = new FixtureConnector({
+      platform: "facebook",
+      capabilities: { publish: false },
+    });
+    expect(() => assertSupportedTask(connector, makeTask())).toThrow(
+      "Connector does not support task kind",
+    );
+  });
+
   it("stops on a platform challenge", async () => {
     const connector = new FixtureConnector({
       platform: "facebook",
