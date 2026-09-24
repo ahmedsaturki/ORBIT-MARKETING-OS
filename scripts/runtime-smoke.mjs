@@ -201,6 +201,32 @@ try {
   });
   if (authorized.status !== 200) throw new Error("expected 200 with correct LAN token");
 
+  const preflightAllowed = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    method: "OPTIONS",
+    headers: {
+      Origin: "https://allowed.example",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "authorization, content-type",
+    },
+  });
+  if (preflightAllowed.status !== 204) throw new Error("expected 204 for allowed CORS preflight");
+  if (preflightAllowed.headers.get("access-control-allow-origin") !== "https://allowed.example") {
+    throw new Error("allowed CORS origin header mismatch");
+  }
+  if (!preflightAllowed.headers.get("access-control-allow-methods")?.includes("POST")) {
+    throw new Error("allowed CORS methods header mismatch");
+  }
+
+  const preflightBlocked = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    method: "OPTIONS",
+    headers: {
+      Origin: "https://blocked.example",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "authorization, content-type",
+    },
+  });
+  if (preflightBlocked.status !== 403) throw new Error("expected 403 for blocked CORS preflight");
+
   const blockedOrigin = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
     headers: {
       Authorization: `Bearer ${authToken}`,
