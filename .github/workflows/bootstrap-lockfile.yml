@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   bootstrap:
-    if: github.ref_name == 'rebuild/orbit-production' && github.actor == 'ahmedsaturki'
+    if: (github.ref_name == 'rebuild/orbit-production' || github.ref_name == 'rebuild/orbit-production-consolidated') && github.actor == 'ahmedsaturki'
     runs-on: [self-hosted, x64, linux]
     timeout-minutes: 30
     steps:
