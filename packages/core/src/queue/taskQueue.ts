@@ -3,6 +3,7 @@ import { calculateRetryDelay, shouldRetry, type RetryPolicy } from "./retry.js";
 
 export interface QueueStats {
   readonly pending: number;
+  readonly awaiting_approval: number;
   readonly running: number;
   readonly succeeded: number;
   readonly failed: number;
@@ -125,6 +126,7 @@ export class TaskQueue {
   public stats(): QueueStats {
     const result: Record<keyof QueueStats, number> = {
       pending: 0,
+      awaiting_approval: 0,
       running: 0,
       succeeded: 0,
       failed: 0,
