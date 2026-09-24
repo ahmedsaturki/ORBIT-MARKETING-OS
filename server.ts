@@ -110,10 +110,14 @@ app.use("/api", (req, res, next) => {
 });
 const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").replace(/\/$/, "");
 
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.1:8b";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.2:3b";
 const OLLAMA_FAST_MODEL = process.env.OLLAMA_FAST_MODEL ?? OLLAMA_MODEL;
 const OLLAMA_REASONING_MODEL = process.env.OLLAMA_REASONING_MODEL ?? OLLAMA_MODEL;
 const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL ?? "";
+const parsedOllamaContext = Number.parseInt(process.env.OLLAMA_NUM_CTX ?? "4096", 10);
+const OLLAMA_NUM_CTX = Number.isFinite(parsedOllamaContext) && parsedOllamaContext >= 1024 && parsedOllamaContext <= 32768
+  ? parsedOllamaContext
+  : 4096;
 
 interface ChatMessageInput {
   readonly role: "user" | "assistant" | "model";
@@ -157,7 +161,7 @@ async function ollamaRequest(
   const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ stream: false, ...body }),
+    body: JSON.stringify({ stream: false, options: { num_ctx: OLLAMA_NUM_CTX }, ...body }),
     signal: AbortSignal.timeout(120_000),
   });
 
