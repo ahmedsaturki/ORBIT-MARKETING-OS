@@ -916,42 +916,45 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
     }
 
 
-        connection.execute_batch(
-            "ALTER TABLE tasks RENAME TO tasks_v10_old;
-             CREATE TABLE tasks (
-               id TEXT PRIMARY KEY,
-               workspace_id TEXT NOT NULL DEFAULT 'default',
-               campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
-               content_id TEXT REFERENCES content_items(id) ON DELETE RESTRICT,
-               destination_id TEXT,
-               account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
-               platform TEXT NOT NULL,
-               kind TEXT NOT NULL,
-               priority INTEGER NOT NULL DEFAULT 0,
-               status TEXT NOT NULL,
-               attempts INTEGER NOT NULL DEFAULT 0,
-               max_attempts INTEGER NOT NULL DEFAULT 3,
-               available_at TEXT NOT NULL,
-               idempotency_key TEXT NOT NULL,
-               created_at TEXT NOT NULL,
-               UNIQUE(workspace_id, idempotency_key)
-             );
-             INSERT INTO tasks(
-               id, workspace_id, campaign_id, content_id, destination_id, account_id, platform,
-               kind, priority, status, attempts, max_attempts, available_at, idempotency_key, created_at
-             )
-             SELECT
-               id, workspace_id, campaign_id, content_id, destination_id, account_id, platform,
-               kind, priority, status, attempts, max_attempts, available_at,
-               COALESCE(NULLIF(idempotency_key, ''), id), created_at
-             FROM tasks_v10_old;
-             DROP TABLE tasks_v10_old;
-             CREATE INDEX IF NOT EXISTS idx_tasks_ready
-               ON tasks(status, available_at, priority);
-             CREATE INDEX IF NOT EXISTS idx_tasks_destination
-               ON tasks(workspace_id, destination_id);
-             PRAGMA user_version = 10;"
-        )?;
+    if version < 10 {
+            connection.execute_batch(
+                "ALTER TABLE tasks RENAME TO tasks_v10_old;
+                 CREATE TABLE tasks (
+                   id TEXT PRIMARY KEY,
+                   workspace_id TEXT NOT NULL DEFAULT 'default',
+                   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+                   content_id TEXT REFERENCES content_items(id) ON DELETE RESTRICT,
+                   destination_id TEXT,
+                   account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+                   platform TEXT NOT NULL,
+                   kind TEXT NOT NULL,
+                   priority INTEGER NOT NULL DEFAULT 0,
+                   status TEXT NOT NULL,
+                   attempts INTEGER NOT NULL DEFAULT 0,
+                   max_attempts INTEGER NOT NULL DEFAULT 3,
+                   available_at TEXT NOT NULL,
+                   idempotency_key TEXT NOT NULL,
+                   created_at TEXT NOT NULL,
+                   UNIQUE(workspace_id, idempotency_key)
+                 );
+                 INSERT INTO tasks(
+                   id, workspace_id, campaign_id, content_id, destination_id, account_id, platform,
+                   kind, priority, status, attempts, max_attempts, available_at, idempotency_key, created_at
+                 )
+                 SELECT
+                   id, workspace_id, campaign_id, content_id, destination_id, account_id, platform,
+                   kind, priority, status, attempts, max_attempts, available_at,
+                   COALESCE(NULLIF(idempotency_key, ''), id), created_at
+                 FROM tasks_v10_old;
+                 DROP TABLE tasks_v10_old;
+                 CREATE INDEX IF NOT EXISTS idx_tasks_ready
+                   ON tasks(status, available_at, priority);
+                 CREATE INDEX IF NOT EXISTS idx_tasks_destination
+                   ON tasks(workspace_id, destination_id);
+                 PRAGMA user_version = 10;"
+            )?
+    }
+;
     }
 
     connection.execute_batch("PRAGMA user_version = 10;")?;
@@ -5127,6 +5130,57 @@ mod tests {
             require_local_user_actor(&connection, "spoofed-user"),
             Err(AppError::Unauthorized)
         ));
+    }
+
+    #[test]
+    fn schema_v10_is_idempotent_after_upgrade() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(
+                "CREATE TABLE tasks (
+                   id TEXT PRIMARY KEY,
+                   workspace_id TEXT NOT NULL DEFAULT 'default',
+                   campaign_id TEXT NOT NULL,
+                   content_id TEXT,
+                   destination_id TEXT,
+                   account_id TEXT NOT NULL,
+                   platform TEXT NOT NULL,
+                   kind TEXT NOT NULL,
+                   priority INTEGER NOT NULL DEFAULT 0,
+                   status TEXT NOT NULL,
+                   attempts INTEGER NOT NULL DEFAULT 0,
+                   max_attempts INTEGER NOT NULL DEFAULT 3,
+                   available_at TEXT NOT NULL,
+                   idempotency_key TEXT NOT NULL UNIQUE,
+                   created_at TEXT NOT NULL
+                 );
+                 INSERT INTO tasks(
+                   id, workspace_id, campaign_id, account_id, platform, kind,
+                   status, available_at, idempotency_key, created_at
+                 ) VALUES (
+                   'task-1', 'workspace-1', 'campaign-1', 'account-1', 'telegram',
+                   'publish', 'pending', '2026-09-24T15:00:00Z', 'key-1',
+                   '2026-09-24T15:00:00Z'
+                 );
+                 PRAGMA user_version = 10;",
+            )
+            .expect("v10 task fixture should be created");
+
+        migrate_schema(&connection).expect("v10 schema should remain unchanged");
+
+        let task_count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM tasks WHERE id='task-1'", [], |row| row.get(0))
+            .expect("task should remain available");
+        assert_eq!(task_count, 1);
+
+        let table_exists: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='tasks_v10_old'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("sqlite schema should be readable");
+        assert_eq!(table_exists, 0);
     }
 
     #[test]
