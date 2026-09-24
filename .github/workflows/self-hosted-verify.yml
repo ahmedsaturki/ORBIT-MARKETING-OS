@@ -14,7 +14,7 @@ jobs:
   verify:
     if: github.ref_name == 'rebuild/orbit-production'
     name: Full verification on owned runner
-    runs-on: [self-hosted, orbit, x64]
+    runs-on: [self-hosted, x64]
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
