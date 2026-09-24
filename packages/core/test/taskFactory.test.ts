@@ -137,6 +137,25 @@ describe("buildCampaignTasks", () => {
         "facebook",
         { taskKind: "publish", maxAttempts: 0 },
       ),
-    ).toThrow("maxAttempts must be a positive integer");
+    ).toThrow("maxAttempts must be an integer between 1 and 10");
+  });
+
+  it("rejects a retry budget above the native execution ceiling", () => {
+    expect(() =>
+      buildCampaignTasks(
+        {
+          id: "camp-1",
+          workspaceId: "workspace-1",
+          name: "Launch",
+          status: "draft",
+          accountIds: ["acc-1"],
+          contentIds: ["content-1"],
+          taskCount: 1,
+          createdAt: "2026-09-24T00:00:00.000Z",
+        },
+        "facebook",
+        { taskKind: "publish", maxAttempts: 11 },
+      ),
+    ).toThrow("maxAttempts must be an integer between 1 and 10");
   });
 });
