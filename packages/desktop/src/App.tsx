@@ -8,6 +8,12 @@ interface Health {
   readonly database: string;
 }
 
+interface WorkspaceView {
+  readonly id: string;
+  readonly name: string;
+  readonly created_at: string;
+}
+
 interface VaultResult {
   readonly label: string;
   readonly payloadVersion: number;
@@ -126,6 +132,10 @@ async function callNative<T>(command: string, args?: Record<string, unknown>): P
 
 export function App(): ReactElement {
   const [health, setHealth] = useState<Health | null>(null);
+  const [workspaces, setWorkspaces] = useState<readonly WorkspaceView[]>([]);
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceView | null>(null);
+  const [newWorkspaceId, setNewWorkspaceId] = useState("");
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [label, setLabel] = useState("demo");
   const [secret, setSecret] = useState("");
   const [password, setPassword] = useState("");
@@ -181,6 +191,48 @@ export function App(): ReactElement {
   const [license, setLicense] = useState<LicenseStatus | null>(null);
   const [licenseToken, setLicenseToken] = useState("");
   const [licenseMessage, setLicenseMessage] = useState("");
+
+  const loadWorkspaces = async (): Promise<void> => {
+    const items = await callNative<WorkspaceView[]>("workspace_list");
+    const current = await callNative<WorkspaceView>("workspace_current");
+    setWorkspaces(items);
+    setActiveWorkspace(current);
+  };
+
+  const createWorkspace = async (): Promise<void> => {
+    if (!newWorkspaceName.trim()) {
+      setError("أدخل اسم مساحة العمل الجديدة");
+      return;
+    }
+    try {
+      setError("");
+      const created = await callNative<WorkspaceView>("workspace_create", {
+        id: newWorkspaceId.trim() || null,
+        name: newWorkspaceName.trim(),
+      });
+      await callNative<WorkspaceView>("workspace_select", { id: created.id });
+      setNewWorkspaceId("");
+      setNewWorkspaceName("");
+      await checkHealth();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل إنشاء مساحة العمل");
+    }
+  };
+
+  const selectWorkspace = async (id: string): Promise<void> => {
+    if (!id || id === activeWorkspace?.id) return;
+    try {
+      setError("");
+      setActiveWorkspace(await callNative<WorkspaceView>("workspace_select", { id }));
+      setSelectedContentId("");
+      setApprovalId("");
+      setMessageConversationId("");
+      setMessages([]);
+      await checkHealth();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تبديل مساحة العمل");
+    }
+  };
 
   const loadCampaigns = async (): Promise<void> => {
     try {
@@ -568,6 +620,7 @@ export function App(): ReactElement {
     try {
       setError("");
       setHealth(await callNative<Health>("app_health"));
+      await loadWorkspaces();
       await loadAccounts();
       await loadCampaigns();
       await loadTasks();
@@ -718,6 +771,39 @@ export function App(): ReactElement {
       ) : null}
 
       <section className="grid">
+      <section className="card workspace-switcher">
+        <div>
+          <div className="eyebrow">WORKSPACE</div>
+          <h2>مساحة العمل الحالية</h2>
+          <p>كل الحسابات والحملات والمحتوى والـCRM وصندوق المحادثات معزولة حسب مساحة العمل المحلية.</p>
+        </div>
+        <div className="actions">
+          <label>
+            المساحة النشطة
+            <select
+              value={activeWorkspace?.id ?? ""}
+              onChange={(event) => void selectWorkspace(event.target.value)}
+            >
+              {workspaces.map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>{workspace.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            اسم مساحة جديدة
+            <input value={newWorkspaceName} onChange={(event) => setNewWorkspaceName(event.target.value)} placeholder="مثال: فريق التسويق" />
+          </label>
+          <label>
+            معرف اختياري
+            <input value={newWorkspaceId} onChange={(event) => setNewWorkspaceId(event.target.value)} placeholder="marketing-team" />
+          </label>
+          <button className="button primary" type="button" onClick={() => void createWorkspace()}>إنشاء وتفعيل</button>
+        </div>
+        {activeWorkspace ? (
+          <div className="result">النشطة الآن: <strong>{activeWorkspace.name}</strong> • {activeWorkspace.id}</div>
+        ) : null}
+      </section>
+
         <article className="card">
           <div className="icon"><ShieldCheck size={22} /></div>
           <h2>الخزنة المحلية</h2>
