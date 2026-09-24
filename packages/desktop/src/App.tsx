@@ -611,7 +611,6 @@ export function App(): ReactElement {
       const result = await callNative<ApprovalView>("approval_request", {
         id: "approval-" + Date.now(),
         content_id: selectedContentId,
-        requested_by: "local-user",
         reviewer_ids_json: JSON.stringify(["local-user"]),
         note: "طلب موافقة من مساحة العمل المحلية",
       });
@@ -633,7 +632,6 @@ export function App(): ReactElement {
       await callNative<ApprovalView>("approval_decide", {
         id: approvalId,
         status,
-        decided_by: "local-user",
         note: "تم اتخاذ القرار من تطبيق ORBIT المحلي",
       });
       await loadContent();
