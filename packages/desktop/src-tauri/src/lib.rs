@@ -3203,6 +3203,27 @@ fn automation_rule_pack_set_enabled(
     )
     .map_err(|error| error.to_string())?;
 
+    if enabled {
+        let existing: Option<(String, i64, String)> = connection
+            .query_row(
+                "SELECT platform, schema_version, rules_json
+                 FROM automation_rule_packs
+                 WHERE id=?1 AND workspace_id=?2",
+                params![&id, &workspace_id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .optional()
+            .map_err(|error| error.to_string())?;
+
+        let Some((platform, stored_schema_version, rules_json)) = existing else {
+            return Ok(false);
+        };
+        if stored_schema_version != 1 {
+            return Err("cannot enable unsupported automation rule pack schema".to_string());
+        }
+        validate_rule_pack_json(&platform, &rules_json)?;
+    }
+
     let changed = connection
         .execute(
             "UPDATE automation_rule_packs
