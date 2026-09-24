@@ -15,6 +15,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | DATA-03 | 1,000 contacts searchable | performance benchmark |
 | WS-01 | Workspace membership is required for workspace access | native SQLite membership test + IPC negative test |
 | WS-02 | Workspace switching persists and scopes data | restart test + multi-workspace integration test |
+| WS-03 | Workspace membership gates sensitive operations | negative native IPC tests |
 | QUE-01 | Persistent queue | restart/recovery test |
 | QUE-02 | Bounded retries | deterministic retry tests |
 | QUE-03 | Circuit breaker | fault-injection test |
