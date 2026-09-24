@@ -12,7 +12,7 @@ In the repository:
 
 Choose the operating system and architecture of the machine, then use the registration commands GitHub displays.
 
-Use an x64 self-hosted runner. The workflows route to `self-hosted, x64`; no custom `orbit` label is required.
+Use an x64 self-hosted runner. The workflows route to `self-hosted, orbit, x64`; add the custom `orbit` label during registration so an unrelated self-hosted runner cannot consume release verification jobs.
 
 The runner should end in a connected/listening state before it can accept the workflow. citeturn961641search1
 
