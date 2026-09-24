@@ -18,6 +18,7 @@ const requiredFiles = [
   "packages/shared-ui/package.json",
   "packages/desktop/src-tauri/Cargo.toml",
   "packages/web/public/icon.svg",
+  "vercel.json",
 ];
 
 function resolveRoot() {
@@ -195,11 +196,12 @@ for (const command of Object.keys(sensitiveDesktopCommands)) {
   }
 }
 
-const webVercel = JSON.parse(await readFile(join(root, "packages/web/vercel.json"), "utf8"));
-if (webVercel.framework !== "nextjs") throw new Error("Web Vercel framework must be nextjs");
-if (webVercel.outputDirectory !== "out") throw new Error("Web Vercel output directory must be out");
-if (webVercel.installCommand !== "pnpm install --frozen-lockfile") throw new Error("Web Vercel install must use frozen lockfile");
-if (!webVercel.ignoreCommand.includes("exit 1")) throw new Error("Web Vercel must fail closed when lockfile is missing");
+const rootVercel = JSON.parse(await readFile(join(root, "vercel.json"), "utf8"));
+if (rootVercel.framework !== "nextjs") throw new Error("Root Vercel framework must be nextjs");
+if (rootVercel.outputDirectory !== "packages/web/out") throw new Error("Root Vercel output directory must be packages/web/out");
+if (rootVercel.installCommand !== "pnpm install --frozen-lockfile") throw new Error("Root Vercel install must use frozen lockfile");
+if (!rootVercel.ignoreCommand.includes("exit 1")) throw new Error("Root Vercel must fail closed when lockfile is missing");
+
 
 
 const workflowFiles = [
