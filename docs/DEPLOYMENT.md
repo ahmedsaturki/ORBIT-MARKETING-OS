@@ -32,9 +32,9 @@ A web deployment alone does not make desktop/mobile/product release-ready. Use `
 
 The root `vercel.json` contains an `ignoreCommand` that skips a Web deployment when the commit does not change `packages/web` or the workspace/deployment manifests. This prevents Core/Desktop-only commits from consuming Vercel build concurrency. Vercel project settings should still use `packages/web` as the Root Directory for the dedicated Web project, with Next.js as the framework preset.
 
-### Dependency-fetch fallback
+### Dependency resolution policy
 
-The connected deployment environment previously failed during pnpm metadata resolution. The Web deployment now uses an isolated npm install for `packages/web` with workspaces disabled, followed by the Web build. This is a deployment workaround only; the repository CI remains pnpm-based and still requires a real lockfile for reproducible release evidence.
+The repository does not use an npm-install fallback for release evidence. The canonical deployment path is the committed `pnpm-lock.yaml` plus `pnpm install --frozen-lockfile`. This keeps CI and Vercel aligned and prevents a deployment from silently using dependency metadata that differs from the verified workspace state.
 
 ## Current Vercel project settings
 
