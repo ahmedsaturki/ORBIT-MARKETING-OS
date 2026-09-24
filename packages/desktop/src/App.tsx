@@ -68,7 +68,6 @@ interface ContactView {
 
 interface ConversationView {
   readonly id: string;
-  readonly account_id?: string;
   readonly account_id: string | null;
   readonly contact_id: string | null;
   readonly platform: string;
@@ -81,7 +80,6 @@ interface ConversationView {
 interface TaskView {
   readonly id: string;
   readonly campaign_id: string;
-  readonly content_id?: string;
   readonly content_id: string | null;
   readonly destination_id: string | null;
   readonly account_id: string;
@@ -119,12 +117,12 @@ interface LicenseStatus {
   readonly installed: boolean;
   readonly valid: boolean;
   readonly reason: string;
-  readonly license_id?: string;
-  readonly plan?: string;
-  readonly subject?: string;
-  readonly expires_at?: string;
-  readonly max_devices?: number;
-  readonly account_limit?: number;
+  readonly license_id: string | null;
+  readonly plan: string | null;
+  readonly subject: string | null;
+  readonly expires_at: string | null;
+  readonly max_devices: number | null;
+  readonly account_limit: number | null;
   readonly feature_count: number;
   readonly account_count: number;
 }
