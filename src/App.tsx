@@ -47,7 +47,7 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <h1 className="font-extrabold text-lg tracking-tight text-white">ORBIT MARKETING OS</h1>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold">
-                    v2.4.1 Local-First
+                    v0.2.0 Rebuild
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 font-medium">منصة تشغيل تسويق وأتمتة شاملة متعددة القنوات</p>
@@ -127,12 +127,12 @@ export default function App() {
       <footer className="border-t border-slate-900 bg-slate-950 text-slate-500 text-xs py-4 px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
           <div>
-            Orbit Marketing OS — منصة تشغيل تسويق وأتمتة متكاملة • Local-First • بدون خوادم مركزية • خصوصية مطلقة 100%
+            Orbit Marketing OS — منصة تشغيل تسويق وأتمتة متكاملة • Local-First • بدون خوادم مركزية • بيانات محلية افتراضيًا
           </div>
           <div className="flex items-center gap-4 text-slate-400">
             <span>الذكاء الاصطناعي: مزود محلي عبر Ollama (النموذج قابل للتهيئة)</span>
             <span>•</span>
-            <span className="text-emerald-400 font-mono">حالة النظام: طبقة الواجهة جاهزة</span>
+            <span className="text-emerald-400 font-mono">حالة النظام: واجهة legacy تجريبية</span>
           </div>
         </div>
       </footer>
