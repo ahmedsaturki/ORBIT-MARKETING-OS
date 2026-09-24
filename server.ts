@@ -108,7 +108,21 @@ function authorizeRuntime(req: express.Request, res: express.Response): boolean 
 app.use("/api", (req, res, next) => {
   if (authorizeRuntime(req, res)) next();
 });
-const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").replace(/\/$/, "");
+function normalizeOllamaBaseUrl(value: string): string {
+  const url = new URL(value);
+  const loopback = new Set(["localhost", "127.0.0.1", "::1"]);
+  if (url.username || url.password) {
+    throw new Error("OLLAMA_BASE_URL must not contain embedded credentials");
+  }
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback.has(url.hostname))) {
+    throw new Error("OLLAMA_BASE_URL must use HTTPS or loopback HTTP");
+  }
+  return url.toString().replace(/\/$/, "");
+}
+
+const OLLAMA_BASE_URL = normalizeOllamaBaseUrl(
+  process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434",
+);
 
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.2:3b";
 const OLLAMA_FAST_MODEL = process.env.OLLAMA_FAST_MODEL ?? OLLAMA_MODEL;
