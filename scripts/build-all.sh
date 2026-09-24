@@ -10,9 +10,13 @@ if [ ! -s pnpm-lock.yaml ]; then
 fi
 
 pnpm verify:workspace
+pnpm verify:release
+pnpm security:scan
 pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm lint
 pnpm test
+pnpm test:runtime
+pnpm test:performance
 pnpm build
 pnpm format:check
