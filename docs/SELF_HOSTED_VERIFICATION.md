@@ -47,9 +47,9 @@ The repository's pinned Rust toolchain is also checked by `verify:workspace`.
 
 ## 3. Run verification
 
-The workflow is **manual-only**:
+The workflow supports both automatic verification on pushes to the consolidation branch and manual `workflow_dispatch`:
 
-**Actions → Self-Hosted Verification → Run workflow**
+**Actions → Self-Hosted Verification → Run workflow** (or push to `rebuild/orbit-production-consolidated`)
 
 It performs:
 
