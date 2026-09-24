@@ -95,6 +95,36 @@ describe("execution policy", () => {
     expect(decision.allowed).toBe(true);
   });
 
+  it("blocks approvals from another workspace", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      approval: {
+        id: "approval-foreign",
+        workspaceId: "other-workspace",
+        contentId: "content-1",
+        requestedBy: "user-1",
+        reviewerIds: ["user-2"],
+        status: "approved",
+      },
+    });
+    expect(decision.reason).toBe("approval_scope_mismatch");
+  });
+
+  it("blocks approvals for content outside the campaign", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      approval: {
+        id: "approval-foreign-content",
+        workspaceId: "workspace-1",
+        contentId: "content-other",
+        requestedBy: "user-1",
+        reviewerIds: ["user-2"],
+        status: "approved",
+      },
+    });
+    expect(decision.reason).toBe("approval_scope_mismatch");
+  });
+
   it("blocks disconnected accounts before approval evaluation", () => {
     const decision = evaluateExecutionPolicy({ ...context, account: { ...account, status: "needs_refresh" } });
     expect(decision.reason).toBe("account_not_connected");
