@@ -110,7 +110,8 @@ function authorizeRuntime(req: express.Request, res: express.Response): boolean 
 
   const supplied = req.header("authorization") ?? "";
   const prefix = "Bearer ";
-  if (!supplied.startsWith(prefix) || !tokensEqual(RUNTIME_AUTH_TOKEN, supplied.slice(prefix.length))) {
+  const credential = supplied.startsWith(prefix) ? supplied.slice(prefix.length) : "";
+  if (credential.length > 1024 || !supplied.startsWith(prefix) || !tokensEqual(RUNTIME_AUTH_TOKEN, credential)) {
     res.status(401).json({ error: "Unauthorized runtime request" });
     return false;
   }
