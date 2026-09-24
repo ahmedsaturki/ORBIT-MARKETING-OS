@@ -29,6 +29,44 @@ describe("buildCampaignTasks", () => {
     expect(tasks.every((task) => task.priority === 5)).toBe(true);
   });
 
+  it("binds the only campaign content item automatically", () => {
+    const tasks = buildCampaignTasks(
+      {
+        id: "camp-content",
+        workspaceId: "workspace-1",
+        name: "Content launch",
+        status: "scheduled",
+        accountIds: ["acc-1"],
+        contentIds: ["content-1"],
+        taskCount: 1,
+        createdAt: "2026-09-24T00:00:00.000Z",
+      },
+      "facebook",
+      { taskKind: "publish" },
+    );
+
+    expect(tasks[0]?.contentId).toBe("content-1");
+  });
+
+  it("requires an explicit content id when a campaign targets multiple content items", () => {
+    expect(() =>
+      buildCampaignTasks(
+        {
+          id: "camp-multi",
+          workspaceId: "workspace-1",
+          name: "Multi content launch",
+          status: "scheduled",
+          accountIds: ["acc-1"],
+          contentIds: ["content-1", "content-2"],
+          taskCount: 1,
+          createdAt: "2026-09-24T00:00:00.000Z",
+        },
+        "facebook",
+        { taskKind: "publish" },
+      ),
+    ).toThrow("contentId is required when a campaign targets multiple content items");
+  });
+
   it("rejects duplicate campaign account ids", () => {
     expect(() =>
       buildCampaignTasks(
