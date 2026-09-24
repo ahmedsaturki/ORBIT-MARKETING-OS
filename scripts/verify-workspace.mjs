@@ -81,6 +81,27 @@ if (!webEslint.devDependencies?.eslint || !webEslint.devDependencies?.["eslint-c
   throw new Error("Web ESLint dependencies are incomplete");
 }
 
+const tauriCapabilities = await readJson("packages/desktop/src-tauri/capabilities/default.json");
+if (
+  !Array.isArray(tauriCapabilities.permissions) ||
+  tauriCapabilities.permissions.length !== 1 ||
+  tauriCapabilities.permissions[0] !== "core:default"
+) {
+  throw new Error("Unexpected Tauri renderer capability expansion");
+}
+
+const tauriConfig = JSON.parse(
+  await readFile(join(root, "packages/desktop/src-tauri/tauri.conf.json"), "utf8"),
+);
+if (
+  typeof tauriConfig.app?.security?.csp !== "string" ||
+  !tauriConfig.app.security.csp.includes("connect-src 'self' http://127.0.0.1:3000") ||
+  !tauriConfig.app.security.csp.includes("img-src 'self' data: blob:") ||
+  !tauriConfig.app.security.csp.includes("object-src 'none'")
+) {
+  throw new Error("Tauri CSP does not match the local AI security contract");
+}
+
 const desktopApp = await readFile(join(root, "packages/desktop/src/App.tsx"), "utf8");
 if (desktopApp.includes("اختبار خزنة محلية حقيقية") && !desktopApp.includes("import.meta.env.DEV")) {
   throw new Error("Vault plaintext diagnostic must remain development-only");
