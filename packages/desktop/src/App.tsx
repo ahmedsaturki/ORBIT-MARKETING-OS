@@ -314,6 +314,7 @@ export function App(): ReactElement {
         name: newWorkspaceName.trim(),
       });
       await callNative<WorkspaceView>("workspace_select", { id: created.id });
+      resetWorkspaceTransientState();
       setNewWorkspaceId("");
       setNewWorkspaceName("");
       await checkHealth();
@@ -322,15 +323,26 @@ export function App(): ReactElement {
     }
   };
 
+  const resetWorkspaceTransientState = (): void => {
+    setSelectedContentId("");
+    setApprovalId("");
+    setMessageConversationId("");
+    setMessages([]);
+    setAiChatMessages([]);
+    setAiChatInput("");
+    setAiGeneratedContent("");
+    setAiImageData("");
+    setAiImageName("");
+    setAiImageAnalysis("");
+    setAiImagePrompt("");
+  };
+
   const selectWorkspace = async (id: string): Promise<void> => {
     if (!id || id === activeWorkspace?.id) return;
     try {
       setError("");
-      setActiveWorkspace(await callNative<WorkspaceView>("workspace_select", { id }));
-      setSelectedContentId("");
-      setApprovalId("");
-      setMessageConversationId("");
-      setMessages([]);
+      await callNative<WorkspaceView>("workspace_select", { id });
+      resetWorkspaceTransientState();
       await checkHealth();
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تبديل مساحة العمل");
