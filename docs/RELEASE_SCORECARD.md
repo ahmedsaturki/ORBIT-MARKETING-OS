@@ -1,6 +1,6 @@
 # ORBIT Release Scorecard
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 
 Status meanings:
 - IMPLEMENTED — source and/or automated checks exist.
@@ -22,7 +22,7 @@ Status meanings:
 | Gate | Current status | Evidence |
 |---|---|---|
 | DATA-01 Local SQLite | IMPLEMENTED / UNVERIFIED | Native SQLite runtime exists; clean runtime test pending |
-| DATA-02 Migration safety | IMPLEMENTED / UNVERIFIED | v1→v10 migration path + migration tests exist |
+| DATA-02 Migration safety | IMPLEMENTED / UNVERIFIED | v1→v9 migration path + migration tests exist |
 | QUE-01 Persistent queue recovery | IMPLEMENTED / UNVERIFIED | Native queue + migration/claim logic exists; restart test pending |
 | QUE-02 Bounded retries | IMPLEMENTED / UNVERIFIED | Core + native retry tests exist |
 | QUE-03 Circuit breaker | IMPLEMENTED / UNVERIFIED | Core execution policy + runtime controls exist |
@@ -78,7 +78,7 @@ Status meanings:
 
 ### Vercel current deployment evidence
 
-The last concrete Vercel deployment with an ERROR state (`dpl_Fa6zfs1JiTLWGidxjdTaTgH7RZPd`) was in `ERROR` at the install step with `errorCode=ENOENT` and `errorMessage=Command "bash scripts/vercel-install.sh" exited with 1`. The repository-side script fails closed because the committed `pnpm-lock.yaml` is absent. The deployment metadata reports the project framework as `vite`; project-level framework/root settings still require confirmation. No more specific build failure is asserted.
+The latest concrete Vercel deployment with an ERROR state (`dpl_Fa6zfs1JiTLWGidxjdTaTgH7RZPd`) was in `ERROR` at the install step with `errorCode=ENOENT` and `errorMessage=Command "bash scripts/vercel-install.sh" exited with 1`. The repository-side script fails closed because the committed `pnpm-lock.yaml` is absent. The deployment metadata reports the project framework as `vite`; project-level framework/root settings still require confirmation. No more specific build failure is asserted.
 
 
 ### GitHub Actions
