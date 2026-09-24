@@ -2897,6 +2897,7 @@ fn write_audit(
     actor: &str,
     entity_id: Option<&str>,
 ) -> Result<(), rusqlite::Error> {
+    let workspace_id = active_workspace_id();
     connection.execute_batch("BEGIN IMMEDIATE")?;
 
     let result = (|| {
@@ -2908,7 +2909,7 @@ fn write_audit(
                  WHERE workspace_id=?1
                  ORDER BY rowid DESC
                  LIMIT 1",
-                params![active_workspace_id()],
+                params![&workspace_id],
                 |row| row.get(0),
             )
             .optional()?
@@ -2918,7 +2919,7 @@ fn write_audit(
         let hash = audit_hash(
             &previous_hash,
             &id,
-            &active_workspace_id(),
+            &workspace_id,
             &timestamp,
             category,
             action,
@@ -2936,7 +2937,7 @@ fn write_audit(
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, ?10)",
             params![
                 id,
-                active_workspace_id(),
+                &workspace_id,
                 timestamp,
                 category,
                 action,
