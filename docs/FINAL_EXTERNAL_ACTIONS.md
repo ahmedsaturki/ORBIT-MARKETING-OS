@@ -7,13 +7,14 @@ The codebase is intentionally not marked production-ready yet. The remaining act
 ## A. Enable zero-cost technical verification
 
 1. Open the repository **Settings → Actions → Runners → New self-hosted runner**.
-2. Register the user's owned Windows/Linux/macOS machine.
-3. Ensure the runner is `Online/Idle` and advertises the standard `self-hosted` + `x64` labels used by the workflows. No custom `orbit` label is required.
+2. Register the user's owned Linux machine or Ubuntu-on-WSL environment.
+3. Ensure the runner is `Online/Idle` and advertises the exact `self-hosted` + `x64` + `linux` labels used by the workflows. No custom `orbit` label is required.
 4. Confirm the runner is **Idle/Online**.
 5. From **Actions → Bootstrap pnpm lockfile → Run workflow**, select `rebuild/orbit-production-consolidated`.
 6. Verify that both `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` were committed to the selected branch.
 7. From **Actions → Self-Hosted Verification → Run workflow**, select `rebuild/orbit-production-consolidated`.
 8. Do not promote or merge unless the verification job is green and the release matrix has current evidence.
+9. After the consolidation PR is merged to `main`, use **Web Release — Self-Hosted** for the guarded production web deployment, then require `scripts/verify-live-web.mjs` to pass.
 
 ## B. Web deployment
 
