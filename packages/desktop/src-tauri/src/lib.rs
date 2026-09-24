@@ -1187,27 +1187,6 @@ fn audit_hash(
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
-fn audit_hash(
-    previous_hash: &str,
-    id: &str,
-    workspace_id: &str,
-    timestamp: &str,
-    category: &str,
-    action: &str,
-    outcome: &str,
-    actor: &str,
-    entity_id: Option<&str>,
-    metadata_json: Option<&str>,
-) -> String {
-    let canonical = format!(
-        "{previous_hash}\n{id}\n{workspace_id}\n{timestamp}\n{category}\n{action}\n{outcome}\n{actor}\n{}\n{}",
-        entity_id.unwrap_or(""),
-        metadata_json.unwrap_or(""),
-    );
-    let digest = Sha256::digest(canonical.as_bytes());
-    digest.iter().map(|byte| format!("{byte:02x}")).collect()
-}
-
 fn write_audit(
     connection: &Connection,
     category: &str,
