@@ -316,6 +316,36 @@ export function App(): ReactElement {
     }
   };
 
+  const importMediaAsset = async (): Promise<void> => {
+    if (!mediaId.trim() || !mediaLocalPath.trim()) {
+      setError("أدخل معرف الوسيط والمسار المحلي قبل الاستيراد");
+      return;
+    }
+    try {
+      setError("");
+      const result = await callNative<MediaAssetView>("media_asset_import", {
+        id: mediaId.trim(),
+        path: mediaLocalPath.trim(),
+        tags_json: JSON.stringify(
+          mediaTags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        ),
+      });
+      setMediaFilename(result.filename);
+      setMediaMimeType(result.mime_type);
+      setMediaSizeBytes(String(result.size_bytes));
+      setMediaSha256(result.sha256 ?? "");
+      setMediaAssets((current) => [
+        result,
+        ...current.filter((item) => item.id !== result.id),
+      ]);
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل استيراد الملف المحلي");
+    }
+  };
+
   const loadMediaAssets = async (): Promise<void> => {
     try {
       setMediaAssets(await callNative<MediaAssetView[]>("media_asset_list", {}));
@@ -1136,9 +1166,14 @@ export function App(): ReactElement {
               الوسوم
               <input value={mediaTags} onChange={(event) => setMediaTags(event.target.value)} placeholder="launch, campaign" />
             </label>
-            <button className="button primary" type="button" onClick={() => void saveMediaAsset()}>
-              حفظ بيانات الوسيط
-            </button>
+            <div className="actions">
+              <button className="button primary" type="button" onClick={() => void saveMediaAsset()}>
+                حفظ بيانات الوسيط
+              </button>
+              <button className="button secondary" type="button" onClick={() => void importMediaAsset()}>
+                استيراد وفحص الملف
+              </button>
+            </div>
           </div>
           <div className="account-list">
             {mediaAssets.slice(0, 10).map((asset) => (
