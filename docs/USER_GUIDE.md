@@ -18,7 +18,7 @@
 
 ## Local AI
 
-Install Ollama locally and configure the runtime variables:
+Install Ollama locally and configure the resource-aware runtime defaults:
 
 ```
 OLLAMA_BASE_URL=http://127.0.0.1:11434
