@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import type { Platform } from "@orbit/core";
 import { Bot, CheckCircle2, Image as ImageIcon, KeyRound, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
 import {
   analyzeLocalImage,
@@ -205,7 +206,7 @@ export function App(): ReactElement {
   const [error, setError] = useState("");
   const [accounts, setAccounts] = useState<readonly AccountView[]>([]);
   const [accountId, setAccountId] = useState("");
-  const [accountPlatform, setAccountPlatform] = useState("facebook");
+  const [accountPlatform, setAccountPlatform] = useState<Platform>("facebook");
   const [accountName, setAccountName] = useState("");
   const [accountUsername, setAccountUsername] = useState("");
   const [accountSession, setAccountSession] = useState("");
@@ -217,7 +218,7 @@ export function App(): ReactElement {
   const [campaignAccountId, setCampaignAccountId] = useState("");
   const [contentItems, setContentItems] = useState<readonly ContentView[]>([]);
   const [contentVariants, setContentVariants] = useState<readonly ContentVariantView[]>([]);
-  const [variantPlatform, setVariantPlatform] = useState("facebook");
+  const [variantPlatform, setVariantPlatform] = useState<Platform>("facebook");
   const [variantBody, setVariantBody] = useState("");
   const [mediaAssets, setMediaAssets] = useState<readonly MediaAssetView[]>([]);
   const [mediaId, setMediaId] = useState("");
