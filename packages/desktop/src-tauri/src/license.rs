@@ -235,7 +235,11 @@ pub fn license_install(
         .format(&Rfc3339)
         .map_err(|_| "failed to format timestamp".to_string())?;
 
-    connection
+    let transaction = connection
+        .unchecked_transaction()
+        .map_err(|error| error.to_string())?;
+
+    transaction
         .execute(
             "INSERT INTO license_records(id, token, updated_at)
              VALUES (1, ?1, ?2)
@@ -243,6 +247,18 @@ pub fn license_install(
             params![token, timestamp],
         )
         .map_err(|error| error.to_string())?;
+
+    crate::append_audit_event_for_module(
+        &transaction,
+        &workspace_id,
+        "license",
+        "install",
+        "success",
+        "user",
+        Some(&payload.license_id),
+    )?;
+
+    transaction.commit().map_err(|error| error.to_string())?;
 
     Ok(LicenseStatus {
         installed: true,
@@ -333,9 +349,24 @@ pub fn license_delete(app: tauri::AppHandle) -> Result<bool, String> {
     let connection = open_connection(&app)?;
     crate::require_workspace_role_for_module(&connection, &workspace_id, &["owner", "admin"])?;
     ensure_license_table(&connection)?;
-    let deleted = connection
+    let transaction = connection
+        .unchecked_transaction()
+        .map_err(|error| error.to_string())?;
+    let deleted = transaction
         .execute("DELETE FROM license_records WHERE id=1", [])
         .map_err(|error| error.to_string())?;
+    if deleted == 1 {
+        crate::append_audit_event_for_module(
+            &transaction,
+            &workspace_id,
+            "license",
+            "delete",
+            "success",
+            "user",
+            Some("local-license"),
+        )?;
+    }
+    transaction.commit().map_err(|error| error.to_string())?;
     Ok(deleted == 1)
 }
 
