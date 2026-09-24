@@ -382,6 +382,19 @@ struct MessageView {
 }
 
 #[derive(Debug, Serialize)]
+#[derive(Debug, Serialize)]
+struct AnalyticsSummaryView {
+    attempted: i64,
+    succeeded: i64,
+    failed: i64,
+    blocked: i64,
+    pending: i64,
+    running: i64,
+    completion_rate: f64,
+    success_rate: f64,
+    failure_rate: f64,
+}
+
 struct AuditView {
     id: String,
     timestamp: String,
@@ -3538,6 +3551,76 @@ fn message_list(
 }
 
 #[tauri::command]
+fn analytics_summary(
+    app: tauri::AppHandle,
+    campaign_id: Option<String>,
+) -> Result<AnalyticsSummaryView, String> {
+    let workspace_id = active_workspace_id();
+    let campaign_id = campaign_id
+        .map(|value| validate_label(&value))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let row = connection
+        .query_row(
+            "SELECT
+               COUNT(*) AS attempted,
+               COALESCE(SUM(CASE WHEN status='succeeded' THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN status='blocked' THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN status='pending' OR status='awaiting_approval' OR status='awaiting_user_action' THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN status='running' THEN 1 ELSE 0 END), 0)
+             FROM tasks
+             WHERE workspace_id=?1
+               AND (?2 IS NULL OR campaign_id=?2)",
+            params![&workspace_id, &campaign_id],
+            |row| {
+                let attempted: i64 = row.get(0)?;
+                let succeeded: i64 = row.get(1)?;
+                let failed: i64 = row.get(2)?;
+                let blocked: i64 = row.get(3)?;
+                let pending: i64 = row.get(4)?;
+                let running: i64 = row.get(5)?;
+                Ok((attempted, succeeded, failed, blocked, pending, running))
+            },
+        )
+        .map_err(|error| error.to_string())?;
+
+    let (attempted, succeeded, failed, blocked, pending, running) = row;
+    let attempted_f = attempted as f64;
+    Ok(AnalyticsSummaryView {
+        attempted,
+        succeeded,
+        failed,
+        blocked,
+        pending,
+        running,
+        completion_rate: if attempted == 0 {
+            0.0
+        } else {
+            (succeeded + failed + blocked) as f64 / attempted_f
+        },
+        success_rate: if attempted == 0 {
+            0.0
+        } else {
+            succeeded as f64 / attempted_f
+        },
+        failure_rate: if attempted == 0 {
+            0.0
+        } else {
+            failed as f64 / attempted_f
+        },
+    })
+}
+
+#[tauri::command]
 fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView>, String> {
     let workspace_id = active_workspace_id();
     let limit = limit.unwrap_or(100).clamp(1, 500);
@@ -4367,6 +4450,7 @@ pub fn run() {
             inbox_list,
             message_list,
             audit_list,
+            analytics_summary,
             audit_verify,
             license::license_install,
             license::license_status,
