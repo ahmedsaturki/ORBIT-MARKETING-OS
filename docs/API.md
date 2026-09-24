@@ -17,8 +17,6 @@ Request:
 }
 ```
 
-The runtime returns a local provider result.
-
 ### POST /api/generate-content
 
 Request:
@@ -33,18 +31,57 @@ Request:
 
 ### POST /api/analyze-image
 
-Requires OLLAMA_VISION_MODEL. Accepts imageBase64 plus an analysisType.
+Requires `OLLAMA_VISION_MODEL`. Accepts `imageBase64` plus an `analysisType`.
 
 ## Desktop IPC
 
-Native commands include:
+### Health and vault
 
-- app_health
-- vault_put / vault_get / vault_delete
-- account_upsert / account_list / account_get_session / account_delete
-- campaign_create / campaign_list
-- task_enqueue / task_claim_next / task_set_status / task_list
-- contact_upsert / contact_list
-- backup_create / backup_list / backup_restore
+- `app_health`
+- `vault_put`
+- `vault_get`
+- `vault_delete`
 
-IPC contracts should be changed together with the React client and tested as a compatibility surface.
+### Accounts
+
+- `account_upsert`
+- `account_list`
+- `account_get_session`
+- `account_delete`
+
+Optional session material is encrypted locally before persistence.
+
+### Campaigns and tasks
+
+- `campaign_create`
+- `campaign_list`
+- `task_enqueue`
+- `task_claim_next`
+- `task_set_status`
+- `task_list`
+
+`task_enqueue` accepts an optional `idempotency_key`; task persistence is workspace-scoped.
+
+### CRM and inbox
+
+- `contact_upsert`
+- `contact_list`
+- `conversation_upsert`
+- `message_add`
+- `inbox_list`
+- `message_list`
+
+Inbox message writes verify that the conversation belongs to the active local workspace.
+
+### Backup and audit
+
+- `backup_create`
+- `backup_list`
+- `backup_restore`
+- `audit_list`
+
+Backups are encrypted locally and restore performs SQLite integrity validation before replacement. Audit records are workspace-scoped.
+
+## Compatibility rule
+
+When an IPC command changes, update the desktop client, this API contract, and its integration tests together. Source inspection alone is not release evidence.
