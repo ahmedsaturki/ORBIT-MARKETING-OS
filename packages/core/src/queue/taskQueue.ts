@@ -68,6 +68,11 @@ export class TaskQueue {
     return this.transition(id, "blocked");
   }
 
+  /** Releases a claimed task back to pending without consuming an attempt. */
+  public release(id: string): Task {
+    return this.transition(id, "pending");
+  }
+
   /** Cancels a task so workers cannot claim it again. */
   public cancel(id: string): Task {
     return this.transition(id, "cancelled");
