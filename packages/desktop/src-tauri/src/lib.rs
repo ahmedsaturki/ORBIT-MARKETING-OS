@@ -22,6 +22,8 @@ use zeroize::Zeroizing;
 
 const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
+const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
+const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
 const SCHEMA_VERSION: i64 = 8;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
@@ -179,6 +181,19 @@ CREATE TABLE IF NOT EXISTS contacts (
 
 CREATE INDEX IF NOT EXISTS idx_tasks_ready
   ON tasks(status, available_at, priority);
+
+CREATE TABLE IF NOT EXISTS execution_counters (
+  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  day_key INTEGER NOT NULL,
+  completed_today INTEGER NOT NULL DEFAULT 0 CHECK(completed_today >= 0),
+  consecutive_failures INTEGER NOT NULL DEFAULT 0 CHECK(consecutive_failures >= 0),
+  PRIMARY KEY (workspace_id, account_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_execution_counters_day
+  ON execution_counters(workspace_id, day_key);
+
 
 CREATE TABLE IF NOT EXISTS conversations (
   id TEXT PRIMARY KEY,
@@ -440,6 +455,92 @@ fn parse_retry_timestamp(retry_after_seconds: u64) -> String {
     retry_at
         .format(&Rfc3339)
         .unwrap_or_else(|_| OffsetDateTime::UNIX_EPOCH.format(&Rfc3339).unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string()))
+}
+
+fn execution_day_key() -> i64 {
+    OffsetDateTime::now_utc().unix_timestamp().div_euclid(86_400)
+}
+
+fn next_utc_midnight_timestamp() -> String {
+    let next_epoch = (execution_day_key() + 1) * 86_400;
+    match OffsetDateTime::from_unix_timestamp(next_epoch) {
+        Ok(value) => match value.format(&Rfc3339) {
+            Ok(formatted) => formatted,
+            Err(_) => "1970-01-01T00:00:00Z".to_string(),
+        },
+        Err(_) => "1970-01-01T00:00:00Z".to_string(),
+    }
+}
+
+fn load_execution_counters(
+    connection: &Connection,
+    workspace_id: &str,
+    account_id: &str,
+) -> Result<(i64, i64), String> {
+    let day_key = execution_day_key();
+    connection
+        .execute(
+            "INSERT INTO execution_counters(
+               workspace_id, account_id, day_key, completed_today, consecutive_failures
+             )
+             VALUES (?1, ?2, ?3, 0, 0)
+             ON CONFLICT(workspace_id, account_id) DO UPDATE SET
+               day_key=excluded.day_key,
+               completed_today=CASE
+                 WHEN execution_counters.day_key != excluded.day_key THEN 0
+                 ELSE execution_counters.completed_today
+               END,
+               consecutive_failures=CASE
+                 WHEN execution_counters.day_key != excluded.day_key THEN 0
+                 ELSE execution_counters.consecutive_failures
+               END",
+            params![workspace_id, account_id, day_key],
+        )
+        .map_err(|error| error.to_string())?;
+
+    connection
+        .query_row(
+            "SELECT completed_today, consecutive_failures
+             FROM execution_counters
+             WHERE workspace_id=?1 AND account_id=?2",
+            params![workspace_id, account_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|error| error.to_string())
+}
+
+fn record_execution_success(
+    connection: &Connection,
+    workspace_id: &str,
+    account_id: &str,
+) -> Result<(), String> {
+    let day_key = execution_day_key();
+    connection
+        .execute(
+            "UPDATE execution_counters
+             SET day_key=?1, completed_today=completed_today+1, consecutive_failures=0
+             WHERE workspace_id=?2 AND account_id=?3",
+            params![day_key, workspace_id, account_id],
+        )
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+fn record_execution_failure(
+    connection: &Connection,
+    workspace_id: &str,
+    account_id: &str,
+) -> Result<(), String> {
+    let day_key = execution_day_key();
+    connection
+        .execute(
+            "UPDATE execution_counters
+             SET day_key=?1, consecutive_failures=consecutive_failures+1
+             WHERE workspace_id=?2 AND account_id=?3",
+            params![day_key, workspace_id, account_id],
+        )
+        .map_err(|error| error.to_string())?;
+    Ok(())
 }
 
 fn telegram_task_audit(
@@ -1165,6 +1266,48 @@ async fn telegram_execute_task(
     let content_id = content_id.ok_or_else(|| "task has no linked content".to_string())?;
     let destination_id = destination_id.ok_or_else(|| "task has no Telegram destination".to_string())?;
 
+    let (completed_today, consecutive_failures) =
+        load_execution_counters(&connection, &workspace_id, &account_id)
+            .map_err(|error| error.to_string())?;
+    if consecutive_failures >= DEFAULT_CIRCUIT_BREAKER_THRESHOLD {
+        connection
+            .execute(
+                "UPDATE tasks
+                 SET status='awaiting_user_action'
+                 WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                params![&task_id, &workspace_id],
+            )
+            .map_err(|error| error.to_string())?;
+        telegram_task_audit(&connection, &workspace_id, &task_id, "circuit_breaker_open", "blocked")?;
+        return Ok(TelegramExecutionView {
+            task_id,
+            status: "awaiting_user_action".to_string(),
+            external_message_id: None,
+            message: "Local execution circuit breaker is open after repeated failures.".to_string(),
+            retry_at: None,
+        });
+    }
+
+    if completed_today >= DEFAULT_DAILY_EXECUTION_LIMIT {
+        let retry_at = next_utc_midnight_timestamp();
+        connection
+            .execute(
+                "UPDATE tasks
+                 SET status='pending', available_at=?1
+                 WHERE id=?2 AND workspace_id=?3 AND status='running'",
+                params![&retry_at, &task_id, &workspace_id],
+            )
+            .map_err(|error| error.to_string())?;
+        telegram_task_audit(&connection, &workspace_id, &task_id, "daily_limit_reached", "blocked")?;
+        return Ok(TelegramExecutionView {
+            task_id,
+            status: "pending".to_string(),
+            external_message_id: None,
+            message: "Local daily execution budget is exhausted; task deferred until the next UTC day.".to_string(),
+            retry_at: Some(retry_at),
+        });
+    }
+
     let (session_payload_json, account_status) = connection
         .query_row(
             "SELECT session_payload_json, status FROM accounts WHERE id=?1 AND workspace_id=?2 AND platform='telegram'",
@@ -1279,6 +1422,8 @@ async fn telegram_execute_task(
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &workspace_id, &task_id, "send_message", "success")?;
+        record_execution_success(&connection, &workspace_id, &account_id)
+            .map_err(|error| error.to_string())?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "succeeded".to_string(),
@@ -1302,6 +1447,8 @@ async fn telegram_execute_task(
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &workspace_id, &task_id, "authorization_failed", "blocked")?;
+    record_execution_failure(&connection, &workspace_id, &account_id)
+        .map_err(|error| error.to_string())?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_user_action".to_string(),
@@ -1321,6 +1468,8 @@ async fn telegram_execute_task(
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &workspace_id, &task_id, "delivery_status_unknown", "blocked")?;
+    record_execution_failure(&connection, &workspace_id, &account_id)
+        .map_err(|error| error.to_string())?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_user_action".to_string(),
@@ -1369,6 +1518,8 @@ async fn telegram_execute_task(
         )
         .map_err(|error| error.to_string())?;
     telegram_task_audit(&connection, &workspace_id, &task_id, "send_failed", "failure")?;
+    record_execution_failure(&connection, &workspace_id, &account_id)
+        .map_err(|error| error.to_string())?;
 
     Ok(TelegramExecutionView {
         task_id,
@@ -3995,6 +4146,67 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
             .expect("migrated task should exist");
         assert_eq!(values.0, DEFAULT_WORKSPACE_ID);
         assert_eq!(values.1, "legacy-task");
+    }
+}
+
+#[cfg(test)]
+mod execution_counter_tests {
+    use super::*;
+
+    #[test]
+    fn execution_counter_rolls_over_and_resets_failures() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection.execute_batch(
+            "CREATE TABLE workspaces(id TEXT PRIMARY KEY);
+             CREATE TABLE accounts(id TEXT PRIMARY KEY);
+             CREATE TABLE execution_counters(
+               workspace_id TEXT NOT NULL,
+               account_id TEXT NOT NULL,
+               day_key INTEGER NOT NULL,
+               completed_today INTEGER NOT NULL,
+               consecutive_failures INTEGER NOT NULL,
+               PRIMARY KEY(workspace_id, account_id)
+             );",
+        ).expect("schema");
+
+        connection.execute(
+            "INSERT INTO execution_counters(workspace_id, account_id, day_key, completed_today, consecutive_failures)
+             VALUES (?1, ?2, ?3, 9, 2)",
+            params!["workspace-1", "account-1", execution_day_key() - 1],
+        ).expect("seed");
+
+        let counters = load_execution_counters(&connection, "workspace-1", "account-1")
+            .expect("load counters");
+        assert_eq!(counters, (0, 0));
+    }
+
+    #[test]
+    fn execution_counter_records_success_and_failure() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection.execute_batch(
+            "CREATE TABLE execution_counters(
+               workspace_id TEXT NOT NULL,
+               account_id TEXT NOT NULL,
+               day_key INTEGER NOT NULL,
+               completed_today INTEGER NOT NULL,
+               consecutive_failures INTEGER NOT NULL,
+               PRIMARY KEY(workspace_id, account_id)
+             );",
+        ).expect("schema");
+
+        connection.execute(
+            "INSERT INTO execution_counters(workspace_id, account_id, day_key, completed_today, consecutive_failures)
+             VALUES (?1, ?2, ?3, 0, 0)",
+            params!["workspace-1", "account-1", execution_day_key()],
+        ).expect("seed");
+
+        record_execution_failure(&connection, "workspace-1", "account-1").expect("failure");
+        let after_failure = load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(after_failure.1, 1);
+
+        record_execution_success(&connection, "workspace-1", "account-1").expect("success");
+        let after_success = load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(after_success, (1, 0));
     }
 }
 
