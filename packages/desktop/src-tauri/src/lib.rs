@@ -1043,7 +1043,7 @@ fn create_integrity_triggers(connection: &Connection) -> Result<(), AppError> {
 }
 
 fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> {
-    for name in ["orbit.restore.sqlite3", "orbit.previous.sqlite3", "backups/orbit-backup-source.sqlite3"] {
+    for name in ["orbit.restore.sqlite3", "backups/orbit-backup-source.sqlite3"] {
         let path = app_data.join(name);
         if path.exists() {
             fs::remove_file(path)?;
@@ -3978,17 +3978,39 @@ fn backup_restore(
     }
 
     restrict_private_file(&target).map_err(|error| error.to_string())?;
-    let audit_connection = open_db(&app).map_err(|error| error.to_string())?;
-    write_audit(
-        &audit_connection,
-        "backup",
-        "restore",
-        "success",
-        "user",
-        Some(&filename),
-    )
-    .map_err(|error| error.to_string())?;
 
+    let restored_connection_result = (|| -> Result<(), String> {
+        let restored_connection = Connection::open(&target).map_err(|error| error.to_string())?;
+        restored_connection
+            .execute_batch("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;")
+            .map_err(|error| error.to_string())?;
+        restored_connection
+            .execute_batch(SCHEMA)
+            .map_err(|error| error.to_string())?;
+        migrate_schema(&restored_connection).map_err(|error| error.to_string())?;
+        create_integrity_triggers(&restored_connection).map_err(|error| error.to_string())?;
+        ensure_workspace_context(&restored_connection).map_err(|error| error.to_string())?;
+        write_audit(
+            &restored_connection,
+            "backup",
+            "restore",
+            "success",
+            "user",
+            Some(&filename),
+        )
+        .map_err(|error| error.to_string())?;
+        Ok(())
+    })();
+
+    if let Err(error) = restored_connection_result {
+        let _ = fs::remove_file(&target);
+        if previous.exists() {
+            let _ = fs::rename(&previous, &target);
+        }
+        return Err(error);
+    }
+
+    fs::remove_file(&previous).map_err(|error| error.to_string())?;
     Ok(true)
 }
 
