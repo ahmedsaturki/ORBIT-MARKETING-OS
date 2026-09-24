@@ -20,6 +20,7 @@ export interface TaskQueueOptions {
  */
 export class TaskQueue {
   private readonly tasks = new Map<string, Task>();
+  private readonly idempotencyKeys = new Set<string>();
 
   public constructor(private readonly options: TaskQueueOptions) {
     if (options.retryPolicy.maxAttempts < 1) {
@@ -29,8 +30,13 @@ export class TaskQueue {
 
   /** Adds a task exactly once. */
   public enqueue(task: Task): void {
+    this.validateTask(task);
     if (this.tasks.has(task.id)) throw new Error("Task already exists: " + task.id);
+    if (this.idempotencyKeys.has(task.idempotencyKey)) {
+      throw new Error("Task idempotency key already exists: " + task.idempotencyKey);
+    }
     this.tasks.set(task.id, task);
+    this.idempotencyKeys.add(task.idempotencyKey);
   }
 
   /** Returns a task without mutating queue state. */
@@ -125,5 +131,29 @@ export class TaskQueue {
   private setTask(task: Task): Task {
     this.tasks.set(task.id, task);
     return task;
+  }
+
+  private validateTask(task: Task): void {
+    if (!task.id.trim() || !task.workspaceId.trim() || !task.campaignId.trim() || !task.accountId.trim()) {
+      throw new Error("Task identifiers are required");
+    }
+    if (!task.idempotencyKey.trim()) {
+      throw new Error("Task idempotency key is required");
+    }
+    if (task.priority < 0 || !Number.isInteger(task.priority)) {
+      throw new RangeError("priority must be a non-negative integer");
+    }
+    if (task.attempts < 0 || !Number.isInteger(task.attempts) || task.attempts > task.maxAttempts) {
+      throw new RangeError("attempts must be a non-negative integer within maxAttempts");
+    }
+    if (!Number.isInteger(task.maxAttempts) || task.maxAttempts < 1) {
+      throw new RangeError("maxAttempts must be a positive integer");
+    }
+    if (Number.isNaN(Date.parse(task.availableAt)) || Number.isNaN(Date.parse(task.createdAt))) {
+      throw new RangeError("task timestamps must be valid ISO timestamps");
+    }
+    if (task.status !== "pending") {
+      throw new Error("New queue tasks must start in pending state");
+    }
   }
 }
