@@ -1437,7 +1437,21 @@ async fn telegram_execute_task(
         )
         .map_err(|error| error.to_string())?;
 
-    if approval_status != "approved" || body.trim().is_empty() {
+    let approval_exists: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1
+               FROM approvals
+               WHERE workspace_id=?1
+                 AND content_id=?2
+                 AND status='approved'
+             )",
+            params![&workspace_id, &content_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+
+    if approval_status != "approved" || !approval_exists || body.trim().is_empty() {
         connection
             .execute(
                 "UPDATE tasks SET status='awaiting_approval' WHERE id=?1 AND workspace_id=?2 AND status='running'",
