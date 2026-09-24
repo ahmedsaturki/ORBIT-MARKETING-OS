@@ -2105,22 +2105,6 @@ fn vault_put(
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
 
-    if session_payload_json.is_none() {
-        let existing_platform: Option<String> = connection
-            .query_row(
-                "SELECT platform FROM accounts WHERE id=?1 AND workspace_id=?2",
-                params![&id, &workspace_id],
-                |row| row.get(0),
-            )
-            .optional()
-            .map_err(|error| error.to_string())?;
-        if let Some(existing_platform) = existing_platform {
-            if existing_platform != platform {
-                return Err("changing an account platform requires a new authorized session".to_string());
-            }
-        }
-    }
-
     let timestamp = chrono_like_timestamp();
     connection
         .execute(
@@ -2220,6 +2204,21 @@ fn validate_platform(platform: &str) -> Result<String, AppError> {
     }
 }
 
+fn ensure_account_platform_session_consistency(
+    existing_platform: Option<&str>,
+    target_platform: &str,
+    has_new_session: bool,
+) -> Result<(), AppError> {
+    if !has_new_session {
+        if let Some(existing) = existing_platform {
+            if existing != target_platform {
+                return Err(AppError::InvalidPayload);
+            }
+        }
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn account_upsert(
     app: tauri::AppHandle,
@@ -2247,6 +2246,25 @@ fn account_upsert(
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
+
+    let existing_platform: Option<String> = connection
+        .query_row(
+            "SELECT platform FROM accounts WHERE id=?1 AND workspace_id=?2",
+            params![&id, &workspace_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    ensure_account_platform_session_consistency(
+        existing_platform.as_deref(),
+        &platform,
+        session_payload_json.is_some(),
+    )
+    .map_err(|error| match error {
+        AppError::InvalidPayload => "changing an account platform requires a new authorized session".to_string(),
+        other => other.to_string(),
+    })?;
+
     let timestamp = chrono_like_timestamp();
     let status = if session_payload_json.is_some() { "connected" } else { "needs_refresh" };
     let changed = connection
@@ -5378,30 +5396,13 @@ mod tests {
 
     #[test]
     fn account_platform_change_requires_new_session() {
-        let connection = Connection::open_in_memory().expect("sqlite should be available");
-        connection
-            .execute_batch(
-                "CREATE TABLE accounts(
-                   id TEXT PRIMARY KEY,
-                   workspace_id TEXT NOT NULL,
-                   platform TEXT NOT NULL,
-                   session_payload_json TEXT
-                 );
-                 INSERT INTO accounts(id, workspace_id, platform, session_payload_json)
-                 VALUES ('account-1', 'workspace-1', 'telegram', 'encrypted-token');",
-            )
-            .expect("account fixture should be created");
-
-        let existing_platform: Option<String> = connection
-            .query_row(
-                "SELECT platform FROM accounts WHERE id='account-1' AND workspace_id='workspace-1'",
-                [],
-                |row| row.get(0),
-            )
-            .expect("account platform should be readable");
-
-        assert_eq!(existing_platform.as_deref(), Some("telegram"));
-        assert_ne!(existing_platform.as_deref(), Some("linkedin"));
+        assert!(ensure_account_platform_session_consistency(None, "telegram", false).is_ok());
+        assert!(ensure_account_platform_session_consistency(Some("telegram"), "telegram", false).is_ok());
+        assert!(ensure_account_platform_session_consistency(Some("telegram"), "linkedin", true).is_ok());
+        assert!(matches!(
+            ensure_account_platform_session_consistency(Some("telegram"), "linkedin", false),
+            Err(AppError::InvalidPayload)
+        ));
     }
 
     #[test]
