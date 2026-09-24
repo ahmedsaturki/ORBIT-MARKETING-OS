@@ -28,8 +28,10 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | CONT-02 | Media metadata/search | indexing test |
 | CONT-03 | Content validation and platform variant selection | deterministic content contract tests |
 | MEDIA-01 | Media type/size/hash validation and local search | media contract tests |
+| MEDIA-02 | Local media file import with streaming SHA-256 | native file-hash integration test |
 | AN-01 | Campaign analytics remain campaign-scoped | analytics isolation tests |
 | AUTO-01 | Enabled external automation rules require confirmation | rule-pack validation tests |
+| AUTO-02 | Enabled Rule Pack lifecycle is persisted and bounded | native lifecycle integration test |
 | INBOX-01 | Unified conversation model | connector fixture integration |
 | CRM-01 | Conversation-contact linking | relational integration test |
 | SYNC-01 | Offline edits survive restart | device simulation test |
