@@ -33,6 +33,12 @@ test.describe("ORBIT public web surface", () => {
     }
   });
 
+  test("robots.txt is present and allows public product pages", async ({ request }) => {
+    const response = await request.get("/robots.txt");
+    expect(response.ok()).toBe(true);
+    expect(await response.text()).toContain("Allow: /");
+  });
+
   test("PWA manifest is valid and points at ORBIT branding", async ({ request }) => {
     const response = await request.get("/manifest.json");
     expect(response.ok()).toBe(true);
