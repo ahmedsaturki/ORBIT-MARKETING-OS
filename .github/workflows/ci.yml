@@ -39,6 +39,9 @@ jobs:
       - name: Require desktop Cargo.lock
         run: test -f packages/desktop/src-tauri/Cargo.lock
 
+      - name: Release sanity
+        run: pnpm verify:release
+
       - name: Workspace sanity
         run: pnpm verify:workspace
 
