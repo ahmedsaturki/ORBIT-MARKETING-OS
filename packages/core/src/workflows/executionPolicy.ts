@@ -8,6 +8,8 @@ export type ExecutionBlockReason =
   | "account_not_connected"
   | "approval_required"
   | "approval_scope_mismatch"
+  | "content_required"
+  | "content_scope_mismatch"
   | "daily_limit_reached"
   | "circuit_breaker_open"
   | "campaign_not_runnable";
@@ -67,7 +69,10 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
   if (
     context.approval &&
     (context.approval.workspaceId !== context.task.workspaceId ||
-      !context.campaign.contentIds.includes(context.approval.contentId))
+      !context.campaign.contentIds.includes(context.approval.contentId) ||
+      (context.task.kind !== "sync" &&
+        context.task.contentId !== undefined &&
+        context.approval.contentId !== context.task.contentId))
   ) {
     return {
       allowed: false,
