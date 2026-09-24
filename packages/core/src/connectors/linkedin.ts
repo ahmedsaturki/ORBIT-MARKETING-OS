@@ -9,7 +9,7 @@ import {
 
 export interface LinkedInConnectorOptions {
   readonly apiBaseUrl?: string;
-  /** LinkedIn version in YYYYMM form, e.g. "202603". */
+  /** LinkedIn Marketing API version in YYYYMM form; defaults to the current release. */
   readonly apiVersion: string;
   readonly fetchImpl?: typeof fetch;
   readonly tokenResolver: () => Promise<string | undefined>;
@@ -38,7 +38,7 @@ export class LinkedInConnector implements PlatformConnector {
     this.apiBaseUrl = normalizeApiBase(
       options.apiBaseUrl ?? "https://api.linkedin.com/rest",
     );
-    this.apiVersion = normalizeVersion(options.apiVersion);
+    this.apiVersion = normalizeVersion(options.apiVersion || "202609");
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
