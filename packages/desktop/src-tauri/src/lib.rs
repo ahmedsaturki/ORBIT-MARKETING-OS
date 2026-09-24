@@ -1435,8 +1435,9 @@ fn task_set_status(
     };
 
     let valid_transition = match current.as_str() {
-        "pending" => matches!(status.as_str(), "blocked" | "cancelled"),
-        "running" => matches!(status.as_str(), "blocked" | "cancelled"),
+        "pending" => matches!(status.as_str(), "awaiting_approval" | "awaiting_user_action" | "blocked" | "cancelled"),
+        "awaiting_approval" | "awaiting_user_action" => status == "pending",
+        "running" => matches!(status.as_str(), "awaiting_approval" | "awaiting_user_action" | "blocked" | "cancelled"),
         "succeeded" | "failed" | "blocked" | "cancelled" => false,
         _ => false,
     };
