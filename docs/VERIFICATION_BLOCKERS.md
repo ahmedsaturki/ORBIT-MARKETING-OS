@@ -6,13 +6,13 @@ Updated: 2026-09-24
 
 Current rebuild HEAD at the latest source revision:
 
-`cb4f2567e7ee6cf04dad2a8801cf9aa31fa12f60`
+`fdf15ef7c4b0fa27cc309f49caacf1e2441a83ed`
 
 The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
 
 Latest observed hosted-runner behavior:
 
-- The newest observed CI run (36040244621, job 107770331541) fails before step registration with no runner allocation metadata and no step records.
+- The newest observed CI run (36043131650, job 107779961627) fails before step registration with `runner_id=0`, empty runner name, and no step records.
 - Multiple consecutive runs show the same pre-execution signature.
 
 A deliberately minimal runner probe was also tested earlier and failed before any workflow step executed. It was removed after diagnosis.
@@ -31,7 +31,7 @@ The repository now provides:
 
 ## 3. Vercel deployment evidence
 
-The Vercel project `orbit-marketing-os` is connected and receives deployments from `rebuild/orbit-production`.
+The Vercel project `orbit-marketing-os` is connected. Automatic Git builds are disabled repository-side; the intended release path is guarded prebuilt deployment.
 
 The latest verified deployment diagnostics identified and then addressed these configuration failures:
 

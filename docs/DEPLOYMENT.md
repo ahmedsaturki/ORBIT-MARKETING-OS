@@ -8,7 +8,7 @@ The repository contains `vercel.json` plus a guarded GitHub Actions deployment w
 
 The deployment path must use Vercel's CI build output flow (`vercel pull` → `vercel build` → `vercel deploy --prebuilt`). A normal Next.js build alone is not treated as Vercel Build Output evidence.
 
-The Vercel project exists and receives Git deployments from `rebuild/orbit-production`. Release verification is still blocked by the dependency metadata fetch failure documented in `docs/VERIFICATION_BLOCKERS.md`.
+The connected Vercel project exists. Automatic Git deployments are disabled repository-side; the intended release path is the guarded prebuilt flow described below. Release verification remains blocked by lockfile and project-setting evidence documented in `docs/VERIFICATION_BLOCKERS.md`.
 
 ## Desktop
 
@@ -46,4 +46,4 @@ For the connected Vercel project orbit-marketing-os, the intended production Web
 - Build Command: `pnpm --dir packages/web build`
 - Output Directory: `packages/web/out`.
 
-The connected project currently reports a vite framework in its metadata. Until the project-level Root Directory/framework configuration is confirmed as repository root with Next.js, a successful production Web deployment is not considered proven.
+The connected project's available metadata has historically reported a Vite framework. Until the project-level Root Directory/framework configuration is confirmed as repository root with Next.js, a successful production Web deployment is not considered proven.
