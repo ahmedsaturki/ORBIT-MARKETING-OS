@@ -547,6 +547,19 @@ const workflowFiles = [
   ".github/workflows/self-hosted-verify.yml",
   ".github/workflows/bootstrap-lockfile.yml",
 ];
+const selfHostedWorkflow = await readFile(join(root, ".github/workflows/self-hosted-verify.yml"), "utf8");
+if (!selfHostedWorkflow.includes("github.ref_name == 'rebuild/orbit-production'")) {
+  throw new Error("Self-hosted verification must be restricted to rebuild/orbit-production");
+}
+if (!selfHostedWorkflow.includes("github.actor == 'ahmedsaturki'")) {
+  throw new Error("Self-hosted verification must be owner-restricted");
+}
+if (!selfHostedWorkflow.includes("runs-on: [self-hosted, x64, linux]")) {
+  throw new Error("Self-hosted verification must require the Linux runner");
+}
+if (!selfHostedWorkflow.includes("run: bash scripts/self-hosted-preflight.sh")) {
+  throw new Error("Self-hosted verification must run the runner preflight");
+}
 const bootstrapWorkflow = await readFile(join(root, ".github/workflows/bootstrap-lockfile.yml"), "utf8");
 if (!bootstrapWorkflow.includes("workflow_dispatch:")) {
   throw new Error("Lockfile bootstrap must be manually dispatched");
@@ -560,13 +573,11 @@ if (!bootstrapWorkflow.includes("git push origin \"HEAD:${GITHUB_REF_NAME}\"")) 
 if (!bootstrapWorkflow.includes("github.actor == 'ahmedsaturki'")) {
   throw new Error("Lockfile bootstrap must be owner-restricted");
 }
-if (!selfHostedWorkflow.includes("github.actor == 'ahmedsaturki'")) {
-  throw new Error("Self-hosted verification must be owner-restricted");
+if (!bootstrapWorkflow.includes("runs-on: [self-hosted, x64, linux]")) {
+  throw new Error("Lockfile bootstrap must require the Linux self-hosted runner");
 }
-
-const selfHostedWorkflow = await readFile(join(root, ".github/workflows/self-hosted-verify.yml"), "utf8");
-if (!selfHostedWorkflow.includes("github.ref_name == 'rebuild/orbit-production'")) {
-  throw new Error("Self-hosted verification must be restricted to rebuild/orbit-production");
+if (!bootstrapWorkflow.includes("run: bash scripts/self-hosted-preflight.sh")) {
+  throw new Error("Lockfile bootstrap must run the runner preflight");
 }
 
 for (const workflow of workflowFiles) {
@@ -587,6 +598,7 @@ for (const workflow of workflowFiles) {
     }
   }
 }
+
 await assertFile("rust-toolchain.toml");
 const rustToolchain = await readFile(join(root, "rust-toolchain.toml"), "utf8");
 if (!rustToolchain.includes('channel = "1.98.1"')) {
