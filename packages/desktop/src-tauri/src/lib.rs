@@ -648,6 +648,14 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
              CREATE INDEX IF NOT EXISTS idx_workspace_memberships_user
                ON workspace_memberships(user_id, workspace_id, active);",
         )?;
+
+        let timestamp = chrono_like_timestamp();
+        connection.execute(
+            "INSERT OR IGNORE INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+             SELECT id, ?1, 'owner', 1, ?2
+             FROM workspaces",
+            params![DEFAULT_LOCAL_USER_ID, timestamp],
+        )?;
     }
 
     if version < 8 {
@@ -736,10 +744,10 @@ fn ensure_workspace_context(connection: &Connection) -> Result<(), AppError> {
     )?;
 
     connection.execute(
-        "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
-         VALUES (?1, ?2, 'owner', 1, ?3)
-         ON CONFLICT(workspace_id, user_id) DO UPDATE SET active=1",
-        params![selected, DEFAULT_LOCAL_USER_ID, timestamp],
+        "INSERT OR IGNORE INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+         SELECT id, ?1, 'owner', 1, ?2
+         FROM workspaces",
+        params![DEFAULT_LOCAL_USER_ID, timestamp],
     )?;
 
     set_active_workspace_id(&selected)?;
@@ -1006,7 +1014,7 @@ async fn telegram_execute_task(
         .build()
         .map_err(|_| "failed to initialize Telegram HTTP client".to_string())?;
     let url = format!("https://api.telegram.org/bot{token}/sendMessage");
-    let response = client
+    let response = match client
         .post(url)
         .json(&serde_json::json!({
             "chat_id": destination_id,
@@ -1014,7 +1022,32 @@ async fn telegram_execute_task(
         }))
         .send()
         .await
-        .map_err(|_| "Telegram request failed".to_string())?;
+    {
+        Ok(response) => response,
+        Err(_) => {
+            connection
+                .execute(
+                    "UPDATE tasks
+                     SET status='awaiting_user_action'
+                     WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                    params![&task_id, active_workspace_id()],
+                )
+                .map_err(|error| error.to_string())?;
+            telegram_task_audit(
+                &connection,
+                &task_id,
+                "delivery_status_unknown",
+                "blocked",
+            )?;
+            return Ok(TelegramExecutionView {
+                task_id,
+                status: "awaiting_user_action".to_string(),
+                external_message_id: None,
+                message: "Telegram delivery status is unknown. Verify the destination before retrying to avoid a duplicate send.".to_string(),
+                retry_at: None,
+            });
+        }
+    };
 
     let status_code = response.status();
     let parsed = response
