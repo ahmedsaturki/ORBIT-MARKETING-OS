@@ -9,7 +9,6 @@ use std::{fs, path::PathBuf};
 use tauri::Manager;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
-const DEFAULT_WORKSPACE_ID: &str = "default";
 const LICENSE_PUBLIC_KEY_B64: &str =
     "TM9dnIPSgNRBrd9JnGiVsCgPYA3/ttjdPpn1y64AjUA=";
 
