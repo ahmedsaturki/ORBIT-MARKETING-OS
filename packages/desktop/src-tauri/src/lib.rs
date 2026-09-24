@@ -1937,6 +1937,7 @@ fn account_upsert(
                platform=excluded.platform,
                display_name=excluded.display_name,
                username=excluded.username,
+               status=excluded.status,
                session_payload_json=COALESCE(excluded.session_payload_json, accounts.session_payload_json),
                updated_at=excluded.updated_at
              WHERE accounts.workspace_id=excluded.workspace_id",
@@ -4506,6 +4507,69 @@ mod tests {
             }
         };
         assert!(open_payload("wrong-password", &payload).is_err());
+    }
+
+    #[test]
+    fn account_upsert_status_tracks_session_presence() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection.execute_batch(
+            "CREATE TABLE accounts(
+               id TEXT PRIMARY KEY,
+               workspace_id TEXT NOT NULL,
+               platform TEXT NOT NULL,
+               display_name TEXT NOT NULL,
+               username TEXT,
+               status TEXT NOT NULL,
+               session_payload_json TEXT,
+               created_at TEXT NOT NULL,
+               updated_at TEXT NOT NULL
+             );
+             INSERT INTO accounts(
+               id, workspace_id, platform, display_name, username, status,
+               session_payload_json, created_at, updated_at
+             ) VALUES (
+               'account-1', 'workspace-1', 'telegram', 'Telegram', 'orbit',
+               'needs_refresh', NULL, '1', '1'
+             );",
+        )
+        .expect("account fixture should be created");
+
+        connection
+            .execute(
+                "INSERT INTO accounts(
+                   id, workspace_id, platform, display_name, username, status,
+                   session_payload_json, created_at, updated_at
+                 )
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+                 ON CONFLICT(id) DO UPDATE SET
+                   platform=excluded.platform,
+                   display_name=excluded.display_name,
+                   username=excluded.username,
+                   status=excluded.status,
+                   session_payload_json=COALESCE(excluded.session_payload_json, accounts.session_payload_json),
+                   updated_at=excluded.updated_at
+                 WHERE accounts.workspace_id=excluded.workspace_id",
+                params![
+                    "account-1",
+                    "workspace-1",
+                    "telegram",
+                    "Telegram",
+                    "orbit",
+                    "connected",
+                    "encrypted-session",
+                    "2"
+                ],
+            )
+            .expect("account upsert should succeed");
+
+        let status: String = connection
+            .query_row(
+                "SELECT status FROM accounts WHERE id='account-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("account status should be readable");
+        assert_eq!(status, "connected");
     }
 
     #[test]
