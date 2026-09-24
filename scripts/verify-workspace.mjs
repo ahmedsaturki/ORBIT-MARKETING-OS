@@ -66,6 +66,11 @@ if (!webEslint.devDependencies?.eslint || !webEslint.devDependencies?.["eslint-c
   throw new Error("Web ESLint dependencies are incomplete");
 }
 
+const desktopApp = await readFile(join(root, "packages/desktop/src/App.tsx"), "utf8");
+if (desktopApp.includes("اختبار خزنة محلية حقيقية") && !desktopApp.includes("import.meta.env.DEV")) {
+  throw new Error("Vault plaintext diagnostic must remain development-only");
+}
+
 const desktopPackage = await readJson("packages/desktop/package.json");
 if (!desktopPackage.scripts?.build || !desktopPackage.scripts?.typecheck) {
   throw new Error("Desktop build/typecheck scripts are incomplete");
