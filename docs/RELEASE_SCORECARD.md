@@ -47,7 +47,7 @@ Status meanings:
 | CONN-02 Unsupported action rejection | IMPLEMENTED / UNVERIFIED | Negative tests exist |
 | CONN-03 Challenge → human intervention | IMPLEMENTED / UNVERIFIED | Fixture challenge + native Telegram challenge handling; browser E2E pending |
 | Telegram native path | IMPLEMENTED / UNVERIFIED | Native API path exists; controlled real-account verification pending |
-| Facebook / Instagram / WhatsApp / LinkedIn / TikTok | UNVERIFIED | No production-grade end-to-end connector evidence yet |
+| Facebook / Instagram / WhatsApp / TikTok | NOT_IMPLEMENTED | No real connector; contract/fixture surfaces only |\n| LinkedIn | IMPLEMENTED / UNVERIFIED | Text publishing Posts API connector exists; controlled authorization/runtime evidence pending |
 
 ## Web / Mobile
 
@@ -93,10 +93,10 @@ A minimal diagnostic workflow reproduced the same signature before being removed
 ### Vercel
 
 The orbit-marketing-os Vercel project exists. The canonical monorepo configuration is:
-- Root Directory: packages/web
+- Root Directory: repository root
 - Framework: Next.js
-- Build from packages/web
-- Static output: out
+- Build command: `pnpm --dir packages/web build`
+- Static output: `packages/web/out`
 
 Repository-side vercel.json files are aligned with this configuration. The connected Vercel toolset currently exposes deployment listing but not working project-setting mutation/deploy execution, so the project-level Root Directory remains an external action.
 
