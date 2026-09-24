@@ -24,7 +24,7 @@ const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
 const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
 const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
-const SCHEMA_VERSION: i64 = 8;
+const SCHEMA_VERSION: i64 = 9;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 
@@ -194,6 +194,39 @@ CREATE TABLE IF NOT EXISTS execution_counters (
 CREATE INDEX IF NOT EXISTS idx_execution_counters_day
   ON execution_counters(workspace_id, day_key);
 
+CREATE TABLE IF NOT EXISTS media_assets (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL CHECK(size_bytes > 0),
+  sha256 TEXT,
+  local_path TEXT NOT NULL,
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_media_assets_workspace_updated
+  ON media_assets(workspace_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS automation_rule_packs (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  version TEXT NOT NULL,
+  schema_version INTEGER NOT NULL,
+  rules_json TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(workspace_id, platform, id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rule_packs_workspace_platform
+  ON automation_rule_packs(workspace_id, platform, enabled);
+
 
 CREATE TABLE IF NOT EXISTS conversations (
   id TEXT PRIMARY KEY,
@@ -313,6 +346,32 @@ struct ContentView {
     updated_at: String,
 }
 #[derive(Debug, Serialize)]
+#[derive(Debug, Serialize)]
+struct MediaAssetView {
+    id: String,
+    kind: String,
+    filename: String,
+    mime_type: String,
+    size_bytes: i64,
+    sha256: Option<String>,
+    local_path: String,
+    tags_json: String,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct AutomationRulePackView {
+    id: String,
+    platform: String,
+    version: String,
+    schema_version: i64,
+    rules_json: String,
+    enabled: bool,
+    created_at: String,
+    updated_at: String,
+}
+
 struct ContentVariantView {
     content_id: String,
     platform: String,
@@ -2167,6 +2226,305 @@ fn content_list(app: tauri::AppHandle) -> Result<Vec<ContentView>, String> {
                 approval_status: row.get(3)?,
                 tags_json: row.get(4)?,
                 updated_at: row.get(5)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+fn validate_media_kind(kind: &str) -> Result<String, AppError> {
+    let value = kind.trim().to_lowercase();
+    if ["image", "video", "audio", "document"].contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err(AppError::InvalidLabel)
+    }
+}
+
+fn validate_media_sha256(value: Option<&str>) -> Result<Option<String>, AppError> {
+    let Some(value) = value else { return Ok(None); };
+    let value = value.trim().to_lowercase();
+    if !value.is_empty() && !value.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(AppError::InvalidLabel);
+    }
+    if !value.is_empty() && value.len() != 64 {
+        return Err(AppError::InvalidLabel);
+    }
+    Ok(if value.is_empty() { None } else { Some(value) })
+}
+
+#[tauri::command]
+fn media_asset_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    kind: String,
+    filename: String,
+    mime_type: String,
+    size_bytes: i64,
+    sha256: Option<String>,
+    local_path: String,
+    tags_json: Option<String>,
+) -> Result<MediaAssetView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let kind = validate_media_kind(&kind).map_err(|error| error.to_string())?;
+    let filename = validate_label(&filename).map_err(|error| error.to_string())?;
+    let mime_type = validate_label(&mime_type).map_err(|error| error.to_string())?;
+    let local_path = validate_label(&local_path).map_err(|error| error.to_string())?;
+    if size_bytes <= 0 {
+        return Err("media size must be positive".to_string());
+    }
+    let sha256 = validate_media_sha256(sha256.as_deref()).map_err(|error| error.to_string())?;
+    let tags_json = tags_json.unwrap_or_else(|| "[]".to_string());
+    let tags: Vec<String> = serde_json::from_str(&tags_json)
+        .map_err(|_| "tags_json must be a JSON array".to_string())?;
+    if tags.len() > 100 || tags.iter().any(|tag: &String| tag.trim().is_empty() || tag.len() > 100) {
+        return Err("invalid media tags".to_string());
+    }
+    let tags_json = serde_json::to_string(
+        &tags.into_iter().map(|tag| tag.trim().to_string()).collect::<Vec<_>>(),
+    )
+    .map_err(|error| error.to_string())?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor"],
+    )
+    .map_err(|error| error.to_string())?;
+    let timestamp = chrono_like_timestamp();
+
+    connection
+        .execute(
+            "INSERT INTO media_assets(
+               id, workspace_id, kind, filename, mime_type, size_bytes,
+               sha256, local_path, tags_json, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)
+             ON CONFLICT(id) DO UPDATE SET
+               kind=excluded.kind,
+               filename=excluded.filename,
+               mime_type=excluded.mime_type,
+               size_bytes=excluded.size_bytes,
+               sha256=excluded.sha256,
+               local_path=excluded.local_path,
+               tags_json=excluded.tags_json,
+               updated_at=excluded.updated_at
+             WHERE media_assets.workspace_id=excluded.workspace_id",
+            params![
+                &id,
+                &workspace_id,
+                &kind,
+                &filename,
+                &mime_type,
+                size_bytes,
+                &sha256,
+                &local_path,
+                &tags_json,
+                &timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit_for_workspace(
+        &connection,
+        &workspace_id,
+        "media",
+        "asset_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(MediaAssetView {
+        id,
+        kind,
+        filename,
+        mime_type,
+        size_bytes,
+        sha256,
+        local_path,
+        tags_json,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn media_asset_list(
+    app: tauri::AppHandle,
+    search: Option<String>,
+    kind: Option<String>,
+) -> Result<Vec<MediaAssetView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+    let pattern = search
+        .map(|value| "%".to_string() + value.trim() + "%");
+    let kind = kind
+        .map(|value| validate_media_kind(&value))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, kind, filename, mime_type, size_bytes, sha256,
+                    local_path, tags_json, created_at, updated_at
+             FROM media_assets
+             WHERE workspace_id=?1
+               AND (?2 IS NULL OR filename LIKE ?2 OR local_path LIKE ?2 OR tags_json LIKE ?2)
+               AND (?3 IS NULL OR kind=?3)
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![&workspace_id, pattern, kind], |row| {
+            Ok(MediaAssetView {
+                id: row.get(0)?,
+                kind: row.get(1)?,
+                filename: row.get(2)?,
+                mime_type: row.get(3)?,
+                size_bytes: row.get(4)?,
+                sha256: row.get(5)?,
+                local_path: row.get(6)?,
+                tags_json: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn automation_rule_pack_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    platform: String,
+    version: String,
+    schema_version: i64,
+    rules_json: String,
+    enabled: bool,
+) -> Result<AutomationRulePackView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
+    let version = validate_label(&version).map_err(|error| error.to_string())?;
+    if schema_version != 1 {
+        return Err("unsupported automation rule pack schema".to_string());
+    }
+    let parsed: serde_json::Value = serde_json::from_str(&rules_json)
+        .map_err(|_| "rules_json must be valid JSON".to_string())?;
+    if !parsed.is_array() || parsed.as_array().map(|value| value.len()).unwrap_or(usize::MAX) > 100 {
+        return Err("rules_json must be an array with at most 100 rules".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor"],
+    )
+    .map_err(|error| error.to_string())?;
+    let timestamp = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO automation_rule_packs(
+               id, workspace_id, platform, version, schema_version,
+               rules_json, enabled, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+             ON CONFLICT(id) DO UPDATE SET
+               platform=excluded.platform,
+               version=excluded.version,
+               schema_version=excluded.schema_version,
+               rules_json=excluded.rules_json,
+               enabled=excluded.enabled,
+               updated_at=excluded.updated_at
+             WHERE automation_rule_packs.workspace_id=excluded.workspace_id",
+            params![
+                &id,
+                &workspace_id,
+                &platform,
+                &version,
+                schema_version,
+                &rules_json,
+                if enabled { 1 } else { 0 },
+                &timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit_for_workspace(
+        &connection,
+        &workspace_id,
+        "automation",
+        "rule_pack_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(AutomationRulePackView {
+        id,
+        platform,
+        version,
+        schema_version,
+        rules_json,
+        enabled,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn automation_rule_pack_list(
+    app: tauri::AppHandle,
+    platform: Option<String>,
+) -> Result<Vec<AutomationRulePackView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+    let platform = platform
+        .map(|value| validate_platform(&value))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT id, platform, version, schema_version, rules_json,
+                    enabled, created_at, updated_at
+             FROM automation_rule_packs
+             WHERE workspace_id=?1
+               AND (?2 IS NULL OR platform=?2)
+             ORDER BY platform ASC, version DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![&workspace_id, &platform], |row| {
+            Ok(AutomationRulePackView {
+                id: row.get(0)?,
+                platform: row.get(1)?,
+                version: row.get(2)?,
+                schema_version: row.get(3)?,
+                rules_json: row.get(4)?,
+                enabled: row.get::<_, i64>(5)? == 1,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         })
         .map_err(|error| error.to_string())?;
@@ -4511,6 +4869,10 @@ pub fn run() {
             content_upsert,
             content_list,
             content_variant_upsert,
+            media_asset_upsert,
+            media_asset_list,
+            automation_rule_pack_upsert,
+            automation_rule_pack_list,
             content_variant_list,
             campaign_attach_content,
             approval_request,
