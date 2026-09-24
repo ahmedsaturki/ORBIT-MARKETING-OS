@@ -1,5 +1,5 @@
 {
-  "installCommand": "pnpm install --frozen-lockfile",
+  "installCommand": "bash scripts/vercel-install.sh",
   "buildCommand": "pnpm --dir packages/web build",
   "outputDirectory": "packages/web/out",
   "framework": "nextjs",
