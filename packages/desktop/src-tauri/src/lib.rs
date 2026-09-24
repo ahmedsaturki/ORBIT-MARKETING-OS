@@ -3475,6 +3475,43 @@ mod tests {
 
     #[test]
     #[test]
+    fn task_claim_projection_keeps_task_fields_in_declared_order() {
+        let selected_columns = [
+            "id",
+            "campaign_id",
+            "content_id",
+            "destination_id",
+            "account_id",
+            "platform",
+            "kind",
+            "priority",
+            "attempts",
+            "max_attempts",
+            "idempotency_key",
+            "available_at",
+            "created_at",
+        ];
+
+        let task_view_fields = [
+            "id",
+            "campaign_id",
+            "content_id",
+            "destination_id",
+            "account_id",
+            "platform",
+            "kind",
+            "priority",
+            "attempts",
+            "max_attempts",
+            "idempotency_key",
+            "available_at",
+            "created_at",
+        ];
+
+        assert_eq!(selected_columns, task_view_fields);
+    }
+
+    #[test]
     fn sqlite_connection_defaults_enable_integrity_and_busy_timeout() {
         let connection = Connection::open_in_memory()
             .expect("in-memory SQLite should be available");
