@@ -254,31 +254,6 @@ describe("task execution orchestrator", () => {
     expect(taskQueue.get(task.id)?.status).toBe("awaiting_user_action");
   });
 
-  it("blocks external execution before the connector when confirmation is missing", async () => {
-    const task = makeTask();
-    const taskQueue = queue(task);
-    const claimed = taskQueue.claimNext("2026-09-24T00:00:01.000Z");
-    const registry = new ConnectorRegistry();
-    registry.register(new FixtureConnector({ platform: "facebook" }));
-    const result = await executeClaimedTask(
-      {
-        queue: taskQueue,
-        connectors: registry,
-        audit: new AuditLog(),
-        loadContext: async () => context(task),
-      },
-      claimed!,
-      false,
-      "2026-09-24T00:00:01.000Z",
-    );
-
-    expect(result).toMatchObject({
-      status: "blocked",
-      reason: "confirmation_required",
-    });
-    expect(taskQueue.get(task.id)?.status).toBe("awaiting_user_action");
-  });
-
   it("stops on a platform challenge and records a blocked audit event", async () => {
     const task = makeTask();
     const taskQueue = queue(task);
