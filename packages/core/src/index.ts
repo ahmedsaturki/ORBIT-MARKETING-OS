@@ -2,7 +2,7 @@ export * from "./access/control.js";
 export * from "./accounts/index.js";
 export * from "./audit/index.js";
 export * from "./backup/index.js";
-export * from "./campaigns/validation.js";
+export * from "./campaigns/index.js";
 export * from "./connectors/index.js";
 export * from "./database/index.js";
 export * from "./licensing/index.js";
