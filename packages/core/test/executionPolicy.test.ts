@@ -143,6 +143,22 @@ describe("execution policy", () => {
     expect(decision.reason).toBe("approval_scope_mismatch");
   });
 
+  it("blocks external tasks without a destination", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      task: { ...context.task, destinationId: undefined },
+    });
+    expect(decision.reason).toBe("destination_required");
+  });
+
+  it("blocks external tasks when content has not been loaded", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      content: undefined,
+    });
+    expect(decision.reason).toBe("content_unavailable");
+  });
+
   it("blocks external execution when content is not approved", () => {
     const decision = evaluateExecutionPolicy({
       ...context,

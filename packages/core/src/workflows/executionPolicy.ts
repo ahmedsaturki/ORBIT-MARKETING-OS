@@ -11,6 +11,8 @@ export type ExecutionBlockReason =
   | "content_required"
   | "content_scope_mismatch"
   | "content_not_approved"
+  | "content_unavailable"
+  | "destination_required"
   | "daily_limit_reached"
   | "circuit_breaker_open"
   | "campaign_not_runnable";
@@ -112,6 +114,22 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
       allowed: false,
       reason: "circuit_breaker_open",
       message: "The execution circuit breaker is open after repeated failures.",
+    };
+  }
+
+  if (context.task.kind !== "sync" && !context.task.destinationId) {
+    return {
+      allowed: false,
+      reason: "destination_required",
+      message: "External tasks must identify a destination before execution.",
+    };
+  }
+
+  if (context.task.kind !== "sync" && !context.content) {
+    return {
+      allowed: false,
+      reason: "content_unavailable",
+      message: "The referenced content must be loaded before external execution.",
     };
   }
 
