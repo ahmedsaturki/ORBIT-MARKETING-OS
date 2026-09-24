@@ -1384,6 +1384,57 @@ mod tests {
         assert!(validate_label("   ").is_err());
         assert!(validate_label(&"x".repeat(201)).is_err());
     }
+
+    #[test]
+    fn migrates_legacy_schema_and_backfills_task_idempotency() {
+        let connection = match Connection::open_in_memory() {
+            Ok(value) => value,
+            Err(error) => {
+                assert!(false, "in-memory SQLite unavailable: {error}");
+                return;
+            }
+        };
+
+        let legacy = r#"
+CREATE TABLE accounts (id TEXT PRIMARY KEY, platform TEXT NOT NULL, display_name TEXT NOT NULL, username TEXT, status TEXT NOT NULL, session_payload_json TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE campaigns (id TEXT PRIMARY KEY, name TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE campaign_accounts (campaign_id TEXT NOT NULL, account_id TEXT NOT NULL, PRIMARY KEY(campaign_id, account_id));
+CREATE TABLE tasks (id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL, account_id TEXT NOT NULL, platform TEXT NOT NULL, kind TEXT NOT NULL, priority INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, max_attempts INTEGER NOT NULL DEFAULT 3, available_at TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE contacts (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, phone TEXT, email TEXT, source_platform TEXT, status TEXT NOT NULL, notes TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE conversations (id TEXT PRIMARY KEY, contact_id TEXT, platform TEXT NOT NULL, external_thread_id TEXT, status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE audit_events (id TEXT PRIMARY KEY, timestamp TEXT NOT NULL, category TEXT NOT NULL, action TEXT NOT NULL, outcome TEXT NOT NULL, actor TEXT NOT NULL, entity_id TEXT, metadata_json TEXT);
+INSERT INTO tasks(id, campaign_id, account_id, platform, kind, priority, status, attempts, max_attempts, available_at, created_at)
+VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish', 0, 'pending', 0, 3, '1000', '1000');
+"#;
+
+        if let Err(error) = connection.execute_batch(legacy) {
+            assert!(false, "legacy schema setup failed: {error}");
+            return;
+        }
+
+        if let Err(error) = migrate_schema(&connection) {
+            assert!(false, "legacy migration failed: {error}");
+            return;
+        }
+
+        let version = connection
+            .query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0))
+            .expect("schema version query should work");
+        assert_eq!(version, SCHEMA_VERSION);
+
+        assert!(has_column(&connection, "tasks", "workspace_id").expect("workspace column check"));
+        assert!(has_column(&connection, "tasks", "idempotency_key").expect("idempotency column check"));
+
+        let values: (String, String) = connection
+            .query_row(
+                "SELECT workspace_id, idempotency_key FROM tasks WHERE id='legacy-task'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("migrated task should exist");
+        assert_eq!(values.0, DEFAULT_WORKSPACE_ID);
+        assert_eq!(values.1, "legacy-task");
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
