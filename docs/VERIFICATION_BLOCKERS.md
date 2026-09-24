@@ -33,20 +33,21 @@ The repository now provides:
 
 ## 3. Vercel deployment evidence
 
-The Vercel project `orbit-marketing-os` exists in the connected Vercel team.
+The Vercel project `orbit-marketing-os` is connected and receives deployments from `rebuild/orbit-production`.
 
-The last concrete deployment evidence inspected before the current release-control hardening was an ERROR caused by `ERR_PNPM_META_FETCH_FAIL` during dependency installation. That deployment is not treated as proof of a source build failure.
+The latest verified deployment diagnostics identified and then addressed these configuration failures:
 
-The repository Vercel configs now:
+1. `ignoreCommand` exceeded Vercel's 256-character schema limit.
+2. The shortened command then failed when `VERCEL_GIT_PREVIOUS_SHA` was empty and `git diff` received an empty revision.
 
-- require `pnpm install --frozen-lockfile`;
-- fail closed when the committed lockfile is absent;
-- target Next.js;
-- use the `packages/web` static output contract.
+The repository `vercel.json` has now been hardened so missing Git revision context does not produce a fatal `bad revision` error. A successful deployment still requires a fresh deployment result after this fix.
 
-The Vercel project-level settings still require external verification against the intended `packages/web` + Next.js deployment target.
+The project metadata previously reported framework `vite` while the repository deployment contract targets Next.js static output. This remains a project-configuration verification item until a successful deployment confirms the effective build settings.
+
+## 4. Reproducible release blocker
+
+`pnpm-lock.yaml` is still absent from the rebuild branch. This is intentional: no lockfile is being fabricated. Bootstrap scripts/workflow exist to generate it on an owned runner, after which frozen installs become the release path.
 
 ## Release consequence
 
 Do not merge PR #2 or claim production readiness while clean install, TypeScript checks, Rust checks, runtime integration, E2E, security, performance, signing, distribution, and other applicable release gates remain unverified.
-
