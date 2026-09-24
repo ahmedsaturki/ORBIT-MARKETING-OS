@@ -22,7 +22,7 @@ describe("AuditIntegrityChain", () => {
 
   it("isolates stored events from caller mutation", async () => {
     const chain = new AuditIntegrityChain();
-    const original = event("1");
+    const original = { ...event("1") };
     await chain.append(original);
     original.action = "tampered";
     expect(await chain.verify()).toBe(true);
@@ -33,7 +33,8 @@ describe("AuditIntegrityChain", () => {
     const chain = new AuditIntegrityChain();
     await chain.append(event("1"));
     const snapshot = chain.snapshot();
-    (snapshot[0]!.event as AuditEvent).action = "tampered";
+    const tamperedEvent = { ...snapshot[0]!.event };
+    tamperedEvent.action = "tampered";
     expect(await chain.verify()).toBe(true);
     expect(chain.snapshot()[0]?.event.action).toBe("test");
   });
