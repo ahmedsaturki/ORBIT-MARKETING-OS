@@ -4637,7 +4637,6 @@ fn write_audit(
 
 
 
-#[tauri::command]
 fn count_conversation_messages(
     connection: &Connection,
     conversation_id: &str,
@@ -4649,6 +4648,7 @@ fn count_conversation_messages(
     )
 }
 
+#[tauri::command]
 fn conversation_upsert(
     app: tauri::AppHandle,
     id: String,
