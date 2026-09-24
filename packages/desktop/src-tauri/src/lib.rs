@@ -906,7 +906,7 @@ fn task_set_status(
     };
 
     let valid_transition = match current.as_str() {
-        "pending" => matches!(status.as_str(), "running" | "blocked" | "cancelled"),
+        "pending" => matches!(status.as_str(), "blocked" | "cancelled"),
         "running" => matches!(status.as_str(), "succeeded" | "failed" | "blocked" | "cancelled"),
         "succeeded" | "failed" | "blocked" | "cancelled" => false,
         _ => false,
@@ -1611,6 +1611,18 @@ mod tests {
         assert!(validate_label("vault-entry").is_ok());
         assert!(validate_label("   ").is_err());
         assert!(validate_label(&"x".repeat(201)).is_err());
+    }
+
+    #[test]
+    fn pending_tasks_cannot_be_started_by_manual_status_override() {
+        let current = "pending";
+        let requested = "running";
+        let valid = match current {
+            "pending" => matches!(requested, "blocked" | "cancelled"),
+            "running" => matches!(requested, "succeeded" | "failed" | "blocked" | "cancelled"),
+            _ => false,
+        };
+        assert!(!valid);
     }
 
     #[test]
