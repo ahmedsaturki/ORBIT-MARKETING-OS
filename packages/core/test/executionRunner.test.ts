@@ -57,6 +57,7 @@ const task: Task = {
   attempts: 0,
   maxAttempts: 3,
   availableAt: "2026-09-24T00:00:00.000Z",
+  destinationId: "destination-1",
   idempotencyKey: "task-1",
   createdAt: "2026-09-24T00:00:00.000Z",
 };
@@ -89,7 +90,8 @@ describe("ExecutionRunner", () => {
     const result = await runner().run({
       account,
       campaign,
-      task: { ...task, status: "running", destinationId: "destination-1" },
+      task: { ...task, status: "running" },
+      content,
       actionsToday: 0,
       dailyLimit: 10,
       consecutiveFailures: 0,
@@ -138,6 +140,7 @@ describe("ExecutionRunner", () => {
       account,
       campaign,
       task: { ...task, status: "running" },
+      content,
       approval: {
         id: "approval-1",
         workspaceId: "workspace-1",
@@ -164,6 +167,7 @@ describe("ExecutionRunner", () => {
       account,
       campaign,
       task: { ...task, status: "running" },
+      content,
       approval: {
         id: "approval-1",
         workspaceId: "workspace-1",
@@ -203,6 +207,7 @@ describe("ExecutionRunner", () => {
       account,
       campaign,
       task: { ...task, status: "running" },
+      content,
       approval: {
         id: "approval-1",
         workspaceId: "workspace-1",
