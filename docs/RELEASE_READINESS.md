@@ -78,10 +78,10 @@ The connected Vercel project is `orbit-marketing-os`. The repository configurati
 The default branch now also exposes branch-restricted `Bootstrap pnpm lockfile` and `Self-Hosted Verification` workflow definitions so their manual `workflow_dispatch` controls are available from GitHub's Actions UI. Both workflows refuse refs other than `rebuild/orbit-production`.
 
 
-- Branch HEAD: `1b811014fe76c4d2c994411cc15f4849cdafd6b3`.
+- Branch HEAD: `f49d9faf47e59c37d5fe69472e750263b478658b`.
 - PR #2 remains open, draft, and unmerged.
-- The latest hosted `CI` run (`36032108431`, job `107743139525`) failed before workflow steps were registered.
-- The latest lockfile bootstrap run for the branch remains `queued`; previous bootstrap runs were cancelled by its concurrency policy.
+- The latest hosted `CI` run (`36037752496`, job `107761969648`) failed before workflow steps were registered.
+- The lockfile bootstrap path remains pending until an executable self-hosted runner is available; generated lockfiles are only accepted after real generation and frozen-install verification.
 - No production deployment is being claimed from these states.
 
 The implementation branch now includes local content variants, media metadata/import/delete lifecycle, versioned automation rule packs with confirmation invariants and runtime limits, campaign-scoped analytics, current LinkedIn Posts API version defaults, normalized task scheduling timestamps with bounded retries, synchronized account authorization state, and expanded acceptance/verification coverage.
