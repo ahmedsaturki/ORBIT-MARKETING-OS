@@ -78,6 +78,14 @@ Optional session material is encrypted locally before persistence.
 
 `task_enqueue` accepts an optional `idempotency_key`; task persistence is workspace-scoped. Non-sync external tasks require `content_id` and `destination_id`. Approval changes are workspace-scoped and must remain bound to the referenced content.
 
+### Content variants and analytics
+
+- `content_variant_upsert`
+- `content_variant_list`
+- `analytics_summary`
+
+Content variants are workspace-scoped through their parent content item. Analytics can be scoped to a campaign and is derived from persisted task outcomes.
+
 ### CRM and inbox
 
 - `contact_upsert`
