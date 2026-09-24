@@ -48,8 +48,8 @@ export function buildCampaignTasks(
     throw new Error("contentId is not part of campaign");
   }
 
-  if (maxAttempts < 1 || !Number.isInteger(maxAttempts)) {
-    throw new RangeError("maxAttempts must be a positive integer");
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 10) {
+    throw new RangeError("maxAttempts must be an integer between 1 and 10");
   }
 
   return campaign.accountIds.map((accountId) => {
