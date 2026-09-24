@@ -1,0 +1,110 @@
+name: Web Release — Self-Hosted
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orbit-web-release-self-hosted
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref_name == 'main' && github.actor == 'ahmedsaturki'
+    name: Verified web release from main
+    runs-on: [self-hosted, x64, linux]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10.17.1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: Require Vercel release credentials
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+
+      - name: Runner preflight
+        run: bash scripts/self-hosted-preflight.sh
+
+      - name: Install reproducibly
+        run: pnpm install --frozen-lockfile
+
+      - name: Workspace sanity
+        run: pnpm verify:workspace
+
+      - name: Release sanity
+        run: pnpm verify:release
+
+      - name: Secret scan
+        run: pnpm security:scan
+
+      - name: Web typecheck
+        run: pnpm --filter @orbit/web typecheck
+
+      - name: Web lint
+        run: pnpm --filter @orbit/web lint
+
+      - name: Web build
+        run: pnpm --filter @orbit/web build
+
+      - name: Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser E2E
+        run: pnpm test:e2e
+
+      - name: Pull Vercel project settings
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: pnpm dlx vercel@59.23.1 pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Verify Vercel dry-run framework
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          pnpm dlx vercel@59.23.1 deploy --dry --format=json --token="$VERCEL_TOKEN" > vercel-dry-run.json
+          node -e "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('vercel-dry-run.json','utf8')); const text=JSON.stringify(data); if (!/nextjs/i.test(text)) { console.error('Vercel dry-run did not detect Next.js'); process.exit(1); }"
+
+      - name: Build Vercel output
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: pnpm dlx vercel@59.23.1 build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy production
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          pnpm dlx vercel@59.23.1 deploy --prebuilt --prod --token="$VERCEL_TOKEN" 2>&1 | tee vercel-deploy.log
+          grep -q "Production:" vercel-deploy.log
+          deployment_url="$(grep -Eo 'https://[A-Za-z0-9.-]+\.vercel\.app' vercel-deploy.log | tail -1)"
+          test -n "$deployment_url"
+          printf 'url=%s\n' "$deployment_url" >> "$GITHUB_OUTPUT"
+
+      - name: Verify live rebuild
+        env:
+          ORBIT_LIVE_URL: ${{ steps.deploy.outputs.url }}
+        run: node scripts/verify-live-web.mjs
