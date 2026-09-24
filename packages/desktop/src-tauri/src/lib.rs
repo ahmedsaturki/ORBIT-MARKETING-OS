@@ -304,7 +304,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
             )?;
         }
 
-        let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let transaction = connection.unchecked_transaction()?;
         let mut statement = transaction.prepare(
             "SELECT rowid, id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json
              FROM audit_events
@@ -1233,7 +1233,7 @@ fn write_audit(
     actor: &str,
     entity_id: Option<&str>,
 ) -> Result<(), rusqlite::Error> {
-    let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let transaction = connection.unchecked_transaction()?;
     let id = uuid_like();
     let timestamp = chrono_like_timestamp();
     let previous_hash: String = transaction
