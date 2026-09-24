@@ -305,6 +305,41 @@ for (const entry of rustSources) {
   }
 }
 
+const serializableResponseViews = [
+  "WorkspaceView",
+  "VaultWriteResult",
+  "CampaignView",
+  "ContentView",
+  "MediaAssetView",
+  "AutomationRulePackView",
+  "ContentVariantView",
+  "ApprovalView",
+  "TaskView",
+  "ContactView",
+  "ConversationView",
+  "MessageView",
+  "AnalyticsSummaryView",
+  "AuditView",
+  "TelegramExecutionView",
+  "AccountView",
+  "LicenseStatus",
+];
+
+for (const typeName of serializableResponseViews) {
+  const declaration = rustSources
+    .map((entry) => entry.content)
+    .some((content) =>
+      new RegExp(
+        "#\\[derive\\([^\\n]*\\bSerialize\\b[^\\n]*\\)\\]\\s*(?:pub\\s+)?struct\\s+" +
+          typeName +
+          "\\s*\\{",
+      ).test(content),
+    );
+  if (!declaration) {
+    throw new Error("Tauri response type is missing a Serialize derive: " + typeName);
+  }
+}
+
 const tauriCommandDefinitions = [];
 for (const entry of rustSources) {
   tauriCommandDefinitions.push(
