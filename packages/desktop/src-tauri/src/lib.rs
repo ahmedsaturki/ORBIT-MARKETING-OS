@@ -1396,14 +1396,6 @@ fn require_workspace_role_for(
     }
 }
 
-fn require_local_user_actor(connection: &Connection, actor: &str) -> Result<(), AppError> {
-    let local_user = local_user_id(connection)?;
-    if actor != local_user {
-        return Err(AppError::Unauthorized);
-    }
-    Ok(())
-}
-
 fn require_active_workspace_reviewers(
     connection: &Connection,
     workspace_id: &str,
@@ -5160,29 +5152,6 @@ mod tests {
                 "workspace-1",
                 &[String::from("editor-1")]
             ),
-            Err(AppError::Unauthorized)
-        ));
-    }
-
-    #[test]
-    fn approval_actor_must_match_local_user() {
-        let connection = Connection::open_in_memory().expect("sqlite should be available");
-        connection
-            .execute(
-                "CREATE TABLE runtime_state(key TEXT PRIMARY KEY, value TEXT NOT NULL)",
-                [],
-            )
-            .expect("runtime state should be created");
-        connection
-            .execute(
-                "INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user')",
-                [],
-            )
-            .expect("local user should be stored");
-
-        assert!(require_local_user_actor(&connection, "local-user").is_ok());
-        assert!(matches!(
-            require_local_user_actor(&connection, "spoofed-user"),
             Err(AppError::Unauthorized)
         ));
     }
