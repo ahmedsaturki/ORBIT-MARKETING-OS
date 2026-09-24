@@ -33,6 +33,7 @@ describe("buildCampaignTasks", () => {
       buildCampaignTasks(
         {
           id: "camp-1",
+          workspaceId: "workspace-1",
           name: "Launch",
           status: "draft",
           accountIds: ["acc-1"],
