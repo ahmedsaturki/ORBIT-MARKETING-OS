@@ -3873,7 +3873,7 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
                 |row| Ok((row.get(0)?, row.get(1)?)),
             )
             .expect("migrated task should exist");
-        assert_eq!(values.0, workspace_id);
+        assert_eq!(values.0, DEFAULT_WORKSPACE_ID);
         assert_eq!(values.1, "legacy-task");
     }
 }
