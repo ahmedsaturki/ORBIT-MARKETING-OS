@@ -2738,6 +2738,14 @@ fn media_asset_import(
 ) -> Result<MediaAssetView, String> {
     let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor"],
+    )
+    .map_err(|error| error.to_string())?;
+
     let path_string = validate_label(&path).map_err(|error| error.to_string())?;
     let path = std::path::PathBuf::from(&path_string);
     if !path.is_file() {
@@ -2759,14 +2767,6 @@ fn media_asset_import(
         return Err("media file size must be between 1 byte and 2 GB".to_string());
     }
     let digest = sha256_file(&path)?;
-
-    let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(
-        &connection,
-        &workspace_id,
-        &["owner", "admin", "editor"],
-    )
-    .map_err(|error| error.to_string())?;
 
     let tags_json = tags_json.unwrap_or_else(|| "[]".to_string());
     let tags: Vec<String> = serde_json::from_str(&tags_json)
