@@ -55,7 +55,7 @@ function policyContext(input: ExecutionRunnerInput): ExecutionPolicyContext {
     account: input.account,
     campaign: input.campaign,
     task: input.task,
-    approval: input.approval,
+    ...(input.approval ? { approval: input.approval } : {}),
     actionsToday: input.actionsToday,
     dailyLimit: input.dailyLimit,
     consecutiveFailures: input.consecutiveFailures,
