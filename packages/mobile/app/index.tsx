@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { fetchRuntimeHealth } from "../src/services/runtimeClient";
 import type { RuntimeHealth } from "../src/services/runtimeClient";
 
@@ -14,9 +14,29 @@ export default function HomeScreen(): JSX.Element {
   const [status, setStatus] = useState("لم يتم الاتصال بعد.");
 
   useEffect(() => {
-    void AsyncStorage.getItem(ENDPOINT_KEY).then((stored) => {
-      if (stored) setEndpoint(stored);
-    });
+    void AsyncStorage.getItem(ENDPOINT_KEY)
+      .then(async (stored) => {
+        if (stored) setEndpoint(stored);
+        if (Platform.OS === "web") return;
+
+        try {
+          const secureToken = await SecureStore.getItemAsync("orbit.runtime.auth");
+          if (secureToken) {
+            setAuthToken(secureToken);
+            return;
+          }
+
+          const legacyToken = await AsyncStorage.getItem("orbit.runtime.auth");
+          if (legacyToken) {
+            setAuthToken(legacyToken);
+            await SecureStore.setItemAsync("orbit.runtime.auth", legacyToken);
+            await AsyncStorage.removeItem("orbit.runtime.auth");
+          }
+        } catch {
+          setStatus("تعذر قراءة رمز الوصول الآمن على هذا الجهاز.");
+        }
+      })
+      .catch(() => setStatus("تعذر تحميل إعدادات runtime المحلية."));
   }, []);
 
   const saveAndCheck = async (): Promise<void> => {
@@ -27,12 +47,15 @@ export default function HomeScreen(): JSX.Element {
     }
     await AsyncStorage.setItem(ENDPOINT_KEY, clean);
     const token = authToken.trim();
-    if (token) {
-      await SecureStore.setItemAsync("orbit.runtime.auth", token);
-    } else {
-      await SecureStore.deleteItemAsync("orbit.runtime.auth");
+
+    if (Platform.OS !== "web") {
+      if (token) {
+        await SecureStore.setItemAsync("orbit.runtime.auth", token);
+      } else {
+        await SecureStore.deleteItemAsync("orbit.runtime.auth");
+      }
+      await AsyncStorage.removeItem("orbit.runtime.auth");
     }
-    await AsyncStorage.removeItem("orbit.runtime.auth");
     setStatus("جاري فحص runtime...");
     try {
       const result = await fetchRuntimeHealth(clean, authToken);
