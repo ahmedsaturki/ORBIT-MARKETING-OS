@@ -2,7 +2,7 @@
 
 Local-first social operations platform for content, campaigns, CRM, inbox workflows, analytics, and user-authorized platform integrations.
 
-Current real connector coverage: Telegram has a native API path; Facebook, Instagram, WhatsApp, LinkedIn, and TikTok remain contract/fixture surfaces until their real authorization and E2E gates are satisfied.
+Current real connector coverage: Telegram has a native API path and LinkedIn has a text-publishing Posts API connector. Both remain release-gated until controlled authorization/runtime evidence exists. Facebook, Instagram, WhatsApp, and TikTok remain contract/fixture surfaces.
 
 ## Repository status
 
