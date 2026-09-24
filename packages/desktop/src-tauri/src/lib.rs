@@ -464,6 +464,14 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
 
     if version < 2 {
+        connection.execute_batch(
+            "CREATE TABLE IF NOT EXISTS workspaces (
+               id TEXT PRIMARY KEY,
+               name TEXT NOT NULL,
+               created_at TEXT NOT NULL
+             );",
+        )?;
+
         let migrations = [
             ("accounts", "workspace_id", "ALTER TABLE accounts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
             ("campaigns", "workspace_id", "ALTER TABLE campaigns ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
