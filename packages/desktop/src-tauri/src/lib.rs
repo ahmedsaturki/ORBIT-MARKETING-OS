@@ -21,7 +21,8 @@ use thiserror::Error;
 use zeroize::Zeroizing;
 
 const DEFAULT_WORKSPACE_ID: &str = "default";
-const SCHEMA_VERSION: i64 = 6;
+const DEFAULT_LOCAL_USER_ID: &str = "local-user";
+const SCHEMA_VERSION: i64 = 7;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 
@@ -60,6 +61,18 @@ CREATE TABLE IF NOT EXISTS runtime_state (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS workspace_memberships (
+  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (workspace_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_workspace_memberships_user
+  ON workspace_memberships(user_id, workspace_id, active);
 
 CREATE TABLE IF NOT EXISTS vault_records (
   label TEXT PRIMARY KEY,
@@ -229,6 +242,8 @@ enum AppError {
     Decryption,
     #[error("vault record not found")]
     NotFound,
+    #[error("unauthorized workspace operation")]
+    Unauthorized,
     #[error("invalid label")]
     InvalidLabel,
     #[error("invalid stored payload")]
@@ -618,7 +633,22 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         )?;
     }
 
-    connection.execute_batch("PRAGMA user_version = 6;")?;
+    if version < 7 {
+        connection.execute_batch(
+            "CREATE TABLE IF NOT EXISTS workspace_memberships (
+               workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+               user_id TEXT NOT NULL,
+               role TEXT NOT NULL,
+               active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+               created_at TEXT NOT NULL,
+               PRIMARY KEY (workspace_id, user_id)
+             );
+             CREATE INDEX IF NOT EXISTS idx_workspace_memberships_user
+               ON workspace_memberships(user_id, workspace_id, active);",
+        )?;
+    }
+
+    connection.execute_batch("PRAGMA user_version = 7;")?;
 }
 
 fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> {
@@ -644,7 +674,13 @@ fn ensure_workspace_context(connection: &Connection) -> Result<(), AppError> {
     let timestamp = chrono_like_timestamp();
     connection.execute(
         "INSERT OR IGNORE INTO workspaces(id, name, created_at) VALUES (?1, ?2, ?3)",
-        params![active_workspace_id(), "Default Workspace", timestamp],
+        params![DEFAULT_WORKSPACE_ID, "Default Workspace", timestamp],
+    )?;
+
+    connection.execute(
+        "INSERT INTO runtime_state(key, value) VALUES ('local_user_id', ?1)
+         ON CONFLICT(key) DO NOTHING",
+        params![DEFAULT_LOCAL_USER_ID],
     )?;
 
     let stored: Option<String> = connection
@@ -655,7 +691,7 @@ fn ensure_workspace_context(connection: &Connection) -> Result<(), AppError> {
         )
         .optional()?;
 
-    let candidate = stored.unwrap_or_else(|| active_workspace_id().to_string());
+    let candidate = stored.unwrap_or_else(|| DEFAULT_WORKSPACE_ID.to_string());
     let exists: bool = connection.query_row(
         "SELECT EXISTS(SELECT 1 FROM workspaces WHERE id=?1)",
         params![candidate],
@@ -664,7 +700,7 @@ fn ensure_workspace_context(connection: &Connection) -> Result<(), AppError> {
     let selected = if exists {
         candidate
     } else {
-        active_workspace_id().to_string()
+        DEFAULT_WORKSPACE_ID.to_string()
     };
 
     connection.execute(
@@ -672,6 +708,14 @@ fn ensure_workspace_context(connection: &Connection) -> Result<(), AppError> {
          ON CONFLICT(key) DO UPDATE SET value=excluded.value",
         params![selected],
     )?;
+
+    connection.execute(
+        "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+         VALUES (?1, ?2, 'owner', 1, ?3)
+         ON CONFLICT(workspace_id, user_id) DO UPDATE SET active=1",
+        params![selected, DEFAULT_LOCAL_USER_ID, timestamp],
+    )?;
+
     set_active_workspace_id(&selected)?;
     Ok(())
 }
@@ -743,6 +787,40 @@ fn open_payload(password: &str, payload: &EncryptedPayload) -> Result<String, Ap
         .map_err(|_| AppError::Decryption)?;
 
     String::from_utf8(plaintext).map_err(|_| AppError::Decryption)
+}
+
+fn local_user_id(connection: &Connection) -> Result<String, AppError> {
+    connection
+        .query_row(
+            "SELECT value FROM runtime_state WHERE key='local_user_id'",
+            [],
+            |row| row.get(0),
+        )
+        .optional()
+        .map(|value| value.unwrap_or_else(|| DEFAULT_LOCAL_USER_ID.to_string()))
+        .map_err(AppError::from)
+}
+
+fn require_workspace_role(
+    connection: &Connection,
+    required_roles: &[&str],
+) -> Result<(), AppError> {
+    let workspace_id = active_workspace_id();
+    let user_id = local_user_id(connection)?;
+    let role: Option<String> = connection
+        .query_row(
+            "SELECT role FROM workspace_memberships
+             WHERE workspace_id=?1 AND user_id=?2 AND active=1",
+            params![workspace_id, user_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+
+    match role {
+        Some(role) if required_roles.contains(&role.as_str()) => Ok(()),
+        Some(_) => Err(AppError::Unauthorized),
+        None => Err(AppError::Unauthorized),
+    }
 }
 
 fn validate_label(label: &str) -> Result<String, AppError> {
