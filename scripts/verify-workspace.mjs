@@ -83,21 +83,52 @@ if (!mobilePackage.scripts?.build || !mobilePackage.scripts?.test) {
   throw new Error("Mobile build/test scripts are incomplete");
 }
 
-const rustPath = join(root, "packages/desktop/src-tauri/src/lib.rs");
-const rust = await readFile(rustPath, "utf8");
-const rustFunctions = [...rust.matchAll(/\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map((match) => match[1]);
-const duplicateFunctions = new Map();
-for (const name of rustFunctions) {
-  duplicateFunctions.set(name, (duplicateFunctions.get(name) ?? 0) + 1);
-}
-for (const [name, count] of duplicateFunctions) {
-  if (count > 1) throw new Error("Duplicate Rust function definition: " + name);
+const rustSourceDir = join(root, "packages/desktop/src-tauri/src");
+const rustSourcePaths = (await readdir(rustSourceDir, { withFileTypes: true }))
+  .filter((entry) => entry.isFile() && entry.name.endsWith(".rs"))
+  .map((entry) => join(rustSourceDir, entry.name));
+
+if (rustSourcePaths.length === 0) {
+  throw new Error("No Rust source files found in desktop runtime");
 }
 
-const testModuleMarker = rust.indexOf("#[cfg(test)]");
-const productionRust = testModuleMarker >= 0 ? rust.slice(0, testModuleMarker) : rust;
-if (/\.unwrap\s*\(|\.expect\s*\(|\bpanic!\s*\(/.test(productionRust)) {
-  throw new Error("Unchecked Rust unwrap/expect/panic detected outside tests");
+const rustSources = [];
+for (const path of rustSourcePaths) {
+  rustSources.push({
+    path,
+    content: await readFile(path, "utf8"),
+  });
+}
+
+const rust = rustSources.map((entry) => entry.content).join("\n");
+const rustFunctions = [];
+for (const entry of rustSources) {
+  rustFunctions.push(
+    ...[...entry.content.matchAll(/\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map((match) => ({
+      name: match[1],
+      path: relative(root, entry.path),
+    })),
+  );
+}
+const duplicateFunctions = new Map();
+for (const value of rustFunctions) {
+  duplicateFunctions.set(value.name, [...(duplicateFunctions.get(value.name) ?? []), value.path]);
+}
+for (const [name, paths] of duplicateFunctions) {
+  if (paths.length > 1) {
+    const uniquePaths = [...new Set(paths)];
+    if (uniquePaths.length === 1) {
+      throw new Error("Duplicate Rust function definition: " + name);
+    }
+  }
+}
+
+for (const entry of rustSources) {
+  const testModuleMarker = entry.content.indexOf("#[cfg(test)]");
+  const productionRust = testModuleMarker >= 0 ? entry.content.slice(0, testModuleMarker) : entry.content;
+  if (/\.unwrap\s*\(|\.expect\s*\(|\bpanic!\s*\(/.test(productionRust)) {
+    throw new Error("Unchecked Rust unwrap/expect/panic detected outside tests in " + relative(root, entry.path));
+  }
 }
 
 if (!rust.includes("BEGIN IMMEDIATE")) {
@@ -176,7 +207,7 @@ const sensitiveDesktopCommands = {
   telegram_execute_task: ["owner", "admin", "operator"],
 };
 
-const rustCommandPositions = [...rust.matchAll(/#\[tauri::command\]\s*(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)]
+const rustCommandPositions = [...rust.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)]
   .map((match) => ({ name: match[1], index: match.index ?? -1 }))
   .filter((value) => value.index >= 0);
 
