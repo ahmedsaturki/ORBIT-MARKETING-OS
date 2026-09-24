@@ -847,6 +847,16 @@ fn validate_content_status(status: &str) -> Result<String, AppError> {
     }
 }
 
+fn validate_content_edit_status(status: &str) -> Result<String, AppError> {
+    let value = status.trim().to_lowercase();
+    let allowed = ["draft", "pending", "rejected", "changes_requested"];
+    if allowed.contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err(AppError::InvalidLabel)
+    }
+}
+
 #[tauri::command]
 fn content_upsert(
     app: tauri::AppHandle,
@@ -862,7 +872,7 @@ fn content_upsert(
     if body.is_empty() || body.len() > 100_000 {
         return Err("invalid content body".to_string());
     }
-    let approval_status = validate_content_status(&approval_status).map_err(|error| error.to_string())?;
+    let approval_status = validate_content_edit_status(&approval_status).map_err(|error| error.to_string())?;
     let tags_json = tags_json.unwrap_or_else(|| "[]".to_string());
     let tags: Vec<String> = serde_json::from_str(&tags_json)
         .map_err(|_| "tags_json must be a JSON array of strings".to_string())?;
@@ -1058,7 +1068,7 @@ fn approval_decide(
         )
         .optional()
         .map_err(|error| error.to_string())?;
-    let Some((content_id, requested_by, old_status, reviewer_ids_json, old_note)) = current else {
+    let Some((content_id, requested_by, old_status, _reviewer_ids_json, old_note)) = current else {
         return Err(AppError::NotFound.to_string());
     };
     if old_status != "pending" {
