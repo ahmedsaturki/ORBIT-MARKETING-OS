@@ -865,6 +865,14 @@ async fn telegram_execute_task(
     user_confirmed: bool,
 ) -> Result<TelegramExecutionView, String> {
     let task_id = validate_label(&task_id).map_err(|error| error.to_string())?;
+    let auth_connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role(
+        &auth_connection,
+        &["owner", "admin", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+    drop(auth_connection);
+
     if !user_confirmed {
         let connection = open_db(&app).map_err(|error| error.to_string())?;
         let current: Option<String> = connection
