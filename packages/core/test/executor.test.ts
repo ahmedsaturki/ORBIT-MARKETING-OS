@@ -34,6 +34,7 @@ function makeTask(kind: Task["kind"] = "publish"): Task {
     accountId: "account-1",
     platform: "facebook",
     kind,
+    contentId: kind === "sync" ? undefined : "content-1",
     priority: 10,
     status: "pending",
     attempts: 0,
