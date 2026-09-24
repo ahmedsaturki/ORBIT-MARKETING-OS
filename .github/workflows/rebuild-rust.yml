@@ -6,8 +6,6 @@ concurrency:
   cancel-in-progress: true
 on:
   workflow_dispatch:
-  push:
-    branches: ["main", "rebuild/**"]
   pull_request:
     branches: ["main"]
 
