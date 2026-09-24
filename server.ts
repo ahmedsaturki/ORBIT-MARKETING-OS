@@ -161,7 +161,14 @@ async function ollamaRequest(
   const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ stream: false, options: { num_ctx: OLLAMA_NUM_CTX }, ...body }),
+    body: JSON.stringify({
+      stream: false,
+      ...body,
+      options: {
+        ...(isRecord(body.options) ? body.options : {}),
+        num_ctx: OLLAMA_NUM_CTX,
+      },
+    }),
     signal: AbortSignal.timeout(120_000),
   });
 
