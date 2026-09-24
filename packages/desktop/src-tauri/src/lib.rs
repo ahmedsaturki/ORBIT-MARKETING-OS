@@ -1454,8 +1454,11 @@ async fn telegram_execute_task(
         });
     }
 
+    let rule_config = load_rule_config(&connection, &workspace_id, "telegram", &kind)?;
+    let effective_timeout_ms = rule_config.map(|value| value.0).unwrap_or(15_000);
+    let effective_max_attempts = rule_config.map(|value| value.1).unwrap_or(max_attempts);
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
+        .timeout(std::time::Duration::from_millis(effective_timeout_ms))
         .build()
         .map_err(|_| "failed to initialize Telegram HTTP client".to_string())?;
     let url = format!("https://api.telegram.org/bot{token}/sendMessage");
@@ -1591,7 +1594,7 @@ async fn telegram_execute_task(
     }
 
     let next_attempt = attempts + 1;
-    let terminal = next_attempt >= max_attempts;
+    let terminal = next_attempt >= effective_max_attempts;
     let next_status = if terminal { "failed" } else { "pending" };
     let next_available = if terminal {
         chrono_like_timestamp()
@@ -2659,6 +2662,63 @@ fn media_asset_list(
 }
 
 #[tauri::command]
+fn load_rule_config(
+    connection: &Connection,
+    workspace_id: &str,
+    platform: &str,
+    task_kind: &str,
+) -> Result<Option<(u64, i64)>, String> {
+    let row: Option<(String, i64, i64)> = connection
+        .query_row(
+            "SELECT rules_json, schema_version, enabled
+             FROM automation_rule_packs
+             WHERE workspace_id=?1 AND platform=?2 AND enabled=1
+             ORDER BY updated_at DESC
+             LIMIT 1",
+            params![workspace_id, platform],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+
+    let Some((rules_json, schema_version, _enabled)) = row else {
+        return Ok(None);
+    };
+    if schema_version != 1 {
+        return Err("unsupported automation rule pack schema".to_string());
+    }
+    let parsed = validate_rule_pack_json(platform, &rules_json)?;
+    let rules = parsed
+        .as_array()
+        .ok_or_else(|| "rules_json must be an array".to_string())?;
+
+    for rule in rules {
+        let Some(object) = rule.as_object() else { continue; };
+        let kinds = object
+            .get("taskKinds")
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let matches_kind = kinds.iter().any(|kind| kind.as_str() == Some(task_kind));
+        if !matches_kind {
+            continue;
+        }
+        let max_attempts = object
+            .get("maxAttempts")
+            .and_then(serde_json::Value::as_i64)
+            .unwrap_or(3)
+            .clamp(1, 10);
+        let timeout_ms = object
+            .get("timeoutMs")
+            .and_then(serde_json::Value::as_i64)
+            .unwrap_or(30_000)
+            .clamp(1_000, 300_000) as u64;
+        return Ok(Some((timeout_ms, max_attempts)));
+    }
+
+    Ok(None)
+}
+
 fn automation_rule_pack_upsert(
     app: tauri::AppHandle,
     id: String,
