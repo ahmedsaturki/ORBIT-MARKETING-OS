@@ -1018,11 +1018,11 @@ fn local_user_id(connection: &Connection) -> Result<String, AppError> {
         .map_err(AppError::from)
 }
 
-fn require_workspace_role(
+fn require_workspace_role_for(
     connection: &Connection,
+    workspace_id: &str,
     required_roles: &[&str],
 ) -> Result<(), AppError> {
-    let workspace_id = active_workspace_id();
     let user_id = local_user_id(connection)?;
     let role: Option<String> = connection
         .query_row(
@@ -1038,6 +1038,14 @@ fn require_workspace_role(
         Some(_) => Err(AppError::Unauthorized),
         None => Err(AppError::Unauthorized),
     }
+}
+
+fn require_workspace_role(
+    connection: &Connection,
+    required_roles: &[&str],
+) -> Result<(), AppError> {
+    let workspace_id = active_workspace_id();
+    require_workspace_role_for(connection, &workspace_id, required_roles)
 }
 
 pub(crate) fn require_workspace_role_for_module(
@@ -1062,6 +1070,7 @@ async fn telegram_execute_task(
     vault_password: String,
     user_confirmed: bool,
 ) -> Result<TelegramExecutionView, String> {
+    let workspace_id = workspace_id;
     let task_id = validate_label(&task_id).map_err(|error| error.to_string())?;
     let auth_connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role(
@@ -1076,7 +1085,7 @@ async fn telegram_execute_task(
         let current: Option<String> = connection
             .query_row(
                 "SELECT status FROM tasks WHERE id=?1 AND workspace_id=?2",
-                params![&task_id, active_workspace_id()],
+                params![&task_id, workspace_id],
                 |row| row.get(0),
             )
             .optional()
@@ -1084,7 +1093,7 @@ async fn telegram_execute_task(
         if current.as_deref() == Some("running") {
             if let Err(error) = connection.execute(
                 "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, active_workspace_id()],
+                params![&task_id, workspace_id],
             ) {
                 return Err(error.to_string());
             }
@@ -1108,7 +1117,7 @@ async fn telegram_execute_task(
         .query_row(
             "SELECT account_id, platform, kind, content_id, destination_id, status, attempts, max_attempts
              FROM tasks WHERE id=?1 AND workspace_id=?2",
-            params![&task_id, active_workspace_id()],
+            params![&task_id, workspace_id],
             |row| {
                 Ok((
                     row.get::<_, String>(0)?,
@@ -1144,7 +1153,7 @@ async fn telegram_execute_task(
     let (session_payload_json, account_status) = connection
         .query_row(
             "SELECT session_payload_json, status FROM accounts WHERE id=?1 AND workspace_id=?2 AND platform='telegram'",
-            params![&account_id, active_workspace_id()],
+            params![&account_id, workspace_id],
             |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, String>(1)?)),
         )
         .map_err(|error| error.to_string())?;
@@ -1153,7 +1162,7 @@ async fn telegram_execute_task(
         connection
             .execute(
                 "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, active_workspace_id()],
+                params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "account_not_connected", "blocked")?;
@@ -1177,7 +1186,7 @@ async fn telegram_execute_task(
     let (body, approval_status) = connection
         .query_row(
             "SELECT body, approval_status FROM content_items WHERE id=?1 AND workspace_id=?2",
-            params![&content_id, active_workspace_id()],
+            params![&content_id, workspace_id],
             |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
         )
         .map_err(|error| error.to_string())?;
@@ -1186,7 +1195,7 @@ async fn telegram_execute_task(
         connection
             .execute(
                 "UPDATE tasks SET status='awaiting_approval' WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, active_workspace_id()],
+                params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "approval_required", "blocked")?;
@@ -1220,7 +1229,7 @@ async fn telegram_execute_task(
                     "UPDATE tasks
                      SET status='awaiting_user_action'
                      WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                    params![&task_id, active_workspace_id()],
+                    params![&task_id, workspace_id],
                 )
                 .map_err(|error| error.to_string())?;
             telegram_task_audit(
@@ -1250,7 +1259,7 @@ async fn telegram_execute_task(
         connection
             .execute(
                 "UPDATE tasks SET status='succeeded' WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, active_workspace_id()],
+                params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "send_message", "success")?;
@@ -1267,13 +1276,13 @@ async fn telegram_execute_task(
         connection
             .execute(
                 "UPDATE accounts SET status='needs_refresh', updated_at=?1 WHERE id=?2 AND workspace_id=?3",
-                params![chrono_like_timestamp(), &account_id, active_workspace_id()],
+                params![chrono_like_timestamp(), &account_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
         connection
             .execute(
                 "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, active_workspace_id()],
+                params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "authorization_failed", "blocked")?;
@@ -1292,7 +1301,7 @@ async fn telegram_execute_task(
                 "UPDATE tasks
                  SET status='awaiting_user_action'
                  WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, active_workspace_id()],
+                params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "delivery_status_unknown", "blocked")?;
@@ -1315,7 +1324,7 @@ async fn telegram_execute_task(
         connection
             .execute(
                 "UPDATE tasks SET status='pending', available_at=?1 WHERE id=?2 AND workspace_id=?3 AND status='running'",
-                params![retry_at, &task_id, active_workspace_id()],
+                params![retry_at, &task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "rate_limited", "blocked")?;
@@ -1340,7 +1349,7 @@ async fn telegram_execute_task(
     connection
         .execute(
             "UPDATE tasks SET status=?1, attempts=?2, available_at=?3 WHERE id=?4 AND workspace_id=?5 AND status='running'",
-            params![next_status, next_attempt, next_available, &task_id, active_workspace_id()],
+            params![next_status, next_attempt, next_available, &task_id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
     telegram_task_audit(&connection, &task_id, "send_failed", "failure")?;
@@ -1756,13 +1765,14 @@ fn campaign_create(
     name: String,
     account_ids: Vec<String>,
 ) -> Result<CampaignView, String> {
+    let workspace_id = workspace_id;
     let name = validate_label(&name).map_err(|error| error.to_string())?;
     if account_ids.is_empty() {
         return Err("at least one account is required".to_string());
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
     let campaign_id = format!("camp-{}", uuid_like());
     let timestamp = chrono_like_timestamp();
     let transaction = connection
@@ -1772,7 +1782,7 @@ fn campaign_create(
     transaction
         .execute(
             "INSERT INTO campaigns(id, workspace_id, name, status, created_at) VALUES (?1, ?2, ?3, 'draft', ?4)",
-            params![campaign_id, active_workspace_id(), name, timestamp],
+            params![campaign_id, workspace_id, name, timestamp],
         )
         .map_err(|error| error.to_string())?;
 
@@ -1780,7 +1790,7 @@ fn campaign_create(
         transaction
             .execute(
                 "INSERT INTO campaign_accounts(workspace_id, campaign_id, account_id) VALUES (?1, ?2, ?3)",
-                params![active_workspace_id(), campaign_id, validate_label(account_id).map_err(|error| error.to_string())?],
+                params![workspace_id, campaign_id, validate_label(account_id).map_err(|error| error.to_string())?],
             )
             .map_err(|error| error.to_string())?;
     }
@@ -1953,10 +1963,11 @@ fn campaign_attach_content(
     campaign_id: String,
     content_id: String,
 ) -> Result<bool, String> {
+    let workspace_id = workspace_id;
     let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
     let content_id = validate_label(&content_id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
 
     let compatible: bool = connection
         .query_row(
@@ -1966,7 +1977,7 @@ fn campaign_attach_content(
                WHERE c.id=?1 AND c.workspace_id=?3
                  AND ci.id=?2 AND ci.workspace_id=?3
              )",
-            params![campaign_id, content_id, active_workspace_id()],
+            params![campaign_id, content_id, workspace_id],
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
@@ -1978,7 +1989,7 @@ fn campaign_attach_content(
         .execute(
             "INSERT OR IGNORE INTO campaign_content(workspace_id, campaign_id, content_id)
              VALUES (?1, ?2, ?3)",
-            params![active_workspace_id(), campaign_id, content_id],
+            params![workspace_id, campaign_id, content_id],
         )
         .map_err(|error| error.to_string())?;
     write_audit(&connection, "campaign", "attach_content", "success", "user", Some(&campaign_id))
@@ -1995,6 +2006,7 @@ fn approval_request(
     reviewer_ids_json: Option<String>,
     note: Option<String>,
 ) -> Result<ApprovalView, String> {
+    let workspace_id = workspace_id;
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let content_id = validate_label(&content_id).map_err(|error| error.to_string())?;
     let requested_by = validate_label(&requested_by).map_err(|error| error.to_string())?;
@@ -2008,14 +2020,14 @@ fn approval_request(
         .map_err(|error| error.to_string())?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
     let exists: bool = connection
         .query_row(
             "SELECT EXISTS(
                SELECT 1 FROM content_items
                WHERE id=?1 AND workspace_id=?2
              )",
-            params![content_id, active_workspace_id()],
+            params![content_id, workspace_id],
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
@@ -2029,14 +2041,14 @@ fn approval_request(
             "INSERT INTO approvals(
                id, workspace_id, content_id, requested_by, reviewer_ids_json, status, note
              ) VALUES (?1, ?2, ?3, ?4, ?5, 'pending', ?6)",
-            params![id, active_workspace_id(), content_id, requested_by, reviewer_ids_json, note],
+            params![id, workspace_id, content_id, requested_by, reviewer_ids_json, note],
         )
         .map_err(|error| error.to_string())?;
     connection
         .execute(
             "UPDATE content_items SET approval_status='pending', updated_at=?1
              WHERE id=?2 AND workspace_id=?3",
-            params![timestamp, content_id, active_workspace_id()],
+            params![timestamp, content_id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
     write_audit(&connection, "content", "approval_request", "success", "user", Some(&content_id))
@@ -2061,6 +2073,7 @@ fn approval_decide(
     decided_by: String,
     note: Option<String>,
 ) -> Result<ApprovalView, String> {
+    let workspace_id = workspace_id;
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let decided_by = validate_label(&decided_by).map_err(|error| error.to_string())?;
     let status = validate_content_status(&status).map_err(|error| error.to_string())?;
@@ -2069,12 +2082,12 @@ fn approval_decide(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
     let current: Option<(String, String, String, String, Option<String>)> = connection
         .query_row(
             "SELECT content_id, requested_by, status, reviewer_ids_json, note
              FROM approvals WHERE id=?1 AND workspace_id=?2",
-            params![id, active_workspace_id()],
+            params![id, workspace_id],
             |row| Ok((
                 row.get(0)?,
                 row.get(1)?,
@@ -2103,14 +2116,14 @@ fn approval_decide(
             "UPDATE approvals
              SET status=?1, decided_by=?2, decided_at=?3, note=?4
              WHERE id=?5 AND workspace_id=?6 AND status='pending'",
-            params![status, decided_by, timestamp, note, &id, active_workspace_id()],
+            params![status, decided_by, timestamp, note, &id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
     connection
         .execute(
             "UPDATE content_items SET approval_status=?1, updated_at=?2
              WHERE id=?3 AND workspace_id=?4",
-            params![status, timestamp, content_id, active_workspace_id()],
+            params![status, timestamp, content_id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
     write_audit(&connection, "content", "approval_decide", "success", "user", Some(&content_id))
@@ -2172,6 +2185,7 @@ fn task_enqueue(
     content_id: Option<String>,
     destination_id: Option<String>,
 ) -> Result<TaskView, String> {
+    let workspace_id = workspace_id;
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
@@ -2206,7 +2220,7 @@ fn task_enqueue(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
     let associated: bool = connection
         .query_row(
             "SELECT EXISTS(
@@ -2221,7 +2235,7 @@ fn task_enqueue(
                  AND a.workspace_id=?3
                  AND a.platform=?4
              )",
-            params![campaign_id, account_id, active_workspace_id(), platform],
+            params![campaign_id, account_id, workspace_id, platform],
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
@@ -2241,7 +2255,7 @@ fn task_enqueue(
                      AND cc.content_id=?2
                      AND ci.workspace_id=?3
                  )",
-                params![campaign_id, content_id, active_workspace_id()],
+                params![campaign_id, content_id, workspace_id],
                 |row| row.get(0),
             )
             .map_err(|error| error.to_string())?;
@@ -2261,7 +2275,7 @@ fn task_enqueue(
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'pending', 0, ?10, ?11, ?12, ?13)",
             params![
                 id,
-                active_workspace_id(),
+                workspace_id,
                 campaign_id,
                 content_id,
                 destination_id,
@@ -2300,8 +2314,9 @@ fn task_enqueue(
 
 #[tauri::command]
 fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView>, String> {
+    let workspace_id = workspace_id;
     let mut connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
     let transaction = connection
         .transaction()
         .map_err(|error| error.to_string())?;
@@ -2316,7 +2331,7 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
                AND available_at <= ?1
              ORDER BY priority DESC, available_at ASC, created_at ASC
              LIMIT 1",
-            params![now, active_workspace_id()],
+            params![now, workspace_id],
             |row| {
                 Ok(TaskView {
                     id: row.get(0)?,
@@ -2351,7 +2366,7 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
             "UPDATE tasks
              SET status='running'
              WHERE id=?1 AND workspace_id=?2 AND status='pending'",
-            params![task.id, active_workspace_id()],
+            params![task.id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
 
@@ -2372,18 +2387,19 @@ fn task_set_status(
     id: String,
     status: String,
 ) -> Result<bool, String> {
+    let workspace_id = workspace_id;
     let allowed = ["pending", "awaiting_approval", "awaiting_user_action", "running", "succeeded", "failed", "blocked", "cancelled"];
     if !allowed.contains(&status.as_str()) {
         return Err("unsupported task status".to_string());
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
     let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
     let current: Option<String> = connection
         .query_row(
             "SELECT status FROM tasks WHERE id=?1 AND workspace_id=?2",
-            params![&entity_id, active_workspace_id()],
+            params![&entity_id, workspace_id],
             |row| row.get(0),
         )
         .optional()
@@ -2408,7 +2424,7 @@ fn task_set_status(
     let changed = connection
         .execute(
             "UPDATE tasks SET status=?1 WHERE id=?2 AND workspace_id=?3 AND status=?4",
-            params![status, &entity_id, active_workspace_id(), current],
+            params![status, &entity_id, workspace_id, current],
         )
         .map_err(|error| error.to_string())?;
 
@@ -2437,19 +2453,20 @@ fn task_fail(
     id: String,
     now: String,
 ) -> Result<TaskView, String> {
+    let workspace_id = workspace_id;
     let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
     let failed_at = OffsetDateTime::parse(now.trim(), &Rfc3339)
         .map_err(|_| "failure timestamp must be an RFC3339 ISO timestamp".to_string())?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
     let current: Option<(i64, i64, String, Option<String>, Option<String>, String, String, String, i64, String, String, String, String)> = connection
         .query_row(
             "SELECT attempts, max_attempts, campaign_id, content_id, destination_id, account_id, platform, kind, priority,
                     status, idempotency_key, available_at, created_at
              FROM tasks
              WHERE id=?1 AND workspace_id=?2",
-            params![&entity_id, active_workspace_id()],
+            params![&entity_id, workspace_id],
             |row| {
                 Ok((
                     row.get(0)?,
@@ -2495,7 +2512,7 @@ fn task_fail(
             "UPDATE tasks
              SET status=?1, attempts=?2, available_at=?3
              WHERE id=?4 AND workspace_id=?5 AND status='running'",
-            params![next_status, next_attempt, next_available, &entity_id, active_workspace_id()],
+            params![next_status, next_attempt, next_available, &entity_id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
 
@@ -2972,6 +2989,7 @@ fn conversation_upsert(
     external_thread_id: Option<String>,
     status: String,
 ) -> Result<ConversationView, String> {
+    let workspace_id = workspace_id;
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
@@ -2981,11 +2999,11 @@ fn conversation_upsert(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator"]).map_err(|error| error.to_string())?;
     let account_platform: Option<String> = connection
         .query_row(
             "SELECT platform FROM accounts WHERE id=?1 AND workspace_id=?2",
-            params![account_id, active_workspace_id()],
+            params![account_id, workspace_id],
             |row| row.get(0),
         )
         .optional()
@@ -3002,7 +3020,7 @@ fn conversation_upsert(
                 "SELECT EXISTS(
                    SELECT 1 FROM contacts WHERE id=?1 AND workspace_id=?2
                  )",
-                params![contact_id, active_workspace_id()],
+                params![contact_id, workspace_id],
                 |row| row.get(0),
             )
             .map_err(|error| error.to_string())?;
@@ -3028,7 +3046,7 @@ fn conversation_upsert(
                updated_at=excluded.updated_at",
             params![
                 id,
-                active_workspace_id(),
+                workspace_id,
                 account_id,
                 contact_id,
                 platform,
@@ -3062,6 +3080,7 @@ fn message_add(
     direction: String,
     body: String,
 ) -> Result<MessageView, String> {
+    let workspace_id = workspace_id;
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let conversation_id = validate_label(&conversation_id).map_err(|error| error.to_string())?;
     let body = body.trim().to_string();
@@ -3073,13 +3092,13 @@ fn message_add(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
     let conversation_exists: bool = connection
         .query_row(
             "SELECT EXISTS(
                SELECT 1 FROM conversations WHERE id=?1 AND workspace_id=?2
              )",
-            params![conversation_id, active_workspace_id()],
+            params![conversation_id, workspace_id],
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
@@ -3098,7 +3117,7 @@ fn message_add(
     connection
         .execute(
             "UPDATE conversations SET updated_at=?1 WHERE id=?2 AND workspace_id=?3",
-            params![sent_at, conversation_id, active_workspace_id()],
+            params![sent_at, conversation_id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
 
@@ -3214,8 +3233,9 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
 
 #[tauri::command]
 fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
+    let workspace_id = workspace_id;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json, previous_hash, hash
@@ -3225,7 +3245,7 @@ fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![active_workspace_id()], |row| {
+        .query_map(params![workspace_id], |row| {
             Ok((
                 row.get::<_, String>(0)?,
                 row.get::<_, String>(1)?,
@@ -3358,7 +3378,7 @@ mod tests {
         let first_hash = audit_hash(
             "GENESIS",
             first_id,
-            active_workspace_id(),
+            workspace_id,
             first_timestamp,
             "security",
             "test",
@@ -3370,7 +3390,7 @@ mod tests {
         let second_hash = audit_hash(
             &first_hash,
             "audit-2",
-            active_workspace_id(),
+            workspace_id,
             "1001",
             "security",
             "test",
@@ -3385,7 +3405,7 @@ mod tests {
         let mutated = audit_hash(
             "GENESIS",
             first_id,
-            active_workspace_id(),
+            workspace_id,
             first_timestamp,
             "security",
             "tampered",
@@ -3625,7 +3645,7 @@ mod tests {
         assert_eq!(membership.0, DEFAULT_LOCAL_USER_ID);
         assert_eq!(membership.1, "owner");
         assert_eq!(membership.2, 1);
-        assert_eq!(active_workspace_id(), DEFAULT_WORKSPACE_ID);
+        assert_eq!(workspace_id, DEFAULT_WORKSPACE_ID);
     }
 
     #[test]
@@ -3691,7 +3711,7 @@ mod tests {
             .expect("role update should work");
 
         assert!(matches!(
-            require_workspace_role(&connection, &["owner", "admin"]),
+            require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]),
             Err(AppError::Unauthorized)
         ));
         assert!(require_workspace_role(
@@ -3836,7 +3856,7 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
                 |row| Ok((row.get(0)?, row.get(1)?)),
             )
             .expect("migrated task should exist");
-        assert_eq!(values.0, active_workspace_id());
+        assert_eq!(values.0, workspace_id);
         assert_eq!(values.1, "legacy-task");
     }
 }
