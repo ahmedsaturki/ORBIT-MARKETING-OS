@@ -49,6 +49,23 @@ function runner(challengeOnExecute = false): ExecutionRunner {
 }
 
 describe("ExecutionRunner", () => {
+  it("blocks tasks that have not been claimed", async () => {
+    const result = await runner().run({
+      account,
+      campaign,
+      task,
+      actionsToday: 0,
+      dailyLimit: 10,
+      consecutiveFailures: 0,
+      circuitBreakerThreshold: 3,
+      userConfirmed: true,
+    });
+    expect(result).toMatchObject({
+      status: "blocked",
+      reason: "policy",
+    });
+  });
+
   it("blocks before connector execution when approval is missing", async () => {
     const result = await runner().run({
       account,
