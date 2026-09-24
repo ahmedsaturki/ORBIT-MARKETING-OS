@@ -121,6 +121,36 @@ describe("task execution orchestrator", () => {
     expect(audit.list()[0]?.action).toBe("execution.succeeded");
   });
 
+  it("retries when execution context loading fails", async () => {
+    const task = makeTask();
+    const taskQueue = queue(task);
+    const claimed = taskQueue.claimNext("2026-09-24T00:00:01.000Z");
+    expect(claimed).toBeDefined();
+
+    const result = await executeClaimedTask(
+      {
+        queue: taskQueue,
+        connectors: new ConnectorRegistry(),
+        audit: new AuditLog(),
+        loadContext: async () => {
+          throw new Error("temporary context failure");
+        },
+      },
+      claimed!,
+      true,
+      "2026-09-24T00:00:01.000Z",
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      taskId: task.id,
+      retryScheduled: true,
+      message: "temporary context failure",
+    });
+    expect(taskQueue.get(task.id)?.status).toBe("pending");
+    expect(taskQueue.get(task.id)?.attempts).toBe(1);
+  });
+
   it("blocks before connector execution when approval is missing", async () => {
     const task = makeTask();
     const taskQueue = queue(task);
