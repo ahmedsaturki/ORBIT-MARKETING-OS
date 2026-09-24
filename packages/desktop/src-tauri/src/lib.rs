@@ -1912,7 +1912,7 @@ fn workspace_create(
 
     let user_id = local_user_id(&connection).map_err(|error| error.to_string())?;
     let transaction = connection
-        .unchecked_transaction()
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(|error| error.to_string())?;
 
     transaction
@@ -2682,7 +2682,7 @@ fn media_asset_upsert(
     )
     .map_err(|error| error.to_string())?;
 
-    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(
         &connection,
         &workspace_id,
@@ -3401,7 +3401,7 @@ fn approval_decide(
         return Err("approval decision must be approved, rejected, or changes_requested".to_string());
     }
 
-    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
     require_local_user_actor(&connection, &decided_by).map_err(|error| error.to_string())?;
     let current: Option<(String, String, String, String, Option<String>)> = connection
@@ -3433,7 +3433,7 @@ fn approval_decide(
 
     let timestamp = chrono_like_timestamp();
     let transaction = connection
-        .unchecked_transaction()
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(|error| error.to_string())?;
 
     transaction
