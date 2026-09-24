@@ -17,7 +17,7 @@ jobs:
     name: Release quality gate
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-2025, ubuntu-24.04, macos-15]
     steps:
       - uses: actions/checkout@v4
         with:
