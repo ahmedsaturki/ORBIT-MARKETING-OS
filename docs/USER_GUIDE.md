@@ -28,7 +28,7 @@ OLLAMA_REASONING_MODEL=llama3.2:3b
 OLLAMA_VISION_MODEL=
 ```
 
-The application reports an offline/degraded state when Ollama is not reachable.
+The desktop runtime accepts Ollama only through the local loopback endpoint. The application reports an offline/degraded state when Ollama is not reachable; remote Ollama endpoints are rejected.
 
 ## Safety
 
