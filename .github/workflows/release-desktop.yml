@@ -52,7 +52,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2025, ubuntu-24.04, macos-15]
+        include:
+          - os: windows-2025
+            artifact: windows-x64
+          - os: ubuntu-24.04
+            artifact: linux-x64
+          - os: macos-15-intel
+            artifact: macos-x64
+          - os: macos-15
+            artifact: macos-arm64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -104,7 +112,7 @@ jobs:
       - name: Upload desktop bundle
         uses: actions/upload-artifact@v4
         with:
-          name: orbit-desktop-${{ runner.os }}
+          name: orbit-desktop-${{ matrix.artifact }}
           path: packages/desktop/src-tauri/target/release/bundle/**
           if-no-files-found: error
           retention-days: 14
