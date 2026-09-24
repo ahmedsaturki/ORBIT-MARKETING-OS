@@ -1120,6 +1120,8 @@ fn create_integrity_triggers(connection: &Connection) -> Result<(), AppError> {
 
 /// Reconcile tasks left in "running" state by the previous application process.
 /// This must run once during application startup, not from every SQLite connection opener.
+/// Reconcile tasks left in "running" state by the previous application process.
+/// This must run once during application startup, not from every SQLite connection opener.
 fn recover_interrupted_tasks(connection: &Connection) -> Result<usize, AppError> {
     let interrupted: Vec<(String, String, String)> = {
         let mut statement = connection.prepare(
@@ -1139,28 +1141,36 @@ fn recover_interrupted_tasks(connection: &Connection) -> Result<usize, AppError>
     };
 
     for (task_id, workspace_id, kind) in &interrupted {
-        let next_status = if kind == "sync" {
-            "pending"
-        } else {
-            "awaiting_user_action"
-        };
+        let next_status = if kind == "sync" { "pending" } else { "awaiting_user_action" };
 
-        connection.execute(
-            "UPDATE tasks
-             SET status=?1
-             WHERE id=?2 AND workspace_id=?3 AND status='running'",
-            params![next_status, task_id, workspace_id],
-        )?;
+        connection.execute_batch("BEGIN IMMEDIATE")?;
+        let result = (|| -> Result<(), rusqlite::Error> {
+            connection.execute(
+                "UPDATE tasks
+                 SET status=?1
+                 WHERE id=?2 AND workspace_id=?3 AND status='running'",
+                params![next_status, task_id, workspace_id],
+            )?;
 
-        write_audit_for_workspace(
-            connection,
-            workspace_id,
-            "task",
-            "startup_recovery",
-            "success",
-            "system",
-            Some(task_id),
-        )?;
+            append_audit_event(
+                connection,
+                workspace_id,
+                "task",
+                "startup_recovery",
+                "success",
+                "system",
+                Some(task_id),
+            )?;
+            Ok(())
+        })();
+
+        match result {
+            Ok(()) => connection.execute_batch("COMMIT")?,
+            Err(error) => {
+                let _ = connection.execute_batch("ROLLBACK");
+                return Err(AppError::Database(error));
+            }
+        }
     }
 
     Ok(interrupted.len())
