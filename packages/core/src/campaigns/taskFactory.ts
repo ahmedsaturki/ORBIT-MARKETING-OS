@@ -71,7 +71,7 @@ export function buildCampaignTasks(
       accountId,
       platform,
       kind: template.taskKind,
-      contentId,
+      ...(contentId ? { contentId } : {}),
       priority,
       status: "pending",
       attempts: 0,
