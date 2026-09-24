@@ -28,6 +28,9 @@ jobs:
         with:
           toolchain: 1.98.1
 
+      - name: Runner preflight
+        run: bash scripts/self-hosted-preflight.sh
+
       - name: Generate JavaScript lockfile
         run: pnpm install --lockfile-only --ignore-scripts
 
