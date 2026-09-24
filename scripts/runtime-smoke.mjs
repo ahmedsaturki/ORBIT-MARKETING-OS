@@ -62,3 +62,58 @@ try {
     throw new Error(`runtime process exited with code ${child.exitCode}`);
   }
 }
+
+
+const authPort = "3102";
+const authToken = "orbit-test-token";
+const authChild = spawn("pnpm", ["runtime:start"], {
+  env: {
+    ...process.env,
+    PORT: authPort,
+    RUNTIME_HOST: "0.0.0.0",
+    RUNTIME_AUTH_TOKEN: authToken,
+    OLLAMA_BASE_URL: "http://127.0.0.1:9",
+  },
+  stdio: ["ignore", "pipe", "pipe"],
+  shell: process.platform === "win32",
+});
+let authLogs = "";
+authChild.stdout.on("data", (chunk) => { authLogs += String(chunk); });
+authChild.stderr.on("data", (chunk) => { authLogs += String(chunk); });
+
+try {
+  let authReady = false;
+  const authDeadline = Date.now() + 15_000;
+  while (Date.now() < authDeadline) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${authPort}/api/health`);
+      if (response.status === 503) {
+        authReady = true;
+        break;
+      }
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  if (!authReady) throw new Error("LAN runtime did not enforce missing-token block");
+
+  const unauthorized = await fetch(`http://127.0.0.1:${authPort}/api/health`);
+  if (unauthorized.status !== 503) throw new Error("expected 503 without LAN token");
+
+  const wrong = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: { Authorization: "Bearer wrong-token" },
+  });
+  if (wrong.status !== 401) throw new Error("expected 401 with wrong LAN token");
+
+  const authorized = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
+  if (authorized.status !== 200) throw new Error("expected 200 with correct LAN token");
+  console.log("runtime LAN auth smoke passed");
+} finally {
+  authChild.kill("SIGTERM");
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  if (authChild.exitCode !== null && authChild.exitCode !== 0) {
+    console.error(authLogs);
+    throw new Error(`LAN runtime exited with code ${authChild.exitCode}`);
+  }
+}
