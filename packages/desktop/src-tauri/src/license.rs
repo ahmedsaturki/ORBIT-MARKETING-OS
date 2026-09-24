@@ -5,8 +5,6 @@ use base64::{
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use std::{fs, path::PathBuf};
-use tauri::Manager;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 const LICENSE_PUBLIC_KEY_B64: &str =
