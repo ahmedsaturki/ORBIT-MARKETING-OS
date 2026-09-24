@@ -2,6 +2,8 @@ import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 
 const ollamaPort = "3110";
+
+const unsafeRuntimeCheck = (await import("node:child_process"));
 let capturedOllamaBody = null;
 const ollamaServer = createServer((req, res) => {
   if (req.method === "GET" && req.url === "/api/tags") {
@@ -41,6 +43,19 @@ await new Promise((resolve, reject) => {
 });
 
 const port = "3101";
+
+for (const url of [
+  "http://user:password@example.com:11434",
+  "http://example.com:11434",
+]) {
+  const probe = unsafeRuntimeCheck.spawnSync("node", ["-e", "import './server.ts'"], {
+    env: { ...process.env, OLLAMA_BASE_URL: url, PORT: "3199" },
+    encoding: "utf8",
+  });
+  if (probe.status === 0 || !/OLLAMA_BASE_URL/.test((probe.stderr ?? "") + (probe.stdout ?? ""))) {
+    throw new Error("runtime must reject unsafe Ollama endpoint: " + url);
+  }
+}
 const child = spawn("pnpm", ["runtime:start"], {
   env: {
     ...process.env,
