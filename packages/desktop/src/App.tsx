@@ -179,6 +179,8 @@ export function App(): ReactElement {
   const [taskKind, setTaskKind] = useState("publish");
   const [taskId, setTaskId] = useState("");
   const [taskIdempotencyKey, setTaskIdempotencyKey] = useState("");
+  const [taskContentId, setTaskContentId] = useState("");
+  const [taskDestinationId, setTaskDestinationId] = useState("");
   const [taskDestinationId, setTaskDestinationId] = useState("");
   const [executionMessage, setExecutionMessage] = useState("");
   const [contacts, setContacts] = useState<readonly ContactView[]>([]);
@@ -1078,6 +1080,18 @@ export function App(): ReactElement {
               Idempotency Key (اختياري)
               <input value={taskIdempotencyKey} onChange={(event) => setTaskIdempotencyKey(event.target.value)} />
             </label>
+            {taskKind !== "sync" ? (
+              <>
+                <label>
+                  Content ID
+                  <input value={taskContentId} onChange={(event) => setTaskContentId(event.target.value)} placeholder="content-001" />
+                </label>
+                <label>
+                  Destination ID
+                  <input value={taskDestinationId} onChange={(event) => setTaskDestinationId(event.target.value)} placeholder="page-or-channel-001" />
+                </label>
+              </>
+            ) : null}
             <div className="actions">
               <button className="button primary" type="button" onClick={() => void enqueueTask()}>إضافة للمحلية</button>
               <button className="button secondary" type="button" onClick={() => void claimNextTask()}>سحب التالية</button>
