@@ -1,44 +1,42 @@
 # ORBIT Marketing OS — Release Readiness
 
-## Implemented on `feat/foundation-local-first`
+## Current rebuild
 
-The current branch contains a working implementation baseline for:
+The active implementation branch is `rebuild/orbit-production`. PR #2 remains intentionally open and unmerged while release evidence is collected.
 
-- strict TypeScript workspace configuration;
-- `@orbit/core` domain types;
-- campaign/task validation;
-- typed task queue with exponential retry;
-- AES-256-GCM authenticated encryption;
-- sensitive-field redaction;
-- audit logging;
-- offline Ed25519 license verification;
-- SQLite schema baseline;
-- compliant connector contract with explicit user confirmation;
-- Tauri v2 desktop shell;
-- Rust Argon2id-derived AES-256-GCM local vault;
-- encrypted local session storage for account records;
-- local account list/create/delete operations;
-- local Ollama runtime for chat/content/vision;
-- Next.js static landing/PWA/pricing/legal surfaces;
-- Expo mobile runtime monitoring screen.
+## Implemented foundations
 
-## Still required before commercial launch
+- strict TypeScript monorepo baseline with pnpm 10.17.1 + Turborepo;
+- `@orbit/core` typed domain contracts, validation, retry policy, queue logic, approval/execution policy, encryption, redaction, audit integrity, Yjs sync primitives, licensing and backup foundations;
+- Tauri v2 desktop runtime with native SQLite, schema migration/versioning, workspace-scoped persistence, encrypted vault/session storage, campaign/task/CRM/inbox/audit commands;
+- native Argon2id-derived AES-256-GCM encryption and encrypted local backup/restore;
+- Next.js 16 static web/PWA/legal/pricing surface with flat-config ESLint;
+- Expo SDK 57 / React Native 0.86 mobile monitoring surface with configuration smoke tests;
+- guarded CI and release-gate documentation.
 
-These are not declared complete:
+## Evidence still required
 
-- produce and commit `pnpm-lock.yaml`;
-- run the complete workspace install/build/test suite on a clean machine;
-- run Rust `cargo fmt`, `cargo test`, and `cargo clippy -D warnings`;
-- connect real platform integrations using supported authorization mechanisms;
-- implement and test CRM/inbox/campaign persistence UI against the native store;
-- implement encrypted CRDT transport and backup providers;
-- configure production payment processor and business account;
-- obtain Apple/Google signing credentials and produce store artifacts;
-- obtain Windows/macOS signing credentials and notarization setup;
-- execute long-running performance/security testing on representative machines.
+The following remain `UNVERIFIED` until executed in a clean environment:
 
-No launch status should be changed to “production ready” until those gates have evidence.
+- reproducible clean checkout install and lockfile generation/validation;
+- full TypeScript typecheck, lint, tests, build, and format check;
+- Rust fmt, check, test, and clippy against the Tauri runtime;
+- native SQLite migration/restart/crash-recovery integration;
+- persistent queue recovery and idempotency tests through the actual desktop runtime;
+- controlled connector fixtures plus real user-authorized integrations;
+- challenge/authentication stop and human-intervention flows;
+- encrypted CRDT transport and multi-device convergence;
+- content/media indexing and local AI/Ollama failure/resource handling;
+- browser E2E and accessibility verification;
+- Android/iOS release artifacts, Windows/Linux/macOS packaging and signing;
+- production web deployment and rollback verification;
+- security/dependency review, performance benchmarks, and 24-hour soak evidence;
+- commercial billing/payment configuration.
 
 ## Platform safety
 
-The product intentionally does not implement fingerprint spoofing, stealth browser plugins, CAPTCHA bypass, anti-abuse evasion, or concealed automation. External workflows stop on authentication/challenge states and require appropriate user intervention.
+ORBIT does not implement fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion, or concealed automation. External actions must remain user-authorized and platform-compliant.
+
+## Release rule
+
+No production-ready or commercial-launch claim is valid until every applicable gate in `docs/ACCEPTANCE_MATRIX_V2.md` and `docs/RELEASE_GATES.md` has current evidence.
