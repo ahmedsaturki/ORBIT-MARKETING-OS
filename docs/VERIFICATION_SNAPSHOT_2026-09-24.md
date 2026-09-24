@@ -1,13 +1,13 @@
 # ORBIT Current Verification Snapshot — 2026-09-24
 
-Source implementation head at snapshot: "69f18a59d94f306d112785b90f3fa3250c3af129"
+Source implementation head at snapshot: "5b7c81ffa879ffeca7c42966ce9a1ffdfbef2827"
 
 ## Live repository state
 
-- Active branch: `rebuild/orbit-production`
-- PR #2: open, draft, unmerged
-- Latest hosted CI run: `36051495812`
-- Latest CI result: job failed before any workflow steps executed; current branch commits continue to reproduce runner allocation failure
+- Active branch: `rebuild/orbit-production-consolidated`
+- PR #9: open, draft, unmerged
+- Latest hosted CI run: `36053293828`
+- Latest CI result: job failed before any workflow steps executed; the consolidation branch continues to reproduce runner allocation failure
 - Latest CI conclusion: `failure`
 - Runner metadata: `runner_id=0`, runner name empty
 - Workflow steps registered: none
@@ -42,7 +42,7 @@ Source implementation head at snapshot: "69f18a59d94f306d112785b90f3fa3250c3af12
 
 ## CI/release infrastructure
 
-- Branch-restricted bootstrap and full self-hosted verification workflows are exposed from `main` for manual dispatch while remaining restricted to `rebuild/orbit-production`.
+- Branch-restricted bootstrap and full self-hosted verification workflows are exposed from `main` for manual dispatch and accept the approved rebuild refs, including `rebuild/orbit-production-consolidated`.
 - GitHub-hosted runner allocation remains the current execution blocker.
 - Current repository contains no committed `pnpm-lock.yaml` or `packages/desktop/src-tauri/Cargo.lock`.
 
