@@ -27,3 +27,7 @@ The runtime is designed for local Ollama use. Cloud AI is not required by the cu
 ## Release gate
 
 A web deployment alone does not make desktop/mobile/product release-ready. Use `docs/ACCEPTANCE_MATRIX_V2.md`, `docs/RELEASE_GATES.md`, and `docs/RELEASE_READINESS.md` as the release control set.
+
+## Monorepo build filtering
+
+The root `vercel.json` contains an `ignoreCommand` that skips a Web deployment when the commit does not change `packages/web` or the workspace/deployment manifests. This prevents Core/Desktop-only commits from consuming Vercel build concurrency. Vercel project settings should still use `packages/web` as the Root Directory for the dedicated Web project, with Next.js as the framework preset.
