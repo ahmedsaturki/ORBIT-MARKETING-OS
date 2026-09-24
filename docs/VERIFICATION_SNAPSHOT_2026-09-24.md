@@ -1,13 +1,13 @@
 # ORBIT Current Verification Snapshot — 2026-09-24
 
-Source implementation head at snapshot: "badba95f247acc60e6234a85466ee5c9059b3652"
+Source implementation head at snapshot: "69f18a59d94f306d112785b90f3fa3250c3af129"
 
 ## Live repository state
 
 - Active branch: `rebuild/orbit-production`
 - PR #2: open, draft, unmerged
-- Latest hosted CI run: `36050298475`
-- Latest CI jobs: `107803873493` (quality) / `107803873685` (Rust quality)
+- Latest hosted CI run: `36051495812`
+- Latest CI result: job failed before any workflow steps executed; current branch commits continue to reproduce runner allocation failure
 - Latest CI conclusion: `failure`
 - Runner metadata: `runner_id=0`, runner name empty
 - Workflow steps registered: none
@@ -35,6 +35,8 @@ Source implementation head at snapshot: "badba95f247acc60e6234a85466ee5c9059b365
 - Account authorization/session state synchronization after upsert.
 - Typed/serializable desktop IPC views and stronger IPC verification.
 - LinkedIn connector default API version `202609`.
+- License install/delete mutations are atomic with audit-chain append.
+- Native conversation upsert returns the persisted message count.
 - Compatibility-shell formatting cleanup.
 - Repository-wide secret-pattern/tree scan found no tracked private-key/credential files; only `.env.example` matched the sensitive filename allowlist.
 
@@ -52,6 +54,7 @@ Source implementation head at snapshot: "badba95f247acc60e6234a85466ee5c9059b365
 - Repository contract remains Next.js static export to `packages/web/out`.
 - Effective Vercel project framework/Root Directory still require external verification.
 - Successful guarded prebuilt production deployment and rollback remain unverified.
+- Vercel project-setting mutation is not executable through the connected tool: its declared schema requires `projectId`, while the backend reports an incompatible `idOrName` expectation.
 
 ## Remaining release gates
 
