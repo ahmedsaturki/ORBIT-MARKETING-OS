@@ -7,7 +7,7 @@ Source implementation head at snapshot: "41c586a6338e8d937f0722a6e6bf97598e7420f
 - Active branch: `rebuild/orbit-production`
 - PR #2: open, draft, unmerged
 - Latest hosted CI run: `36049164892`
-- Latest CI job: `107800093660 (Rust) / 107800093968 (quality)` (Rust) / `107795977291` (quality)
+- Latest CI jobs: `107800093660` (Rust) / `107800093968` (quality)
 - Latest CI conclusion: `failure`
 - Runner metadata: `runner_id=0`, runner name empty
 - Workflow steps registered: none
