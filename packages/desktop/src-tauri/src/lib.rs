@@ -5157,6 +5157,45 @@ mod tests {
     }
 
     #[test]
+    fn fresh_schema_scopes_task_idempotency_by_workspace() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection.execute_batch(SCHEMA).expect("fresh schema should be creatable");
+
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-1', 'One', '1'), ('workspace-2', 'Two', '1');
+                 INSERT INTO accounts(
+                   id, workspace_id, platform, display_name, status, created_at, updated_at
+                 ) VALUES
+                   ('account-1', 'workspace-1', 'telegram', 'One', 'connected', '1', '1'),
+                   ('account-2', 'workspace-2', 'telegram', 'Two', 'connected', '1', '1');
+                 INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                 VALUES
+                   ('campaign-1', 'workspace-1', 'One', 'scheduled', '1'),
+                   ('campaign-2', 'workspace-2', 'Two', 'scheduled', '1');
+                 INSERT INTO tasks(
+                   id, workspace_id, campaign_id, account_id, platform, kind, status,
+                   available_at, idempotency_key, created_at
+                 ) VALUES
+                   ('task-1', 'workspace-1', 'campaign-1', 'account-1', 'telegram', 'sync',
+                    'pending', '2026-09-24T15:00:00Z', 'same-key', '2026-09-24T15:00:00Z'),
+                   ('task-2', 'workspace-2', 'campaign-2', 'account-2', 'telegram', 'sync',
+                    'pending', '2026-09-24T15:00:00Z', 'same-key', '2026-09-24T15:00:00Z');",
+            )
+            .expect("same idempotency key should be valid across workspaces");
+
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM tasks WHERE idempotency_key='same-key'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("tasks should be queryable");
+        assert_eq!(count, 2);
+    }
+
+    #[test]
     fn schema_v10_is_idempotent_after_upgrade() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
         connection
