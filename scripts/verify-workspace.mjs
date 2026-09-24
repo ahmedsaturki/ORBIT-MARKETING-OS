@@ -221,7 +221,7 @@ for (const command of Object.keys(sensitiveDesktopCommands)) {
     .sort((a, b) => a.index - b.index)[0]?.index ?? rust.length;
 
   const segment = rust.slice(current.index, next);
-  if (!segment.includes("require_workspace_role(") && !segment.includes("require_workspace_role_for(")) {
+  if (!segment.includes("require_workspace_role(") && !segment.includes("require_workspace_role_for(") && !segment.includes("require_workspace_role_for_module(")) {
     throw new Error("Sensitive Tauri command is not role-gated: " + command);
   }
   if (segment.includes("active_workspace_id()") && !segment.includes("let workspace_id = active_workspace_id();")) {

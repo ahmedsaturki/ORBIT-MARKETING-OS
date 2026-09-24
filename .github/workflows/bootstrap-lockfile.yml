@@ -47,4 +47,4 @@ jobs:
             exit 0
           }
           git commit -m "chore(ci): bootstrap pnpm lockfile"
-          git push origin "HEAD:rebuild/orbit-production"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
