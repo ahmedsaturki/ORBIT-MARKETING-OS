@@ -69,7 +69,7 @@ Optional session material is encrypted locally before persistence.
 - `task_set_status`
 - `task_list`
 
-`task_enqueue` accepts an optional `idempotency_key`; task persistence is workspace-scoped.
+`task_enqueue` accepts an optional `idempotency_key`; task persistence is workspace-scoped. Non-sync external tasks require `content_id` and `destination_id`.
 
 ### CRM and inbox
 
@@ -81,6 +81,13 @@ Optional session material is encrypted locally before persistence.
 - `message_list`
 
 Inbox message writes verify that the conversation belongs to the active local workspace.
+
+### Telegram external execution
+
+- `telegram_execute_task`
+
+Required arguments: `task_id`, `vault_password`, and `user_confirmed=true`.
+The command is workspace- and role-gated, requires a connected Telegram account and approved linked content, and stops for human verification on authentication challenges, rate limits, or ambiguous delivery status.
 
 ### Backup and audit
 
