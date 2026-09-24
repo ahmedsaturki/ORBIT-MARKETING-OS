@@ -12,7 +12,7 @@ The branch is generating GitHub Actions runs, but the hosted jobs currently fail
 
 Latest observed hosted-runner behavior:
 
-- The newest observed CI run (`36047914345`) has two jobs; both fail before step registration with `runner_id=0`, empty runner name, and no step records.
+- The newest observed CI run (`36049164892`) has two jobs; both fail before step registration with `runner_id=0`, empty runner name, and no step records.
 - Multiple consecutive runs show the same pre-execution signature.
 
 A deliberately minimal runner probe was also tested earlier and failed before any workflow step executed. It was removed after diagnosis.
