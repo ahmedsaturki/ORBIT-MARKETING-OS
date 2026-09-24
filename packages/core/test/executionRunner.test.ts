@@ -105,6 +105,40 @@ describe("ExecutionRunner", () => {
     expect(result).toMatchObject({ status: "blocked", reason: "user_confirmation_required" });
   });
 
+  it("blocks when the connector does not support the task capability", async () => {
+    const registry = new ConnectorRegistry();
+    registry.register(
+      new FixtureConnector({
+        platform: "facebook",
+        capabilities: { publish: false },
+      }),
+    );
+
+    const result = await new ExecutionRunner(registry).run({
+      account,
+      campaign,
+      task: { ...task, status: "running" },
+      approval: {
+        id: "approval-1",
+        workspaceId: "workspace-1",
+        contentId: "content-1",
+        requestedBy: "user-1",
+        reviewerIds: ["user-2"],
+        status: "approved",
+      },
+      actionsToday: 0,
+      dailyLimit: 10,
+      consecutiveFailures: 0,
+      circuitBreakerThreshold: 3,
+      userConfirmed: true,
+    });
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reason: "unsupported_action",
+    });
+  });
+
   it("returns a safe blocked state for connector challenges", async () => {
     const result = await runner(true).run({
       account,
