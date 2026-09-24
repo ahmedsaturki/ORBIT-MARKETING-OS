@@ -65,3 +65,5 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md]
 Launch control: `docs/LAUNCH_SCORECARD.md`
 
 Zero-cost technical verification fallback: `docs/SELF_HOSTED_VERIFICATION.md`
+
+Runner setup and the exact verification order: `docs/SELF_HOSTED_RUNNER.md`

@@ -37,7 +37,7 @@ Latest observed hosted GitHub Actions CI on the rebuild line:
 - conclusion: `failure`
 - no workflow steps were registered before failure; therefore this is not source-level build evidence.
 
-The connected Vercel project has no verified successful deployment. Recent rebuild deployment attempts were canceled; the last concrete ERROR deployment failed at the install step because the repository did not yet contain the required lockfile.
+The connected Vercel project has no verified successful deployment. Automatic Git builds are now disabled repository-side; historical rebuild attempts were canceled and the last concrete ERROR deployment failed at the install step because the repository lacked the required lockfile.
 
 ## Remaining release gates
 

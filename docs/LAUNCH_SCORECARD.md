@@ -39,13 +39,13 @@ Legend:
 | Performance/soak | UNVERIFIED | Benchmarks and 24h soak not executed |
 | Desktop signing | BLOCKED | Signing credentials are intentionally absent; validation builds only |
 | Mobile production signing | BLOCKED | Current workflow produces debug validation APK |
-| Vercel production deployment | BLOCKED | Connected `orbit-marketing-os` project exists, but the newest rebuild attempts are CANCELED; the last concrete ERROR deployment failed during install; repository-side config is now canonical and first-deployment-safe, while a committed lockfile is still required |
+| Vercel production deployment | BLOCKED | Connected `orbit-marketing-os` project exists. Automatic Git builds are now disabled repository-side; recent historical attempts were CANCELED and the last concrete ERROR deployment failed during install. A successful guarded prebuilt deployment remains required, and committed lockfiles are still required. |
 | Billing/payment | BLOCKED | No commercial payment provider configuration is verified |
 | Production launch | BLOCKED | Any applicable UNVERIFIED/BLOCKED runtime or distribution gate prevents release claim |
 
 ## Current infrastructure blocker
 
-GitHub Actions jobs for the rebuild branch are being created but can fail before the first step is registered, with no runner allocation metadata. The latest observed CI job (`107768119208`, run `36039581003`) ended `failure` before workflow steps were registered. The same behavior was reproduced previously with a minimal runner probe. This is treated as execution-infrastructure evidence, not source-build evidence.
+GitHub Actions jobs for the rebuild branch are being created but can fail before the first step is registered, with no runner allocation metadata. The latest observed CI job (`107770331541`, run `36040244621`) ended `failure` before workflow steps were registered. The same behavior was reproduced previously with a minimal runner probe. This is treated as execution-infrastructure evidence, not source-build evidence.
 
 ## Zero-cost verification fallback
 

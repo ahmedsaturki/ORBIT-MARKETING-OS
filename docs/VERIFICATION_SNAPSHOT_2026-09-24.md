@@ -1,48 +1,49 @@
-# ORBIT Verification Snapshot — 2026-09-24
+# ORBIT Current Verification Snapshot — 2026-09-24
 
-## Source of truth
-- Branch: `rebuild/orbit-production`
-- HEAD: `cb4f2567e7ee6cf04dad2a8801cf9aa31fa12f60`
+Source snapshot commit: `0d2494746cf6f62f045dadae0050639775ccc0dc`
+
+## Live repository state
+
+- Active branch: `rebuild/orbit-production`
 - PR #2: open, draft, unmerged
-
-## Technical work completed
-- Native SQLite schema through v10 with workspace-scoped task idempotency and legacy migration coverage.
-- Startup crash recovery occurs once at Tauri application startup; sync tasks requeue, external tasks stop for human verification.
-- Approval actors/reviewer roles are enforced and approval mutation + audit are atomic.
-- Account authorization state and persisted encrypted-session state stay synchronized.
-- Native task timestamps are normalized to UTC and retry ceilings are bounded.
-- Audit integrity failure blocks Telegram external execution.
-- Media import authorization precedes local filesystem reads.
-- LinkedIn Posts connector defaults to `202609`.
-- Desktop consumes `@orbit/core` platform types.
-- React 19 scoped JSX cleanup completed across all tracked TSX files.
-- Vercel/release workflows remain fail-closed without reproducible lockfiles.
-
-## Latest execution evidence
-- GitHub Actions CI run: `36039581003`
-- Job: `107768119208`
-- Conclusion: `failure`
-- Steps registered: none
-- Interpretation: runner/execution infrastructure failure, not a source compile/test result.
-- Main branch exhibits the same pre-step failure signature, so this is not isolated to the rebuild source line.
+- Latest hosted CI run: `36040244621`
+- Latest CI job: `107770331541`
+- Latest CI conclusion: `failure`
+- Workflow steps registered: none
+- Interpretation: runner allocation/execution infrastructure failure; no TypeScript/Rust/test result is implied.
 
 ## Vercel
-- Connected project: `orbit-marketing-os`
-- Recent rebuild deployments were canceled.
-- Last concrete ERROR deployment failed at `bash scripts/vercel-install.sh` because `pnpm-lock.yaml` was absent.
-- Repository-side contract remains Next.js static export to `packages/web/out`.
-- Project-level framework metadata has reported `vite`; effective settings remain unverified.
-- No successful production deployment is claimed.
+
+- Project: `orbit-marketing-os`
+- Repository-side automatic Git deployments: disabled.
+- Current commit status from GitHub has no Vercel failure context after the disablement change.
+- Historical last concrete Vercel ERROR deployment failed at `bash scripts/vercel-install.sh` because `pnpm-lock.yaml` was absent.
+- Successful guarded prebuilt production deployment remains unverified.
+- Project metadata has historically reported framework `vite`; repository contract remains Next.js static export to `packages/web/out`.
+
+## Completed source hardening in this snapshot
+
+- SQLite schema v10 + workspace-scoped task idempotency.
+- Atomic/idempotent startup recovery for interrupted tasks.
+- Workspace/RBAC and approval actor/reviewer enforcement.
+- Atomic approval + audit transactions.
+- Audit-integrity fail-closed external Telegram execution.
+- Media import authorization before filesystem access.
+- UTC-normalized native/core scheduling and bounded retries.
+- LinkedIn API default `202609`.
+- React 19 scoped JSX cleanup.
+- Desktop consumption of `@orbit/core` platform types.
+- PWA offline fallback hardening.
+- Vercel automatic Git-build disablement with prebuilt-only release path.
 
 ## Remaining release gates
-- Real dependency resolution and committed pnpm/Cargo lockfiles.
-- Full TS/Rust/runtime/browser verification.
-- Controlled real-platform connector verification.
-- Security/dependency audit.
-- Performance/soak.
-- Signed desktop/mobile distribution.
-- Vercel deployment + rollback verification.
-- Commercial billing/payment and final legal/commercial review.
 
-## Integrity rule
-No production-ready, commercial-launch, signed-distribution or successful-deployment claim is made without fresh execution evidence.
+1. Real dependency resolution + committed `pnpm-lock.yaml` and `Cargo.lock`.
+2. Clean TS/Rust/runtime/browser/device execution evidence.
+3. Real authorized connector/platform verification.
+4. Security/dependency review, performance benchmarks and soak.
+5. Desktop/mobile signing and production distribution.
+6. Successful Vercel prebuilt deployment + rollback test.
+7. Commercial billing/payment and final legal/commercial review.
+
+No production-ready, signed, commercial-launch, or successful-deployment claim is made without fresh evidence.

@@ -99,7 +99,7 @@ The orbit-marketing-os Vercel project exists. The canonical monorepo configurati
 - Build command: `pnpm --dir packages/web build`
 - Static output: `packages/web/out`
 
-Repository-side vercel.json files are aligned with this configuration. The connected Vercel toolset currently exposes deployment listing but not working project-setting mutation/deploy execution, so the project-level Root Directory remains an external action.
+Repository-side vercel.json files are aligned with this configuration. The connected Vercel toolset currently exposes deployment listing but not working project-setting mutation/deploy execution. Repository configuration now disables automatic Git deployments, so production deployment is intentionally reserved for the guarded prebuilt workflow.
 
 ## Release rule
 

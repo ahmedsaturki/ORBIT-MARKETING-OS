@@ -12,7 +12,7 @@ The branch is generating GitHub Actions runs, but the hosted jobs currently fail
 
 Latest observed hosted-runner behavior:
 
-- The newest observed CI run (36039581003, job 107768119208) fails before step registration with no runner allocation metadata and no step records.
+- The newest observed CI run (36040244621, job 107770331541) fails before step registration with no runner allocation metadata and no step records.
 - Multiple consecutive runs show the same pre-execution signature.
 
 A deliberately minimal runner probe was also tested earlier and failed before any workflow step executed. It was removed after diagnosis.
@@ -38,7 +38,7 @@ The latest verified deployment diagnostics identified and then addressed these c
 1. `ignoreCommand` exceeded Vercel's 256-character schema limit.
 2. The shortened command then failed when `VERCEL_GIT_PREVIOUS_SHA` was empty and `git diff` received an empty revision.
 
-The repository `vercel.json` has now been hardened so missing Git revision context does not produce a fatal `bad revision` error. Recent rebuild deployments after these fixes have been canceled before a successful deployment was established.
+The repository `vercel.json` has now been hardened so missing Git revision context does not produce a fatal `bad revision` error. Automatic Git deployments are now disabled repository-side. The connected deployment status is clear on the current source snapshot; successful prebuilt production deployment remains unverified.
 
 The connected project metadata has reported framework `vite` while the repository deployment contract targets Next.js static output. This remains a project-configuration verification item until project settings are corrected/confirmed and a successful deployment validates the effective settings.
 
