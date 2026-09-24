@@ -8,6 +8,7 @@ const requiredFiles = [
   "pnpm-workspace.yaml",
   "turbo.json",
   "pnpm-lock.yaml",
+  "packages/desktop/src-tauri/Cargo.lock",
   "tsconfig.base.json",
   "docs/ACCEPTANCE_MATRIX_V2.md",
   "docs/RELEASE_GATES.md",
