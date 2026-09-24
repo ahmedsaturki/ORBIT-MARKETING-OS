@@ -34,3 +34,16 @@ test("static server rejects traversal attempts", async ({ request }) => {
   const body = await response.text();
   expect(body).not.toContain('"scripts"');
 });
+
+
+test("PWA manifest and service worker assets are reachable", async ({ request }) => {
+  const manifest = await request.get("/manifest.json");
+  expect(manifest.ok()).toBe(true);
+  const manifestBody = (await manifest.json()) as { start_url?: string; display?: string; dir?: string; lang?: string };
+  expect(manifestBody.start_url).toBeDefined();
+  expect(manifestBody.display).toBeDefined();
+
+  const serviceWorker = await request.get("/sw.js");
+  expect(serviceWorker.ok()).toBe(true);
+  expect(await serviceWorker.text()).toContain("addEventListener");
+});
