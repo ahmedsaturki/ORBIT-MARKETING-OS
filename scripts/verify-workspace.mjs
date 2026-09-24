@@ -57,6 +57,35 @@ const rootPackage = await readJson("package.json");
 if (rootPackage.packageManager !== "pnpm@10.17.1") {
   throw new Error("Expected root packageManager pnpm@10.17.1");
 }
+
+const workspacePackagePaths = [
+  "packages/core/package.json",
+  "packages/desktop/package.json",
+  "packages/mobile/package.json",
+  "packages/web/package.json",
+  "packages/shared-ui/package.json",
+];
+for (const path of workspacePackagePaths) {
+  const pkg = await readJson(path);
+  if (pkg.version !== rootPackage.version) {
+    throw new Error(
+      "Workspace package version drift detected: " + path + " (" + pkg.version + " != " + rootPackage.version + ")",
+    );
+  }
+}
+
+const tauriReleaseConfig = JSON.parse(
+  await readFile(join(root, "packages/desktop/src-tauri/tauri.conf.json"), "utf8"),
+);
+if (tauriReleaseConfig.version !== rootPackage.version) {
+  throw new Error(
+    "Tauri product version drift detected (" +
+      tauriReleaseConfig.version +
+      " != " +
+      rootPackage.version +
+      ")",
+  );
+}
 if (!rootPackage.scripts?.lint || !rootPackage.scripts?.typecheck || !rootPackage.scripts?.test || !rootPackage.scripts?.build) {
   throw new Error("Root quality scripts are incomplete");
 }
