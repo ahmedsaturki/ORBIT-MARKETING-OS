@@ -35,3 +35,15 @@ The root `vercel.json` contains an `ignoreCommand` that skips a Web deployment w
 ### Dependency-fetch fallback
 
 The connected deployment environment previously failed during pnpm metadata resolution. The Web deployment now uses an isolated npm install for `packages/web` with workspaces disabled, followed by the Web build. This is a deployment workaround only; the repository CI remains pnpm-based and still requires a real lockfile for reproducible release evidence.
+
+## Current Vercel project settings
+
+For the connected Vercel project orbit-marketing-os, the intended production Web project should use:
+
+- Root Directory: packages/web
+- Framework preset: Next.js
+- Node.js: 22.x
+- Build Command: pnpm build when the Root Directory is packages/web, or the repository-level command defined in vercel.json when the Root Directory remains the repository root.
+- Output Directory: out when the Root Directory is packages/web; packages/web/out when building from the repository root.
+
+The connected project currently reports a vite framework in its metadata. Until the project-level Root Directory/framework configuration is corrected, a successful production Web deployment is not considered proven.
