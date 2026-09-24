@@ -2253,6 +2253,104 @@ fn validate_media_sha256(value: Option<&str>) -> Result<Option<String>, AppError
     }
     Ok(if value.is_empty() { None } else { Some(value) })
 }
+fn validate_media_mime(kind: &str, mime_type: &str) -> Result<(), AppError> {
+    let valid = match kind {
+        "image" => mime_type.starts_with("image/"),
+        "video" => mime_type.starts_with("video/"),
+        "audio" => mime_type.starts_with("audio/"),
+        "document" => mime_type == "application/pdf"
+            || mime_type.starts_with("text/")
+            || mime_type == "application/zip",
+        _ => false,
+    };
+    if valid { Ok(()) } else { Err(AppError::InvalidLabel) }
+}
+
+fn validate_rule_pack_json(
+    platform: &str,
+    rules_json: &str,
+) -> Result<serde_json::Value, String> {
+    let parsed: serde_json::Value =
+        serde_json::from_str(rules_json).map_err(|_| "rules_json must be valid JSON".to_string())?;
+    let Some(rules) = parsed.as_array() else {
+        return Err("rules_json must be an array".to_string());
+    };
+    if rules.is_empty() || rules.len() > 100 {
+        return Err("rules_json must contain between 1 and 100 rules".to_string());
+    }
+
+    let valid_kinds = ["publish", "message", "comment", "sync", "engage"];
+    let mut ids = std::collections::HashSet::new();
+    for rule in rules {
+        let Some(object) = rule.as_object() else {
+            return Err("every rule must be an object".to_string());
+        };
+        let id = object
+            .get("id")
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty() && value.len() <= 200)
+            .ok_or_else(|| "rule id is required".to_string())?;
+        if !ids.insert(id.to_string()) {
+            return Err("rule ids must be unique".to_string());
+        }
+
+        let rule_platform = object
+            .get("platform")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or(platform);
+        if rule_platform != platform {
+            return Err("rule platform must match rule pack platform".to_string());
+        }
+
+        let Some(task_kinds) = object.get("taskKinds").and_then(serde_json::Value::as_array) else {
+            return Err("rule taskKinds must be an array".to_string());
+        };
+        if task_kinds.is_empty() {
+            return Err("rule taskKinds must contain at least one task kind".to_string());
+        }
+        for kind in task_kinds {
+            let value = kind
+                .as_str()
+                .ok_or_else(|| "rule task kind must be a string".to_string())?;
+            if !valid_kinds.contains(&value) {
+                return Err("rule contains unsupported task kind".to_string());
+            }
+        }
+
+        let enabled = object
+            .get("enabled")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(true);
+        let requires_confirmation = object
+            .get("requiresConfirmation")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        let has_external = task_kinds.iter().any(|kind| kind != "sync");
+        if enabled && has_external && !requires_confirmation {
+            return Err("enabled external rules must require confirmation".to_string());
+        }
+
+        let max_attempts = object
+            .get("maxAttempts")
+            .and_then(serde_json::Value::as_i64)
+            .unwrap_or(3);
+        if !(1..=10).contains(&max_attempts) {
+            return Err("rule maxAttempts must be between 1 and 10".to_string());
+        }
+
+        let timeout_ms = object
+            .get("timeoutMs")
+            .and_then(serde_json::Value::as_i64)
+            .unwrap_or(30_000);
+        if !(1_000..=300_000).contains(&timeout_ms) {
+            return Err("rule timeoutMs must be between 1000 and 300000".to_string());
+        }
+    }
+
+    Ok(parsed)
+}
+
 
 #[tauri::command]
 fn media_asset_upsert(
@@ -2271,6 +2369,7 @@ fn media_asset_upsert(
     let kind = validate_media_kind(&kind).map_err(|error| error.to_string())?;
     let filename = validate_label(&filename).map_err(|error| error.to_string())?;
     let mime_type = validate_label(&mime_type).map_err(|error| error.to_string())?;
+    validate_media_mime(&kind, &mime_type).map_err(|error| error.to_string())?;
     let local_path = validate_label(&local_path).map_err(|error| error.to_string())?;
     if size_bytes <= 0 {
         return Err("media size must be positive".to_string());
@@ -2422,11 +2521,7 @@ fn automation_rule_pack_upsert(
     if schema_version != 1 {
         return Err("unsupported automation rule pack schema".to_string());
     }
-    let parsed: serde_json::Value = serde_json::from_str(&rules_json)
-        .map_err(|_| "rules_json must be valid JSON".to_string())?;
-    if !parsed.is_array() || parsed.as_array().map(|value| value.len()).unwrap_or(usize::MAX) > 100 {
-        return Err("rules_json must be an array with at most 100 rules".to_string());
-    }
+    let parsed = validate_rule_pack_json(&platform, &rules_json)?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(
