@@ -13,6 +13,11 @@ const requiredFiles = [
   "docs/RELEASE_GATES.md",
   "packages/core/package.json",
   "packages/core/src/access/control.ts",
+  "packages/core/src/content/catalog.ts",
+  "packages/core/src/media/catalog.ts",
+  "packages/core/src/analytics/metrics.ts",
+  "packages/core/src/automation/rules.ts",
+  "packages/core/src/connectors/linkedin.ts",
   "packages/desktop/package.json",
   "packages/mobile/package.json",
   "packages/web/package.json",
@@ -22,6 +27,11 @@ const requiredFiles = [
   "vercel.json",
   "scripts/vercel-ignore.sh",
   "scripts/vercel-install.sh",
+  "packages/core/test/linkedin.test.ts",
+  "packages/core/test/executor.test.ts",
+  "e2e/web-smoke.spec.ts",
+  "e2e/public-web.spec.ts",
+  "playwright.config.ts",
 ];
 
 function resolveRoot() {
