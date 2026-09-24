@@ -28,7 +28,7 @@ jobs:
       - name: Require committed lockfile
         run: test -f pnpm-lock.yaml
       - name: Install workspace
-        run: pnpm install --frozen-lockfile
+        run: bash scripts/vercel-install.sh
       - name: Workspace sanity
         run: pnpm verify:workspace
       - name: Web typecheck
