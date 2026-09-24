@@ -44,6 +44,11 @@ if (!rootPackage.scripts?.lint || !rootPackage.scripts?.typecheck || !rootPackag
   throw new Error("Root quality scripts are incomplete");
 }
 
+const corePackage = await readJson("packages/core/package.json");
+if (corePackage.scripts?.["test:coverage"] && !corePackage.devDependencies?.["@vitest/coverage-v8"]) {
+  throw new Error("Core coverage command requires @vitest/coverage-v8");
+}
+
 const webPackage = await readJson("packages/web/package.json");
 if (webPackage.scripts?.lint !== "eslint .") {
   throw new Error("Web lint must use the ESLint CLI");
