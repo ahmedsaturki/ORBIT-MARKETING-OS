@@ -153,16 +153,21 @@ export async function executeClaimedTask(
   const decision = evaluateExecutionPolicy({ ...context, task });
 
   if (!decision.allowed) {
-    const resumable = decision.reason === "approval_required" || decision.reason === "daily_limit_reached";
-    if (resumable) {
-      dependencies.queue.release(task.id);
+    if (decision.reason === "approval_required") {
+      dependencies.queue.awaitApproval(task.id);
+    } else if (decision.reason === "daily_limit_reached") {
+      const nextDay = new Date(now);
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+      nextDay.setUTCHours(0, 0, 0, 0);
+      dependencies.queue.defer(task.id, nextDay.toISOString());
     } else {
       dependencies.queue.block(task.id);
     }
     audit(dependencies.audit, task, "blocked", "execution.policy_blocked", {
       reason: decision.reason,
       message: decision.message,
-      resumable,
+      resumable:
+        decision.reason === "approval_required" || decision.reason === "daily_limit_reached",
     });
     return {
       status: "blocked",
