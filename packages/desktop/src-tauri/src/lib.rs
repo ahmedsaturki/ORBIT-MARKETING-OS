@@ -1482,7 +1482,7 @@ fn task_fail(
         .map_err(|_| "failure timestamp must be an RFC3339 ISO timestamp".to_string())?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    let current: Option<(i64, i64, String, String, String, String, i64, String, String, String, String)> = connection
+    let current: Option<(i64, i64, String, Option<String>, String, String, String, i64, String, String, String, String)> = connection
         .query_row(
             "SELECT attempts, max_attempts, campaign_id, content_id, account_id, platform, kind, priority,
                     status, idempotency_key, available_at, created_at
@@ -1502,6 +1502,7 @@ fn task_fail(
                     row.get(8)?,
                     row.get(9)?,
                     row.get(10)?,
+                    row.get(11)?,
                 ))
             },
         )
