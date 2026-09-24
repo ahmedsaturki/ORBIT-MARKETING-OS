@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   bootstrap:
+    if: github.ref_name == 'rebuild/orbit-production'
     name: Generate and commit pnpm lockfile
     runs-on: [self-hosted, orbit, x64]
     timeout-minutes: 30
