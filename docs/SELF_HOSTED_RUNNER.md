@@ -56,7 +56,7 @@ Once the interactive path is proven, install the runner as a service using GitHu
 
 Both manual self-hosted workflows are:
 
-- restricted to `rebuild/orbit-production`;
+- restricted to the approved production rebuild refs (`rebuild/orbit-production` and `rebuild/orbit-production-consolidated`);
 - restricted to the repository owner account `ahmedsaturki`;
 - restricted to `self-hosted, x64, linux`.
 
