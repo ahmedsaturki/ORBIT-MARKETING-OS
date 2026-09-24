@@ -4,13 +4,21 @@ export interface RuntimeHealth {
   readonly provider?: string;
   readonly model?: string;
   readonly visionConfigured?: boolean;
+  readonly host?: string;
 }
 
-export async function fetchRuntimeHealth(baseUrl: string): Promise<RuntimeHealth> {
+export async function fetchRuntimeHealth(
+  baseUrl: string,
+  authToken = "",
+): Promise<RuntimeHealth> {
   const normalized = baseUrl.replace(/\/$/, "");
+  const token = authToken.trim();
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const response = await fetch(normalized + "/api/health", {
     method: "GET",
-    headers: { Accept: "application/json" },
+    headers,
   });
 
   if (!response.ok) {
