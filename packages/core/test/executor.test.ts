@@ -73,6 +73,26 @@ function context(task: Task) {
 }
 
 describe("task execution orchestrator", () => {
+  it("rejects execution when a task was not claimed into running state", async () => {
+    const task = makeTask();
+    const registry = new ConnectorRegistry();
+    registry.register(new FixtureConnector({ platform: "facebook" }));
+    await expect(
+      executeClaimedTask(
+        {
+          queue: queue(task),
+          connectors: registry,
+          audit: new AuditLog(),
+          loadContext: async () => context(task),
+        },
+        task,
+        true,
+        "2026-09-24T00:00:01.000Z",
+      ),
+    ).rejects.toThrow("Only claimed running tasks may be executed.");
+  });
+
+
   it("refuses to execute an unclaimed pending task", async () => {
     const task = makeTask();
     const taskQueue = queue(task);
