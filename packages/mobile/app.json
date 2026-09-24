@@ -6,8 +6,15 @@
     "orientation": "portrait",
     "scheme": "orbit",
     "userInterfaceStyle": "dark",
-    "plugins": ["expo-router"],
-    "android": { "package": "com.orbitmarketing.os" },
-    "ios": { "bundleIdentifier": "com.orbitmarketing.os" }
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "android": {
+      "package": "com.orbitmarketing.os"
+    },
+    "ios": {
+      "bundleIdentifier": "com.orbitmarketing.os"
+    }
   }
 }
