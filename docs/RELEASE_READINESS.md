@@ -69,3 +69,7 @@ Global multi-device seat counting remains intentionally unclaimed because the cu
 ## Vercel deployment diagnosis
 
 The connected `orbit-marketing-os` project exists, but no successful deployment has been verified yet. The two latest concrete repository-side configuration failures observed were an overlong `ignoreCommand` and then a `fatal: bad revision ''` caused by missing Git revision environment variables. Both were fixed in the repository configuration, but a fresh deployment has not yet been established. Deployment metadata has also reported project framework `vite`, while the repository contract targets the `packages/web` Next.js static export; this remains an external project-setting verification item.
+
+## Current Vercel state
+
+The connected Vercel project is `orbit-marketing-os`. The repository configuration is now explicitly Next.js static export with `packages/web/out` and a versioned first-deployment-safe ignore script. A fresh successful deployment is still required before release.
