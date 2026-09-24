@@ -47,6 +47,47 @@ describe("offline license verification", () => {
   });
 
 
+  it("verifies a non-expiring lifetime license", async () => {
+    const keyPair = (await crypto.subtle.generateKey(
+      { name: "Ed25519" },
+      true,
+      ["sign", "verify"],
+    )) as CryptoKeyPair;
+
+    const payload = {
+      licenseId: "lic-lifetime",
+      plan: "lifetime" as const,
+      subject: "customer-1",
+      issuedAt: "2026-09-24T00:00:00.000Z",
+      maxDevices: 2,
+      accountLimit: 15,
+      features: ["analytics"],
+    };
+
+    const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
+    const canonical = new TextEncoder().encode(JSON.stringify({
+      licenseId: payload.licenseId,
+      plan: payload.plan,
+      subject: payload.subject,
+      issuedAt: payload.issuedAt,
+      expiresAt: null,
+      maxDevices: payload.maxDevices,
+      accountLimit: payload.accountLimit,
+      features: [...payload.features],
+    }));
+    const signature = new Uint8Array(await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical));
+    const token = createLicenseToken(payload, signature);
+
+    const result = await verifyLicenseToken(token, publicKey, {
+      deviceCount: 1,
+      accountCount: 10,
+      now: new Date("2036-01-01T00:00:00.000Z"),
+    });
+
+    expect(result).toMatchObject({ valid: true, reason: "valid" });
+    expect(result.payload?.expiresAt).toBeUndefined();
+  });
+
   it("rejects a license whose expiry precedes issuance", async () => {
     const keyPair = (await crypto.subtle.generateKey(
       { name: "Ed25519" },
