@@ -25,8 +25,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Require committed lockfile
+        run: test -f pnpm-lock.yaml
       - name: Install workspace
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Workspace sanity
         run: pnpm verify:workspace
       - name: Web typecheck
@@ -74,7 +76,7 @@ jobs:
 
       - name: Install
         if: steps.gate.outputs.enabled == 'true'
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Pull Vercel project settings
         if: steps.gate.outputs.enabled == 'true'
