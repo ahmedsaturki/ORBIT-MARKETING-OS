@@ -1234,6 +1234,28 @@ fn require_local_user_actor(connection: &Connection, actor: &str) -> Result<(), 
     Ok(())
 }
 
+fn require_active_workspace_reviewers(
+    connection: &Connection,
+    workspace_id: &str,
+    reviewer_ids: &[String],
+) -> Result<(), AppError> {
+    for reviewer_id in reviewer_ids {
+        let active: bool = connection.query_row(
+            "SELECT EXISTS(
+               SELECT 1
+               FROM workspace_memberships
+               WHERE workspace_id=?1 AND user_id=?2 AND active=1
+             )",
+            params![workspace_id, reviewer_id],
+            |row| row.get(0),
+        )?;
+        if !active {
+            return Err(AppError::Unauthorized);
+        }
+    }
+    Ok(())
+}
+
 fn require_workspace_role(
     connection: &Connection,
     required_roles: &[&str],
@@ -3118,6 +3140,8 @@ fn approval_request(
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
     require_local_user_actor(&connection, &requested_by).map_err(|error| error.to_string())?;
+    require_active_workspace_reviewers(&connection, &workspace_id, &reviewer_ids)
+        .map_err(|error| error.to_string())?;
     let exists: bool = connection
         .query_row(
             "SELECT EXISTS(
@@ -4698,6 +4722,47 @@ mod tests {
         assert_eq!(retry_delay_ms(2), 2_000);
         assert_eq!(retry_delay_ms(7), 60_000);
         assert_eq!(retry_delay_ms(30), 60_000);
+    }
+
+    #[test]
+    fn approval_reviewers_must_be_active_workspace_members() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(
+                "CREATE TABLE workspace_memberships(
+                   workspace_id TEXT NOT NULL,
+                   user_id TEXT NOT NULL,
+                   active INTEGER NOT NULL
+                 );
+                 INSERT INTO workspace_memberships(workspace_id, user_id, active)
+                 VALUES ('workspace-1', 'reviewer-1', 1),
+                        ('workspace-1', 'reviewer-2', 0);",
+            )
+            .expect("membership fixture should be created");
+
+        assert!(require_active_workspace_reviewers(
+            &connection,
+            "workspace-1",
+            &["reviewer-1".to_string()],
+        )
+        .is_ok());
+
+        assert!(matches!(
+            require_active_workspace_reviewers(
+                &connection,
+                "workspace-1",
+                &["reviewer-2".to_string()],
+            ),
+            Err(AppError::Unauthorized)
+        ));
+        assert!(matches!(
+            require_active_workspace_reviewers(
+                &connection,
+                "workspace-1",
+                &["external-user".to_string()],
+            ),
+            Err(AppError::Unauthorized)
+        ));
     }
 
     #[test]
