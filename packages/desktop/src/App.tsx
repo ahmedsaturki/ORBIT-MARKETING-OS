@@ -1044,9 +1044,24 @@ export function App(): ReactElement {
   };
 
   useEffect(() => {
-    void checkHealth();
-    void loadAudit();
-    void loadLicense();
+    let cancelled = false;
+
+    const initialize = async (): Promise<void> => {
+      await checkHealth();
+      if (cancelled) return;
+      await loadAudit();
+      if (cancelled) return;
+      await loadLicense();
+    };
+
+    void initialize().catch((caught: unknown) => {
+      if (cancelled) return;
+      setError(caught instanceof Error ? caught.message : "فشل تهيئة تطبيق ORBIT");
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
