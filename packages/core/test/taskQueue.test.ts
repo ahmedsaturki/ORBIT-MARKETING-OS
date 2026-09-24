@@ -112,6 +112,24 @@ describe("TaskQueue", () => {
     expect(deferred.attempts).toBe(0);
   });
 
+  it("does not expose mutable internal task state", () => {
+    const instance = queue();
+    const input = { ...baseTask };
+    instance.enqueue(input);
+
+    input.status = "running";
+    const firstRead = instance.get("task-1");
+    expect(firstRead?.status).toBe("pending");
+
+    if (firstRead) firstRead.status = "failed";
+    expect(instance.get("task-1")?.status).toBe("pending");
+
+    const snapshot = instance.snapshot();
+    const snapshotTask = snapshot[0];
+    if (snapshotTask) snapshotTask.status = "failed";
+    expect(instance.get("task-1")?.status).toBe("pending");
+  });
+
   it("rejects duplicate task identifiers", () => {
     const instance = queue();
     instance.enqueue(baseTask);
