@@ -45,7 +45,7 @@ Latest observed hosted GitHub Actions CI on the rebuild line:
 
 The current execution environment cannot generate a reproducible lockfile because pnpm is not installed and the npm registry is unreachable. No fake lockfile is committed.
 
-The connected Vercel project has no verified successful deployment. Automatic Git builds are disabled repository-side; the historical concrete ERROR deployment failed during the install script because the lockfile was absent.
+The connected Vercel project has a verified READY production deployment, but it is the legacy `main` Vite surface, not this rebuild. A fresh successful rebuild deployment remains unverified.
 
 ## Remaining release gates
 
