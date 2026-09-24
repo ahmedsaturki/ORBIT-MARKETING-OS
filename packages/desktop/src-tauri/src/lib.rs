@@ -1118,6 +1118,52 @@ fn create_integrity_triggers(connection: &Connection) -> Result<(), AppError> {
     Ok(())
 }
 
+fn recover_interrupted_tasks(connection: &Connection) -> Result<usize, AppError> {
+    let interrupted: Vec<(String, String, String)> = {
+        let mut statement = connection.prepare(
+            "SELECT id, workspace_id, kind
+             FROM tasks
+             WHERE status='running'
+             ORDER BY rowid ASC",
+        )?;
+        let rows = statement.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        })?;
+        rows.collect::<Result<Vec<_>, _>>()?
+    };
+
+    for (task_id, workspace_id, kind) in &interrupted {
+        let next_status = if kind == "sync" {
+            "pending"
+        } else {
+            "awaiting_user_action"
+        };
+
+        connection.execute(
+            "UPDATE tasks
+             SET status=?1
+             WHERE id=?2 AND workspace_id=?3 AND status='running'",
+            params![next_status, task_id, workspace_id],
+        )?;
+
+        write_audit_for_workspace(
+            connection,
+            workspace_id,
+            "task",
+            "startup_recovery",
+            "success",
+            "system",
+            Some(task_id),
+        )?;
+    }
+
+    Ok(interrupted.len())
+}
+
 fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> {
     for name in ["orbit.restore.sqlite3", "backups/orbit-backup-source.sqlite3"] {
         let path = app_data.join(name);
@@ -1231,6 +1277,7 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     migrate_schema(&connection)?;
     create_integrity_triggers(&connection)?;
     ensure_workspace_context(&connection)?;
+    recover_interrupted_tasks(&connection)?;
     cleanup_stale_temporary_artifacts(&app_data)?;
     Ok(connection)
 }
@@ -5415,6 +5462,71 @@ mod tests {
             [],
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn interrupted_external_tasks_require_human_recovery_but_sync_tasks_requeue() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection.execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection)
+            .expect("schema migration should succeed");
+
+        connection.execute_batch(
+            "INSERT INTO workspaces(id, name, created_at)
+             VALUES ('workspace-1', 'Workspace', '1');
+             INSERT INTO accounts(
+               id, workspace_id, platform, display_name, status, created_at, updated_at
+             ) VALUES
+               ('account-1', 'workspace-1', 'telegram', 'Telegram', 'connected', '1', '1');
+             INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+             VALUES ('campaign-1', 'workspace-1', 'Campaign', 'scheduled', '1');
+             INSERT INTO tasks(
+               id, workspace_id, campaign_id, account_id, platform, kind,
+               status, available_at, idempotency_key, created_at
+             ) VALUES
+               ('task-sync', 'workspace-1', 'campaign-1', 'account-1', 'telegram', 'sync',
+                'running', '2026-01-01T00:00:00Z', 'recovery-sync', '2026-01-01T00:00:00Z'),
+               ('task-publish', 'workspace-1', 'campaign-1', 'account-1', 'telegram', 'publish',
+                'running', '2026-01-01T00:00:00Z', 'recovery-publish', '2026-01-01T00:00:00Z');"
+        ).expect("interrupted task fixtures should be inserted");
+
+        let recovered = recover_interrupted_tasks(&connection)
+            .expect("interrupted tasks should recover");
+        assert_eq!(recovered, 2);
+
+        let statuses: Vec<(String, String)> = connection
+            .prepare(
+                "SELECT id, status
+                 FROM tasks
+                 WHERE workspace_id='workspace-1'
+                 ORDER BY id ASC",
+            )
+            .expect("status query should prepare")
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .expect("status query should execute")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("status rows should decode");
+
+        assert_eq!(
+            statuses,
+            vec![
+                ("task-publish".to_string(), "awaiting_user_action".to_string()),
+                ("task-sync".to_string(), "pending".to_string()),
+            ]
+        );
+
+        let audit_count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*)
+                 FROM audit_events
+                 WHERE workspace_id='workspace-1' AND action='startup_recovery'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("recovery audit count should be readable");
+        assert_eq!(audit_count, 2);
     }
 
     #[test]
