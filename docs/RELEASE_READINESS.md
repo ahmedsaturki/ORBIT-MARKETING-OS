@@ -14,6 +14,14 @@ The active implementation branch is `rebuild/orbit-production`. PR #2 remains in
 - Expo SDK 57 / React Native 0.86 mobile monitoring surface with configuration smoke tests;
 - guarded CI and release-gate documentation.
 
+## Newly implemented hardening
+
+- Desktop workspace context is persisted locally and scoped through a workspace membership table.
+- Sensitive Desktop IPC commands now enforce the local workspace role before mutating or revealing protected data.
+- Encrypted vault records are workspace-scoped with a composite workspace-and-label key and migration support.
+- Audit writes use serialized SQLite transactions to preserve the tamper-evident hash chain under concurrent commands.
+- The repository root legacy UI is now a safe compatibility shell, preventing the old prototype from being mistaken for the production surface.
+
 ## Evidence still required
 
 The following remain `UNVERIFIED` until executed in a clean environment:
@@ -21,7 +29,7 @@ The following remain `UNVERIFIED` until executed in a clean environment:
 - reproducible clean checkout install and lockfile generation/validation;
 - full TypeScript typecheck, lint, tests, build, and format check;
 - Rust fmt, check, test, and clippy against the Tauri runtime;
-- native SQLite migration/restart/crash-recovery integration;
+- native SQLite migration/restart/crash-recovery integration, including v8 workspace-scoped vault migration;
 - persistent queue recovery and idempotency tests through the actual desktop runtime;
 - controlled connector fixtures plus real user-authorized integrations; see `docs/CONNECTOR_MATRIX.md` for the evidence boundary.
 - challenge/authentication stop and human-intervention flows;
