@@ -1,0 +1,25 @@
+name: Runner Probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    if: github.ref_name == 'rebuild/orbit-production'
+    runs-on: [self-hosted, x64]
+    timeout-minutes: 5
+    steps:
+      - name: Report runner identity
+        shell: pwsh
+        run: |
+          Write-Host "Runner probe reached an owned self-hosted runner."
+          Write-Host "OS: $([System.Environment]::OSVersion.VersionString)"
+          Write-Host "Machine: $env:COMPUTERNAME"
+          node --version
+          pnpm --version
+          rustc --version
+          cargo --version
+          git --version
