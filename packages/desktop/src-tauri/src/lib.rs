@@ -701,13 +701,18 @@ fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> 
     }
 }
 
-fn write_private_file(path: &PathBuf, contents: &str) -> Result<(), AppError> {
-    fs::write(path, contents)?;
+fn restrict_private_file(path: &PathBuf) -> Result<(), AppError> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
     }
+    Ok(())
+}
+
+fn write_private_file(path: &PathBuf, contents: &str) -> Result<(), AppError> {
+    fs::write(path, contents)?;
+    restrict_private_file(path)?;
     Ok(())
 }
 
@@ -2501,6 +2506,7 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
         .execute("VACUUM INTO ?1", params![temp_path.to_string_lossy().to_string()])
         .map_err(|error| error.to_string())?;
     drop(connection);
+    restrict_private_file(&temp_path).map_err(|error| error.to_string())?;
 
     let bytes = fs::read(&temp_path).map_err(|error| error.to_string())?;
     fs::remove_file(&temp_path).map_err(|error| error.to_string())?;
@@ -2565,6 +2571,7 @@ fn backup_restore(
     let previous = app_data.join("orbit.previous.sqlite3");
 
     fs::write(&temporary, database_bytes).map_err(|error| error.to_string())?;
+    restrict_private_file(&temporary).map_err(|error| error.to_string())?;
 
     let integrity_connection = Connection::open(&temporary)
         .map_err(|error| error.to_string())?;
@@ -2619,6 +2626,7 @@ fn backup_restore(
         fs::remove_file(&previous).map_err(|error| error.to_string())?;
     }
 
+    restrict_private_file(&target).map_err(|error| error.to_string())?;
     let audit_connection = open_db(&app).map_err(|error| error.to_string())?;
     write_audit(
         &audit_connection,
