@@ -1,16 +1,17 @@
 # ORBIT Current Verification Snapshot — 2026-09-24
 
-Source implementation head at snapshot: "5b7c81ffa879ffeca7c42966ce9a1ffdfbef2827"
+Source implementation head at snapshot: "8904f23766b502525bbcb7d3dee825687ff914f0"
 
 ## Live repository state
 
 - Active branch: `rebuild/orbit-production-consolidated`
 - PR #9: open, draft, unmerged
-- Latest hosted CI run: `36053293828`
-- Latest CI result: job failed before any workflow steps executed; the consolidation branch continues to reproduce runner allocation failure
-- Latest CI conclusion: `failure`
-- Runner metadata: `runner_id=0`, runner name empty
-- Workflow steps registered: none
+- Latest hosted CI run: `36055292748`
+- Latest hosted CI result: job failed before any workflow steps executed; no usable runner step evidence
+- Active self-hosted verification run: `36055285400`
+- Self-hosted job: `107820579765`
+- Self-hosted status: queued for an eligible runner
+- Workflow steps registered: none yet
 - Interpretation: runner allocation/execution infrastructure failure; no TypeScript/Rust/test result is implied.
 
 ## Local execution environment
