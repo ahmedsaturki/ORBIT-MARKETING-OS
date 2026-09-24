@@ -6,13 +6,13 @@ Updated: 2026-09-24
 
 Current rebuild HEAD at the latest source revision:
 
-`c9ab91fefa8f2a205c67d6da0721ba258a4c7322`
+`badba95f247acc60e6234a85466ee5c9059b3652`
 
 The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
 
 Latest observed hosted-runner behavior:
 
-- The newest observed CI run (`36049705206`) has two jobs; both fail before step registration with `runner_id=0`, empty runner name, and no step records.
+- The newest observed CI run (`36050298475`) has two jobs; both fail before step registration with `runner_id=0`, empty runner name, and no step records.
 - Multiple consecutive runs show the same pre-execution signature.
 
 A deliberately minimal runner probe was also tested earlier and failed before any workflow step executed. It was removed after diagnosis.
