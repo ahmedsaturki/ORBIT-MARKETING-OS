@@ -114,6 +114,12 @@ for (const path of rustSourcePaths) {
 }
 
 const rust = rustSources.map((entry) => entry.content).join("\n");
+
+const duplicateDerivePattern = /#\[derive\(([^\n]+)\)\]\s*#\[derive\(\1\)\]/;
+if (duplicateDerivePattern.test(rust)) {
+  throw new Error("Duplicate consecutive Rust derive attribute detected");
+}
+
 const rustFunctions = [];
 for (const entry of rustSources) {
   rustFunctions.push(
