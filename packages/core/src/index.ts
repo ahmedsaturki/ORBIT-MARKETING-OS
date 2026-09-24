@@ -10,3 +10,4 @@ export * from "./security/index.js";
 export * from "./content/variants.js";
 export * from "./media/index.js";
 export * from "./inbox/index.js";
+export * from "./sync/index.js";
