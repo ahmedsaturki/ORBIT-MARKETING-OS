@@ -12,6 +12,10 @@ export interface QueueStats {
   readonly cancelled: number;
 }
 
+function cloneTask(task: Task): Task {
+  return structuredClone(task);
+}
+
 export interface TaskQueueOptions {
   readonly retryPolicy: RetryPolicy;
 }
@@ -37,13 +41,15 @@ export class TaskQueue {
     if (this.idempotencyKeys.has(task.idempotencyKey)) {
       throw new Error("Task idempotency key already exists: " + task.idempotencyKey);
     }
-    this.tasks.set(task.id, task);
+    const stored = cloneTask(task);
+    this.tasks.set(task.id, stored);
     this.idempotencyKeys.add(task.idempotencyKey);
   }
 
   /** Returns a task without mutating queue state. */
   public get(id: string): Task | undefined {
-    return this.tasks.get(id);
+    const task = this.tasks.get(id);
+    return task ? cloneTask(task) : undefined;
   }
 
   /** Claims the highest-priority eligible task and atomically marks it running. */
@@ -56,8 +62,8 @@ export class TaskQueue {
     if (!task) return undefined;
 
     const claimed: Task = { ...task, status: "running" };
-    this.tasks.set(claimed.id, claimed);
-    return claimed;
+    this.tasks.set(claimed.id, cloneTask(claimed));
+    return cloneTask(claimed);
   }
 
   /** Marks a running task successful. */
@@ -151,7 +157,7 @@ export class TaskQueue {
 
   /** Returns a point-in-time copy of current queue tasks. */
   public snapshot(): readonly Task[] {
-    return [...this.tasks.values()];
+    return [...this.tasks.values()].map(cloneTask);
   }
 
   private transition(id: string, status: Task["status"]): Task {
@@ -169,8 +175,9 @@ export class TaskQueue {
   }
 
   private setTask(task: Task): Task {
-    this.tasks.set(task.id, task);
-    return task;
+    const stored = cloneTask(task);
+    this.tasks.set(stored.id, stored);
+    return cloneTask(stored);
   }
 
   private validateTask(task: Task): void {
