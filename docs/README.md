@@ -7,10 +7,18 @@
 - [Launch plan](LAUNCH_PLAN.md)
 - [API](API.md)
 - [User guide](USER_GUIDE.md)
+- [Operations Runbook](OPERATIONS_RUNBOOK.md)
 - [EULA](EULA.md)
 - [Refund policy](REFUND_POLICY.md)
-
-- [Operations Runbook](./OPERATIONS_RUNBOOK.md)
-
-- [Launch Scorecard](./LAUNCH_SCORECARD.md)
-\n- [Connector matrix](./CONNECTOR_MATRIX.md)\n- [Distribution](./DISTRIBUTION.md)\n- [Launch scorecard](./LAUNCH_SCORECARD.md)\n- [Zero-cost self-hosted verification](./SELF_HOSTED_VERIFICATION.md)\n- [Verification blockers](./VERIFICATION_BLOCKERS.md)\n
+- [Licensing](LICENSING.md)
+- [Security threat model](SECURITY_THREAT_MODEL.md)
+- [Acceptance matrix](ACCEPTANCE_MATRIX_V2.md)
+- [Connector matrix](CONNECTOR_MATRIX.md)
+- [Product surface matrix](PRODUCT_SURFACE_MATRIX.md)
+- [Distribution](DISTRIBUTION.md)
+- [Launch scorecard](LAUNCH_SCORECARD.md)
+- [Release scorecard](RELEASE_SCORECARD.md)
+- [Release gates](RELEASE_GATES.md)
+- [Zero-cost self-hosted verification](SELF_HOSTED_VERIFICATION.md)
+- [Verification blockers](VERIFICATION_BLOCKERS.md)
+- [Final external actions](FINAL_EXTERNAL_ACTIONS.md)
