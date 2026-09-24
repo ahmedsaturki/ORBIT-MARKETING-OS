@@ -1118,6 +1118,8 @@ fn create_integrity_triggers(connection: &Connection) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Reconcile tasks left in "running" state by the previous application process.
+/// This must run once during application startup, not from every SQLite connection opener.
 fn recover_interrupted_tasks(connection: &Connection) -> Result<usize, AppError> {
     let interrupted: Vec<(String, String, String)> = {
         let mut statement = connection.prepare(
@@ -1277,7 +1279,6 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     migrate_schema(&connection)?;
     create_integrity_triggers(&connection)?;
     ensure_workspace_context(&connection)?;
-    recover_interrupted_tasks(&connection)?;
     cleanup_stale_temporary_artifacts(&app_data)?;
     Ok(connection)
 }
@@ -6318,6 +6319,11 @@ mod execution_counter_tests {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let result = tauri::Builder::default()
+        .setup(|app| {
+            let connection = open_db(app).map_err(|error| Box::<dyn std::error::Error>::from(error))?;
+            recover_interrupted_tasks(&connection).map_err(|error| Box::<dyn std::error::Error>::from(error))?;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             app_health,
             workspace_list,
