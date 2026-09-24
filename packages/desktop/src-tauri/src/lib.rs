@@ -907,7 +907,7 @@ fn task_set_status(
 
     let valid_transition = match current.as_str() {
         "pending" => matches!(status.as_str(), "blocked" | "cancelled"),
-        "running" => matches!(status.as_str(), "succeeded" | "failed" | "blocked" | "cancelled"),
+        "running" => matches!(status.as_str(), "succeeded" | "blocked" | "cancelled"),
         "succeeded" | "failed" | "blocked" | "cancelled" => false,
         _ => false,
     };
@@ -930,6 +930,101 @@ fn task_set_status(
 
     Ok(changed > 0)
 }
+fn retry_delay_ms(next_attempt: i64) -> i64 {
+    if next_attempt < 1 {
+        return 1_000;
+    }
+
+    let mut delay = 1_000i64;
+    for _ in 1..next_attempt.min(7) {
+        delay = delay.saturating_mul(2);
+    }
+    delay.min(60_000)
+}
+
+#[tauri::command]
+fn task_fail(
+    app: tauri::AppHandle,
+    id: String,
+    now: String,
+) -> Result<TaskView, String> {
+    let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
+    if now.trim().is_empty() {
+        return Err("invalid failure timestamp".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let current: Option<(i64, i64, String, String, String, i64, i64, String, String, String)> = connection
+        .query_row(
+            "SELECT attempts, max_attempts, campaign_id, account_id, platform, priority, status,
+                    idempotency_key, available_at, created_at
+             FROM tasks
+             WHERE id=?1 AND workspace_id=?2",
+            params![&entity_id, DEFAULT_WORKSPACE_ID],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                    row.get(7)?,
+                    row.get(8)?,
+                    row.get(9)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+
+    let Some((attempts, max_attempts, campaign_id, account_id, platform, priority, status, idempotency_key, available_at, created_at)) = current else {
+        return Err(AppError::NotFound.to_string());
+    };
+
+    if status != "running" {
+        return Err("only running tasks can fail".to_string());
+    }
+
+    let next_attempt = attempts + 1;
+    let terminal = next_attempt >= max_attempts;
+    let (next_status, next_available) = if terminal {
+        ("failed".to_string(), available_at)
+    } else {
+        let delay = retry_delay_ms(next_attempt);
+        let base_ms = now.parse::<i64>().map_err(|_| "failure timestamp must be milliseconds".to_string())?;
+        (("pending").to_string(), (base_ms + delay).to_string())
+    };
+
+    connection
+        .execute(
+            "UPDATE tasks
+             SET status=?1, attempts=?2, available_at=?3
+             WHERE id=?4 AND workspace_id=?5 AND status='running'",
+            params![next_status, next_attempt, next_available, &entity_id, DEFAULT_WORKSPACE_ID],
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit(&connection, "task", "failure", if terminal { "failure" } else { "success" }, "system", Some(&entity_id))
+        .map_err(|error| error.to_string())?;
+
+    Ok(TaskView {
+        id: entity_id,
+        campaign_id,
+        account_id,
+        platform,
+        kind: "unknown".to_string(),
+        priority,
+        status: next_status,
+        attempts: next_attempt,
+        max_attempts,
+        idempotency_key,
+        available_at: next_available,
+        created_at,
+    })
+}
+
 #[tauri::command]
 fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<TaskView>, String> {
     let connection = open_db(&app).map_err(|error| error.to_string())?;
@@ -1614,6 +1709,14 @@ mod tests {
     }
 
     #[test]
+    fn retry_backoff_is_bounded() {
+        assert_eq!(retry_delay_ms(1), 1_000);
+        assert_eq!(retry_delay_ms(2), 2_000);
+        assert_eq!(retry_delay_ms(7), 60_000);
+        assert_eq!(retry_delay_ms(30), 60_000);
+    }
+
+    #[test]
     fn pending_tasks_cannot_be_started_by_manual_status_override() {
         let current = "pending";
         let requested = "running";
@@ -1833,6 +1936,7 @@ pub fn run() {
             campaign_list,
             task_enqueue,
             task_claim_next,
+            task_fail,
             task_set_status,
             task_list,
             contact_upsert,
