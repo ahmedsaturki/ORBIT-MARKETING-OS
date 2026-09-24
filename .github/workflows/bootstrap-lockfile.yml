@@ -38,15 +38,5 @@ jobs:
       - name: Verify reproducible lockfiles
         run: node -e "const fs=require('node:fs'); for (const p of ['pnpm-lock.yaml','packages/desktop/src-tauri/Cargo.lock']) { const s=fs.statSync(p); if(!s.isFile() || s.size===0) process.exit(1); }"
 
-      - name: Commit lockfile to rebuild branch
-        shell: bash
-        run: |
-          git config user.name "ORBIT Automation"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml packages/desktop/src-tauri/Cargo.lock
-          git diff --cached --quiet && {
-            echo "Lockfile already current."
-            exit 0
-          }
-          git commit -m "chore(ci): bootstrap pnpm lockfile"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Commit lockfiles to rebuild branch
+        run: node scripts/commit-lockfiles.mjs
