@@ -32,6 +32,16 @@ describe("analytics primitives", () => {
     expect(metrics.failed).toBe(0);
   });
 
+  it("sorts metric points by instant rather than timestamp text", () => {
+    const series = buildMetricSeries([
+      { timestamp: "2026-09-24T03:00:00+03:00", value: 3 },
+      { timestamp: "2026-09-24T00:30:00Z", value: 2 },
+      { timestamp: "2026-09-24T01:00:00Z", value: 4 },
+    ]);
+
+    expect(series.map((point) => point.value)).toEqual([2, 3, 4]);
+  });
+
   it("sorts and filters metric points deterministically", () => {
     const series = buildMetricSeries([
       { timestamp: "2026-09-24T03:00:00.000Z", value: 3 },
