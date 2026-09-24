@@ -885,8 +885,11 @@ fn contact_upsert(
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     connection
         .execute(
-            "INSERT INTO contacts(id, display_name, phone, email, source_platform, status, notes, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+            "INSERT INTO contacts(
+               id, workspace_id, display_name, phone, email, source_platform,
+               status, notes, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
              ON CONFLICT(id) DO UPDATE SET
                display_name=excluded.display_name,
                phone=excluded.phone,
@@ -895,7 +898,17 @@ fn contact_upsert(
                status=excluded.status,
                notes=excluded.notes,
                updated_at=excluded.updated_at",
-            params![id, display_name, phone, email, source_platform, status, notes, timestamp],
+            params![
+                id,
+                DEFAULT_WORKSPACE_ID,
+                display_name,
+                phone,
+                email,
+                source_platform,
+                status,
+                notes,
+                timestamp
+            ],
         )
         .map_err(|error| error.to_string())?;
 
@@ -922,13 +935,14 @@ fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<Con
         .prepare(
             "SELECT id, display_name, phone, email, source_platform, status, notes, updated_at
              FROM contacts
-             WHERE (?1 IS NULL OR display_name LIKE ?1 OR phone LIKE ?1 OR email LIKE ?1)
+             WHERE workspace_id=?1
+               AND (?2 IS NULL OR display_name LIKE ?2 OR phone LIKE ?2 OR email LIKE ?2)
              ORDER BY updated_at DESC",
         )
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![pattern], |row| {
+        .query_map(params![DEFAULT_WORKSPACE_ID, pattern], |row| {
             Ok(ContactView {
                 id: row.get(0)?,
                 display_name: row.get(1)?,
