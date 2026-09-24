@@ -38,6 +38,8 @@ async function assertFile(path) {
 
 for (const file of requiredFiles) await assertFile(file);
 
+await assertFile("pnpm-lock.yaml");
+
 const rootPackage = await readJson("package.json");
 if (rootPackage.packageManager !== "pnpm@10.17.1") {
   throw new Error("Expected root packageManager pnpm@10.17.1");
