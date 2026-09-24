@@ -140,6 +140,31 @@ export async function executeClaimedTask(
     throw new Error("Only claimed running tasks may be executed.");
   }
 
+  if (!dependencies.queue.tryBeginExecution(task.id)) {
+    audit(dependencies.audit, task, "blocked", "execution.already_in_progress", {
+      message: "Task execution is already in progress in this runtime.",
+    });
+    return {
+      status: "blocked",
+      taskId: task.id,
+      reason: "already_executing",
+      message: "Task execution is already in progress in this runtime.",
+    };
+  }
+
+  try {
+    return await executeClaimedTaskReserved(dependencies, task, userConfirmed, now);
+  } finally {
+    dependencies.queue.endExecution(task.id);
+  }
+}
+
+async function executeClaimedTaskReserved(
+  dependencies: TaskExecutorDependencies,
+  task: Task,
+  userConfirmed: boolean,
+  now: string,
+): Promise<TaskExecutionResult> {
   let context: ExecutionRunContext;
   try {
     context = await dependencies.loadContext(task);
