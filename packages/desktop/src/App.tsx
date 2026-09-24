@@ -51,6 +51,7 @@ interface TaskView {
   readonly status: string;
   readonly attempts: number;
   readonly max_attempts: number;
+  readonly idempotency_key: string;
   readonly available_at: string;
   readonly created_at: string;
 }
@@ -90,6 +91,11 @@ export function App(): ReactElement {
   const [campaignName, setCampaignName] = useState("");
   const [campaignAccountId, setCampaignAccountId] = useState("");
   const [tasks, setTasks] = useState<readonly TaskView[]>([]);
+  const [taskCampaignId, setTaskCampaignId] = useState("");
+  const [taskAccountId, setTaskAccountId] = useState("");
+  const [taskKind, setTaskKind] = useState("publish");
+  const [taskId, setTaskId] = useState("");
+  const [taskIdempotencyKey, setTaskIdempotencyKey] = useState("");
   const [contacts, setContacts] = useState<readonly ContactView[]>([]);
   const [contactId, setContactId] = useState("");
   const [contactName, setContactName] = useState("");
@@ -112,6 +118,49 @@ export function App(): ReactElement {
       setTasks(await callNative<TaskView[]>("task_list", {}));
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تحميل المهام");
+    }
+  };
+
+  const enqueueTask = async (): Promise<void> => {
+    if (!taskCampaignId || !taskAccountId) {
+      setError("اختر الحملة والحساب قبل إنشاء المهمة");
+      return;
+    }
+
+    const selectedAccount = accounts.find((account) => account.id === taskAccountId);
+    if (!selectedAccount) {
+      setError("الحساب المحدد غير موجود في مساحة العمل الحالية");
+      return;
+    }
+
+    try {
+      setError("");
+      await callNative<TaskView>("task_enqueue", {
+        id: taskId.trim() || "task-" + Date.now(),
+        campaign_id: taskCampaignId,
+        account_id: taskAccountId,
+        platform: selectedAccount.platform,
+        kind: taskKind,
+        priority: 10,
+        available_at: new Date().toISOString(),
+        max_attempts: 3,
+        idempotency_key: taskIdempotencyKey.trim() || null,
+      });
+      setTaskId("");
+      setTaskIdempotencyKey("");
+      await loadTasks();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل إضافة المهمة");
+    }
+  };
+
+  const claimNextTask = async (): Promise<void> => {
+    try {
+      setError("");
+      await callNative<TaskView | null>("task_claim_next", { now: new Date().toISOString() });
+      await loadTasks();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل سحب المهمة التالية");
     }
   };
 
@@ -212,7 +261,7 @@ export function App(): ReactElement {
       setBackupStatus("جاري فحص النسخة والاسترجاع...");
       await callNative<boolean>("backup_restore", { filename: selectedBackup, password });
       setBackupStatus("تم استرجاع النسخة بعد اجتياز integrity check.");
-      await loadAccounts();
+      await checkHealth();
     } catch (caught: unknown) {
       setBackupStatus(caught instanceof Error ? caught.message : "فشل استرجاع النسخة");
     }
@@ -391,12 +440,55 @@ export function App(): ReactElement {
         <div className="card">
           <h2>المهام</h2>
           <p>Queue native: pending / running / succeeded / failed / blocked / cancelled.</p>
+          <div className="vault-form">
+            <label>
+              الحملة
+              <select value={taskCampaignId} onChange={(event) => setTaskCampaignId(event.target.value)}>
+                <option value="">اختر حملة</option>
+                {campaigns.map((campaign) => (
+                  <option key={campaign.id} value={campaign.id}>{campaign.name} • {campaign.status}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              الحساب
+              <select value={taskAccountId} onChange={(event) => setTaskAccountId(event.target.value)}>
+                <option value="">اختر حساباً</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.display_name} • {account.platform}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              نوع المهمة
+              <select value={taskKind} onChange={(event) => setTaskKind(event.target.value)}>
+                <option value="publish">نشر</option>
+                <option value="message">رسالة</option>
+                <option value="comment">تعليق</option>
+                <option value="sync">مزامنة</option>
+                <option value="engage">تفاعل</option>
+              </select>
+            </label>
+            <label>
+              معرف المهمة (اختياري)
+              <input value={taskId} onChange={(event) => setTaskId(event.target.value)} placeholder="task-001" />
+            </label>
+            <label>
+              Idempotency Key (اختياري)
+              <input value={taskIdempotencyKey} onChange={(event) => setTaskIdempotencyKey(event.target.value)} />
+            </label>
+            <div className="actions">
+              <button className="button primary" type="button" onClick={() => void enqueueTask()}>إضافة للمحلية</button>
+              <button className="button secondary" type="button" onClick={() => void claimNextTask()}>سحب التالية</button>
+              <button className="button secondary" type="button" onClick={() => void loadTasks()}>تحديث</button>
+            </div>
+          </div>
           <div className="account-list">
             {tasks.slice(0, 10).map((task) => (
               <div className="account-row" key={task.id}>
                 <div>
                   <strong>{task.kind} • {task.platform}</strong>
-                  <div className="account-meta">{task.status} • {task.attempts}/{task.max_attempts} • أولوية {task.priority}</div>
+                  <div className="account-meta">{task.status} • {task.attempts}/{task.max_attempts} • أولوية {task.priority} • {task.idempotency_key}</div>
                 </div>
               </div>
             ))}
