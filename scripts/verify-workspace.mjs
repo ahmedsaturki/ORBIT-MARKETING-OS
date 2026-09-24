@@ -85,6 +85,7 @@ if (desktopApp.includes("اختبار خزنة محلية حقيقية") && !des
   throw new Error("Vault plaintext diagnostic must remain development-only");
 }
 
+await assertFile("scripts/verify-ipc.mjs");
 const desktopPackage = await readJson("packages/desktop/package.json");
 if (!desktopPackage.scripts?.build || !desktopPackage.scripts?.typecheck) {
   throw new Error("Desktop build/typecheck scripts are incomplete");
