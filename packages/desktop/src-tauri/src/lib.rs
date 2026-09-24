@@ -22,7 +22,7 @@ use zeroize::Zeroizing;
 
 const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
-const SCHEMA_VERSION: i64 = 7;
+const SCHEMA_VERSION: i64 = 8;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 
@@ -75,9 +75,11 @@ CREATE INDEX IF NOT EXISTS idx_workspace_memberships_user
   ON workspace_memberships(user_id, workspace_id, active);
 
 CREATE TABLE IF NOT EXISTS vault_records (
-  label TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default',
+  label TEXT NOT NULL,
   payload_json TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (workspace_id, label)
 );
 
 CREATE TABLE IF NOT EXISTS accounts (
@@ -648,7 +650,24 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         )?;
     }
 
-    connection.execute_batch("PRAGMA user_version = 7;")?;
+    if version < 8 {
+        connection.execute_batch(
+            "CREATE TABLE vault_records_v8 (
+               workspace_id TEXT NOT NULL DEFAULT 'default',
+               label TEXT NOT NULL,
+               payload_json TEXT NOT NULL,
+               updated_at TEXT NOT NULL,
+               PRIMARY KEY (workspace_id, label)
+             );
+             INSERT INTO vault_records_v8(workspace_id, label, payload_json, updated_at)
+             SELECT 'default', label, payload_json, updated_at
+             FROM vault_records;
+             DROP TABLE vault_records;
+             ALTER TABLE vault_records_v8 RENAME TO vault_records;",
+        )?;
+    }
+
+    connection.execute_batch("PRAGMA user_version = 8;")?;
 }
 
 fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> {
@@ -1235,10 +1254,10 @@ fn vault_put(
     let timestamp = chrono_like_timestamp();
     connection
         .execute(
-            "INSERT INTO vault_records(label, payload_json, updated_at)
-             VALUES (?1, ?2, ?3)
-             ON CONFLICT(label) DO UPDATE SET payload_json=excluded.payload_json, updated_at=excluded.updated_at",
-            params![label, payload_json, timestamp],
+            "INSERT INTO vault_records(workspace_id, label, payload_json, updated_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(workspace_id, label) DO UPDATE SET payload_json=excluded.payload_json, updated_at=excluded.updated_at",
+            params![active_workspace_id(), label, payload_json, timestamp],
         )
         .map_err(|error| error.to_string())?;
 
@@ -1258,8 +1277,8 @@ fn vault_get(app: tauri::AppHandle, label: String, password: String) -> Result<S
     require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let payload_json: String = connection
         .query_row(
-            "SELECT payload_json FROM vault_records WHERE label = ?1",
-            params![label],
+            "SELECT payload_json FROM vault_records WHERE workspace_id = ?1 AND label = ?2",
+            params![active_workspace_id(), label],
             |row| row.get(0),
         )
         .map_err(|error| match error {
@@ -1278,7 +1297,10 @@ fn vault_delete(app: tauri::AppHandle, label: String) -> Result<bool, String> {
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let changed = connection
-        .execute("DELETE FROM vault_records WHERE label = ?1", params![label])
+        .execute(
+            "DELETE FROM vault_records WHERE workspace_id = ?1 AND label = ?2",
+            params![active_workspace_id(), label],
+        )
         .map_err(|error| error.to_string())?;
     Ok(changed > 0)
 }
