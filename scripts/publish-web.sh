@@ -10,3 +10,5 @@ pnpm install --frozen-lockfile
 pnpm --filter @orbit/web typecheck
 pnpm --filter @orbit/web lint
 pnpm --filter @orbit/web build
+
+test -f packages/web/out/index.html
