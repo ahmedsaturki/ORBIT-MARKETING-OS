@@ -3292,10 +3292,9 @@ fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
 }
 
 fn chrono_like_timestamp() -> String {
-    match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-        Ok(duration) => duration.as_millis().to_string(),
-        Err(_) => "0".to_string(),
-    }
+    OffsetDateTime::now_utc()
+        .format(&Rfc3339)
+        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
 }
 
 #[cfg(test)]
