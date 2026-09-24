@@ -89,8 +89,11 @@ Content variants are workspace-scoped through their parent content item. Analyti
 ### Media and automation
 
 - `media_asset_upsert`
+- `media_asset_import`
+- `media_asset_delete`
 - `media_asset_list`
 - `automation_rule_pack_upsert`
+- `automation_rule_pack_set_enabled`
 - `automation_rule_pack_list`
 
 Media commands persist metadata only; local file bytes are not uploaded implicitly. Rule packs are schema-versioned JSON and external actions require confirmation.
