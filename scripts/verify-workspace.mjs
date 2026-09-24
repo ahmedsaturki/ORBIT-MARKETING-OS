@@ -207,6 +207,8 @@ const sensitiveDesktopCommands = {
   license_install: ["owner", "admin"],
   license_delete: ["owner", "admin"],
   telegram_execute_task: ["owner", "admin", "operator"],
+  media_asset_upsert: ["owner", "admin", "editor"],
+  automation_rule_pack_upsert: ["owner", "admin", "editor"],
 };
 
 const rustCommandPositions = [...rust.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)]
