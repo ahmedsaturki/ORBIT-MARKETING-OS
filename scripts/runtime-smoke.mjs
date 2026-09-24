@@ -129,6 +129,13 @@ try {
     throw new Error("official Tauri webview origin must be allowed by default");
   }
 
+  const tauriDevOriginHealth = await fetch(`http://127.0.0.1:${port}/api/health`, {
+    headers: { Origin: "http://127.0.0.1:1420" },
+  });
+  if (tauriDevOriginHealth.status !== 200) {
+    throw new Error("Tauri development origin must be allowed by default");
+  }
+
   const generation = await fetch(`http://127.0.0.1:${port}/api/generate-content`, {
     method: "POST",
     headers: { "content-type": "application/json" },
