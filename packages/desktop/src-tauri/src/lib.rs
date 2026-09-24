@@ -1110,10 +1110,13 @@ fn write_audit(
     entity_id: Option<&str>,
 ) -> Result<(), rusqlite::Error> {
     connection.execute(
-        "INSERT INTO audit_events(id, timestamp, category, action, outcome, actor, entity_id)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO audit_events(
+           id, workspace_id, timestamp, category, action, outcome, actor, entity_id
+         )
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
             uuid_like(),
+            DEFAULT_WORKSPACE_ID,
             chrono_like_timestamp(),
             category,
             action,
@@ -1145,15 +1148,26 @@ fn conversation_upsert(
     let timestamp = chrono_like_timestamp();
     connection
         .execute(
-            "INSERT INTO conversations(id, contact_id, platform, external_thread_id, status, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
+            "INSERT INTO conversations(
+               id, workspace_id, contact_id, platform, external_thread_id,
+               status, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
              ON CONFLICT(id) DO UPDATE SET
                contact_id=excluded.contact_id,
                platform=excluded.platform,
                external_thread_id=excluded.external_thread_id,
                status=excluded.status,
                updated_at=excluded.updated_at",
-            params![id, contact_id, platform, external_thread_id, status, timestamp],
+            params![
+                id,
+                DEFAULT_WORKSPACE_ID,
+                contact_id,
+                platform,
+                external_thread_id,
+                status,
+                timestamp
+            ],
         )
         .map_err(|error| error.to_string())?;
 
@@ -1225,13 +1239,14 @@ fn inbox_list(app: tauri::AppHandle) -> Result<Vec<ConversationView>, String> {
             "SELECT c.id, c.contact_id, c.platform, c.external_thread_id, c.status, COUNT(m.id), c.updated_at
              FROM conversations c
              LEFT JOIN messages m ON m.conversation_id=c.id
+             WHERE c.workspace_id=?1
              GROUP BY c.id
              ORDER BY c.updated_at DESC",
         )
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map([], |row| {
+        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
             Ok(ConversationView {
                 id: row.get(0)?,
                 contact_id: row.get(1)?,
@@ -1256,12 +1271,15 @@ fn message_list(
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
-            "SELECT id, conversation_id, direction, body, sent_at
-             FROM messages WHERE conversation_id=?1 ORDER BY sent_at ASC",
+            "SELECT m.id, m.conversation_id, m.direction, m.body, m.sent_at
+             FROM messages m
+             JOIN conversations c ON c.id=m.conversation_id
+             WHERE m.conversation_id=?1 AND c.workspace_id=?2
+             ORDER BY m.sent_at ASC",
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![conversation_id], |row| {
+        .query_map(params![conversation_id, DEFAULT_WORKSPACE_ID], |row| {
             Ok(MessageView {
                 id: row.get(0)?,
                 conversation_id: row.get(1)?,
@@ -1282,11 +1300,13 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
     let mut statement = connection
         .prepare(
             "SELECT id, timestamp, category, action, outcome, actor, entity_id, metadata_json
-             FROM audit_events ORDER BY timestamp DESC LIMIT ?1",
+             FROM audit_events
+             WHERE workspace_id=?1
+             ORDER BY timestamp DESC LIMIT ?2",
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![limit], |row| {
+        .query_map(params![DEFAULT_WORKSPACE_ID, limit], |row| {
             Ok(AuditView {
                 id: row.get(0)?,
                 timestamp: row.get(1)?,
@@ -1305,7 +1325,7 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
 
 fn chrono_like_timestamp() -> String {
     match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-        Ok(duration) => duration.as_secs().to_string(),
+        Ok(duration) => duration.as_millis().to_string(),
         Err(_) => "0".to_string(),
     }
 }
