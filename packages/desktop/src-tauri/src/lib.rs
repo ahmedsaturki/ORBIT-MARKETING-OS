@@ -1260,7 +1260,7 @@ fn ensure_workspace_context(connection: &Connection) -> Result<(), AppError> {
     connection.execute(
         "INSERT OR IGNORE INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
          VALUES (?1, ?2, 'owner', 1, ?3)",
-        params![DEFAULT_WORKSPACE_ID, DEFAULT_LOCAL_USER_ID, timestamp],
+        params![DEFAULT_WORKSPACE_ID, &local_user, timestamp],
     )?;
 
     set_active_workspace_id(&selected)?;
