@@ -50,3 +50,10 @@ The current environment used for source work cannot reach the npm registry, so a
 
 An ORBIT Vercel project/deployment is not currently verified, so no production web URL is claimed.
 
+
+
+## Licensing checkpoint
+
+Offline commercial licensing is now wired through the Desktop runtime. The application verifies Ed25519-signed tokens against an embedded public key, checks payload/date/account-limit constraints, stores the active token locally, and exposes install/status/remove controls. The private signing key is not stored in Git.
+
+Global multi-device seat counting remains intentionally unclaimed because the current product has no coordinating licensing service.
