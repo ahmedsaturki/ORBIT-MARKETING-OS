@@ -11,3 +11,7 @@ export * from "./security/index.js";
 export * from "./sync/index.js";
 export * from "./types/index.js";
 export * from "./workflows/index.js";
+export * from "./content/index.js";
+export * from "./media/index.js";
+export * from "./analytics/index.js";
+export * from "./automation/index.js";
