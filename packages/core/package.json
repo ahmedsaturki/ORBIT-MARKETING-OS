@@ -12,7 +12,8 @@
     "./policy": "./src/policy/index.ts",
     "./connectors": "./src/connectors/index.ts",
     "./audit": "./src/audit/index.ts",
-    "./types": "./src/types/index.ts"
+    "./types": "./src/types/index.ts",
+    "./data": "./src/data/index.ts"
   },
   "scripts": {
     "test": "vitest run",
