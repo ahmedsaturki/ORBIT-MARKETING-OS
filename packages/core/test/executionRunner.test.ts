@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ConnectorRegistry } from "../src/connectors/registry.js";
 import { FixtureConnector } from "../src/connectors/fixture.js";
 import { ExecutionRunner } from "../src/workflows/executionRunner.js";
-import type { Campaign, SocialAccount, Task } from "../src/types/index.js";
+import type { Campaign, ContentItem, SocialAccount, Task } from "../src/types/index.js";
 
 const account: SocialAccount = {
   id: "account-1",
@@ -23,6 +23,25 @@ const campaign: Campaign = {
   contentIds: ["content-1"],
   taskCount: 1,
   createdAt: "2026-09-24T00:00:00.000Z",
+};
+
+const content: ContentItem = {
+  id: "content-1",
+  workspaceId: "workspace-1",
+  title: "Approved",
+  body: "Hello",
+  platformVariants: {
+    facebook: "Hello",
+    instagram: undefined,
+    telegram: undefined,
+    whatsapp: undefined,
+    linkedin: undefined,
+    tiktok: undefined,
+  },
+  approvalStatus: "approved",
+  tags: [],
+  createdAt: "2026-09-24T00:00:00.000Z",
+  updatedAt: "2026-09-24T00:00:00.000Z",
 };
 
 const task: Task = {
@@ -70,7 +89,7 @@ describe("ExecutionRunner", () => {
     const result = await runner().run({
       account,
       campaign,
-      task: { ...task, status: "running" },
+      task: { ...task, status: "running", destinationId: "destination-1" },
       actionsToday: 0,
       dailyLimit: 10,
       consecutiveFailures: 0,
@@ -88,6 +107,7 @@ describe("ExecutionRunner", () => {
       account,
       campaign,
       task: { ...task, status: "running" },
+      content,
       approval: {
         id: "approval-1",
         workspaceId: "workspace-1",
