@@ -74,6 +74,8 @@ interface AuditView {
   readonly outcome: string;
   readonly actor: string;
   readonly entity_id?: string;
+  readonly previous_hash: string;
+  readonly hash: string;
 }
 
 interface MessageView {
@@ -131,6 +133,7 @@ export function App(): ReactElement {
   const [contactStatus, setContactStatus] = useState("new");
   const [contactNotes, setContactNotes] = useState("");
   const [auditEntries, setAuditEntries] = useState<readonly AuditView[]>([]);
+  const [auditIntegrity, setAuditIntegrity] = useState<"unknown" | "valid" | "invalid">("unknown");
 
   const loadCampaigns = async (): Promise<void> => {
     try {
@@ -196,6 +199,18 @@ export function App(): ReactElement {
       setAuditEntries(await callNative<AuditView[]>("audit_list", { limit: 25 }));
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تحميل سجل التدقيق");
+    }
+  };
+
+  const verifyAudit = async (): Promise<void> => {
+    try {
+      setError("");
+      const valid = await callNative<boolean>("audit_verify");
+      setAuditIntegrity(valid ? "valid" : "invalid");
+      await loadAudit();
+    } catch (caught: unknown) {
+      setAuditIntegrity("invalid");
+      setError(caught instanceof Error ? caught.message : "فشل التحقق من سلامة سجل التدقيق");
     }
   };
 
@@ -805,7 +820,13 @@ export function App(): ReactElement {
       <section className="card">
         <h2>سجل التدقيق</h2>
         <p>أحداث التشغيل المحلية تُحفظ دون أسرار أو قيم الجلسات الحساسة.</p>
-        <button className="button secondary" type="button" onClick={() => void loadAudit()}>تحديث السجل</button>
+        <div className="actions">
+          <button className="button secondary" type="button" onClick={() => void loadAudit()}>تحديث السجل</button>
+          <button className="button primary" type="button" onClick={() => void verifyAudit()}>تحقق من سلامة السجل</button>
+          <span className="account-meta">
+            الحالة: {auditIntegrity === "valid" ? "سليم" : auditIntegrity === "invalid" ? "يحتاج مراجعة" : "غير متحقق"}
+          </span>
+        </div>
         <div className="account-list">
           {auditEntries.slice(0, 25).map((entry) => (
             <div className="account-row" key={entry.id}>
