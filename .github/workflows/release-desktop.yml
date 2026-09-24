@@ -9,6 +9,33 @@ permissions:
   contents: write
 
 jobs:
+  quality:
+    name: Release quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Workspace sanity
+        run: pnpm verify:workspace
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Tests
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+      - name: Format check
+        run: pnpm format:check
+
   build:
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -75,7 +102,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [quality, build]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
