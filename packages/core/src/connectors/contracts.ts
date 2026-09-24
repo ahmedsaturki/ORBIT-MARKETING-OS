@@ -18,7 +18,8 @@ export type ConnectorOutcome =
         | "user_confirmation_required"
         | "platform_challenge"
         | "authorization_required"
-        | "platform_limit";
+        | "platform_limit"
+        | "delivery_status_unknown";
       readonly message: string;
     }
   | {
