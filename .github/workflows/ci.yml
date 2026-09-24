@@ -34,11 +34,14 @@ jobs:
           pnpm --version
           test "$(pnpm --version)" = "10.17.1"
 
-      - name: Workspace sanity
-        run: pnpm verify:workspace
-
       - name: Generate lockfile
         run: pnpm install --lockfile-only --ignore-scripts
+
+      - name: Require generated lockfile
+        run: test -f pnpm-lock.yaml
+
+      - name: Workspace sanity
+        run: pnpm verify:workspace
 
       - name: Reproducible install
         run: pnpm install --frozen-lockfile

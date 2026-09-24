@@ -3744,7 +3744,8 @@ mod tests {
         assert_eq!(membership.0, DEFAULT_LOCAL_USER_ID);
         assert_eq!(membership.1, "owner");
         assert_eq!(membership.2, 1);
-        assert_eq!(workspace_id, DEFAULT_WORKSPACE_ID);
+        assert_eq!(membership.0, DEFAULT_LOCAL_USER_ID);
+        assert_eq!(active_workspace_id(), DEFAULT_WORKSPACE_ID);
     }
 
     #[test]

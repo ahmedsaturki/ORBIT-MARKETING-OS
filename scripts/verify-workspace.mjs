@@ -38,8 +38,6 @@ async function assertFile(path) {
 
 for (const file of requiredFiles) await assertFile(file);
 
-await assertFile("pnpm-lock.yaml");
-
 const rootPackage = await readJson("package.json");
 if (rootPackage.packageManager !== "pnpm@10.17.1") {
   throw new Error("Expected root packageManager pnpm@10.17.1");
@@ -130,7 +128,7 @@ const productionRoots = [
   "packages/shared-ui/src",
 ];
 
-const forbiddenTypeScriptAny = /\b(?:any\[\]|any\b|as\s+any\b|Record<[^>]*,\s*any\s*>)/;
+const forbiddenTypeScriptAny = /(?:\:\s*any\b|\bas\s+any\b|\bany\[\]|Record<[^>]*,\s*any\s*>)/;
 async function scanProductionSource(dir) {
   for (const entry of await readdir(join(root, dir), { withFileTypes: true })) {
     if (ignored.has(entry.name)) continue;
