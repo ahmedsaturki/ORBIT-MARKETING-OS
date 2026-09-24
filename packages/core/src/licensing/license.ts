@@ -36,6 +36,12 @@ function validatePayload(payload: LicensePayload): void {
   if (payload.expiresAt !== undefined && (typeof payload.expiresAt !== "string" || Number.isNaN(Date.parse(payload.expiresAt)))) {
     throw new Error("Invalid license payload");
   }
+  if (
+    payload.expiresAt !== undefined &&
+    Date.parse(payload.expiresAt) < Date.parse(payload.issuedAt)
+  ) {
+    throw new Error("Invalid license payload");
+  }
   if (!isFiniteNonNegativeInteger(payload.maxDevices) || payload.maxDevices < 1) {
     throw new Error("Invalid license payload");
   }
