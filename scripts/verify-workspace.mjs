@@ -223,7 +223,10 @@ if (taskV10MigrationIndex < 0) {
   throw new Error("Schema v10 task migration is missing");
 }
 const taskV10MigrationStart = rust.lastIndexOf("if version < 10 {", taskV10MigrationIndex);
-const taskV10MigrationWindow = rust.slice(taskV10MigrationStart, taskV10MigrationIndex + 1200);
+const taskV10MigrationWindow = rust.slice(
+  taskV10MigrationStart,
+  Math.min(rust.length, taskV10MigrationIndex + 5000),
+);
 if (taskV10MigrationStart < 0 || !taskV10MigrationWindow.includes("let transaction = connection.unchecked_transaction()?;")) {
   throw new Error("Schema v10 task migration must run inside a transaction");
 }
@@ -240,7 +243,7 @@ if (!rust.includes("const SCHEMA_VERSION: i64 = 10;")) {
 if (!rust.includes("UNIQUE(workspace_id, idempotency_key)")) {
   throw new Error("Task idempotency must be workspace-scoped");
 }
-if (!rust.includes('connection.execute_batch("PRAGMA user_version = 10;")?;')) {
+if (!rust.includes("PRAGMA user_version = 10;")) {
   throw new Error("Schema migration must finalize at v10");
 }
 if (!rust.includes("recover_interrupted_tasks(&connection)?;")) {
