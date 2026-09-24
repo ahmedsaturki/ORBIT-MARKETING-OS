@@ -1040,6 +1040,13 @@ fn require_workspace_role(
     }
 }
 
+pub(crate) fn require_workspace_role_for_module(
+    connection: &Connection,
+    required_roles: &[&str],
+) -> Result<(), String> {
+    require_workspace_role(connection, required_roles).map_err(|error| error.to_string())
+}
+
 fn validate_label(label: &str) -> Result<String, AppError> {
     let value = label.trim();
     if value.is_empty() || value.len() > 200 {
