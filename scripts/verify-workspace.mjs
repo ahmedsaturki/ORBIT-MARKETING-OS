@@ -185,6 +185,9 @@ for (const command of Object.keys(sensitiveDesktopCommands)) {
   if (!segment.includes("require_workspace_role(") && !segment.includes("require_workspace_role_for(")) {
     throw new Error("Sensitive Tauri command is not role-gated: " + command);
   }
+  if (segment.includes("active_workspace_id()") && !segment.includes("let workspace_id = active_workspace_id();")) {
+    throw new Error("Sensitive Tauri command uses global workspace lookup without a local snapshot: " + command);
+  }
 }
 
 const webVercel = JSON.parse(await readFile(join(root, "packages/web/vercel.json"), "utf8"));
