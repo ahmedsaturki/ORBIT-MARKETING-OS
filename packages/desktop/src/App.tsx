@@ -100,6 +100,18 @@ interface TaskView {
   readonly created_at: string;
 }
 
+interface AnalyticsSummaryView {
+  readonly attempted: number;
+  readonly succeeded: number;
+  readonly failed: number;
+  readonly blocked: number;
+  readonly pending: number;
+  readonly running: number;
+  readonly completion_rate: number;
+  readonly success_rate: number;
+  readonly failure_rate: number;
+}
+
 interface AuditView {
   readonly id: string;
   readonly timestamp: string;
@@ -209,6 +221,7 @@ export function App(): ReactElement {
   const [contactStatus, setContactStatus] = useState("new");
   const [contactNotes, setContactNotes] = useState("");
   const [auditEntries, setAuditEntries] = useState<readonly AuditView[]>([]);
+  const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummaryView | null>(null);
   const [auditIntegrity, setAuditIntegrity] = useState<"unknown" | "valid" | "invalid">("unknown");
   const [license, setLicense] = useState<LicenseStatus | null>(null);
   const [licenseToken, setLicenseToken] = useState("");
@@ -513,6 +526,14 @@ export function App(): ReactElement {
     }
   };
 
+  const loadAnalytics = async (): Promise<void> => {
+    try {
+      setAnalyticsSummary(await callNative<AnalyticsSummaryView>("analytics_summary"));
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل التحليلات");
+    }
+  };
+
   const loadAudit = async (): Promise<void> => {
     try {
       setAuditEntries(await callNative<AuditView[]>("audit_list", { limit: 25 }));
@@ -722,6 +743,7 @@ export function App(): ReactElement {
       await loadApprovals();
       await loadContacts();
       await loadInbox();
+      await loadAnalytics();
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل فحص التطبيق المحلي");
     }
@@ -1511,6 +1533,48 @@ export function App(): ReactElement {
           </button>
         </div>
         {licenseMessage ? <div className="result">{licenseMessage}</div> : null}
+      </section>
+
+      <section className="card">
+        <h2>التحليلات التشغيلية</h2>
+        <p>الملخص محسوب من حالة المهام المحلية ضمن مساحة العمل الحالية.</p>
+        {analyticsSummary ? (
+          <div className="grid">
+            <div className="card">
+              <strong>المحاولات</strong>
+              <div className="price">{analyticsSummary.attempted}</div>
+            </div>
+            <div className="card">
+              <strong>نجح</strong>
+              <div className="price">{analyticsSummary.succeeded}</div>
+            </div>
+            <div className="card">
+              <strong>فشل</strong>
+              <div className="price">{analyticsSummary.failed}</div>
+            </div>
+            <div className="card">
+              <strong>محجوب</strong>
+              <div className="price">{analyticsSummary.blocked}</div>
+            </div>
+            <div className="card">
+              <strong>قيد الانتظار</strong>
+              <div className="price">{analyticsSummary.pending}</div>
+            </div>
+            <div className="card">
+              <strong>قيد التنفيذ</strong>
+              <div className="price">{analyticsSummary.running}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="result">لا تتوفر بيانات تحليلات بعد.</div>
+        )}
+        {analyticsSummary ? (
+          <div className="account-meta">
+            Completion: {(analyticsSummary.completion_rate * 100).toFixed(1)}% •
+            Success: {(analyticsSummary.success_rate * 100).toFixed(1)}% •
+            Failure: {(analyticsSummary.failure_rate * 100).toFixed(1)}%
+          </div>
+        ) : null}
       </section>
 
       <section className="card">
