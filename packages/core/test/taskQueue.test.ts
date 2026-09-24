@@ -125,8 +125,8 @@ describe("TaskQueue", () => {
     expect(instance.get("task-1")?.status).toBe("pending");
 
     const snapshot = instance.snapshot();
-    const snapshotTask = snapshot[0];
-    if (snapshotTask) snapshotTask.status = "failed";
+    const mutableSnapshot = snapshot as Task[];
+    if (mutableSnapshot[0]) mutableSnapshot[0].status = "failed";
     expect(instance.get("task-1")?.status).toBe("pending");
   });
 
