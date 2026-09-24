@@ -164,6 +164,9 @@ const sensitiveDesktopCommands = {
   task_set_status: ["owner", "admin", "operator"],
   content_upsert: ["owner", "admin", "editor"],
   approval_decide: ["owner", "admin", "reviewer"],
+  license_install: ["owner", "admin"],
+  license_delete: ["owner", "admin"],
+  telegram_execute_task: ["owner", "admin", "operator"],
 };
 
 const rustCommandPositions = [...rust.matchAll(/#\[tauri::command\]\s*(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)]
@@ -179,7 +182,7 @@ for (const command of Object.keys(sensitiveDesktopCommands)) {
     .sort((a, b) => a.index - b.index)[0]?.index ?? rust.length;
 
   const segment = rust.slice(current.index, next);
-  if (!segment.includes("require_workspace_role(")) {
+  if (!segment.includes("require_workspace_role(") && !segment.includes("require_workspace_role_for(")) {
     throw new Error("Sensitive Tauri command is not role-gated: " + command);
   }
 }
