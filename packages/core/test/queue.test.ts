@@ -65,11 +65,12 @@ describe("TaskQueue", () => {
     const queue = new TaskQueue({
       retryPolicy: { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 },
     });
-    queue.enqueue(task({ id: "one" }));
-    queue.enqueue(task({ id: "two" }));
+    queue.enqueue(task({ id: "one", priority: 1, idempotencyKey: "one" }));
+    queue.enqueue(task({ id: "two", priority: 9, idempotencyKey: "two" }));
 
     queue.claimNext("2026-09-24T10:00:00.000Z");
     queue.succeed("two");
+    queue.claimNext("2026-09-24T10:00:00.000Z");
     queue.block("one");
 
     expect(queue.stats()).toEqual({
