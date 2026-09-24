@@ -137,7 +137,7 @@ fn validate_payload(payload: &LicensePayload) -> Result<(), String> {
     Ok(())
 }
 
-fn decode_token(token: &str) -> Result<(LicensePayload, Signature), String> {
+fn decode_token(token: &str) -> Result<LicensePayload, String> {
     let mut parts = token.split('.');
     let payload_part = parts.next().ok_or_else(|| "invalid license token".to_string())?;
     let signature_part = parts.next().ok_or_else(|| "invalid license token".to_string())?;
@@ -172,7 +172,7 @@ fn decode_token(token: &str) -> Result<(LicensePayload, Signature), String> {
         .verify(&canonical, &signature)
         .map_err(|_| "license signature verification failed".to_string())?;
 
-    Ok((payload, signature))
+    Ok(payload)
 }
 
 fn evaluate_payload(
@@ -219,8 +219,8 @@ fn load_token(connection: &Connection) -> Result<Option<String>, String> {
 fn account_count(connection: &Connection) -> Result<u64, String> {
     connection
         .query_row(
-            "SELECT COUNT(*) FROM accounts WHERE workspace_id=?1",
-            params![DEFAULT_WORKSPACE_ID],
+            "SELECT COUNT(*) FROM accounts",
+            [],
             |row| row.get::<_, i64>(0),
         )
         .map(|value| value.max(0) as u64)
@@ -237,7 +237,7 @@ pub fn license_install(
         return Err("invalid license token".to_string());
     }
 
-    let (payload, _) = decode_token(&token)?;
+    let payload = decode_token(&token)?;
     let connection = open_connection(&app)?;
     ensure_license_table(&connection)?;
     let accounts = account_count(&connection)?;
@@ -295,7 +295,7 @@ pub fn license_status(app: tauri::AppHandle) -> Result<LicenseStatus, String> {
     };
 
     match decode_token(&token) {
-        Ok((payload, _)) => match evaluate_payload(&payload, accounts) {
+        Ok(payload) => match evaluate_payload(&payload, accounts) {
             Ok(()) => Ok(LicenseStatus {
                 installed: true,
                 valid: true,
