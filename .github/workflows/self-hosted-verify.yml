@@ -47,8 +47,14 @@ jobs:
       - name: Install dependencies reproducibly
         run: pnpm install --frozen-lockfile
 
+      - name: Release sanity
+        run: pnpm verify:release
+
       - name: Workspace sanity
         run: pnpm verify:workspace
+
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high
 
       - name: Typecheck
         run: pnpm typecheck
