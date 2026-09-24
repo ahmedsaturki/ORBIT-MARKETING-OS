@@ -877,6 +877,43 @@ export function App(): ReactElement {
 
 
       <section className="card">
+        <h2>الترخيص المحلي</h2>
+        <p>الترخيص يُتحقق منه محلياً بتوقيع Ed25519. لا توجد مفاتيح توقيع خاصة داخل التطبيق.</p>
+        <div className="account-meta">
+          الحالة: {license?.valid ? "فعال" : license?.installed ? "غير صالح" : "غير مثبت"}
+          {license?.plan ? " • " + license.plan : ""}
+          {license?.account_limit ? " • حد الحسابات " + license.account_limit : ""}
+        </div>
+        {license?.license_id ? (
+          <div className="result">
+            {license.license_id} • {license.subject ?? "بدون subject"} • {license.reason}
+          </div>
+        ) : null}
+        <label>
+          License Token
+          <textarea
+            value={licenseToken}
+            onChange={(event) => setLicenseToken(event.target.value)}
+            rows={4}
+            placeholder="ألصق token الموقّع هنا"
+            spellCheck={false}
+          />
+        </label>
+        <div className="actions">
+          <button className="button primary" type="button" onClick={() => void installLicense()}>
+            تحقق وفعّل محلياً
+          </button>
+          <button className="button secondary" type="button" onClick={() => void loadLicense()}>
+            تحديث الحالة
+          </button>
+          <button className="button danger" type="button" onClick={() => void removeLicense()} disabled={!license?.installed}>
+            إزالة الترخيص
+          </button>
+        </div>
+        {licenseMessage ? <div className="result">{licenseMessage}</div> : null}
+      </section>
+
+      <section className="card">
         <h2>سجل التدقيق</h2>
         <p>أحداث التشغيل المحلية تُحفظ دون أسرار أو قيم الجلسات الحساسة.</p>
         <div className="actions">
