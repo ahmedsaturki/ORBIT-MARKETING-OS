@@ -1,0 +1,20 @@
+[package]
+name = "orbit-marketing-os"
+version = "2.4.1"
+edition = "2021"
+description = "Orbit Marketing OS desktop shell — renderer capability isolation via Tauri"
+license = "UNLICENSED"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
+# Keep debug builds fast; release builds are the artifact path (REL-02).
+[profile.dev]
+incremental = true

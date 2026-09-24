@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Desktop main window: rendering and core window lifecycle only. Deny-by-default — any capability not listed here (fs, shell, http, clipboard, dialog, updater, etc.) is unreachable from the renderer.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

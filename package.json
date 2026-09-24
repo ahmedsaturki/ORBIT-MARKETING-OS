@@ -13,7 +13,8 @@
     "test:core": "npm test --prefix packages/core",
     "typecheck:core": "npm run typecheck --prefix packages/core",
     "checksums": "node scripts/checksums.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "tauri:build": "node scripts/build-tauri.mjs --release"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@tauri-apps/cli": "^2.11.5",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
