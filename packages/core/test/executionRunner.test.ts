@@ -70,14 +70,17 @@ describe("ExecutionRunner", () => {
     const result = await runner().run({
       account,
       campaign,
-      task,
+      task: { ...task, status: "running" },
       actionsToday: 0,
       dailyLimit: 10,
       consecutiveFailures: 0,
       circuitBreakerThreshold: 3,
       userConfirmed: true,
     });
-    expect(result).toMatchObject({ status: "blocked", reason: "policy" });
+    expect(result).toMatchObject({
+      status: "blocked",
+      reason: "policy",
+    });
   });
 
   it("requires explicit confirmation before connector side effects", async () => {
