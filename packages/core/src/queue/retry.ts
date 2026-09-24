@@ -5,16 +5,16 @@ export interface RetryPolicy {
 }
 
 function validateRetryPolicy(policy: RetryPolicy): void {
+  if (!Number.isInteger(policy.maxAttempts) || policy.maxAttempts < 1 || policy.maxAttempts > 10) {
+    throw new RangeError("retryPolicy.maxAttempts must be an integer between 1 and 10");
+  }
   if (
-    !Number.isInteger(policy.maxAttempts) ||
-    policy.maxAttempts < 1 ||
-    policy.maxAttempts > 10 ||
     !Number.isFinite(policy.baseDelayMs) ||
     policy.baseDelayMs < 0 ||
     !Number.isFinite(policy.maxDelayMs) ||
     policy.maxDelayMs < policy.baseDelayMs
   ) {
-    throw new RangeError("retryPolicy.maxAttempts must be an integer between 1 and 10");
+    throw new RangeError("invalid retry policy");
   }
 }
 

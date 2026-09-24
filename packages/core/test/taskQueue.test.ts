@@ -219,8 +219,18 @@ describe("TaskQueue", () => {
 
   it("reports waiting states in queue statistics", () => {
     const instance = queue();
-    instance.enqueue({ ...baseTask, id: "approval", idempotencyKey: "approval" });
-    instance.enqueue({ ...baseTask, id: "action", idempotencyKey: "action" });
+    instance.enqueue({
+      ...baseTask,
+      id: "approval",
+      idempotencyKey: "approval",
+      priority: 20,
+    });
+    instance.enqueue({
+      ...baseTask,
+      id: "action",
+      idempotencyKey: "action",
+      priority: 10,
+    });
     expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("approval");
     instance.awaitApproval("approval");
     expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("action");

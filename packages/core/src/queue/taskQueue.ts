@@ -37,13 +37,17 @@ export class TaskQueue {
     if (
       !Number.isInteger(options.retryPolicy.maxAttempts) ||
       options.retryPolicy.maxAttempts < 1 ||
-      options.retryPolicy.maxAttempts > 10 ||
+      options.retryPolicy.maxAttempts > 10
+    ) {
+      throw new RangeError("retryPolicy.maxAttempts must be an integer between 1 and 10");
+    }
+    if (
       !Number.isFinite(options.retryPolicy.baseDelayMs) ||
       options.retryPolicy.baseDelayMs < 0 ||
       !Number.isFinite(options.retryPolicy.maxDelayMs) ||
       options.retryPolicy.maxDelayMs < options.retryPolicy.baseDelayMs
     ) {
-      throw new RangeError("retryPolicy.maxAttempts must be an integer between 1 and 10");
+      throw new RangeError("invalid retry policy");
     }
   }
 
