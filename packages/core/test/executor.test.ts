@@ -196,7 +196,37 @@ describe("task execution orchestrator", () => {
     expect(result.status).toBe("blocked");
     expect(result.reason).toBe("approval_required");
     expect(executeCalls).toBe(0);
-    expect(taskQueue.get(task.id)?.status).toBe("blocked");
+    expect(taskQueue.get(task.id)?.status).toBe("awaiting_approval");
+  });
+
+  it("defers daily-limit work until the next UTC day", async () => {
+    const task = makeTask();
+    const taskQueue = queue(task);
+    const claimed = taskQueue.claimNext("2026-09-24T23:30:00.000Z");
+    expect(claimed).toBeDefined();
+
+    const result = await executeClaimedTask(
+      {
+        queue: taskQueue,
+        connectors: new ConnectorRegistry(),
+        audit: new AuditLog(),
+        loadContext: async () => ({
+          ...context(task),
+          actionsToday: 10,
+          dailyLimit: 10,
+        }),
+      },
+      claimed!,
+      true,
+      "2026-09-24T23:30:00.000Z",
+    );
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reason: "daily_limit_reached",
+    });
+    expect(taskQueue.get(task.id)?.status).toBe("pending");
+    expect(taskQueue.get(task.id)?.availableAt).toBe("2026-09-25T00:00:00.000Z");
   });
 
   it("releases a task when user confirmation is missing", async () => {
