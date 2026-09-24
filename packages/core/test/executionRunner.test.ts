@@ -32,6 +32,7 @@ const task: Task = {
   accountId: "account-1",
   platform: "facebook",
   kind: "publish",
+  contentId: "content-1",
   priority: 10,
   status: "pending",
   attempts: 0,
