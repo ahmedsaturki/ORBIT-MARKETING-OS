@@ -6,13 +6,13 @@ Updated: 2026-09-24
 
 Current rebuild HEAD at the latest source revision:
 
-`3c7da4ea191c7a89ba4fc4e3cf3e931537bc2da0`
+`cb4f2567e7ee6cf04dad2a8801cf9aa31fa12f60`
 
 The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
 
 Latest observed hosted-runner behavior:
 
-- The newest observed CI run (36037594361, job 107761450300) fails before step registration with no runner allocation metadata and no step records.
+- The newest observed CI run (36039581003, job 107768119208) fails before step registration with no runner allocation metadata and no step records.
 - Multiple consecutive runs show the same pre-execution signature.
 
 A deliberately minimal runner probe was also tested earlier and failed before any workflow step executed. It was removed after diagnosis.
@@ -38,9 +38,9 @@ The latest verified deployment diagnostics identified and then addressed these c
 1. `ignoreCommand` exceeded Vercel's 256-character schema limit.
 2. The shortened command then failed when `VERCEL_GIT_PREVIOUS_SHA` was empty and `git diff` received an empty revision.
 
-The repository `vercel.json` has now been hardened so missing Git revision context does not produce a fatal `bad revision` error. No fresh deployment has appeared after this fix yet, so a successful Vercel build is still unverified.
+The repository `vercel.json` has now been hardened so missing Git revision context does not produce a fatal `bad revision` error. Recent rebuild deployments after these fixes have been canceled before a successful deployment was established.
 
-The connected project metadata continues to report framework `vite` while the repository deployment contract targets Next.js static output. This remains a project-configuration verification item until project settings are corrected/confirmed and a successful deployment validates the effective settings.
+The connected project metadata has reported framework `vite` while the repository deployment contract targets Next.js static output. This remains a project-configuration verification item until project settings are corrected/confirmed and a successful deployment validates the effective settings.
 
 ## 4. Reproducible release blocker
 

@@ -4,42 +4,47 @@ Updated: 2026-09-24
 
 ## Implemented in the rebuild branch
 
-- Repository access confirmed; production work is isolated on `rebuild/orbit-production` and PR #2 remains intentionally unmerged.
-- pnpm workspace and Turborepo configuration added with a strict TypeScript baseline.
-- `@orbit/core` domain model, campaign/task validation, retry policy, in-memory queue, connector contract, approval gate, execution policy, Yjs sync primitives, database schema, redaction, AES-256-GCM primitives, licensing/backup foundations, and account safety controls are present.
-- Queue persistence is now an explicit adapter boundary with workspace checks and idempotency-key lookup requirements.
-- Encryption key derivation is an explicit Argon2id provider boundary; no home-grown password KDF is used in TypeScript.
-- Audit logging now has both redaction and an append-only SHA-256 hash-chain integrity primitive.
-- Core queue and audit integrity invariant tests were added.
-- A Tauri v2 desktop backend exists with local SQLite, Argon2id, AES-256-GCM, encrypted session/vault storage, campaigns/tasks, CRM/inbox, backup/restore, audit commands, and a persisted active-workspace context with workspace list/create/select IPC.
-- Rust formatting/check/clippy workflow and repository release/security gates are defined.
+- Production work is isolated on `rebuild/orbit-production`; PR #2 remains open, draft, and unmerged pending release evidence.
+- pnpm workspace + Turborepo with a strict TypeScript baseline.
+- `@orbit/core` domain model, queue contracts, approval/execution policy, connector contract/registry, sync primitives, audit/redaction, encryption, licensing and backup foundations.
+- Tauri v2 desktop backend with native SQLite, Argon2id + AES-256-GCM, encrypted sessions/vault, campaigns/tasks, CRM/inbox, analytics, media metadata, automation rule packs, backup/restore, audit commands and persisted workspaces.
+- Native SQLite schema is versioned through v10. Task idempotency is scoped by `(workspace_id, idempotency_key)`; legacy v9 databases are migrated to the v10 table shape.
+- Startup recovery is wired once in Tauri startup, not in every database-open call. Interrupted sync tasks return to `pending`; interrupted external tasks stop in `awaiting_user_action`.
+- Approval request/decision paths validate local actor identity, reviewer roles, and use immediate transactions that include the audit event.
+- External Telegram execution now fail-closes when the local audit hash chain is invalid.
+- Media import checks workspace authorization before touching/hash-reading the requested local file.
+- Core and native task scheduling normalize RFC3339 timestamps to UTC and bound retry attempts.
+- LinkedIn Posts connector defaults to API version `202609`.
+- Desktop now consumes typed platform contracts from `@orbit/core`.
+- React 19 JSX type drift was removed from all tracked `.tsx` files; the repository verifier now prevents `JSX.Element` from returning.
+- PWA service-worker fallback was hardened so failed static asset fetches do not incorrectly return the home document.
+- Branch-restricted bootstrap/full-verification workflows are exposed from the default branch for manual execution on an owned runner.
 
-## Latest hardening fixes
+## Verification improvements
 
-- Native account upsert now persists the submitted authorization status during updates, with regression coverage.
-- Native task scheduling now normalizes ​RFC3339 timestamps to UTC before persistence/claim comparison and bounds `max_attempts` to 1..=10.
-- LinkedIn connector default API version is `202609`, matching the active September 2026 Marketing API release.
-- Workspace sanity verification now detects duplicate consecutive Rust derive attributes.
+- Workspace sanity checks cover duplicate Rust derives, version consistency, schema v10, workspace-scoped idempotency, startup recovery wiring, forbidden production placeholders, and stale React JSX types.
+- IPC verification compares Desktop UI native calls against Tauri commands.
+- CI/release workflows require committed `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` and use frozen installs.
 
-## Workspace/RBAC status
+## Evidence still required
 
-Workspace switching is now implemented in the desktop runtime and UI. Typed RBAC contracts are present in `@orbit/core`. End-to-end identity, membership persistence, and enforcement at every IPC command remain release-gated until integration tests prove them.
+The following remain `UNVERIFIED` or `BLOCKED` until a real execution environment produces current evidence:
 
-## Evidence still required before release
+- dependency resolution and committed lockfiles;
+- complete TypeScript typecheck, lint, tests, coverage and build;
+- Rust fmt/check/test/clippy;
+- native SQLite restart/migration integration under a real desktop runtime;
+- controlled real-user connector tests and platform authorization/challenge handling;
+- CRDT encrypted transport and multi-device convergence;
+- local-AI/Ollama execution, resource and failure tests;
+- browser/device E2E and accessibility checks;
+- release packaging, signing, notarization and store distribution;
+- production Vercel deployment and rollback verification;
+- security/dependency audit, performance benchmarks and soak testing;
+- commercial billing/payment configuration.
 
-- A real checkout must complete dependency installation against a committed, validated lockfile.
-- TypeScript typecheck, unit tests, formatting, and full monorepo build must execute successfully in CI or an equivalent clean environment.
-- Rust fmt/check/clippy must execute successfully against the Tauri backend.
-- SQLite migrations/persistence need integration tests against the native runtime, including crash/recovery and workspace isolation.
-- Platform connectors require real user-authorized integration tests, challenge handling, failure recovery, and platform-policy review.
-- CRM/unified inbox, CRDT transport, and encrypted sync need end-to-end tests across supported control surfaces.
-- Ollama/local-AI integration needs resource-aware tests and failure handling.
-- Mobile and Next.js/PWA builds need clean-environment verification and browser/device checks.
-- Licensing, signing, notarization/store distribution, release artifacts, and updater verification remain unproven.
-- Security review, dependency audit, performance measurements, backup/restore drills, and release smoke tests remain unproven.
+## Platform safety
 
-## Specification adjustment
+The product deliberately excludes fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion and concealed automation. External actions remain user-authorized, auditable and subject to conservative limits and human intervention.
 
-The original brief requested stealth, fingerprint randomization, CAPTCHA bypass-oriented behavior, and anti-ban evasion. Those mechanisms are not implemented. The safe implementation uses explicit limits, circuit breaking, user intervention on challenges, auditability, and platform-compliant integrations.
-
-**Release rule:** implementation is not evidence. No production-release claim should be made until every applicable release gate has current evidence.
+**Release rule:** implementation is not evidence. No production-release claim is valid until the applicable acceptance and release gates have current execution evidence.

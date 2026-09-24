@@ -2,86 +2,61 @@
 
 ## Current rebuild
 
-The active implementation branch is `rebuild/orbit-production`. PR #2 remains intentionally open and unmerged while release evidence is collected.
+The active implementation branch is `rebuild/orbit-production`. PR #2 remains intentionally open, draft, and unmerged while release evidence is collected.
 
 ## Implemented foundations
 
 - strict TypeScript monorepo baseline with pnpm 10.17.1 + Turborepo;
-- `@orbit/core` typed domain contracts, validation, retry policy, queue logic, approval/execution policy, content/media/analytics/automation rules, encryption, redaction, audit integrity, Yjs sync primitives, licensing and backup foundations;
-- Tauri v2 desktop runtime with native SQLite, schema migration/versioning through v10, workspace-scoped persistence, encrypted vault/session storage, campaign/task/CRM/inbox/audit commands;
+- `@orbit/core` typed domain contracts, queue logic, approval/execution policy, connector registry, content/media/analytics/automation rules, encryption, redaction, audit integrity, sync primitives, licensing and backup foundations;
+- Tauri v2 desktop runtime with native SQLite schema through v10, workspace-scoped persistence, encrypted vault/session storage, campaign/task/CRM/inbox/audit commands and safe startup recovery;
 - native Argon2id-derived AES-256-GCM encryption and encrypted local backup/restore;
-- Next.js 16 static web/PWA/legal/pricing surface with flat-config ESLint;
-- Expo SDK 57 / React Native 0.86 mobile monitoring surface with configuration smoke tests;
-- guarded CI and release-gate documentation.
+- Next.js 16 static web/PWA/legal/pricing surface;
+- Expo SDK 57 / React Native 0.86 mobile monitoring surface;
+- guarded CI, release workflows and zero-cost self-hosted verification fallback.
 
-## Newly implemented hardening
+## Hardening completed in this line
 
-- Desktop workspace context is persisted locally and scoped through a workspace membership table.
-- Sensitive Desktop IPC commands now enforce the local workspace role before mutating or revealing protected data.
-- Encrypted vault records are workspace-scoped with a composite workspace-and-label key and migration support.
-- Audit writes use serialized SQLite transactions to preserve the tamper-evident hash chain under concurrent commands.
-- The repository root legacy UI is now a safe compatibility shell, preventing the old prototype from being mistaken for the production surface.
+- workspace/RBAC checks are applied before protected mutations/reads;
+- approval actor identity and reviewer role are validated;
+- approval mutations and their audit records are committed atomically;
+- audit integrity failure blocks external Telegram execution;
+- startup recovery runs once at application startup and is idempotent;
+- task scheduling uses normalized UTC timestamps and bounded retry ceilings;
+- task idempotency is workspace-scoped with v9→v10 migration support;
+- account authorization/session state remains synchronized after upsert;
+- media import authorizes before filesystem access;
+- Desktop consumes typed `@orbit/core` contracts;
+- all tracked TSX files use scoped React element types;
+- Vercel installer/ignore scripts fail closed without a reproducible lockfile.
 
-## Evidence still required
+## Current execution evidence
 
-The following remain `UNVERIFIED` until executed in a clean environment:
+Latest observed hosted GitHub Actions CI on the rebuild line:
+- run `36039581003`
+- job `107768119208`
+- conclusion: `failure`
+- no workflow steps were registered before failure; therefore this is not source-level build evidence.
 
-- reproducible clean checkout install and lockfile generation/validation;
-- full TypeScript typecheck, lint, tests, build, and format check;
-- Rust fmt, check, test, and clippy against the Tauri runtime;
-- native SQLite migration/restart/crash-recovery integration, including v8 workspace-scoped vault migration followed by v10 workspace-scoped task-idempotency migration;
-- persistent queue recovery and idempotency tests through the actual desktop runtime;
-- controlled connector fixtures plus real user-authorized integrations; see `docs/CONNECTOR_MATRIX.md` for the evidence boundary.
-- challenge/authentication stop and human-intervention flows;
-- encrypted CRDT transport and multi-device convergence;
-- content/media indexing and local AI/Ollama failure/resource handling;
-- browser E2E and accessibility verification;
-- Android/iOS release artifacts, Windows/Linux/macOS packaging and signing;
-- production web deployment and rollback verification;
-- security/dependency review, performance benchmarks, and 24-hour soak evidence;
-- commercial billing/payment configuration.
+The connected Vercel project has no verified successful deployment. Recent rebuild deployment attempts were canceled; the last concrete ERROR deployment failed at the install step because the repository did not yet contain the required lockfile.
 
-## Platform safety
+## Remaining release gates
 
-ORBIT does not implement fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion, or concealed automation. External actions must remain user-authorized and platform-compliant.
+- committed, validated `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock`;
+- clean typecheck/lint/tests/coverage/build;
+- clean Rust fmt/check/test/clippy;
+- native migration/restart/crash-recovery evidence;
+- real authorized connector/platform verification;
+- CRDT transport/convergence evidence;
+- local AI/resource/failure evidence;
+- browser/device E2E + accessibility;
+- security/dependency review;
+- performance and 24h soak;
+- Windows/Linux/macOS packaging plus signing;
+- Android/iOS production distribution/signing;
+- successful Vercel deployment + rollback verification;
+- commercial payment/billing configuration;
+- legal/commercial publication review.
 
 ## Release rule
 
-No production-ready or commercial-launch claim is valid until every applicable gate in `docs/ACCEPTANCE_MATRIX_V2.md` and `docs/RELEASE_GATES.md` has current evidence.
-
-
-## Current verified repository facts
-
-The rebuild branch currently contains the intended CI, Rust, release-desktop, and release-mobile workflow definitions, but the latest Actions runs are still failing before any workflow step executes; GitHub reports completed failed jobs with no step records. This is tracked as an execution-infrastructure blocker, not treated as evidence of a source-level build failure.
-
-The current source environment cannot reach GitHub/npm through its shell network, so a real pnpm-lock.yaml was not fabricated. The normal CI and release workflows require committed `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` files and use frozen/reproducible installs. A separate, branch-restricted self-hosted bootstrap workflow/script exists to generate both lockfiles; that bootstrap evidence is still pending.
-
-A Vercel project `orbit-marketing-os` exists. Repository-side deployment configuration is canonical at the repository root: Next.js, `pnpm install --frozen-lockfile`, `pnpm --dir packages/web build`, and `packages/web/out`. Recent concrete deployments reached Vercel's configuration/ignore stage and failed before a usable deployment was established; the repository-side `ignoreCommand` was subsequently hardened and moved into `scripts/vercel-ignore.sh`. A fresh successful deployment is still required to verify the effective project settings.
-
-
-
-## Licensing checkpoint
-
-Offline commercial licensing is now wired through the Desktop runtime. The application verifies Ed25519-signed tokens against an embedded public key, checks payload/date/account-limit constraints, stores the active token locally, and exposes install/status/remove controls. The private signing key is not stored in Git.
-
-Global multi-device seat counting remains intentionally unclaimed because the current product has no coordinating licensing service.
-
-## Vercel deployment diagnosis
-
-The connected `orbit-marketing-os` project exists, but no successful deployment has been verified yet. The two latest concrete repository-side configuration failures observed were an overlong `ignoreCommand` and then a `fatal: bad revision ''` caused by missing Git revision environment variables. Both were fixed in the repository configuration, but a fresh deployment has not yet been established. Deployment metadata has also reported project framework `vite`, while the repository contract targets the `packages/web` Next.js static export; this remains an external project-setting verification item.
-
-## Current Vercel state
-
-The connected Vercel project is `orbit-marketing-os`. The repository configuration is now explicitly Next.js static export with `packages/web/out` and a versioned first-deployment-safe ignore script. A fresh successful deployment is still required before release.
-
-## Latest execution snapshot
-The default branch now also exposes branch-restricted `Bootstrap pnpm lockfile` and `Self-Hosted Verification` workflow definitions so their manual `workflow_dispatch` controls are available from GitHub's Actions UI. Both workflows refuse refs other than `rebuild/orbit-production`.
-
-
-- Branch HEAD: `f49d9faf47e59c37d5fe69472e750263b478658b`.
-- PR #2 remains open, draft, and unmerged.
-- The latest hosted `CI` run (`36037752496`, job `107761969648`) failed before workflow steps were registered.
-- The lockfile bootstrap path remains pending until an executable self-hosted runner is available; generated lockfiles are only accepted after real generation and frozen-install verification.
-- No production deployment is being claimed from these states.
-
-The implementation branch now includes local content variants, media metadata/import/delete lifecycle, versioned automation rule packs with confirmation invariants and runtime limits, campaign-scoped analytics, current LinkedIn Posts API version defaults, normalized task scheduling timestamps with bounded retries, synchronized account authorization state, and expanded acceptance/verification coverage.
+No tag, merge, production deployment, or commercial launch claim should be made while required gates remain `UNVERIFIED` or `BLOCKED`.

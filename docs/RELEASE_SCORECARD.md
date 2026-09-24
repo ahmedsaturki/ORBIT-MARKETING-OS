@@ -78,7 +78,7 @@ Status meanings:
 
 ### Vercel current deployment evidence
 
-The latest observed Vercel deployment for this branch (`dpl_Fa6zfs1JiTLWGidxjdTaTgH7RZPd`) is in `ERROR` at the install step with `errorCode=ENOENT` and `errorMessage=Command "bash scripts/vercel-install.sh" exited with 1`. The repository-side script fails closed because the committed `pnpm-lock.yaml` is absent. The deployment metadata reports the project framework as `vite`; project-level framework/root settings still require confirmation. No more specific build failure is asserted.
+The last concrete Vercel deployment with an ERROR state (`dpl_Fa6zfs1JiTLWGidxjdTaTgH7RZPd`) was in `ERROR` at the install step with `errorCode=ENOENT` and `errorMessage=Command "bash scripts/vercel-install.sh" exited with 1`. The repository-side script fails closed because the committed `pnpm-lock.yaml` is absent. The deployment metadata reports the project framework as `vite`; project-level framework/root settings still require confirmation. No more specific build failure is asserted.
 
 
 ### GitHub Actions
@@ -89,7 +89,7 @@ Current hosted jobs fail before the first step:
 - empty runner name
 - failure within seconds
 
-A minimal diagnostic workflow reproduced the same signature before being removed. Current evidence therefore indicates runner provisioning/startup infrastructure, not a source-level ORBIT build error. GitHub community reports documented the same pre-runner-allocation symptom in September 2026. The GitHub status page currently shows the September 24 incident as resolved, so this repository still needs a fresh successful runner allocation before any CI result can be trusted.
+A minimal diagnostic workflow reproduced the same signature before being removed. Current evidence therefore indicates runner provisioning/startup infrastructure, not a source-level ORBIT build error. The repository reproduced the same pre-step failure on both the rebuild line and main. The repository still needs a fresh successful runner allocation before any CI result can be trusted.
 
 ### Vercel
 
