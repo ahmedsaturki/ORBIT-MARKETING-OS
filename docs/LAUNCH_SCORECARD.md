@@ -23,6 +23,9 @@ Legend:
 | Web product surface | IMPLEMENTED | Next.js static app, pricing, legal, PWA |
 | Mobile monitoring surface | IMPLEMENTED | Expo Router monitor + secure runtime token storage |
 | Runtime perimeter | IMPLEMENTED | Loopback/local auth model, bearer token, origin allowlist, rate limit |
+| Media metadata persistence | IMPLEMENTED | Workspace-scoped SQLite metadata, MIME/hash validation, search |
+| Automation rule-pack persistence | IMPLEMENTED | Schema-versioned JSON, structural validation, confirmation invariant |
+| Campaign task analytics | IMPLEMENTED | Workspace/campaign scoped native aggregation |
 | Local AI defaults | IMPLEMENTED | llama3.2:3b default, bounded OLLAMA_NUM_CTX=4096 |
 | Runtime AI smoke | IMPLEMENTED | Fake-Ollama contract added to runtime smoke |
 | Clean install | UNVERIFIED | Requires clean checkout execution and lockfile evidence |
