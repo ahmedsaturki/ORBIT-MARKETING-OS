@@ -7,7 +7,7 @@ The active implementation branch is `rebuild/orbit-production`. PR #2 remains in
 ## Implemented foundations
 
 - strict TypeScript monorepo baseline with pnpm 10.17.1 + Turborepo;
-- `@orbit/core` typed domain contracts, validation, retry policy, queue logic, approval/execution policy, encryption, redaction, audit integrity, Yjs sync primitives, licensing and backup foundations;
+- `@orbit/core` typed domain contracts, validation, retry policy, queue logic, approval/execution policy, content/media/analytics/automation rules, encryption, redaction, audit integrity, Yjs sync primitives, licensing and backup foundations;
 - Tauri v2 desktop runtime with native SQLite, schema migration/versioning, workspace-scoped persistence, encrypted vault/session storage, campaign/task/CRM/inbox/audit commands;
 - native Argon2id-derived AES-256-GCM encryption and encrypted local backup/restore;
 - Next.js 16 static web/PWA/legal/pricing surface with flat-config ESLint;
