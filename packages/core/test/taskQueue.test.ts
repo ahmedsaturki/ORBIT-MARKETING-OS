@@ -163,6 +163,18 @@ describe("TaskQueue", () => {
     expect(instance.get(baseTask.id)?.status).toBe("running");
   });
 
+  it("rejects malformed queue timestamps", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+    expect(() => instance.claimNext("not-a-timestamp")).toThrow(
+      "now must be a valid ISO timestamp",
+    );
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+    expect(() => instance.fail("task-1", "not-a-timestamp")).toThrow(
+      "now must be a valid ISO timestamp",
+    );
+  });
+
   it("rejects malformed queue tasks", () => {
     const instance = queue();
     expect(() => instance.enqueue({ ...baseTask, idempotencyKey: " " })).toThrow(
