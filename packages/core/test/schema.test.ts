@@ -3,7 +3,7 @@ import { DATABASE_SCHEMA_SQL, DATABASE_SCHEMA_VERSION } from "../src/database/sc
 
 describe("database schema contract", () => {
   it("uses the current schema version", () => {
-    expect(DATABASE_SCHEMA_VERSION).toBe(4);
+    expect(DATABASE_SCHEMA_VERSION).toBe(5);
   });
 
   it("enforces tenant ownership on core records", () => {
@@ -28,6 +28,7 @@ describe("database schema contract", () => {
   it("has first-class approval and conversation primitives", () => {
     expect(DATABASE_SCHEMA_SQL).toContain("CREATE TABLE IF NOT EXISTS approvals");
     expect(DATABASE_SCHEMA_SQL).toContain("CREATE TABLE IF NOT EXISTS conversations");
+    expect(DATABASE_SCHEMA_SQL).toContain("account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT");
     expect(DATABASE_SCHEMA_SQL).toContain("UNIQUE(account_id, external_thread_id)");
   });
 });
