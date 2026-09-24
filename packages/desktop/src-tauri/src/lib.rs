@@ -584,16 +584,16 @@ fn campaign_create(
 
     transaction
         .execute(
-            "INSERT INTO campaigns(id, name, status, created_at) VALUES (?1, ?2, 'draft', ?3)",
-            params![campaign_id, name, timestamp],
+            "INSERT INTO campaigns(id, workspace_id, name, status, created_at) VALUES (?1, ?2, ?3, 'draft', ?4)",
+            params![campaign_id, DEFAULT_WORKSPACE_ID, name, timestamp],
         )
         .map_err(|error| error.to_string())?;
 
     for account_id in &account_ids {
         transaction
             .execute(
-                "INSERT INTO campaign_accounts(campaign_id, account_id) VALUES (?1, ?2)",
-                params![campaign_id, validate_label(account_id).map_err(|error| error.to_string())?],
+                "INSERT INTO campaign_accounts(workspace_id, campaign_id, account_id) VALUES (?1, ?2, ?3)",
+                params![DEFAULT_WORKSPACE_ID, campaign_id, validate_label(account_id).map_err(|error| error.to_string())?],
             )
             .map_err(|error| error.to_string())?;
     }
@@ -619,14 +619,15 @@ fn campaign_list(app: tauri::AppHandle) -> Result<Vec<CampaignView>, String> {
         .prepare(
             "SELECT c.id, c.name, c.status, COUNT(t.id), c.created_at
              FROM campaigns c
-             LEFT JOIN tasks t ON t.campaign_id = c.id
+             LEFT JOIN tasks t ON t.campaign_id = c.id AND t.workspace_id = c.workspace_id
+             WHERE c.workspace_id = ?1
              GROUP BY c.id
              ORDER BY c.created_at DESC",
         )
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map([], |row| {
+        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
             Ok(CampaignView {
                 id: row.get(0)?,
                 name: row.get(1)?,
