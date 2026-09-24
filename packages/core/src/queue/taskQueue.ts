@@ -126,12 +126,12 @@ export class TaskQueue {
 
     const nextAttempt = task.attempts + 1;
     if (!shouldRetry(nextAttempt, this.options.retryPolicy) || nextAttempt >= task.maxAttempts) {
-      return this.setTask({ ...task, attempts: nextAttempt, status: "failed" });
+      return { ...this.setTask({ ...task, attempts: nextAttempt, status: "failed" }) };
     }
 
     const retryDelay = calculateRetryDelay(nextAttempt, this.options.retryPolicy);
     const availableAt = new Date(new Date(now).getTime() + retryDelay).toISOString();
-    return this.setTask({ ...task, attempts: nextAttempt, status: "pending", availableAt });
+    return { ...this.setTask({ ...task, attempts: nextAttempt, status: "pending", availableAt }) };
   }
 
   /** Returns a point-in-time count of all queue states. */
@@ -165,7 +165,7 @@ export class TaskQueue {
     if (task.status !== "running") {
       throw new Error(`Only running tasks can transition: ${id}`);
     }
-    return this.setTask({ ...task, status });
+    return { ...this.setTask({ ...task, status }) };
   }
 
   private requireTask(id: string): Task {
