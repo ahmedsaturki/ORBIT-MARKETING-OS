@@ -42,7 +42,7 @@ Required toolchain:
 
 - Node.js 22
 - pnpm 10.17.1
-- Rust 1.98.1+
+- Rust 1.98.1 (repository-pinned)
 - Git
 - Playwright Chromium dependencies
 - Tauri Linux dependencies when validating Linux desktop builds
