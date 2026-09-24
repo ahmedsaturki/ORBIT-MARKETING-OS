@@ -518,7 +518,12 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     fs::create_dir_all(&app_data)?;
     cleanup_stale_database_artifacts(&app_data)?;
     let db_path: PathBuf = app_data.join("orbit.sqlite3");
-    let connection = Connection::open(db_path)?;
+    let connection = Connection::open(&db_path)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&db_path, fs::Permissions::from_mode(0o600))?;
+    }
     connection.execute_batch(
         "PRAGMA foreign_keys = ON;
          PRAGMA journal_mode = WAL;
@@ -1706,6 +1711,11 @@ fn backup_directory(app: &tauri::AppHandle) -> Result<PathBuf, AppError> {
     let app_data = app.path().app_data_dir().map_err(|_| AppError::Path)?;
     let backups = app_data.join("backups");
     fs::create_dir_all(&backups)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&backups, fs::Permissions::from_mode(0o700))?;
+    }
     Ok(backups)
 }
 
@@ -1750,7 +1760,7 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
 
     let payload = seal(&password, &B64.encode(bytes)).map_err(|error| error.to_string())?;
     let payload_json = serde_json::to_string(&payload).map_err(|error| error.to_string())?;
-    let filename = format!("orbit-{}.orbitbackup", chrono_like_timestamp());
+    let filename = format!("orbit-{}-{}.orbitbackup", chrono_like_timestamp(), uuid_like());
     let destination = backups.join(&filename);
     write_private_file(&destination, &payload_json).map_err(|error| error.to_string())?;
     write_audit(&open_db(&app).map_err(|error| error.to_string())?, "backup", "create", "success", "user", Some(&filename))
@@ -1809,15 +1819,38 @@ fn backup_restore(
 
     fs::write(&temporary, database_bytes).map_err(|error| error.to_string())?;
 
-    let integrity = Connection::open(&temporary)
-        .and_then(|connection| {
-            connection.query_row("PRAGMA integrity_check", [], |row| row.get::<_, String>(0))
-        })
+    let integrity_connection = Connection::open(&temporary)
+        .map_err(|error| error.to_string())?;
+    let integrity = integrity_connection
+        .query_row("PRAGMA integrity_check", [], |row| row.get::<_, String>(0))
         .map_err(|error| error.to_string())?;
     if integrity != "ok" {
         let _ = fs::remove_file(&temporary);
         return Err("backup integrity check failed".to_string());
     }
+
+    let foreign_key_error: Option<String> = integrity_connection
+        .query_row(
+            "SELECT message FROM pragma_foreign_key_check LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    if foreign_key_error.is_some() {
+        let _ = fs::remove_file(&temporary);
+        return Err("backup foreign-key integrity check failed".to_string());
+    }
+
+    let restored_schema_version: i64 = integrity_connection
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .map_err(|error| error.to_string())?;
+    if restored_schema_version > SCHEMA_VERSION {
+        let _ = fs::remove_file(&temporary);
+        return Err("backup schema version is newer than this application".to_string());
+    }
+
+    drop(integrity_connection);
 
     if previous.exists() {
         fs::remove_file(&previous).map_err(|error| error.to_string())?;
