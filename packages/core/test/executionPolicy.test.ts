@@ -107,6 +107,21 @@ describe("execution policy", () => {
     expect(decision.reason).toBe("content_scope_mismatch");
   });
 
+  it("blocks an approval for a different content item in the same campaign", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      approval: {
+        id: "approval-other-content",
+        workspaceId: "workspace-1",
+        contentId: "content-2",
+        requestedBy: "user-1",
+        reviewerIds: ["user-2"],
+        status: "approved",
+      },
+    });
+    expect(decision.reason).toBe("approval_scope_mismatch");
+  });
+
   it("fails closed without approval", () => {
     const decision = evaluateExecutionPolicy(context);
     expect(decision.allowed).toBe(false);
