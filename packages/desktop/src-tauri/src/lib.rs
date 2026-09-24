@@ -651,20 +651,27 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
     }
 
     if version < 8 {
-        connection.execute_batch(
-            "CREATE TABLE vault_records_v8 (
-               workspace_id TEXT NOT NULL DEFAULT 'default',
-               label TEXT NOT NULL,
-               payload_json TEXT NOT NULL,
-               updated_at TEXT NOT NULL,
-               PRIMARY KEY (workspace_id, label)
-             );
-             INSERT INTO vault_records_v8(workspace_id, label, payload_json, updated_at)
-             SELECT 'default', label, payload_json, updated_at
-             FROM vault_records;
-             DROP TABLE vault_records;
-             ALTER TABLE vault_records_v8 RENAME TO vault_records;",
-        )?;
+        if !has_column(connection, "vault_records", "workspace_id")? {
+            connection.execute_batch(
+                "CREATE TABLE IF NOT EXISTS vault_records (
+                   label TEXT PRIMARY KEY,
+                   payload_json TEXT NOT NULL,
+                   updated_at TEXT NOT NULL
+                 );
+                 CREATE TABLE vault_records_v8 (
+                   workspace_id TEXT NOT NULL DEFAULT 'default',
+                   label TEXT NOT NULL,
+                   payload_json TEXT NOT NULL,
+                   updated_at TEXT NOT NULL,
+                   PRIMARY KEY (workspace_id, label)
+                 );
+                 INSERT INTO vault_records_v8(workspace_id, label, payload_json, updated_at)
+                 SELECT 'default', label, payload_json, updated_at
+                 FROM vault_records;
+                 DROP TABLE vault_records;
+                 ALTER TABLE vault_records_v8 RENAME TO vault_records;",
+            )?;
+        }
     }
 
     connection.execute_batch("PRAGMA user_version = 8;")?;
@@ -3194,6 +3201,49 @@ mod tests {
     }
 
     #[test]
+    #[test]
+    fn vault_schema_is_workspace_scoped_and_supports_same_label_per_workspace() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        connection
+            .execute(
+                "INSERT INTO vault_records(workspace_id, label, payload_json, updated_at)
+                 VALUES
+                   ('workspace-a', 'shared-label', 'payload-a', '1'),
+                   ('workspace-b', 'shared-label', 'payload-b', '1')",
+                [],
+            )
+            .expect("same labels should be isolated across workspaces");
+
+        let values: Vec<(String, String)> = connection
+            .prepare(
+                "SELECT workspace_id, payload_json
+                 FROM vault_records
+                 WHERE label='shared-label'
+                 ORDER BY workspace_id ASC",
+            )
+            .expect("vault query should prepare")
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .expect("vault query should execute")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("vault rows should decode");
+
+        assert_eq!(
+            values,
+            vec![
+                ("workspace-a".to_string(), "payload-a".to_string()),
+                ("workspace-b".to_string(), "payload-b".to_string()),
+            ]
+        );
+        assert!(has_column(&connection, "vault_records", "workspace_id")
+            .expect("workspace column should exist"));
+    }
+
     fn workspace_role_gate_rejects_insufficient_role() {
         let connection = Connection::open_in_memory()
             .expect("in-memory SQLite should be available");
