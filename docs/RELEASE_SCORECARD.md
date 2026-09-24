@@ -61,7 +61,7 @@ Status meanings:
 
 | Gate | Current status | Evidence |
 |---|---|---|
-| REL-01 Reproducible install | BLOCKED | pnpm-lock.yaml intentionally not fabricated; clean runner unavailable |
+| REL-01 Reproducible install | BLOCKED | pnpm-lock.yaml is a required release artifact but is not present; it will not be fabricated without a real dependency resolution environment |
 | REL-02 Signed desktop artifact | UNVERIFIED | Release workflow builds unsigned validation artifacts |
 | REL-03 Checksum verification | IMPLEMENTED / UNVERIFIED | Release workflow generates and checks SHA-256 manifest |
 | OPS-01 Crash/restart recovery | UNVERIFIED | Native recovery logic exists; forced-termination test pending |
