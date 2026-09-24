@@ -6,6 +6,7 @@ cd "$ROOT"
 
 command -v node >/dev/null 2>&1 || { echo "Node.js 22+ is required"; exit 1; }
 command -v pnpm >/dev/null 2>&1 || { echo "pnpm 10.17.1 is required"; exit 1; }
+command -v cargo >/dev/null 2>&1 || { echo "Rust/Cargo 1.98.1 is required"; exit 1; }
 
 PNPM_VERSION="$(pnpm --version)"
 if [ "$PNPM_VERSION" != "10.17.1" ]; then
@@ -14,7 +15,9 @@ if [ "$PNPM_VERSION" != "10.17.1" ]; then
 fi
 
 pnpm install --lockfile-only --ignore-scripts
-test -f pnpm-lock.yaml
+cargo generate-lockfile --manifest-path packages/desktop/src-tauri/Cargo.toml
+test -s pnpm-lock.yaml
+test -s packages/desktop/src-tauri/Cargo.lock
 pnpm verify:workspace
 
-echo "Lockfile bootstrap complete. Review pnpm-lock.yaml, then commit it."
+echo "Reproducible lockfile bootstrap complete. Review pnpm-lock.yaml and packages/desktop/src-tauri/Cargo.lock, then commit them."
