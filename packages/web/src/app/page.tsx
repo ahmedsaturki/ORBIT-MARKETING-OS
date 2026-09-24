@@ -19,6 +19,7 @@ export default function HomePage(): JSX.Element {
             <Link href="/pricing/">الأسعار</Link>
             <Link href="/legal/privacy/">الخصوصية</Link>
             <Link href="/legal/terms/">الشروط</Link>
+            <Link href="/legal/refunds/">الاسترداد</Link>
           </nav>
         </div>
       </header>
