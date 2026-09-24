@@ -81,6 +81,27 @@ describe("TaskQueue", () => {
     expect(released.attempts).toBe(0);
   });
 
+  it("parks running tasks awaiting approval", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+
+    expect(instance.awaitApproval("task-1").status).toBe("awaiting_approval");
+    expect(instance.claimNext("2026-09-24T00:00:02.000Z")).toBeUndefined();
+    expect(instance.resume("task-1").status).toBe("pending");
+  });
+
+  it("defers a running task without consuming an attempt", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+
+    const deferred = instance.defer("task-1", "2026-09-25T00:00:00.000Z");
+    expect(deferred.status).toBe("pending");
+    expect(deferred.availableAt).toBe("2026-09-25T00:00:00.000Z");
+    expect(deferred.attempts).toBe(0);
+  });
+
   it("rejects duplicate task identifiers", () => {
     const instance = queue();
     instance.enqueue(baseTask);
