@@ -119,7 +119,7 @@ export interface AuditEvent {
   readonly id: string;
   readonly timestamp: string;
   readonly workspaceId: string;
-  readonly category: "account" | "campaign" | "task" | "security" | "connector" | "content" | "inbox" | "crm" | "sync" | "backup" | "license";
+  readonly category: "account" | "campaign" | "task" | "security" | "connector" | "content" | "media" | "automation" | "inbox" | "crm" | "sync" | "backup" | "license";
   readonly action: string;
   readonly outcome: "success" | "failure" | "blocked";
   readonly actor: Actor;
