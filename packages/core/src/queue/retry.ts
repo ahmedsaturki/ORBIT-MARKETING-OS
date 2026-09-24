@@ -25,17 +25,7 @@ export function calculateRetryDelay(
   if (!Number.isInteger(attempt) || attempt < 1) {
     throw new RangeError("attempt must be a positive integer");
   }
-  if (
-    !Number.isInteger(policy.maxAttempts) ||
-    policy.maxAttempts < 1 ||
-    policy.maxAttempts > 10 ||
-    !Number.isFinite(policy.baseDelayMs) ||
-    policy.baseDelayMs < 0 ||
-    !Number.isFinite(policy.maxDelayMs) ||
-    policy.maxDelayMs < policy.baseDelayMs
-  ) {
-    throw new RangeError("invalid retry policy");
-  }
+  validateRetryPolicy(policy);
 
   const exponential = policy.baseDelayMs * 2 ** (attempt - 1);
   return Math.min(exponential, policy.maxDelayMs);
