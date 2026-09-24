@@ -46,6 +46,7 @@ const requiredFiles = [
   ".github/workflows/self-hosted-verify.yml",
   ".github/workflows/bootstrap-lockfile.yml",
   ".github/workflows/vercel-web.yml",
+  "scripts/self-hosted-preflight.sh",
 ];
 
 for (const relative of requiredFiles) {
