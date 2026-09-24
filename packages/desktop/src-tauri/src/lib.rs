@@ -3981,6 +3981,23 @@ fn backup_restore(
         return Err("backup foreign-key integrity check failed".to_string());
     }
 
+    let audit_workspaces: Vec<String> = {
+        let mut statement = integrity_connection
+            .prepare("SELECT DISTINCT workspace_id FROM audit_events ORDER BY workspace_id")
+            .map_err(|error| error.to_string())?;
+        let rows = statement
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|error| error.to_string())?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|error| error.to_string())?
+    };
+    for audit_workspace_id in audit_workspaces {
+        if !verify_audit_chain(&integrity_connection, &audit_workspace_id)? {
+            let _ = fs::remove_file(&temporary);
+            return Err("backup audit integrity check failed".to_string());
+        }
+    }
+
     let restored_schema_version: i64 = integrity_connection
         .query_row("PRAGMA user_version", [], |row| row.get(0))
         .map_err(|error| error.to_string())?;
@@ -4495,10 +4512,7 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
 }
 
 #[tauri::command]
-fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
-    let workspace_id = active_workspace_id();
-    let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
+fn verify_audit_chain(connection: &Connection, workspace_id: &str) -> Result<bool, String> {
     let mut statement = connection
         .prepare(
             "SELECT id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json, previous_hash, hash
@@ -4527,15 +4541,15 @@ fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
 
     let mut previous_hash = "GENESIS".to_string();
     for row in rows {
-        let (id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json, stored_previous, stored_hash) =
+        let (id, row_workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json, stored_previous, stored_hash) =
             row.map_err(|error| error.to_string())?;
-        if stored_previous != previous_hash {
+        if row_workspace_id != workspace_id || stored_previous != previous_hash {
             return Ok(false);
         }
         let expected = audit_hash(
             &previous_hash,
             &id,
-            &workspace_id,
+            &row_workspace_id,
             &timestamp,
             &category,
             &action,
@@ -4551,6 +4565,13 @@ fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
     }
 
     Ok(true)
+}
+
+fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
+    verify_audit_chain(&connection, &workspace_id)
 }
 
 fn chrono_like_timestamp() -> String {
@@ -4917,6 +4938,48 @@ mod tests {
             None,
         );
         assert_ne!(first_hash, mutated);
+    }
+
+    #[test]
+    fn audit_chain_helper_rejects_tampered_rows() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(
+                "CREATE TABLE audit_events(
+                   id TEXT PRIMARY KEY,
+                   workspace_id TEXT NOT NULL,
+                   timestamp TEXT NOT NULL,
+                   category TEXT NOT NULL,
+                   action TEXT NOT NULL,
+                   outcome TEXT NOT NULL,
+                   actor TEXT NOT NULL,
+                   entity_id TEXT,
+                   metadata_json TEXT,
+                   previous_hash TEXT NOT NULL,
+                   hash TEXT NOT NULL
+                 );",
+            )
+            .expect("audit table should be created");
+        write_audit_for_workspace(
+            &connection,
+            "workspace-1",
+            "security",
+            "test",
+            "success",
+            "system",
+            Some("entity-1"),
+        )
+        .expect("audit write should succeed");
+        assert!(verify_audit_chain(&connection, "workspace-1").expect("audit verification should work"));
+
+        connection
+            .execute(
+                "UPDATE audit_events SET action='tampered' WHERE workspace_id='workspace-1'",
+                [],
+            )
+            .expect("audit tamper fixture should update");
+
+        assert!(!verify_audit_chain(&connection, "workspace-1").expect("audit verification should work"));
     }
 
     #[test]
