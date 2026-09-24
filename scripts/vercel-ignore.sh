@@ -4,6 +4,11 @@ set -u
 # Vercel ignore command contract:
 # exit 0 = skip build; exit 1 = build.
 # A missing previous SHA is a first deployment / shallow-history case: build.
+if [[ ! -s pnpm-lock.yaml && "${VERCEL_GIT_COMMIT_REF:-}" != "main" ]]; then
+  echo "Preview deployment skipped until the reproducible lockfile gate is satisfied."
+  exit 0
+fi
+
 if [[ -z "${VERCEL_GIT_PREVIOUS_SHA:-}" || -z "${VERCEL_GIT_COMMIT_SHA:-}" ]]; then
   exit 1
 fi
