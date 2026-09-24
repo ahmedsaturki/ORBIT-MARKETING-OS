@@ -53,8 +53,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Require committed lockfile
+        run: test -f pnpm-lock.yaml
       - name: Install JavaScript dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Verify workspace
         run: pnpm verify:workspace
