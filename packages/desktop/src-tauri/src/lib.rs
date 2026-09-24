@@ -17,7 +17,7 @@ use thiserror::Error;
 use zeroize::Zeroizing;
 
 const DEFAULT_WORKSPACE_ID: &str = "default";
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 
 const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS vault_records (
@@ -46,6 +46,43 @@ CREATE TABLE IF NOT EXISTS campaigns (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS content_items (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default',
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  approval_status TEXT NOT NULL DEFAULT 'draft',
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS content_variants (
+  content_id TEXT NOT NULL REFERENCES content_items(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  body TEXT,
+  PRIMARY KEY (content_id, platform)
+);
+
+CREATE TABLE IF NOT EXISTS campaign_content (
+  workspace_id TEXT NOT NULL DEFAULT 'default',
+  campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  content_id TEXT NOT NULL REFERENCES content_items(id) ON DELETE RESTRICT,
+  PRIMARY KEY (campaign_id, content_id)
+);
+
+CREATE TABLE IF NOT EXISTS approvals (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default',
+  content_id TEXT NOT NULL REFERENCES content_items(id) ON DELETE CASCADE,
+  requested_by TEXT NOT NULL,
+  reviewer_ids_json TEXT NOT NULL DEFAULT '[]',
+  status TEXT NOT NULL,
+  decided_by TEXT,
+  decided_at TEXT,
+  note TEXT
+);
+
 CREATE TABLE IF NOT EXISTS campaign_accounts (
   workspace_id TEXT NOT NULL DEFAULT 'default',
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
@@ -57,6 +94,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,
   workspace_id TEXT NOT NULL DEFAULT 'default',
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  content_id TEXT REFERENCES content_items(id) ON DELETE RESTRICT,
   account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
   platform TEXT NOT NULL,
   kind TEXT NOT NULL,
@@ -100,10 +138,14 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE TABLE IF NOT EXISTS messages (
   id TEXT PRIMARY KEY,
   conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  external_message_id TEXT,
   direction TEXT NOT NULL,
   body TEXT NOT NULL,
   sent_at TEXT NOT NULL
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_messages_external
+  ON messages(conversation_id, external_message_id);
 
 CREATE TABLE IF NOT EXISTS audit_events (
   id TEXT PRIMARY KEY,
@@ -180,9 +222,31 @@ struct CampaignView {
 }
 
 #[derive(Debug, Serialize)]
+struct ContentView {
+    id: String,
+    title: String,
+    body: String,
+    approval_status: String,
+    tags_json: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ApprovalView {
+    id: String,
+    content_id: String,
+    requested_by: String,
+    status: String,
+    decided_by: Option<String>,
+    decided_at: Option<String>,
+    note: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
 struct TaskView {
     id: String,
     campaign_id: String,
+    content_id: Option<String>,
     account_id: String,
     platform: String,
     kind: String,
@@ -353,7 +417,60 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         transaction.commit()?;
     }
 
-    connection.execute_batch("PRAGMA user_version = 3;")?;
+    if version < 4 {
+        connection.execute_batch(
+            "CREATE TABLE IF NOT EXISTS content_items (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL DEFAULT 'default',
+                title TEXT NOT NULL,
+                body TEXT NOT NULL,
+                approval_status TEXT NOT NULL DEFAULT 'draft',
+                tags_json TEXT NOT NULL DEFAULT '[]',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+             );
+             CREATE TABLE IF NOT EXISTS content_variants (
+                content_id TEXT NOT NULL REFERENCES content_items(id) ON DELETE CASCADE,
+                platform TEXT NOT NULL,
+                body TEXT,
+                PRIMARY KEY(content_id, platform)
+             );
+             CREATE TABLE IF NOT EXISTS campaign_content (
+                workspace_id TEXT NOT NULL DEFAULT 'default',
+                campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+                content_id TEXT NOT NULL REFERENCES content_items(id) ON DELETE RESTRICT,
+                PRIMARY KEY(campaign_id, content_id)
+             );
+             CREATE TABLE IF NOT EXISTS approvals (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL DEFAULT 'default',
+                content_id TEXT NOT NULL REFERENCES content_items(id) ON DELETE CASCADE,
+                requested_by TEXT NOT NULL,
+                reviewer_ids_json TEXT NOT NULL DEFAULT '[]',
+                status TEXT NOT NULL,
+                decided_by TEXT,
+                decided_at TEXT,
+                note TEXT
+             );",
+        )?;
+
+        if !has_column(connection, "tasks", "content_id")? {
+            connection.execute_batch(
+                "ALTER TABLE tasks ADD COLUMN content_id TEXT REFERENCES content_items(id) ON DELETE RESTRICT",
+            )?;
+        }
+        if !has_column(connection, "messages", "external_message_id")? {
+            connection.execute_batch(
+                "ALTER TABLE messages ADD COLUMN external_message_id TEXT",
+            )?;
+        }
+        connection.execute_batch(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_messages_external
+             ON messages(conversation_id, external_message_id);",
+        )?;
+    }
+
+    connection.execute_batch("PRAGMA user_version = 4;")?;
 }
 
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
