@@ -1597,6 +1597,126 @@ mod tests {
     }
 
     #[test]
+    fn audit_hash_chain_detects_mutation() {
+        let first_id = "audit-1";
+        let first_timestamp = "1000";
+        let first_hash = audit_hash(
+            "GENESIS",
+            first_id,
+            DEFAULT_WORKSPACE_ID,
+            first_timestamp,
+            "security",
+            "test",
+            "success",
+            "system",
+            None,
+            None,
+        );
+        let second_hash = audit_hash(
+            &first_hash,
+            "audit-2",
+            DEFAULT_WORKSPACE_ID,
+            "1001",
+            "security",
+            "test",
+            "success",
+            "system",
+            None,
+            None,
+        );
+
+        assert_ne!(first_hash, second_hash);
+
+        let mutated = audit_hash(
+            "GENESIS",
+            first_id,
+            DEFAULT_WORKSPACE_ID,
+            first_timestamp,
+            "security",
+            "tampered",
+            "success",
+            "system",
+            None,
+            None,
+        );
+        assert_ne!(first_hash, mutated);
+    }
+
+    #[test]
+    fn audit_write_creates_a_verifiable_chain() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection.execute_batch(
+            "CREATE TABLE audit_events(
+               id TEXT PRIMARY KEY,
+               workspace_id TEXT NOT NULL,
+               timestamp TEXT NOT NULL,
+               category TEXT NOT NULL,
+               action TEXT NOT NULL,
+               outcome TEXT NOT NULL,
+               actor TEXT NOT NULL,
+               entity_id TEXT,
+               metadata_json TEXT,
+               previous_hash TEXT NOT NULL,
+               hash TEXT NOT NULL
+             );",
+        ).expect("audit table should be created");
+
+        write_audit(&connection, "security", "one", "success", "system", None)
+            .expect("first audit write should work");
+        write_audit(&connection, "security", "two", "success", "system", None)
+            .expect("second audit write should work");
+
+        let rows = connection
+            .prepare(
+                "SELECT workspace_id, timestamp, category, action, outcome, actor,
+                        entity_id, metadata_json, previous_hash, hash
+                 FROM audit_events
+                 ORDER BY rowid ASC",
+            )
+            .expect("query should prepare")
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, Option<String>>(6)?,
+                    row.get::<_, Option<String>>(7)?,
+                    row.get::<_, String>(8)?,
+                    row.get::<_, String>(9)?,
+                ))
+            })
+            .expect("query should execute");
+
+        let collected: Vec<_> = rows.collect::<Result<Vec<_>, _>>()
+            .expect("audit rows should decode");
+        assert_eq!(collected.len(), 2);
+
+        let first = collected.first().expect("first row should exist");
+        let second = collected.get(1).expect("second row should exist");
+
+        assert_eq!(first.8, "GENESIS");
+        assert_eq!(
+            first.9,
+            audit_hash(
+                &first.8,
+                "audit-placeholder",
+                DEFAULT_WORKSPACE_ID,
+                &first.1,
+                &first.2,
+                &first.3,
+                &first.4,
+                &first.5,
+                first.6.as_deref(),
+                first.7.as_deref(),
+            ).replace("audit-placeholder", &"".to_string())
+        );
+        assert_eq!(second.8, first.9);
+    }
+
+    #[test]
     fn migrates_legacy_schema_and_backfills_task_idempotency() {
         let connection = match Connection::open_in_memory() {
             Ok(value) => value,
