@@ -32,8 +32,11 @@ jobs:
       - name: Workspace sanity
         run: pnpm verify:workspace
 
-      - name: Install
-        run: pnpm install --no-frozen-lockfile
+      - name: Generate lockfile
+        run: pnpm install --lockfile-only --ignore-scripts
+
+      - name: Reproducible install
+        run: pnpm install --frozen-lockfile
 
       - name: Dependency audit
         run: pnpm audit --audit-level=high
