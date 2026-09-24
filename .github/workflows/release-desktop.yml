@@ -79,7 +79,7 @@ jobs:
           version=${GITHUB_REF_NAME}
           commit=${GITHUB_SHA}
           source=rebuild/orbit-production
-          build_date=${{ github.event.repository.updated_at }}
+          build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           signing=unsigned
           EOF
 
