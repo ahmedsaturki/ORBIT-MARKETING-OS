@@ -12,11 +12,7 @@ In the repository:
 
 Choose the operating system and architecture of the machine, then use the registration commands GitHub displays.
 
-Assign these custom labels during configuration:
-
-`orbit,x64`
-
-GitHub labels are case-insensitive. citeturn961641search0
+Use an x64 self-hosted runner. The workflows route to `self-hosted, x64`; no custom `orbit` label is required.
 
 The runner should end in a connected/listening state before it can accept the workflow. citeturn961641search1
 
@@ -72,7 +68,7 @@ A successful self-hosted verification run is valid execution evidence for the co
 
 ## One-click lockfile bootstrap
 
-After the self-hosted runner is registered with labels `orbit,x64`, use:
+After the self-hosted x64 runner is registered, use:
 
 **Actions → Bootstrap Lockfile → Run workflow**
 
