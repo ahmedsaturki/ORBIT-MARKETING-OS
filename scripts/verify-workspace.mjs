@@ -218,6 +218,19 @@ for (const entry of rustSources) {
   }
 }
 
+const taskV10MigrationIndex = rust.indexOf("ALTER TABLE tasks RENAME TO tasks_v10_old;");
+if (taskV10MigrationIndex < 0) {
+  throw new Error("Schema v10 task migration is missing");
+}
+const taskV10MigrationStart = rust.lastIndexOf("if version < 10 {", taskV10MigrationIndex);
+const taskV10MigrationWindow = rust.slice(taskV10MigrationStart, taskV10MigrationIndex + 1200);
+if (taskV10MigrationStart < 0 || !taskV10MigrationWindow.includes("let transaction = connection.unchecked_transaction()?;")) {
+  throw new Error("Schema v10 task migration must run inside a transaction");
+}
+if (!taskV10MigrationWindow.includes("transaction.execute_batch") || !taskV10MigrationWindow.includes("transaction.commit()?;")) {
+  throw new Error("Schema v10 task migration transaction lifecycle is incomplete");
+}
+
 if (!rust.includes("CREATE TABLE IF NOT EXISTS media_assets")) {
   throw new Error("Media metadata persistence table is missing");
 }
