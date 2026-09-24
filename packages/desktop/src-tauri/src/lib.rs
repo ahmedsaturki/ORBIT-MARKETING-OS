@@ -25,7 +25,7 @@ const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
 const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
 const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
-const SCHEMA_VERSION: i64 = 9;
+const SCHEMA_VERSION: i64 = 10;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 static TELEGRAM_EXECUTION_IDS: OnceLock<Mutex<std::collections::HashSet<String>>> = OnceLock::new();
@@ -197,8 +197,9 @@ CREATE TABLE IF NOT EXISTS tasks (
   attempts INTEGER NOT NULL DEFAULT 0,
   max_attempts INTEGER NOT NULL DEFAULT 3,
   available_at TEXT NOT NULL,
-  idempotency_key TEXT NOT NULL UNIQUE,
-  created_at TEXT NOT NULL
+  idempotency_key TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(workspace_id, idempotency_key)
 );
 
 CREATE TABLE IF NOT EXISTS contacts (
@@ -887,6 +888,45 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
              SELECT id, ?1, 'owner', 1, ?2
              FROM workspaces",
             params![DEFAULT_LOCAL_USER_ID, timestamp],
+        )?;
+    }
+
+    if version < 10 {
+        connection.execute_batch(
+            "ALTER TABLE tasks RENAME TO tasks_v10_old;
+             CREATE TABLE tasks (
+               id TEXT PRIMARY KEY,
+               workspace_id TEXT NOT NULL DEFAULT 'default',
+               campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+               content_id TEXT REFERENCES content_items(id) ON DELETE RESTRICT,
+               destination_id TEXT,
+               account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+               platform TEXT NOT NULL,
+               kind TEXT NOT NULL,
+               priority INTEGER NOT NULL DEFAULT 0,
+               status TEXT NOT NULL,
+               attempts INTEGER NOT NULL DEFAULT 0,
+               max_attempts INTEGER NOT NULL DEFAULT 3,
+               available_at TEXT NOT NULL,
+               idempotency_key TEXT NOT NULL,
+               created_at TEXT NOT NULL,
+               UNIQUE(workspace_id, idempotency_key)
+             );
+             INSERT INTO tasks(
+               id, workspace_id, campaign_id, content_id, destination_id, account_id, platform,
+               kind, priority, status, attempts, max_attempts, available_at, idempotency_key, created_at
+             )
+             SELECT
+               id, workspace_id, campaign_id, content_id, destination_id, account_id, platform,
+               kind, priority, status, attempts, max_attempts, available_at,
+               COALESCE(NULLIF(idempotency_key, ''), id), created_at
+             FROM tasks_v10_old;
+             DROP TABLE tasks_v10_old;
+             CREATE INDEX IF NOT EXISTS idx_tasks_ready
+               ON tasks(status, available_at, priority);
+             CREATE INDEX IF NOT EXISTS idx_tasks_destination
+               ON tasks(workspace_id, destination_id);
+             PRAGMA user_version = 10;"
         )?;
     }
 
@@ -5326,6 +5366,47 @@ mod tests {
     }
 
     #[test]
+    fn task_idempotency_key_is_scoped_to_workspace() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection.execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection)
+            .expect("schema migration should succeed");
+        connection.execute_batch(
+            "INSERT INTO workspaces(id, name, created_at)
+             VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+             INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+             VALUES ('campaign-a', 'workspace-a', 'A', 'scheduled', '1'),
+                    ('campaign-b', 'workspace-b', 'B', 'scheduled', '1');
+             INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+             VALUES ('account-a', 'workspace-a', 'telegram', 'A', 'connected', '1', '1'),
+                    ('account-b', 'workspace-b', 'telegram', 'B', 'connected', '1', '1');
+             INSERT INTO campaign_accounts(workspace_id, campaign_id, account_id)
+             VALUES ('workspace-a', 'campaign-a', 'account-a'),
+                    ('workspace-b', 'campaign-b', 'account-b');
+             INSERT INTO tasks(
+               id, workspace_id, campaign_id, account_id, platform, kind,
+               priority, status, attempts, max_attempts, available_at, idempotency_key, created_at
+             )
+             VALUES
+               ('task-a', 'workspace-a', 'campaign-a', 'account-a', 'telegram', 'sync',
+                0, 'pending', 0, 3, '2026-01-01T00:00:00Z', 'same-key', '2026-01-01T00:00:00Z'),
+               ('task-b', 'workspace-b', 'campaign-b', 'account-b', 'telegram', 'sync',
+                0, 'pending', 0, 3, '2026-01-01T00:00:00Z', 'same-key', '2026-01-01T00:00:00Z');"
+        ).expect("same idempotency key should be accepted in separate workspaces");
+
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM tasks WHERE idempotency_key='same-key'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("task count should be readable");
+        assert_eq!(count, 2);
+    }
+
+    #[test]
     fn vault_schema_is_workspace_scoped_and_supports_same_label_per_workspace() {
         let connection = Connection::open_in_memory()
             .expect("in-memory SQLite should be available");
@@ -5485,6 +5566,66 @@ mod tests {
         }
 
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn migrates_global_task_idempotency_constraint_to_workspace_scoped_constraint() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection.execute_batch(
+            "CREATE TABLE workspaces(id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL);
+             CREATE TABLE campaigns(id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, name TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
+             CREATE TABLE accounts(id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, platform TEXT NOT NULL, display_name TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+             CREATE TABLE content_items(id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, approval_status TEXT NOT NULL, tags_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+             CREATE TABLE tasks(
+               id TEXT PRIMARY KEY,
+               workspace_id TEXT NOT NULL DEFAULT 'default',
+               campaign_id TEXT NOT NULL,
+               content_id TEXT,
+               destination_id TEXT,
+               account_id TEXT NOT NULL,
+               platform TEXT NOT NULL,
+               kind TEXT NOT NULL,
+               priority INTEGER NOT NULL DEFAULT 0,
+               status TEXT NOT NULL,
+               attempts INTEGER NOT NULL DEFAULT 0,
+               max_attempts INTEGER NOT NULL DEFAULT 3,
+               available_at TEXT NOT NULL,
+               idempotency_key TEXT NOT NULL UNIQUE,
+               created_at TEXT NOT NULL
+             );"
+        ).expect("legacy tasks schema should be created");
+        connection.execute_batch(
+            "PRAGMA user_version = 9;"
+        ).expect("legacy version should be set");
+
+        migrate_schema(&connection)
+            .expect("legacy task migration should succeed");
+
+        connection.execute_batch(
+            "INSERT INTO workspaces(id, name, created_at)
+             VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+             INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+             VALUES ('campaign-a', 'workspace-a', 'A', 'scheduled', '1'),
+                    ('campaign-b', 'workspace-b', 'B', 'scheduled', '1');
+             INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+             VALUES ('account-a', 'workspace-a', 'telegram', 'A', 'connected', '1', '1'),
+                    ('account-b', 'workspace-b', 'telegram', 'B', 'connected', '1', '1');
+             INSERT INTO tasks(
+               id, workspace_id, campaign_id, account_id, platform, kind,
+               priority, status, attempts, max_attempts, available_at, idempotency_key, created_at
+             )
+             VALUES
+               ('task-a', 'workspace-a', 'campaign-a', 'account-a', 'telegram', 'sync',
+                0, 'pending', 0, 3, '2026-01-01T00:00:00Z', 'same-key', '2026-01-01T00:00:00Z'),
+               ('task-b', 'workspace-b', 'campaign-b', 'account-b', 'telegram', 'sync',
+                0, 'pending', 0, 3, '2026-01-01T00:00:00Z', 'same-key', '2026-01-01T00:00:00Z');"
+        ).expect("migrated schema should accept workspace-scoped duplicate keys");
+
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("schema version should be readable");
+        assert_eq!(version, 10);
     }
 
     #[test]
