@@ -1183,9 +1183,8 @@ fn ensure_workspace_context(connection: &Connection) -> Result<(), AppError> {
 
     connection.execute(
         "INSERT OR IGNORE INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
-         SELECT id, ?1, 'owner', 1, ?2
-         FROM workspaces",
-        params![DEFAULT_LOCAL_USER_ID, timestamp],
+         VALUES (?1, ?2, 'owner', 1, ?3)",
+        params![DEFAULT_WORKSPACE_ID, DEFAULT_LOCAL_USER_ID, timestamp],
     )?;
 
     set_active_workspace_id(&selected)?;
@@ -5335,6 +5334,38 @@ mod tests {
             [],
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn workspace_context_does_not_auto_grant_membership_to_unassigned_workspaces() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        ensure_workspace_context(&connection).expect("workspace context should initialize");
+
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-unassigned', 'Unassigned', '2')",
+                [],
+            )
+            .expect("unassigned workspace should be inserted");
+
+        ensure_workspace_context(&connection).expect("workspace context should be repeatable");
+
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*)
+                 FROM workspace_memberships
+                 WHERE workspace_id='workspace-unassigned' AND user_id=?1",
+                params![DEFAULT_LOCAL_USER_ID],
+                |row| row.get(0),
+            )
+            .expect("membership count should be readable");
+        assert_eq!(count, 0);
     }
 
     #[test]
