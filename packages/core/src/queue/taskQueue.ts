@@ -54,6 +54,7 @@ export class TaskQueue {
 
   /** Claims the highest-priority eligible task and atomically marks it running. */
   public claimNext(now: string): Task | undefined {
+    this.validateTimestamp(now, "now");
     const candidates = [...this.tasks.values()]
       .filter((task) => task.status === "pending" && task.availableAt <= now)
       .sort((a, b) => b.priority - a.priority || a.availableAt.localeCompare(b.availableAt));
@@ -119,6 +120,7 @@ export class TaskQueue {
 
   /** Records a failed attempt and either schedules a retry or terminally fails the task. */
   public fail(id: string, now: string): Task {
+    this.validateTimestamp(now, "now");
     const task = this.requireTask(id);
     if (task.status !== "running") {
       throw new Error(`Only running tasks can fail: ${id}`);
@@ -178,6 +180,12 @@ export class TaskQueue {
     const stored = cloneTask(task);
     this.tasks.set(stored.id, stored);
     return cloneTask(stored);
+  }
+
+  private validateTimestamp(value: string, field: string): void {
+    if (Number.isNaN(Date.parse(value))) {
+      throw new RangeError(field + " must be a valid ISO timestamp");
+    }
   }
 
   private validateTask(task: Task): void {
