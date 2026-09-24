@@ -57,11 +57,24 @@ function tokensEqual(expected: string, supplied: string): boolean {
   );
 }
 
+function requestOrigin(req: express.Request): string | undefined {
+  return req.header("origin")?.trim() || undefined;
+}
+
 function originAllowed(req: express.Request): boolean {
-  const origin = req.header("origin");
+  const origin = requestOrigin(req);
   if (!origin) return true;
   if (!runtimeAuthRequired()) return true;
   return RUNTIME_ALLOWED_ORIGINS.has(origin);
+}
+
+function applyCors(req: express.Request, res: express.Response): void {
+  const origin = requestOrigin(req);
+  if (!origin || !originAllowed(req)) return;
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept");
 }
 
 function isLoopbackHost(host: string): boolean {
@@ -106,6 +119,15 @@ function authorizeRuntime(req: express.Request, res: express.Response): boolean 
 }
 
 app.use("/api", (req, res, next) => {
+  applyCors(req, res);
+
+  if (req.method === "OPTIONS") {
+    if (runtimeAuthRequired() && !originAllowed(req)) {
+      return res.status(403).json({ error: "Origin is not allowed for this runtime." });
+    }
+    return res.sendStatus(204);
+  }
+
   if (authorizeRuntime(req, res)) next();
 });
 function normalizeOllamaBaseUrl(value: string): string {
