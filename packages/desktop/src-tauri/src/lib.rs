@@ -3282,6 +3282,91 @@ mod tests {
     }
 
     #[test]
+    fn concurrent_audit_writes_preserve_a_hash_chain() {
+        let path = std::env::temp_dir().join(format!("orbit-audit-{}.sqlite3", uuid_like()));
+        let setup = Connection::open(&path).expect("SQLite database should open");
+        setup.execute_batch(SCHEMA).expect("schema should be created");
+        migrate_schema(&setup).expect("schema migration should succeed");
+        ensure_workspace_context(&setup).expect("workspace context should initialize");
+        drop(setup);
+
+        let first = std::thread::spawn({
+            let path = path.clone();
+            move || {
+                let connection = Connection::open(&path).expect("first connection should open");
+                write_audit(&connection, "security", "first", "success", "system", None)
+                    .expect("first audit write should succeed");
+            }
+        });
+
+        let second = std::thread::spawn({
+            let path = path.clone();
+            move || {
+                let connection = Connection::open(&path).expect("second connection should open");
+                write_audit(&connection, "security", "second", "success", "system", None)
+                    .expect("second audit write should succeed");
+            }
+        });
+
+        first.join().expect("first audit writer should finish");
+        second.join().expect("second audit writer should finish");
+
+        let connection = Connection::open(&path).expect("verification connection should open");
+        let mut statement = connection
+            .prepare(
+                "SELECT id, workspace_id, timestamp, category, action, outcome, actor,
+                        entity_id, metadata_json, previous_hash, hash
+                 FROM audit_events
+                 WHERE workspace_id=?1
+                 ORDER BY rowid ASC",
+            )
+            .expect("verification query should prepare");
+        let rows = statement
+            .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, String>(6)?,
+                    row.get::<_, Option<String>>(7)?,
+                    row.get::<_, Option<String>>(8)?,
+                    row.get::<_, String>(9)?,
+                    row.get::<_, String>(10)?,
+                ))
+            })
+            .expect("verification query should execute");
+
+        let collected: Vec<_> = rows
+            .collect::<Result<Vec<_>, _>>()
+            .expect("audit rows should decode");
+        assert_eq!(collected.len(), 2);
+
+        let mut previous_hash = "GENESIS".to_string();
+        for row in &collected {
+            assert_eq!(row.9, previous_hash);
+            let expected = audit_hash(
+                &previous_hash,
+                &row.0,
+                &row.1,
+                &row.2,
+                &row.3,
+                &row.4,
+                &row.5,
+                &row.6,
+                row.7.as_deref(),
+                row.8.as_deref(),
+            );
+            assert_eq!(row.10, expected);
+            previous_hash = row.10.clone();
+        }
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
     fn migrates_legacy_schema_and_backfills_task_idempotency() {
         let connection = match Connection::open_in_memory() {
             Ok(value) => value,
