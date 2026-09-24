@@ -169,6 +169,18 @@ const productionRoots = [
 ];
 
 const forbiddenTypeScriptAny = /(?:\:\s*any\b|\bas\s+any\b|\bany\[\]|Record<[^>]*,\s*any\s*>)/;
+const forbiddenProductionSafetyTerms = [
+  "fingerprint cloaking",
+  "fingerprint spoof",
+  "browser fingerprint",
+  "stealth automation",
+  "playwright stealth",
+  "anti-ban",
+  "antiban",
+  "captcha bypass",
+  "CAPTCHA bypass",
+];
+
 async function scanProductionSource(dir) {
   for (const entry of await readdir(join(root, dir), { withFileTypes: true })) {
     if (ignored.has(entry.name)) continue;
@@ -182,6 +194,16 @@ async function scanProductionSource(dir) {
     const content = await readFile(full, "utf8");
     if (forbiddenTypeScriptAny.test(content)) {
       throw new Error("Production source uses implicit any in " + relative(root, full));
+    }
+    for (const fragment of forbiddenProductionSafetyTerms) {
+      if (content.toLowerCase().includes(fragment.toLowerCase())) {
+        throw new Error(
+          "Forbidden stealth/evasion language detected in production source: " +
+          relative(root, full) +
+          ": " +
+          fragment,
+        );
+      }
     }
   }
 }
@@ -208,6 +230,7 @@ const sensitiveDesktopCommands = {
   license_delete: ["owner", "admin"],
   telegram_execute_task: ["owner", "admin", "operator"],
   media_asset_upsert: ["owner", "admin", "editor"],
+  media_asset_import: ["owner", "admin", "editor"],
   automation_rule_pack_upsert: ["owner", "admin", "editor"],
 };
 
