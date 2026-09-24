@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,
   workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  content_id TEXT REFERENCES content_items(id) ON DELETE RESTRICT,
   account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
   platform TEXT NOT NULL,
   kind TEXT NOT NULL,
