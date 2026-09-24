@@ -73,3 +73,13 @@ The connected `orbit-marketing-os` project exists, but no successful deployment 
 ## Current Vercel state
 
 The connected Vercel project is `orbit-marketing-os`. The repository configuration is now explicitly Next.js static export with `packages/web/out` and a versioned first-deployment-safe ignore script. A fresh successful deployment is still required before release.
+
+## Latest execution snapshot
+
+- Branch HEAD: `857323353c3611da78211565cd6c227670ab3be3`.
+- PR #2 remains open, draft, and unmerged.
+- The latest hosted `CI` run for the branch completed with `failure` before workflow steps were registered.
+- The latest lockfile bootstrap run for the branch remains `queued`; previous bootstrap runs were cancelled by its concurrency policy.
+- No production deployment is being claimed from these states.
+
+The implementation branch now includes local content variants, media metadata/import/delete lifecycle, versioned automation rule packs with confirmation invariants and runtime limits, campaign-scoped analytics, a compliant LinkedIn Posts API connector, and expanded acceptance/verification coverage.
