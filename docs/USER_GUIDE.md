@@ -22,9 +22,9 @@ Install Ollama locally and configure the runtime variables:
 
 ```
 OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=llama3.1:8b
-OLLAMA_FAST_MODEL=llama3.1:8b
-OLLAMA_REASONING_MODEL=llama3.1:8b
+OLLAMA_MODEL=llama3.2:3b
+OLLAMA_FAST_MODEL=llama3.2:3b
+OLLAMA_REASONING_MODEL=llama3.2:3b
 OLLAMA_VISION_MODEL=
 ```
 

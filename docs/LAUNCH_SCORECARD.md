@@ -21,7 +21,7 @@ Legend:
 | Migration path | IMPLEMENTED | Migration chain through schema v8 with legacy backfill |
 | Desktop UI | IMPLEMENTED | Workspace switching, content, approvals, tasks, CRM, inbox, backup, license, audit |
 | Web product surface | IMPLEMENTED | Next.js static app, pricing, legal, PWA |
-| Mobile control surface | IMPLEMENTED | Expo Router monitor + secure runtime token storage |
+| Mobile monitoring surface | IMPLEMENTED | Expo Router monitor + secure runtime token storage |
 | Runtime perimeter | IMPLEMENTED | Loopback/local auth model, bearer token, origin allowlist, rate limit |
 | Local AI defaults | IMPLEMENTED | llama3.2:3b default, bounded OLLAMA_NUM_CTX=4096 |
 | Runtime AI smoke | IMPLEMENTED | Fake-Ollama contract added to runtime smoke |
@@ -35,7 +35,7 @@ Legend:
 | Performance/soak | UNVERIFIED | Benchmarks and 24h soak not executed |
 | Desktop signing | BLOCKED | Signing credentials are intentionally absent; validation builds only |
 | Mobile production signing | BLOCKED | Current workflow produces debug validation APK |
-| Vercel production deployment | BLOCKED | Connected `orbit-marketing-os` project exists, but no current production deployment is verified; repository-side config is now canonical at root and requires a committed lockfile |
+| Vercel production deployment | BLOCKED | Connected `orbit-marketing-os` project exists, but recent deployments are ERROR; repository-side config is now canonical and first-deployment-safe, while a committed lockfile is still required |
 | Billing/payment | BLOCKED | No commercial payment provider configuration is verified |
 | Production launch | BLOCKED | Any applicable UNVERIFIED/BLOCKED runtime or distribution gate prevents release claim |
 

@@ -31,7 +31,8 @@ Requirements:
 Bootstrap:
 
 ```bash
-pnpm install
+bash ./scripts/bootstrap-lockfile.sh
+pnpm install --frozen-lockfile
 ```
 
 Core checks:
