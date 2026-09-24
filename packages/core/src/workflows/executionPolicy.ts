@@ -7,6 +7,7 @@ export type ExecutionBlockReason =
   | "task_platform_mismatch"
   | "account_not_connected"
   | "approval_required"
+  | "approval_scope_mismatch"
   | "daily_limit_reached"
   | "circuit_breaker_open"
   | "campaign_not_runnable";
@@ -60,6 +61,18 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
       allowed: false,
       reason: "task_platform_mismatch",
       message: "Task platform does not match the account platform.",
+    };
+  }
+
+  if (
+    context.approval &&
+    (context.approval.workspaceId !== context.task.workspaceId ||
+      !context.campaign.contentIds.includes(context.approval.contentId))
+  ) {
+    return {
+      allowed: false,
+      reason: "approval_scope_mismatch",
+      message: "The approval does not belong to the task workspace and campaign content.",
     };
   }
 
