@@ -34,6 +34,18 @@ interface TelegramMessage {
 
 const DEFAULT_API = "https://api.telegram.org";
 
+function normalizeApiBaseUrl(value: string): string {
+  const url = new URL(value);
+  const loopback = new Set(["localhost", "127.0.0.1", "::1"]);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback.has(url.hostname))) {
+    throw new Error("Telegram API base URL must use HTTPS (or HTTP only for loopback fixtures)");
+  }
+  if (url.username || url.password) {
+    throw new Error("Telegram API base URL must not contain embedded credentials");
+  }
+  return url.toString().replace(/\/$/, "");
+}
+
 export class TelegramConnector implements PlatformConnector {
   public readonly platform = "telegram" as const;
 
@@ -54,7 +66,7 @@ export class TelegramConnector implements PlatformConnector {
   public constructor(options: TelegramConnectorOptions) {
     this.tokenResolver = options.tokenResolver;
     this.contentResolver = options.contentResolver;
-    this.apiBaseUrl = (options.apiBaseUrl ?? DEFAULT_API).replace(/\/$/, "");
+    this.apiBaseUrl = normalizeApiBaseUrl(options.apiBaseUrl ?? DEFAULT_API);
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
