@@ -4405,6 +4405,8 @@ fn analytics_summary(
 
     let (attempted, succeeded, failed, blocked, pending, running) = row;
     let attempted_f = attempted as f64;
+    let total = attempted + pending + running;
+    let total_f = total as f64;
     Ok(AnalyticsSummaryView {
         attempted,
         succeeded,
@@ -4412,10 +4414,10 @@ fn analytics_summary(
         blocked,
         pending,
         running,
-        completion_rate: if attempted == 0 {
+        completion_rate: if total == 0 {
             0.0
         } else {
-            (succeeded + failed + blocked) as f64 / attempted_f
+            attempted as f64 / total_f
         },
         success_rate: if attempted == 0 {
             0.0
@@ -4735,6 +4737,15 @@ mod tests {
         assert!((1i64..=10i64).contains(&1));
         assert!((1i64..=10i64).contains(&10));
         assert!(!(1i64..=10i64).contains(&11));
+    }
+
+    #[test]
+    fn analytics_completion_rate_includes_in_flight_work() {
+        let attempted = 3i64;
+        let pending = 4i64;
+        let running = 1i64;
+        let total = attempted + pending + running;
+        assert!((attempted as f64 / total as f64 - 0.375).abs() < f64::EPSILON);
     }
 
     #[test]
