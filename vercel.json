@@ -1,5 +1,5 @@
 {
-  "installCommand": "corepack prepare pnpm@10.17.1 --activate && pnpm install --filter @orbit/web --no-frozen-lockfile",
+  "installCommand": "pnpm install --filter @orbit/web --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @orbit/web build",
   "outputDirectory": "packages/web/out",
   "framework": "nextjs"
