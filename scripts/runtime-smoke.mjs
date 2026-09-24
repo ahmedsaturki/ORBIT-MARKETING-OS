@@ -1,4 +1,44 @@
+import { createServer } from "node:http";
 import { spawn } from "node:child_process";
+
+const ollamaPort = "3110";
+let capturedOllamaBody = null;
+const ollamaServer = createServer((req, res) => {
+  if (req.method === "GET" && req.url === "/api/tags") {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ models: [{ name: "llama3.2:3b" }] }));
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/api/chat") {
+    let body = "";
+    req.setEncoding("utf8");
+    req.on("data", (chunk) => { body += chunk; });
+    req.on("end", () => {
+      try {
+        capturedOllamaBody = JSON.parse(body);
+      } catch {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid fake ollama request" }));
+        return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({
+        model: capturedOllamaBody?.model ?? "llama3.2:3b",
+        message: { role: "assistant", content: "fake ollama response" },
+      }));
+    });
+    return;
+  }
+
+  res.writeHead(404);
+  res.end();
+});
+
+await new Promise((resolve, reject) => {
+  ollamaServer.once("error", reject);
+  ollamaServer.listen(Number(ollamaPort), "127.0.0.1", resolve);
+});
 
 const port = "3101";
 const child = spawn("pnpm", ["runtime:start"], {
@@ -6,7 +46,7 @@ const child = spawn("pnpm", ["runtime:start"], {
     ...process.env,
     PORT: port,
     RUNTIME_HOST: "127.0.0.1",
-    OLLAMA_BASE_URL: "http://127.0.0.1:9",
+    OLLAMA_BASE_URL: `http://127.0.0.1:${ollamaPort}`,
   },
   stdio: ["ignore", "pipe", "pipe"],
   shell: process.platform === "win32",
@@ -49,11 +89,35 @@ try {
   if (!["ok", "degraded"].includes(body?.status)) {
     throw new Error("health status contract mismatch");
   }
-  if (body?.ai?.status !== "degraded") {
-    throw new Error("offline Ollama fixture must report degraded AI state");
+  if (body?.ai?.status !== "ok") {
+    throw new Error("fake Ollama fixture must report healthy AI state");
   }
 
-  console.log("runtime smoke passed", JSON.stringify(body));
+  const generation = await fetch(`http://127.0.0.1:${port}/api/generate-content`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      topic: "اختبار ORBIT",
+      dialect: "فصحى مبسطة",
+      tone: "احترافي",
+      targetAudience: "اختبار",
+    }),
+  });
+  if (generation.status !== 200) {
+    throw new Error(`generation returned HTTP ${generation.status}`);
+  }
+  if (!capturedOllamaBody?.options || capturedOllamaBody.options.num_ctx !== 4096) {
+    throw new Error("Ollama context budget contract mismatch");
+  }
+  if (capturedOllamaBody.model !== "llama3.2:3b") {
+    throw new Error("resource-aware default model contract mismatch");
+  }
+
+  console.log("runtime AI smoke passed", JSON.stringify({
+    health: body,
+    model: capturedOllamaBody.model,
+    num_ctx: capturedOllamaBody.options.num_ctx,
+  }));
 } finally {
   child.kill("SIGTERM");
   await new Promise((resolve) => setTimeout(resolve, 100));
@@ -146,3 +210,5 @@ try {
     throw new Error(`LAN runtime exited with code ${authChild.exitCode}`);
   }
 }
+
+await new Promise((resolve) => ollamaServer.close(() => resolve()));
