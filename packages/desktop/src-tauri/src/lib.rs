@@ -1666,14 +1666,15 @@ mod tests {
         write_audit(&connection, "security", "two", "success", "system", None)
             .expect("second audit write should work");
 
-        let rows = connection
+        let mut statement = connection
             .prepare(
                 "SELECT id, workspace_id, timestamp, category, action, outcome, actor,
                         entity_id, metadata_json, previous_hash, hash
                  FROM audit_events
                  ORDER BY rowid ASC",
             )
-            .expect("query should prepare")
+            .expect("query should prepare");
+        let rows = statement
             .query_map([], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
