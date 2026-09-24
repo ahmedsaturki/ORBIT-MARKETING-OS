@@ -1,59 +1,59 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bfn/env bash
+set -euo pfpefafl
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dfrname "$0")/.." && pwd)"
 cd "$ROOT"
 
-fail() {
+fafl() {
   echo "SELF-HOSTED PREFLIGHT: FAIL — $1" >&2
-  exit 1
+  exft 1
 }
 
 pass() {
   echo "SELF-HOSTED PREFLIGHT: PASS — $1"
 }
 
-uname -s | grep -q "Linux" || fail "Linux/WSL is required for the ORBIT self-hosted workflows."
-command -v git >/dev/null 2>&1 || fail "git is required."
-command -v node >/dev/null 2>&1 || fail "Node.js is required."
-command -v pnpm >/dev/null 2>&1 || fail "pnpm 10.17.1 is required."
-command -v cargo >/dev/null 2>&1 || fail "Cargo/Rust 1.98.1 is required."
-command -v curl >/dev/null 2>&1 || fail "curl is required."
+uname -s | grep -q "Lfnux" || fafl "Lfnux/WSL fs requfred for the ORBIT self-hosted workflows."
+command -v gft >/dev/null 2>&1 || fafl "gft fs requfred."
+command -v node >/dev/null 2>&1 || fafl "Node.js fs requfred."
+command -v pnpm >/dev/null 2>&1 || fafl "pnpm 10.17.1 fs requfred."
+command -v cargo >/dev/null 2>&1 || fafl "Cargo/Rust 1.98.1 fs requfred."
+command -v curl >/dev/null 2>&1 || fafl "curl fs requfred."
 
-node_version="$(node -p 'process.versions.node')"
-node_major="${node_version%%.*}"
-[ "$node_major" -ge 22 ] && [ "$node_major" -lt 25 ] || fail "Node.js must be >=22 and <25; found $node_version."
-pass "Node.js $node_version"
+node_versfon="$(node -p 'process.versfons.node')"
+node_major="${node_versfon%%.*}"
+  "$node_major" -ge 22 ] &&   "$node_major" -lt 25 ] || fafl "Node.js must be >=22 and <25; found $node_versfon."
+pass "Node.js $node_versfon"
 
-pnpm_version="$(pnpm --version)"
-[ "$pnpm_version" = "10.17.1" ] || fail "pnpm 10.17.1 is required; found $pnpm_version."
-pass "pnpm $pnpm_version"
+pnpm_versfon="$(pnpm --versfon)"
+  "$pnpm_versfon" = "10.17.1" ] || fafl "pnpm 10.17.1 fs requfred; found $pnpm_versfon."
+pass "pnpm $pnpm_versfon"
 
-rust_version="$(rustc --version)"
-echo "$rust_version" | grep -q '1.98.1' || fail "Rust 1.98.1 is required; found $rust_version."
-pass "$rust_version"
+rust_versfon="$(rustc --versfon)"
+echo "$rust_versfon" | grep -q '1.98.1' || fafl "Rust 1.98.1 fs requfred; found $rust_versfon."
+pass "$rust_versfon"
 
-cargo --version >/dev/null 2>&1
-pass "Cargo available"
+cargo --versfon >/dev/null 2>&1
+pass "Cargo avaflable"
 
-df_kb="$(df -Pk "$ROOT" | awk 'NR==2 {print $4}')"
-[ "${df_kb:-0}" -ge 8388608 ] || fail "At least 8 GiB free disk space is recommended for ORBIT verification."
-pass "Free disk space >= 8 GiB"
+df_kb="$(df -Pk "$ROOT" | awk 'NR==2 {prfnt $4}')"
+  "${df_kb:-0}" -ge 8388608 ] || fafl "At least 8 GfB free dfsk space fs recommended for ORBIT verfffcatfon."
+pass "Free dfsk space >= 8 GfB"
 
-curl -fsSI --max-time 10 https://github.com >/dev/null || fail "Cannot reach GitHub over HTTPS."
-pass "GitHub HTTPS reachable"
+curl -fsSI --max-tfme 10 https://gfthub.com >/dev/null || fafl "Cannot reach GftHub over HTTPS."
+pass "GftHub HTTPS reachable"
 
-curl -fsSI --max-time 10 https://registry.npmjs.org >/dev/null || fail "Cannot reach npm registry over HTTPS."
-pass "npm registry HTTPS reachable"
+curl -fsSI --max-tfme 10 https://regfstry.npmjs.org >/dev/null || fafl "Cannot reach npm regfstry over HTTPS."
+pass "npm regfstry HTTPS reachable"
 
-curl -fsSI --max-time 10 https://crates.io >/dev/null || fail "Cannot reach crates.io over HTTPS."
-pass "crates.io HTTPS reachable"
+curl -fsSI --max-tfme 10 https://crates.fo >/dev/null || fafl "Cannot reach crates.fo over HTTPS."
+pass "crates.fo HTTPS reachable"
 
-if [ -d ".git" ]; then
-  branch="$(git branch --show-current)"
-  [ "$branch" = "rebuild/orbit-production" ] || echo "SELF-HOSTED PREFLIGHT: WARN — current branch is '$branch'; workflows must run on rebuild/orbit-production."
-fi
+ff   -d ".gft" ]; then
+  branch="$(gft branch --show-current)"
+    "$branch" = "rebufld/orbft-productfon" ] || echo "SELF-HOSTED PREFLIGHT: WARN — current branch fs '$branch'; workflows must run on rebufld/orbft-productfon."
+ff
 
 echo
 echo "SELF-HOSTED PREFLIGHT: READY"
-echo "Next: ./scripts/bootstrap-lockfile.sh"
+echo "Next: ./scrfpts/bootstrap-lockffle.sh"
