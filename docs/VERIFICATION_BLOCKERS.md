@@ -6,14 +6,14 @@ Updated: 2026-09-24
 
 Current rebuild HEAD at the latest source revision:
 
-`badba95f247acc60e6234a85466ee5c9059b3652`
+`8904f23766b502525bbcb7d3dee825687ff914f0`
 
 The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
 
 Latest observed hosted-runner behavior:
 
-- The newest observed CI run (`36050298475`) has two jobs; both fail before step registration with `runner_id=0`, empty runner name, and no step records.
-- Multiple consecutive runs show the same pre-execution signature.
+- The newest hosted CI run on the consolidated line (`36055292748`) failed before any workflow step executed; the job record has no usable steps/logs.
+- A self-hosted verification run (`36055285400`) is now queued against the exact consolidation HEAD `8904f23766b502525bbcb7d3dee825687ff914f0` and awaits a matching `self-hosted, x64, linux` runner.
 
 A deliberately minimal runner probe was also tested earlier and failed before any workflow step executed. It was removed after diagnosis.
 
@@ -27,7 +27,7 @@ The repository now provides:
 
 - `scripts/bootstrap-lockfile.ps1` for Windows.
 - `scripts/bootstrap-lockfile.sh` for Linux/WSL/macOS.
-- `.github/workflows/self-hosted-verify.yml` as a manual full verification path on an owned runner.
+- `.github/workflows/self-hosted-verify.yml` as the full verification path (push/manual) on an owned runner.
 
 ## 3. Vercel deployment evidence
 
@@ -48,4 +48,4 @@ The connected project metadata has reported framework `vite` while the repositor
 
 ## Release consequence
 
-Do not merge PR #2 or claim production readiness while clean install, TypeScript checks, Rust checks, runtime integration, E2E, security, performance, signing, distribution, and other applicable release gates remain unverified.
+Do not merge PR #9 or claim production readiness while clean install, TypeScript checks, Rust checks, runtime integration, E2E, security, performance, signing, distribution, and other applicable release gates remain unverified.
