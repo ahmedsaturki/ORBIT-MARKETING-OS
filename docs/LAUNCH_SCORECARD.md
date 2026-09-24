@@ -21,6 +21,7 @@ Legend:
 | Migration path | IMPLEMENTED | Migration chain through schema v8 with legacy backfill |
 | Desktop UI | IMPLEMENTED | Workspace switching, content, approvals, tasks, CRM, inbox, backup, license, audit |
 | Web product surface | IMPLEMENTED | Next.js static app, pricing, legal, PWA |
+| Local AI Studio | IMPLEMENTED | Typed local runtime client, chat/content/image UI, loopback-only boundary; execution evidence pending |
 | Mobile monitoring surface | IMPLEMENTED | Expo Router monitor + secure runtime token storage |
 | Runtime perimeter | IMPLEMENTED | Loopback/local auth model, bearer token, origin allowlist, rate limit |
 | Media metadata persistence | IMPLEMENTED | Workspace-scoped SQLite metadata, MIME/hash validation, search |
