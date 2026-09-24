@@ -67,10 +67,16 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Install Playwright Chromium on Linux
+        if: runner.os == 'Linux'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright Chromium on Windows/macOS
+        if: runner.os != 'Linux'
+        run: pnpm exec playwright install chromium
+
       - name: Browser E2E
-        run: |
-          pnpm exec playwright install chromium
-          pnpm test:e2e
+        run: pnpm test:e2e
 
       - name: Format check
         run: pnpm format:check
