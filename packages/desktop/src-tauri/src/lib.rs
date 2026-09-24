@@ -1518,6 +1518,7 @@ fn vault_put(
     plaintext: String,
     password: String,
 ) -> Result<VaultWriteResult, String> {
+    let workspace_id = active_workspace_id();
     let label = validate_label(&label).map_err(|error| error.to_string())?;
     if plaintext.is_empty() || password.is_empty() {
         return Err(AppError::InvalidPassword.to_string());
@@ -1526,14 +1527,14 @@ fn vault_put(
     let payload = seal(&password, &plaintext).map_err(|error| error.to_string())?;
     let payload_json = serde_json::to_string(&payload).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
     connection
         .execute(
             "INSERT INTO vault_records(workspace_id, label, payload_json, updated_at)
              VALUES (?1, ?2, ?3, ?4)
              ON CONFLICT(workspace_id, label) DO UPDATE SET payload_json=excluded.payload_json, updated_at=excluded.updated_at",
-            params![active_workspace_id(), label, payload_json, timestamp],
+            params![workspace_id, label, payload_json, timestamp],
         )
         .map_err(|error| error.to_string())?;
 
@@ -1548,13 +1549,14 @@ fn vault_put(
 
 #[tauri::command]
 fn vault_get(app: tauri::AppHandle, label: String, password: String) -> Result<String, String> {
+    let workspace_id = active_workspace_id();
     let label = validate_label(&label).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let payload_json: String = connection
         .query_row(
             "SELECT payload_json FROM vault_records WHERE workspace_id = ?1 AND label = ?2",
-            params![active_workspace_id(), label],
+            params![workspace_id, label],
             |row| row.get(0),
         )
         .map_err(|error| match error {
@@ -1579,13 +1581,14 @@ fn vault_get(app: tauri::AppHandle, label: String, password: String) -> Result<S
 
 #[tauri::command]
 fn vault_delete(app: tauri::AppHandle, label: String) -> Result<bool, String> {
+    let workspace_id = active_workspace_id();
     let label = validate_label(&label).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let changed = connection
         .execute(
             "DELETE FROM vault_records WHERE workspace_id = ?1 AND label = ?2",
-            params![active_workspace_id(), label],
+            params![workspace_id, label],
         )
         .map_err(|error| error.to_string())?;
     if changed > 0 {
@@ -1634,6 +1637,7 @@ fn account_upsert(
     session: Option<String>,
     password: Option<String>,
 ) -> Result<AccountView, String> {
+    let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
     let display_name = validate_label(&display_name).map_err(|error| error.to_string())?;
@@ -1649,7 +1653,7 @@ fn account_upsert(
     };
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
     let status = if session_payload_json.is_some() { "connected" } else { "needs_refresh" };
     connection
@@ -1662,7 +1666,7 @@ fn account_upsert(
                username=excluded.username,
                session_payload_json=COALESCE(excluded.session_payload_json, accounts.session_payload_json),
                updated_at=excluded.updated_at",
-            params![id, active_workspace_id(), platform, display_name, username, status, session_payload_json, timestamp],
+            params![id, workspace_id, platform, display_name, username, status, session_payload_json, timestamp],
         )
         .map_err(|error| error.to_string())?;
 
@@ -1681,14 +1685,15 @@ fn account_upsert(
 
 #[tauri::command]
 fn account_list(app: tauri::AppHandle) -> Result<Vec<AccountView>, String> {
+    let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare("SELECT id, platform, display_name, username, status, session_payload_json FROM accounts WHERE workspace_id=?1 ORDER BY created_at DESC")
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![active_workspace_id()], |row| {
+        .query_map(params![workspace_id], |row| {
             Ok(AccountView {
                 id: row.get(0)?,
                 platform: row.get(1)?,
@@ -1710,17 +1715,18 @@ fn account_get_session(
     id: String,
     password: String,
 ) -> Result<String, String> {
+    let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     if password.is_empty() {
         return Err(AppError::InvalidPassword.to_string());
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let payload_json: Option<String> = connection
         .query_row(
             "SELECT session_payload_json FROM accounts WHERE id = ?1 AND workspace_id = ?2",
-            params![id, active_workspace_id()],
+            params![id, workspace_id],
             |row| row.get(0),
         )
         .map_err(|error| match error {
@@ -1746,11 +1752,12 @@ fn account_get_session(
 
 #[tauri::command]
 fn account_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
+    let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let changed = connection
-        .execute("DELETE FROM accounts WHERE id = ?1 AND workspace_id = ?2", params![id, active_workspace_id()])
+        .execute("DELETE FROM accounts WHERE id = ?1 AND workspace_id = ?2", params![id, workspace_id])
         .map_err(|error| error.to_string())?;
     if changed > 0 {
         write_audit(&connection, "account", "delete", "success", "user", Some(&id))
@@ -1812,8 +1819,9 @@ fn campaign_create(
 
 #[tauri::command]
 fn campaign_list(app: tauri::AppHandle) -> Result<Vec<CampaignView>, String> {
+    let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT c.id, c.name, c.status, COUNT(t.id), c.created_at
@@ -1826,7 +1834,7 @@ fn campaign_list(app: tauri::AppHandle) -> Result<Vec<CampaignView>, String> {
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![active_workspace_id()], |row| {
+        .query_map(params![workspace_id], |row| {
             Ok(CampaignView {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -1884,6 +1892,7 @@ fn content_upsert(
     approval_status: String,
     tags_json: Option<String>,
 ) -> Result<ContentView, String> {
+    let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let title = validate_label(&title).map_err(|error| error.to_string())?;
     let body = body.trim().to_string();
@@ -1903,7 +1912,7 @@ fn content_upsert(
     .map_err(|error| error.to_string())?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
     connection
         .execute(
@@ -1915,7 +1924,7 @@ fn content_upsert(
                approval_status=excluded.approval_status,
                tags_json=excluded.tags_json,
                updated_at=excluded.updated_at",
-            params![id, active_workspace_id(), title, body, approval_status, tags_json, timestamp],
+            params![id, workspace_id, title, body, approval_status, tags_json, timestamp],
         )
         .map_err(|error| error.to_string())?;
     write_audit(&connection, "content", "upsert", "success", "user", Some(&id))
@@ -1932,8 +1941,9 @@ fn content_upsert(
 
 #[tauri::command]
 fn content_list(app: tauri::AppHandle) -> Result<Vec<ContentView>, String> {
+    let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT id, title, body, approval_status, tags_json, updated_at
@@ -1943,7 +1953,7 @@ fn content_list(app: tauri::AppHandle) -> Result<Vec<ContentView>, String> {
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![active_workspace_id()], |row| {
+        .query_map(params![workspace_id], |row| {
             Ok(ContentView {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -2143,8 +2153,9 @@ fn approval_decide(
 
 #[tauri::command]
 fn approval_list(app: tauri::AppHandle) -> Result<Vec<ApprovalView>, String> {
+    let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT id, content_id, requested_by, status, decided_by, decided_at, note
@@ -2154,7 +2165,7 @@ fn approval_list(app: tauri::AppHandle) -> Result<Vec<ApprovalView>, String> {
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![active_workspace_id()], |row| {
+        .query_map(params![workspace_id], |row| {
             Ok(ApprovalView {
                 id: row.get(0)?,
                 content_id: row.get(1)?,
@@ -2552,8 +2563,9 @@ fn task_fail(
 
 #[tauri::command]
 fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<TaskView>, String> {
+    let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT id, campaign_id, content_id, destination_id, account_id, platform, kind, priority,
@@ -2566,7 +2578,7 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![active_workspace_id(), campaign_id], |row| {
+        .query_map(params![workspace_id, campaign_id], |row| {
             Ok(TaskView {
                 id: row.get(0)?,
                 campaign_id: row.get(1)?,
@@ -2600,6 +2612,7 @@ fn contact_upsert(
     status: String,
     notes: Option<String>,
 ) -> Result<ContactView, String> {
+    let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let display_name = validate_label(&display_name).map_err(|error| error.to_string())?;
     let allowed_status = ["new", "interested", "sold", "lost"];
@@ -2609,7 +2622,7 @@ fn contact_upsert(
     let timestamp = chrono_like_timestamp();
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator"]).map_err(|error| error.to_string())?;
     connection
         .execute(
             "INSERT INTO contacts(
@@ -2627,7 +2640,7 @@ fn contact_upsert(
                updated_at=excluded.updated_at",
             params![
                 id,
-                active_workspace_id(),
+                workspace_id,
                 display_name,
                 phone,
                 email,
@@ -2656,8 +2669,9 @@ fn contact_upsert(
 
 #[tauri::command]
 fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<ContactView>, String> {
+    let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
     let pattern = search.map(|value| "%".to_string() + value.trim() + "%");
     let mut statement = connection
         .prepare(
@@ -2670,7 +2684,7 @@ fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<Con
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![active_workspace_id(), pattern], |row| {
+        .query_map(params![workspace_id, pattern], |row| {
             Ok(ContactView {
                 id: row.get(0)?,
                 display_name: row.get(1)?,
@@ -3136,8 +3150,9 @@ fn message_add(
 
 #[tauri::command]
 fn inbox_list(app: tauri::AppHandle) -> Result<Vec<ConversationView>, String> {
+    let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT c.id, c.account_id, c.contact_id, c.platform, c.external_thread_id, c.status, COUNT(m.id), c.updated_at
@@ -3150,7 +3165,7 @@ fn inbox_list(app: tauri::AppHandle) -> Result<Vec<ConversationView>, String> {
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![active_workspace_id()], |row| {
+        .query_map(params![workspace_id], |row| {
             Ok(ConversationView {
                 id: row.get(0)?,
                 account_id: row.get(1)?,
@@ -3172,9 +3187,10 @@ fn message_list(
     app: tauri::AppHandle,
     conversation_id: String,
 ) -> Result<Vec<MessageView>, String> {
+    let workspace_id = active_workspace_id();
     let conversation_id = validate_label(&conversation_id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT m.id, m.conversation_id, m.direction, m.body, m.sent_at
@@ -3185,7 +3201,7 @@ fn message_list(
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![conversation_id, active_workspace_id()], |row| {
+        .query_map(params![conversation_id, workspace_id], |row| {
             Ok(MessageView {
                 id: row.get(0)?,
                 conversation_id: row.get(1)?,
@@ -3201,9 +3217,10 @@ fn message_list(
 
 #[tauri::command]
 fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView>, String> {
+    let workspace_id = active_workspace_id();
     let limit = limit.unwrap_or(100).clamp(1, 500);
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT id, timestamp, category, action, outcome, actor, entity_id, metadata_json, previous_hash, hash
@@ -3213,7 +3230,7 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![active_workspace_id(), limit], |row| {
+        .query_map(params![workspace_id, limit], |row| {
             Ok(AuditView {
                 id: row.get(0)?,
                 timestamp: row.get(1)?,
