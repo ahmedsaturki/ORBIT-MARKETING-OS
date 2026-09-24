@@ -16,11 +16,10 @@ CREATE TABLE social_accounts (
     platform TEXT NOT NULL, -- facebook, whatsapp, telegram, instagram, linkedin
     account_name TEXT NOT NULL,
     username TEXT,
-    session_data TEXT, -- AES-256 encrypted local cookies
-    proxy_config TEXT, -- { host, port, user, pass }
+    session_metadata TEXT,
     status TEXT DEFAULT 'active',
     health_score INTEGER DEFAULT 100,
-    warm_up_level INTEGER DEFAULT 1,
+    health_score INTEGER DEFAULT 100,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -31,8 +30,7 @@ CREATE TABLE campaigns (
     target TEXT NOT NULL,
     status TEXT DEFAULT 'draft',
     content TEXT NOT NULL,
-    delay_min INTEGER DEFAULT 4,
-    delay_max INTEGER DEFAULT 9,
+    safety_budget INTEGER DEFAULT 0,
     scheduled_at TIMESTAMP,
     successful_actions INTEGER DEFAULT 0,
     total_actions INTEGER DEFAULT 0
@@ -294,7 +292,7 @@ CREATE TABLE contacts (
             <div>
               <h3 className="text-sm font-bold text-white">محرك القواعد الديناميكية القابلة للتحديث السريع (Rules Engine)</h3>
               <p className="text-xs text-slate-400">
-                إذا غير فيسبوك أو واتساب محددات الأزرار (Selectors)، يتم تحديث ملف القواعد فورياً دون الحاجة لإعادة تنصيب البرنامج
+                قواعد التكامل تُحدّث بإصدارات واضحة وتُراجع قبل تفعيلها؛ لا تتضمن أساليب لتجاوز ضوابط المنصة
               </p>
             </div>
           </div>
