@@ -302,8 +302,8 @@ const workflowFiles = [
   ".github/workflows/bootstrap-lockfile.yml",
 ];
 const bootstrapWorkflow = await readFile(join(root, ".github/workflows/bootstrap-lockfile.yml"), "utf8");
-if (!bootstrapWorkflow.includes("github.ref_name == 'rebuild/orbit-production'")) {
-  throw new Error("Lockfile bootstrap must be restricted to rebuild/orbit-production");
+if (!bootstrapWorkflow.includes("workflow_dispatch:")) {
+  throw new Error("Lockfile bootstrap must be manually dispatched");
 }
 if (!bootstrapWorkflow.includes("contents: write")) {
   throw new Error("Lockfile bootstrap requires explicit contents: write permission");
