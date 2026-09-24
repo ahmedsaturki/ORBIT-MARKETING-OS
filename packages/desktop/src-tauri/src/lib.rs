@@ -1164,15 +1164,45 @@ fn ensure_workspace_context(connection: &Connection) -> Result<(), AppError> {
         .optional()?;
 
     let candidate = stored.unwrap_or_else(|| DEFAULT_WORKSPACE_ID.to_string());
-    let exists: bool = connection.query_row(
-        "SELECT EXISTS(SELECT 1 FROM workspaces WHERE id=?1)",
-        params![candidate],
+    let local_user = local_user_id(connection)?;
+    let accessible: bool = connection.query_row(
+        "SELECT EXISTS(
+           SELECT 1
+           FROM workspace_memberships
+           WHERE workspace_id=?1 AND user_id=?2 AND active=1
+         )",
+        params![&candidate, &local_user],
         |row| row.get(0),
     )?;
-    let selected = if exists {
+
+    let default_accessible: bool = connection.query_row(
+        "SELECT EXISTS(
+           SELECT 1
+           FROM workspace_memberships
+           WHERE workspace_id=?1 AND user_id=?2 AND active=1
+         )",
+        params![DEFAULT_WORKSPACE_ID, &local_user],
+        |row| row.get(0),
+    )?;
+
+    let selected = if accessible {
         candidate
-    } else {
+    } else if default_accessible {
         DEFAULT_WORKSPACE_ID.to_string()
+    } else {
+        connection
+            .query_row(
+                "SELECT w.id
+                 FROM workspaces w
+                 JOIN workspace_memberships m ON m.workspace_id=w.id
+                 WHERE m.user_id=?1 AND m.active=1
+                 ORDER BY w.created_at ASC, w.id ASC
+                 LIMIT 1",
+                params![&local_user],
+                |row| row.get(0),
+            )
+            .optional()?
+            .unwrap_or_else(|| DEFAULT_WORKSPACE_ID.to_string())
     };
 
     connection.execute(
@@ -5377,6 +5407,47 @@ mod tests {
             [],
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn workspace_context_falls_back_from_inaccessible_saved_workspace() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        ensure_workspace_context(&connection).expect("workspace context should initialize");
+
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-unassigned', 'Unassigned', '2')",
+                [],
+            )
+            .expect("unassigned workspace should be inserted");
+        connection
+            .execute(
+                "UPDATE runtime_state
+                 SET value='workspace-unassigned'
+                 WHERE key='active_workspace_id'",
+                [],
+            )
+            .expect("saved workspace should be changed");
+
+        ensure_workspace_context(&connection).expect("workspace context should recover");
+        assert_eq!(active_workspace_id(), DEFAULT_WORKSPACE_ID);
+
+        let persisted: String = connection
+            .query_row(
+                "SELECT value
+                 FROM runtime_state
+                 WHERE key='active_workspace_id'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("saved active workspace should be readable");
+        assert_eq!(persisted, DEFAULT_WORKSPACE_ID);
     }
 
     #[test]
