@@ -515,50 +515,59 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         }
 
         let transaction = connection.unchecked_transaction()?;
-        let mut statement = transaction.prepare(
-            "SELECT rowid, id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json
-             FROM audit_events
-             WHERE workspace_id=?1
-             ORDER BY rowid ASC",
-        )?;
-        let rows = statement.query_map(params![active_workspace_id()], |row| {
-            Ok((
-                row.get::<_, i64>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, String>(3)?,
-                row.get::<_, String>(4)?,
-                row.get::<_, String>(5)?,
-                row.get::<_, String>(6)?,
-                row.get::<_, String>(7)?,
-                row.get::<_, Option<String>>(8)?,
-                row.get::<_, Option<String>>(9)?,
-            ))
-        })?;
+        let workspace_ids: Vec<String> = {
+            let mut workspace_statement =
+                transaction.prepare("SELECT DISTINCT workspace_id FROM audit_events ORDER BY workspace_id")?;
+            let rows = workspace_statement
+                .query_map([], |row| row.get::<_, String>(0))?;
+            rows.collect::<Result<Vec<_>, _>>()?
+        };
 
-        let mut previous_hash = "GENESIS".to_string();
-        for row in rows {
-            let (rowid, id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json) = row?;
-            let hash = audit_hash(
-                &previous_hash,
-                &id,
-                &workspace_id,
-                &timestamp,
-                &category,
-                &action,
-                &outcome,
-                &actor,
-                entity_id.as_deref(),
-                metadata_json.as_deref(),
-            );
-            transaction.execute(
-                "UPDATE audit_events SET previous_hash=?1, hash=?2 WHERE rowid=?3",
-                params![previous_hash, hash, rowid],
+        for workspace_id in workspace_ids {
+            let mut statement = transaction.prepare(
+                "SELECT rowid, id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json
+                 FROM audit_events
+                 WHERE workspace_id=?1
+                 ORDER BY rowid ASC",
             )?;
-            previous_hash = hash;
+            let rows = statement.query_map(params![&workspace_id], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, String>(6)?,
+                    row.get::<_, String>(7)?,
+                    row.get::<_, Option<String>>(8)?,
+                    row.get::<_, Option<String>>(9)?,
+                ))
+            })?;
+
+            let mut previous_hash = "GENESIS".to_string();
+            for row in rows {
+                let (rowid, id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json) = row?;
+                let hash = audit_hash(
+                    &previous_hash,
+                    &id,
+                    &workspace_id,
+                    &timestamp,
+                    &category,
+                    &action,
+                    &outcome,
+                    &actor,
+                    entity_id.as_deref(),
+                    metadata_json.as_deref(),
+                );
+                transaction.execute(
+                    "UPDATE audit_events SET previous_hash=?1, hash=?2 WHERE rowid=?3",
+                    params![previous_hash, hash, rowid],
+                )?;
+                previous_hash = hash;
+            }
         }
 
-        drop(statement);
         transaction.commit()?;
     }
 
@@ -1398,10 +1407,14 @@ fn workspace_list(app: tauri::AppHandle) -> Result<Vec<WorkspaceView>, String> {
 fn workspace_current(app: tauri::AppHandle) -> Result<WorkspaceView, String> {
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let id = active_workspace_id();
+    let user_id = local_user_id(&connection).map_err(|error| error.to_string())?;
     connection
         .query_row(
-            "SELECT id, name, created_at FROM workspaces WHERE id=?1",
-            params![id],
+            "SELECT w.id, w.name, w.created_at
+             FROM workspaces w
+             JOIN workspace_memberships m ON m.workspace_id=w.id
+             WHERE w.id=?1 AND m.user_id=?2 AND m.active=1",
+            params![id, user_id],
             |row| {
                 Ok(WorkspaceView {
                     id: row.get(0)?,
