@@ -169,6 +169,7 @@ export async function executeClaimedTask(
     account: context.account,
     campaign: context.campaign,
     task,
+    ...(context.content ? { content: context.content } : {}),
     ...(context.approval ? { approval: context.approval } : {}),
     actionsToday: context.actionsToday,
     dailyLimit: context.dailyLimit,
