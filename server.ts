@@ -319,10 +319,20 @@ async function startServer(): Promise<void> {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(__dirname, "dist");
-    app.use(express.static(distPath));
+    const webDistPath = path.join(__dirname, "packages", "web", "out");
+    const webIndex = path.join(webDistPath, "index.html");
+    if (!path.isAbsolute(webDistPath)) {
+      throw new Error("Invalid production web output path");
+    }
+    app.use(express.static(webDistPath));
     app.get("/{*splat}", (_req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      res.sendFile(webIndex, (error) => {
+        if (error && !res.headersSent) {
+          res.status(503).json({
+            error: "Web build output is not available. Run the workspace web build first.",
+          });
+        }
+      });
     });
   }
 
