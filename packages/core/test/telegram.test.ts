@@ -116,6 +116,51 @@ describe("TelegramConnector", () => {
     })).toThrow("must use HTTPS");
   });
 
+  it("blocks ambiguous 5xx delivery responses instead of returning retryable failure", async () => {
+    const connector = new TelegramConnector({
+      tokenResolver: async () => "token",
+      contentResolver: async () => "hello",
+      apiBaseUrl: "https://telegram.test",
+      fetchImpl: async () =>
+        new Response(JSON.stringify({
+          ok: false,
+          error_code: 500,
+          description: "Internal Server Error",
+        }), { status: 500 }),
+    });
+
+    const result = await connector.execute(task, {
+      accountId: "account-1",
+      userConfirmed: true,
+    });
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reason: "delivery_status_unknown",
+    });
+  });
+
+  it("blocks transport failures as delivery-unknown", async () => {
+    const connector = new TelegramConnector({
+      tokenResolver: async () => "token",
+      contentResolver: async () => "hello",
+      apiBaseUrl: "https://telegram.test",
+      fetchImpl: async () => {
+        throw new Error("socket closed");
+      },
+    });
+
+    const result = await connector.execute(task, {
+      accountId: "account-1",
+      userConfirmed: true,
+    });
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reason: "delivery_status_unknown",
+    });
+  });
+
   it("fails when linked content is unavailable", async () => {
     const connector = new TelegramConnector({
       tokenResolver: async () => "token",
