@@ -1414,7 +1414,7 @@ fn task_set_status(
     id: String,
     status: String,
 ) -> Result<bool, String> {
-    let allowed = ["pending", "awaiting_approval", "running", "succeeded", "failed", "blocked", "cancelled"];
+    let allowed = ["pending", "awaiting_approval", "awaiting_user_action", "running", "succeeded", "failed", "blocked", "cancelled"];
     if !allowed.contains(&status.as_str()) {
         return Err("unsupported task status".to_string());
     }
