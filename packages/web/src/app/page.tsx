@@ -53,7 +53,7 @@ export default function HomePage(): JSX.Element {
         </p>
       </section>
 
-      <footer className="container footer">ORBIT Marketing OS • v0.1.0</footer>
+      <footer className="container footer">ORBIT Marketing OS • v0.2.0</footer>
     </main>
   );
 }
