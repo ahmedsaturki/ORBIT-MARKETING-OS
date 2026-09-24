@@ -2,7 +2,7 @@
   "expo": {
     "name": "ORBIT Marketing OS",
     "slug": "orbit-marketing-os",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "scheme": "orbit",
     "userInterfaceStyle": "dark",
