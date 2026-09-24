@@ -184,6 +184,7 @@ struct TaskView {
     status: String,
     attempts: i64,
     max_attempts: i64,
+    idempotency_key: String,
     available_at: String,
     created_at: String,
 }
@@ -652,12 +653,19 @@ fn task_enqueue(
     priority: i64,
     available_at: String,
     max_attempts: i64,
+    idempotency_key: Option<String>,
 ) -> Result<TaskView, String> {
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
     let kind = validate_label(&kind).map_err(|error| error.to_string())?;
+    let idempotency_key = idempotency_key
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| id.clone());
+    let idempotency_key = validate_label(&idempotency_key).map_err(|error| error.to_string())?;
+
     if priority < 0 || max_attempts < 1 || available_at.trim().is_empty() {
         return Err("invalid task parameters".to_string());
     }
@@ -666,10 +674,17 @@ fn task_enqueue(
     let associated: bool = connection
         .query_row(
             "SELECT EXISTS(
-               SELECT 1 FROM campaign_accounts
-               WHERE campaign_id=?1 AND account_id=?2
+               SELECT 1
+               FROM campaign_accounts ca
+               JOIN campaigns c ON c.id=ca.campaign_id
+               JOIN accounts a ON a.id=ca.account_id
+               WHERE ca.campaign_id=?1
+                 AND ca.account_id=?2
+                 AND ca.workspace_id=?3
+                 AND c.workspace_id=?3
+                 AND a.workspace_id=?3
              )",
-            params![campaign_id, account_id],
+            params![campaign_id, account_id, DEFAULT_WORKSPACE_ID],
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
@@ -680,9 +695,25 @@ fn task_enqueue(
     let created_at = chrono_like_timestamp();
     connection
         .execute(
-            "INSERT INTO tasks(id, campaign_id, account_id, platform, kind, priority, status, attempts, max_attempts, available_at, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'pending', 0, ?7, ?8, ?9)",
-            params![id, campaign_id, account_id, platform, kind, priority, max_attempts, available_at, created_at],
+            "INSERT INTO tasks(
+               id, workspace_id, campaign_id, account_id, platform, kind,
+               priority, status, attempts, max_attempts, available_at,
+               idempotency_key, created_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'pending', 0, ?8, ?9, ?10, ?11)",
+            params![
+                id,
+                DEFAULT_WORKSPACE_ID,
+                campaign_id,
+                account_id,
+                platform,
+                kind,
+                priority,
+                max_attempts,
+                available_at,
+                idempotency_key,
+                created_at
+            ],
         )
         .map_err(|error| error.to_string())?;
 
@@ -699,6 +730,7 @@ fn task_enqueue(
         status: "pending".to_string(),
         attempts: 0,
         max_attempts,
+        idempotency_key,
         available_at,
         created_at,
     })
@@ -713,12 +745,15 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
 
     let candidate = transaction
         .query_row(
-            "SELECT id, campaign_id, account_id, platform, kind, priority, attempts, max_attempts, available_at, created_at
+            "SELECT id, campaign_id, account_id, platform, kind, priority,
+                    attempts, max_attempts, idempotency_key, available_at, created_at
              FROM tasks
-             WHERE status='pending' AND available_at <= ?1
+             WHERE workspace_id=?2
+               AND status='pending'
+               AND available_at <= ?1
              ORDER BY priority DESC, available_at ASC, created_at ASC
              LIMIT 1",
-            params![now],
+            params![now, DEFAULT_WORKSPACE_ID],
             |row| {
                 Ok(TaskView {
                     id: row.get(0)?,
@@ -730,8 +765,9 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
                     status: "running".to_string(),
                     attempts: row.get(6)?,
                     max_attempts: row.get(7)?,
-                    available_at: row.get(8)?,
-                    created_at: row.get(9)?,
+                    idempotency_key: row.get(8)?,
+                    available_at: row.get(9)?,
+                    created_at: row.get(10)?,
                 })
             },
         )
@@ -745,9 +781,20 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
             .map_err(|error| error.to_string());
     };
 
-    transaction
-        .execute("UPDATE tasks SET status='running' WHERE id=?1 AND status='pending'", params![task.id])
+    let claimed = transaction
+        .execute(
+            "UPDATE tasks
+             SET status='running'
+             WHERE id=?1 AND workspace_id=?2 AND status='pending'",
+            params![task.id, DEFAULT_WORKSPACE_ID],
+        )
         .map_err(|error| error.to_string())?;
+
+    if claimed != 1 {
+        transaction.rollback().map_err(|error| error.to_string())?;
+        return Ok(None);
+    }
+
     transaction.commit().map_err(|error| error.to_string())?;
     write_audit(&connection, "task", "claim", "success", "system", Some(&task.id))
         .map_err(|error| error.to_string())?;
@@ -768,7 +815,10 @@ fn task_set_status(
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
     let changed = connection
-        .execute("UPDATE tasks SET status=?1 WHERE id=?2", params![status, &entity_id])
+        .execute(
+            "UPDATE tasks SET status=?1 WHERE id=?2 AND workspace_id=?3",
+            params![status, &entity_id, DEFAULT_WORKSPACE_ID],
+        )
         .map_err(|error| error.to_string())?;
     if changed > 0 {
         write_audit(&connection, "task", "status", "success", "user", Some(&entity_id))
@@ -782,15 +832,17 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
-            "SELECT id, campaign_id, account_id, platform, kind, priority, status, attempts, max_attempts, available_at, created_at
+            "SELECT id, campaign_id, account_id, platform, kind, priority,
+                    status, attempts, max_attempts, idempotency_key, available_at, created_at
              FROM tasks
-             WHERE (?1 IS NULL OR campaign_id = ?1)
+             WHERE workspace_id=?1
+               AND (?2 IS NULL OR campaign_id=?2)
              ORDER BY priority DESC, available_at ASC",
         )
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![campaign_id], |row| {
+        .query_map(params![DEFAULT_WORKSPACE_ID, campaign_id], |row| {
             Ok(TaskView {
                 id: row.get(0)?,
                 campaign_id: row.get(1)?,
@@ -801,8 +853,9 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
                 status: row.get(6)?,
                 attempts: row.get(7)?,
                 max_attempts: row.get(8)?,
-                available_at: row.get(9)?,
-                created_at: row.get(10)?,
+                idempotency_key: row.get(9)?,
+                available_at: row.get(10)?,
+                created_at: row.get(11)?,
             })
         })
         .map_err(|error| error.to_string())?;
