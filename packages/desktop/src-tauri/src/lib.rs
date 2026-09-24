@@ -2734,7 +2734,6 @@ fn media_asset_list(
         .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
 fn load_rule_config(
     connection: &Connection,
     workspace_id: &str,
