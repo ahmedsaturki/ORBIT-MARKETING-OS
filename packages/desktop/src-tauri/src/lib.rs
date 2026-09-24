@@ -679,6 +679,9 @@ fn telegram_task_audit(
 
 fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version > SCHEMA_VERSION {
+        return Err(AppError::InvalidPayload);
+    }
 
     if version < 2 {
         connection.execute_batch(
@@ -1685,6 +1688,7 @@ async fn telegram_execute_task(
     let effective_max_attempts = rule_config
         .map(|value| effective_max_attempts(max_attempts, value.1))
         .unwrap_or(max_attempts);
+    validate_retry_policy_limits(effective_max_attempts, effective_timeout_ms)?;
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_millis(effective_timeout_ms))
         .build()
@@ -3908,6 +3912,16 @@ fn effective_max_attempts(task_max_attempts: i64, rule_max_attempts: i64) -> i64
     task_max_attempts.min(rule_max_attempts).clamp(1, 10)
 }
 
+fn validate_retry_policy_limits(max_attempts: i64, timeout_ms: i64) -> Result<(), String> {
+    if !(1..=10).contains(&max_attempts) {
+        return Err("max_attempts must be between 1 and 10".to_string());
+    }
+    if !(1_000..=300_000).contains(&timeout_ms) {
+        return Err("timeout_ms must be between 1000 and 300000".to_string());
+    }
+    Ok(())
+}
+
 fn retry_delay_ms(next_attempt: i64) -> i64 {
     if next_attempt < 1 {
         return 1_000;
@@ -5343,6 +5357,25 @@ mod tests {
         assert_eq!(effective_max_attempts(10, 3), 3);
         assert_eq!(effective_max_attempts(100, 100), 10);
         assert_eq!(effective_max_attempts(0, 3), 1);
+    }
+
+    #[test]
+    fn native_retry_policy_limits_are_validated() {
+        assert!(validate_retry_policy_limits(1, 1_000).is_ok());
+        assert!(validate_retry_policy_limits(10, 300_000).is_ok());
+        assert!(validate_retry_policy_limits(0, 30_000).is_err());
+        assert!(validate_retry_policy_limits(11, 30_000).is_err());
+        assert!(validate_retry_policy_limits(3, 999).is_err());
+        assert!(validate_retry_policy_limits(3, 300_001).is_err());
+    }
+
+    #[test]
+    fn future_schema_versions_fail_closed() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch("PRAGMA user_version = 999;")
+            .expect("schema version should be writable");
+        assert!(matches!(migrate_schema(&connection), Err(AppError::InvalidPayload)));
     }
 
     #[test]
