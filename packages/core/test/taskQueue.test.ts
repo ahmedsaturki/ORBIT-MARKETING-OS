@@ -149,6 +149,20 @@ describe("TaskQueue", () => {
     ).toThrow("Task idempotency key already exists");
   });
 
+  it("does not expose mutable internal queue state", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+
+    const claimed = instance.claimNext("2026-09-24T00:00:01.000Z");
+    expect(claimed).toBeDefined();
+    claimed!.status = "succeeded";
+    expect(instance.get(baseTask.id)?.status).toBe("running");
+
+    const snapshot = instance.snapshot();
+    snapshot[0]!.status = "failed";
+    expect(instance.get(baseTask.id)?.status).toBe("running");
+  });
+
   it("rejects malformed queue tasks", () => {
     const instance = queue();
     expect(() => instance.enqueue({ ...baseTask, idempotencyKey: " " })).toThrow(
