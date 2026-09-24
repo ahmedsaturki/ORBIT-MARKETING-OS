@@ -47,6 +47,6 @@ export function buildMetricSeries(
 ): readonly MetricPoint[] {
   return [...points]
     .filter((point) => Number.isFinite(point.value) && !Number.isNaN(Date.parse(point.timestamp)))
-    .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+    .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
     .map((point) => ({ ...point }));
 }
