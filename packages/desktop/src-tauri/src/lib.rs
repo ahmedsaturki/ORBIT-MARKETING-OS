@@ -3474,7 +3474,6 @@ mod tests {
     }
 
     #[test]
-    #[test]
     fn task_claim_projection_keeps_task_fields_in_declared_order() {
         let selected_columns = [
             "id",
@@ -3596,7 +3595,6 @@ mod tests {
         assert_eq!(active_workspace_id(), DEFAULT_WORKSPACE_ID);
     }
 
-    #[test]
     #[test]
     fn vault_schema_is_workspace_scoped_and_supports_same_label_per_workspace() {
         let connection = Connection::open_in_memory()
