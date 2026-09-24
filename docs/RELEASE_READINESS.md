@@ -54,9 +54,9 @@ No production-ready or commercial-launch claim is valid until every applicable g
 
 The rebuild branch currently contains the intended CI, Rust, release-desktop, and release-mobile workflow definitions, but the latest Actions runs are still failing before any workflow step executes; GitHub reports completed failed jobs with no step records. This is tracked as an execution-infrastructure blocker, not treated as evidence of a source-level build failure.
 
-The current source environment cannot reach GitHub/npm through its shell network, so a real pnpm-lock.yaml was not fabricated. CI now creates the lockfile before workspace sanity checks, while release workflows continue to require a committed lockfile. CI is configured to generate and validate a lockfile on a clean runner; that evidence remains blocked by the GitHub Actions runner failure.
+The current source environment cannot reach GitHub/npm through its shell network, so a real pnpm-lock.yaml was not fabricated. The normal CI and release workflows require a committed lockfile and use frozen installs. A separate, branch-restricted self-hosted bootstrap workflow/script exists to generate the lockfile; that bootstrap evidence is still pending.
 
-A Vercel project `orbit-marketing-os` exists. Repository-side deployment configuration is now canonical at the repository root: Next.js, `pnpm install --frozen-lockfile`, `pnpm --dir packages/web build`, and `packages/web/out`. The project-level Root Directory/Framework settings remain external and must be verified before claiming a production deployment. Earlier Vercel failures are not treated as current source-build evidence.
+A Vercel project `orbit-marketing-os` exists. Repository-side deployment configuration is canonical at the repository root: Next.js, `pnpm install --frozen-lockfile`, `pnpm --dir packages/web build`, and `packages/web/out`. Recent concrete deployments reached Vercel's configuration/ignore stage and failed before a usable deployment was established; the repository-side `ignoreCommand` was subsequently hardened and moved into `scripts/vercel-ignore.sh`. A fresh successful deployment is still required to verify the effective project settings.
 
 
 
@@ -68,4 +68,4 @@ Global multi-device seat counting remains intentionally unclaimed because the cu
 
 ## Vercel deployment diagnosis
 
-The connected `orbit-marketing-os` project exists, but recent Git deployments are failing before a usable production deployment is established. The latest concrete Vercel diagnostic observed was `NEXT_NO_VERSION`, while deployment metadata reported framework `vite`. The repository now uses the root `vercel.json` as the single deployment source of truth, targeting the `packages/web` Next.js static export.
+The connected `orbit-marketing-os` project exists, but no successful deployment has been verified yet. The two latest concrete repository-side configuration failures observed were an overlong `ignoreCommand` and then a `fatal: bad revision ''` caused by missing Git revision environment variables. Both were fixed in the repository configuration, but a fresh deployment has not yet been established. Deployment metadata has also reported project framework `vite`, while the repository contract targets the `packages/web` Next.js static export; this remains an external project-setting verification item.
