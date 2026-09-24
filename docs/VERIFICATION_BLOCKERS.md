@@ -6,13 +6,13 @@ Updated: 2026-09-24
 
 Current rebuild HEAD at the latest source revision:
 
-`4d0f502272f69e6f3b40d35c4d062d4ba7153ba4`
+`dfd7f3c1a42eeffff74ac0fc2c22b82bea10826b`
 
 The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
 
 Latest observed hosted-runner behavior:
 
-- The newest CI run for the moving rebuild branch continues to reach `queued`/then fail before step registration; the latest observed job had `runner_id=0`, an empty runner name, and `steps=[]`.
+- The newest CI run for the moving rebuild branch (`36031898151`, job `107742429760`) fails before step registration; the observed job has no runner allocation metadata and no step records.
 - The previously isolated Runner Probe also failed before its first step and has been removed.
 - No fresh successful hosted-runner execution has been verified.
 
