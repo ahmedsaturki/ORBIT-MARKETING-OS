@@ -3131,6 +3131,62 @@ mod tests {
     }
 
     #[test]
+    fn workspace_context_creates_local_owner_membership() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        ensure_workspace_context(&connection).expect("workspace context should initialize");
+
+        let membership: (String, String, i64) = connection
+            .query_row(
+                "SELECT user_id, role, active
+                 FROM workspace_memberships
+                 WHERE workspace_id=?1 AND user_id=?2",
+                params![DEFAULT_WORKSPACE_ID, DEFAULT_LOCAL_USER_ID],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("default local membership should exist");
+
+        assert_eq!(membership.0, DEFAULT_LOCAL_USER_ID);
+        assert_eq!(membership.1, "owner");
+        assert_eq!(membership.2, 1);
+        assert_eq!(active_workspace_id(), DEFAULT_WORKSPACE_ID);
+    }
+
+    #[test]
+    fn workspace_role_gate_rejects_insufficient_role() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        ensure_workspace_context(&connection).expect("workspace context should initialize");
+
+        connection
+            .execute(
+                "UPDATE workspace_memberships
+                 SET role='viewer'
+                 WHERE workspace_id=?1 AND user_id=?2",
+                params![DEFAULT_WORKSPACE_ID, DEFAULT_LOCAL_USER_ID],
+            )
+            .expect("role update should work");
+
+        assert!(matches!(
+            require_workspace_role(&connection, &["owner", "admin"]),
+            Err(AppError::Unauthorized)
+        ));
+        assert!(require_workspace_role(
+            &connection,
+            &["viewer", "owner", "admin"]
+        )
+        .is_ok());
+    }
+
+    #[test]
     fn migrates_legacy_schema_and_backfills_task_idempotency() {
         let connection = match Connection::open_in_memory() {
             Ok(value) => value,
