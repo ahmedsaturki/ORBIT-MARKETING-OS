@@ -30,6 +30,25 @@ interface CampaignView {
   readonly created_at: string;
 }
 
+interface ContentView {
+  readonly id: string;
+  readonly title: string;
+  readonly body: string;
+  readonly approval_status: string;
+  readonly tags_json: string;
+  readonly updated_at: string;
+}
+
+interface ApprovalView {
+  readonly id: string;
+  readonly content_id: string;
+  readonly requested_by: string;
+  readonly status: string;
+  readonly decided_by?: string;
+  readonly decided_at?: string;
+  readonly note?: string;
+}
+
 interface ContactView {
   readonly id: string;
   readonly display_name: string;
@@ -54,6 +73,7 @@ interface ConversationView {
 interface TaskView {
   readonly id: string;
   readonly campaign_id: string;
+  readonly content_id?: string;
   readonly account_id: string;
   readonly platform: string;
   readonly kind: string;
@@ -123,6 +143,15 @@ export function App(): ReactElement {
   const [campaigns, setCampaigns] = useState<readonly CampaignView[]>([]);
   const [campaignName, setCampaignName] = useState("");
   const [campaignAccountId, setCampaignAccountId] = useState("");
+  const [contentItems, setContentItems] = useState<readonly ContentView[]>([]);
+  const [contentId, setContentId] = useState("");
+  const [contentTitle, setContentTitle] = useState("");
+  const [contentBody, setContentBody] = useState("");
+  const [contentTags, setContentTags] = useState("");
+  const [contentCampaignId, setContentCampaignId] = useState("");
+  const [selectedContentId, setSelectedContentId] = useState("");
+  const [approvalId, setApprovalId] = useState("");
+  const [approvals, setApprovals] = useState<readonly ApprovalView[]>([]);
   const [tasks, setTasks] = useState<readonly TaskView[]>([]);
   const [taskCampaignId, setTaskCampaignId] = useState("");
   const [taskAccountId, setTaskAccountId] = useState("");
@@ -159,6 +188,116 @@ export function App(): ReactElement {
     }
   };
 
+  const loadContent = async (): Promise<void> => {
+    try {
+      const items = await callNative<ContentView[]>("content_list");
+      setContentItems(items);
+      setSelectedContentId((current) => current || items[0]?.id || "");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل المحتوى");
+    }
+  };
+
+  const loadApprovals = async (): Promise<void> => {
+    try {
+      const items = await callNative<ApprovalView[]>("approval_list");
+      setApprovals(items);
+      setApprovalId((current) => current || items[0]?.id || "");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل الموافقات");
+    }
+  };
+
+  const saveContent = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    if (!contentId.trim() || !contentTitle.trim() || !contentBody.trim()) {
+      setError("أدخل معرف المحتوى والعنوان والنص");
+      return;
+    }
+    try {
+      setError("");
+      await callNative<ContentView>("content_upsert", {
+        id: contentId.trim(),
+        title: contentTitle.trim(),
+        body: contentBody.trim(),
+        approval_status: "draft",
+        tags_json: JSON.stringify(
+          contentTags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        ),
+      });
+      setContentId("");
+      setContentTitle("");
+      setContentBody("");
+      setContentTags("");
+      await loadContent();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل حفظ المحتوى");
+    }
+  };
+
+  const attachContent = async (): Promise<void> => {
+    if (!contentCampaignId || !selectedContentId) {
+      setError("اختر الحملة والمحتوى قبل الربط");
+      return;
+    }
+    try {
+      setError("");
+      await callNative<boolean>("campaign_attach_content", {
+        campaign_id: contentCampaignId,
+        content_id: selectedContentId,
+      });
+      await loadCampaigns();
+      setError("");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل ربط المحتوى بالحملة");
+    }
+  };
+
+  const requestApproval = async (): Promise<void> => {
+    if (!selectedContentId) {
+      setError("اختر محتوى لطلب الموافقة");
+      return;
+    }
+    try {
+      setError("");
+      const result = await callNative<ApprovalView>("approval_request", {
+        id: "approval-" + Date.now(),
+        content_id: selectedContentId,
+        requested_by: "local-user",
+        reviewer_ids_json: "[]",
+        note: "طلب موافقة من مساحة العمل المحلية",
+      });
+      setApprovalId(result.id);
+      await loadContent();
+      await loadApprovals();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل طلب الموافقة");
+    }
+  };
+
+  const decideApproval = async (status: "approved" | "rejected" | "changes_requested"): Promise<void> => {
+    if (!approvalId) {
+      setError("اختر موافقة أولاً");
+      return;
+    }
+    try {
+      setError("");
+      await callNative<ApprovalView>("approval_decide", {
+        id: approvalId,
+        status,
+        decided_by: "local-user",
+        note: "تم اتخاذ القرار من تطبيق ORBIT المحلي",
+      });
+      await loadContent();
+      await loadApprovals();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل اتخاذ قرار الموافقة");
+    }
+  };
+
   const loadTasks = async (): Promise<void> => {
     try {
       setTasks(await callNative<TaskView[]>("task_list", {}));
@@ -181,6 +320,11 @@ export function App(): ReactElement {
 
     try {
       setError("");
+      const content = taskKind === "sync" ? null : selectedContentId || null;
+      if (taskKind !== "sync" && !content) {
+        setError("اختر محتوى للمهمة الخارجية");
+        return;
+      }
       await callNative<TaskView>("task_enqueue", {
         id: taskId.trim() || "task-" + Date.now(),
         campaign_id: taskCampaignId,
@@ -191,6 +335,7 @@ export function App(): ReactElement {
         available_at: new Date().toISOString(),
         max_attempts: 3,
         idempotency_key: taskIdempotencyKey.trim() || null,
+        content_id: content,
       });
       setTaskId("");
       setTaskIdempotencyKey("");
@@ -413,6 +558,8 @@ export function App(): ReactElement {
       await loadAccounts();
       await loadCampaigns();
       await loadTasks();
+      await loadContent();
+      await loadApprovals();
       await loadContacts();
       await loadInbox();
     } catch (caught: unknown) {
@@ -580,6 +727,94 @@ export function App(): ReactElement {
 
       <section className="grid workspace-grid">
         <div className="card">
+          <h2>المحتوى والموافقات</h2>
+          <p>أنشئ المحتوى محلياً، اربطه بحملة، ثم مرره عبر approval gate قبل أي مهمة خارجية.</p>
+          <form className="vault-form" onSubmit={saveContent}>
+            <label>
+              معرف المحتوى
+              <input value={contentId} onChange={(event) => setContentId(event.target.value)} placeholder="content-001" />
+            </label>
+            <label>
+              العنوان
+              <input value={contentTitle} onChange={(event) => setContentTitle(event.target.value)} />
+            </label>
+            <label>
+              النص
+              <textarea value={contentBody} onChange={(event) => setContentBody(event.target.value)} rows={6} />
+            </label>
+            <label>
+              الوسوم (مفصولة بفواصل)
+              <input value={contentTags} onChange={(event) => setContentTags(event.target.value)} placeholder="launch, real-estate, arabic" />
+            </label>
+            <button className="button primary" type="submit">حفظ مسودة المحتوى</button>
+          </form>
+
+          <label>
+            المحتوى المحدد
+            <select value={selectedContentId} onChange={(event) => setSelectedContentId(event.target.value)}>
+              <option value="">اختر محتوى</option>
+              {contentItems.map((item) => (
+                <option key={item.id} value={item.id}>{item.title} • {item.approval_status}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            الحملة لربط المحتوى
+            <select value={contentCampaignId} onChange={(event) => setContentCampaignId(event.target.value)}>
+              <option value="">اختر حملة</option>
+              {campaigns.map((campaign) => (
+                <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="actions">
+            <button className="button secondary" type="button" onClick={() => void attachContent()}>
+              ربط بالحملة
+            </button>
+            <button className="button primary" type="button" onClick={() => void requestApproval()} disabled={!selectedContentId}>
+              طلب موافقة
+            </button>
+          </div>
+
+          <div className="account-list">
+            {contentItems.slice(0, 8).map((item) => (
+              <button className="account-row" type="button" key={item.id} onClick={() => setSelectedContentId(item.id)}>
+                <div>
+                  <strong>{item.title}</strong>
+                  <div className="account-meta">{item.id} • {item.approval_status} • {item.updated_at}</div>
+                </div>
+              </button>
+            ))}
+            {!contentItems.length ? <div className="result">لا يوجد محتوى محفوظ.</div> : null}
+          </div>
+
+          <label>
+            الموافقة المحددة
+            <select value={approvalId} onChange={(event) => setApprovalId(event.target.value)}>
+              <option value="">اختر موافقة</option>
+              {approvals.map((approval) => (
+                <option key={approval.id} value={approval.id}>
+                  {approval.id} • {approval.status} • {approval.content_id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="actions">
+            <button className="button primary" type="button" onClick={() => void decideApproval("approved")}>
+              اعتماد
+            </button>
+            <button className="button danger" type="button" onClick={() => void decideApproval("rejected")}>
+              رفض
+            </button>
+            <button className="button secondary" type="button" onClick={() => void decideApproval("changes_requested")}>
+              طلب تعديلات
+            </button>
+          </div>
+        </div>
+
+        <div className="card">
           <h2>الحملات</h2>
           <p>الحملة تُحفظ محلياً وتُربط بالحسابات المستهدفة داخل SQLite.</p>
           <form className="vault-form" onSubmit={createCampaign}>
@@ -643,6 +878,17 @@ export function App(): ReactElement {
                 <option value="engage">تفاعل</option>
               </select>
             </label>
+            {taskKind !== "sync" ? (
+              <label>
+                المحتوى للمهمة
+                <select value={selectedContentId} onChange={(event) => setSelectedContentId(event.target.value)}>
+                  <option value="">اختر محتوى معتمد للمهمة</option>
+                  {contentItems.map((item) => (
+                    <option key={item.id} value={item.id}>{item.title} • {item.approval_status}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label>
               معرف المهمة (اختياري)
               <input value={taskId} onChange={(event) => setTaskId(event.target.value)} placeholder="task-001" />
