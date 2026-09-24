@@ -687,6 +687,10 @@ export function App(): ReactElement {
       setError("أدخل معرف الحساب واسم الحساب");
       return;
     }
+    if (accountSession && !password) {
+      setError("أدخل كلمة مرور الخزنة قبل حفظ بيانات الجلسة المشفرة");
+      return;
+    }
     try {
       setError("");
       const result = await callNative<AccountView>("account_upsert", {
@@ -817,6 +821,26 @@ export function App(): ReactElement {
           <span>الخدمة: {health.status} • قاعدة البيانات: {health.database}</span>
         </div>
       ) : null}
+
+      <section className="card">
+        <div className="eyebrow">SECURE SESSION</div>
+        <h2>جلسة الخزنة المحلية</h2>
+        <p>كلمة المرور تبقى في ذاكرة التطبيق لهذه الجلسة فقط، ولا يتم عرضها أو تخزينها في واجهة الويب.</p>
+        <label>
+          كلمة مرور الخزنة
+          <input
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            spellCheck={false}
+          />
+        </label>
+        {password ? <div className="account-meta">مضبوطة لهذه الجلسة — لا يتم عرض القيمة.</div> : (
+          <div className="account-meta">غير مضبوطة بعد. مطلوبة لتشفير الجلسات والنسخ الاحتياطية وتنفيذ Telegram.</div>
+        )}
+      </section>
+
 
       <section className="grid">
       <section className="card workspace-switcher">
