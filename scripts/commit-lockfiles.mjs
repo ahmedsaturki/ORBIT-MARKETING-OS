@@ -13,8 +13,8 @@ for (const path of required) {
 }
 
 const branch = process.env.GITHUB_REF_NAME;
-if (branch !== "rebuild/orbit-production") {
-  throw new Error("Lockfile bootstrap may only push rebuild/orbit-production; got " + (branch ?? "unknown"));
+if (!["rebuild/orbit-production", "rebuild/orbit-production-consolidated"].includes(branch)) {
+  throw new Error("Lockfile bootstrap may only push a production rebuild branch; got " + (branch ?? "unknown"));
 }
 
 execFileSync("git", ["config", "user.name", "ORBIT Automation"], { stdio: "inherit" });
