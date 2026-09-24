@@ -1,6 +1,6 @@
 # ORBIT — Zero-Cost Self-Hosted Verification
 
-This is the fallback verification path when GitHub-hosted runners cannot start jobs.
+This is the fallback verification path when GitHub-hosted runners cannot start jobs or when a fully owned execution path is preferred.
 
 GitHub documents repository-level self-hosted runners and custom labels for routing jobs. They are free to use with GitHub Actions; the machine is your responsibility. citeturn961641search1turn961641search3
 
