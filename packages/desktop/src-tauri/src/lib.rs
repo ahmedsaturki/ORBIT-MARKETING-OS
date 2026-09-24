@@ -914,6 +914,7 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     fs::create_dir_all(&app_data)?;
     let db_path: PathBuf = app_data.join("orbit.sqlite3");
     let connection = Connection::open(db_path)?;
+    connection.execute_batch("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;")?;
     connection.execute_batch(SCHEMA)?;
     migrate_schema(&connection)?;
     create_integrity_triggers(&connection)?;
@@ -3413,6 +3414,25 @@ mod tests {
     }
 
     #[test]
+    #[test]
+    fn sqlite_connection_defaults_enable_integrity_and_busy_timeout() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection
+            .execute_batch("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;")
+            .expect("SQLite pragmas should apply");
+
+        let foreign_keys: i64 = connection
+            .query_row("PRAGMA foreign_keys", [], |row| row.get(0))
+            .expect("foreign key pragma should be readable");
+        let busy_timeout: i64 = connection
+            .query_row("PRAGMA busy_timeout", [], |row| row.get(0))
+            .expect("busy timeout pragma should be readable");
+
+        assert_eq!(foreign_keys, 1);
+        assert_eq!(busy_timeout, 5000);
+    }
+
     fn sqlite_integrity_triggers_reject_cross_workspace_relationships() {
         let connection = Connection::open_in_memory()
             .expect("in-memory SQLite should be available");
