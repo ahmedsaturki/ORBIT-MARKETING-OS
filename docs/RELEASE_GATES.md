@@ -67,6 +67,8 @@ A release candidate may only be promoted when every applicable gate is PASS.
 
 ## Gate 8 — Documentation
 
+- operations runbook and recovery procedures
+
 - architecture
 - user guide
 - operations guide
