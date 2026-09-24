@@ -17,7 +17,7 @@ use thiserror::Error;
 use zeroize::Zeroizing;
 
 const DEFAULT_WORKSPACE_ID: &str = "default";
-const SCHEMA_VERSION: i64 = 5;
+const SCHEMA_VERSION: i64 = 6;
 
 const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS vault_records (
@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   workspace_id TEXT NOT NULL DEFAULT 'default',
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   content_id TEXT REFERENCES content_items(id) ON DELETE RESTRICT,
+  destination_id TEXT,
   account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
   platform TEXT NOT NULL,
   kind TEXT NOT NULL,
@@ -248,6 +249,7 @@ struct TaskView {
     id: String,
     campaign_id: String,
     content_id: Option<String>,
+    destination_id: Option<String>,
     account_id: String,
     platform: String,
     kind: String,
@@ -491,7 +493,19 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         )?;
     }
 
-    connection.execute_batch("PRAGMA user_version = 5;")?;
+    if version < 6 {
+        if !has_column(connection, "tasks", "destination_id")? {
+            connection.execute_batch(
+                "ALTER TABLE tasks ADD COLUMN destination_id TEXT",
+            )?;
+        }
+        connection.execute_batch(
+            "CREATE INDEX IF NOT EXISTS idx_tasks_destination
+             ON tasks(workspace_id, destination_id)",
+        )?;
+    }
+
+    connection.execute_batch("PRAGMA user_version = 6;")?;
 }
 
 fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> {
@@ -1227,12 +1241,19 @@ fn task_enqueue(
     max_attempts: i64,
     idempotency_key: Option<String>,
     content_id: Option<String>,
+    destination_id: Option<String>,
 ) -> Result<TaskView, String> {
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
     let kind = validate_task_kind(&kind).map_err(|error| error.to_string())?;
+    let destination_id = destination_id
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+
     let content_id = content_id
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
@@ -1246,6 +1267,9 @@ fn task_enqueue(
 
     if kind != "sync" && content_id.is_none() {
         return Err("content_id is required for external tasks".to_string());
+    }
+    if kind != "sync" && destination_id.is_none() {
+        return Err("destination_id is required for external tasks".to_string());
     }
 
     if priority < 0 || max_attempts < 1 || available_at.trim().is_empty() {
@@ -1300,16 +1324,17 @@ fn task_enqueue(
     connection
         .execute(
             "INSERT INTO tasks(
-               id, workspace_id, campaign_id, content_id, account_id, platform, kind,
+               id, workspace_id, campaign_id, content_id, destination_id, account_id, platform, kind,
                priority, status, attempts, max_attempts, available_at,
                idempotency_key, created_at
              )
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'pending', 0, ?9, ?10, ?11, ?12)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'pending', 0, ?10, ?11, ?12, ?13)",
             params![
                 id,
                 DEFAULT_WORKSPACE_ID,
                 campaign_id,
                 content_id,
+                destination_id,
                 account_id,
                 platform,
                 kind,
@@ -1329,6 +1354,7 @@ fn task_enqueue(
         id,
         campaign_id,
         content_id,
+        destination_id,
         account_id,
         platform,
         kind,
@@ -1483,9 +1509,9 @@ fn task_fail(
         .map_err(|_| "failure timestamp must be an RFC3339 ISO timestamp".to_string())?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    let current: Option<(i64, i64, String, Option<String>, String, String, String, i64, String, String, String, String)> = connection
+    let current: Option<(i64, i64, String, Option<String>, Option<String>, String, String, String, i64, String, String, String, String)> = connection
         .query_row(
-            "SELECT attempts, max_attempts, campaign_id, content_id, account_id, platform, kind, priority,
+            "SELECT attempts, max_attempts, campaign_id, content_id, destination_id, account_id, platform, kind, priority,
                     status, idempotency_key, available_at, created_at
              FROM tasks
              WHERE id=?1 AND workspace_id=?2",
@@ -1504,13 +1530,14 @@ fn task_fail(
                     row.get(9)?,
                     row.get(10)?,
                     row.get(11)?,
+                    row.get(12)?,
                 ))
             },
         )
         .optional()
         .map_err(|error| error.to_string())?;
 
-    let Some((attempts, max_attempts, campaign_id, content_id, account_id, platform, kind, priority, status, idempotency_key, available_at, created_at)) = current else {
+    let Some((attempts, max_attempts, campaign_id, content_id, destination_id, account_id, platform, kind, priority, status, idempotency_key, available_at, created_at)) = current else {
         return Err(AppError::NotFound.to_string());
     };
 
@@ -1575,7 +1602,7 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
-            "SELECT id, campaign_id, content_id, account_id, platform, kind, priority,
+            "SELECT id, campaign_id, content_id, destination_id, account_id, platform, kind, priority,
                     status, attempts, max_attempts, idempotency_key, available_at, created_at
              FROM tasks
              WHERE workspace_id=?1
@@ -1590,16 +1617,17 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
                 id: row.get(0)?,
                 campaign_id: row.get(1)?,
                 content_id: row.get(2)?,
-                account_id: row.get(3)?,
-                platform: row.get(4)?,
-                kind: row.get(5)?,
-                priority: row.get(6)?,
-                status: row.get(7)?,
-                attempts: row.get(8)?,
-                max_attempts: row.get(9)?,
-                idempotency_key: row.get(10)?,
-                available_at: row.get(11)?,
-                created_at: row.get(12)?,
+                destination_id: row.get(3)?,
+                account_id: row.get(4)?,
+                platform: row.get(5)?,
+                kind: row.get(6)?,
+                priority: row.get(7)?,
+                status: row.get(8)?,
+                attempts: row.get(9)?,
+                max_attempts: row.get(10)?,
+                idempotency_key: row.get(11)?,
+                available_at: row.get(12)?,
+                created_at: row.get(13)?,
             })
         })
         .map_err(|error| error.to_string())?;
