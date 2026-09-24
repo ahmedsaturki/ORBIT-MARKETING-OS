@@ -267,7 +267,7 @@ export function App(): ReactElement {
         id: "approval-" + Date.now(),
         content_id: selectedContentId,
         requested_by: "local-user",
-        reviewer_ids_json: "[]",
+        reviewer_ids_json: JSON.stringify(["local-user"]),
         note: "طلب موافقة من مساحة العمل المحلية",
       });
       setApprovalId(result.id);
