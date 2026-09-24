@@ -917,47 +917,45 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
 
 
     if version < 10 {
-            connection.execute_batch(
-                "ALTER TABLE tasks RENAME TO tasks_v10_old;
-                 CREATE TABLE tasks (
-                   id TEXT PRIMARY KEY,
-                   workspace_id TEXT NOT NULL DEFAULT 'default',
-                   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
-                   content_id TEXT REFERENCES content_items(id) ON DELETE RESTRICT,
-                   destination_id TEXT,
-                   account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
-                   platform TEXT NOT NULL,
-                   kind TEXT NOT NULL,
-                   priority INTEGER NOT NULL DEFAULT 0,
-                   status TEXT NOT NULL,
-                   attempts INTEGER NOT NULL DEFAULT 0,
-                   max_attempts INTEGER NOT NULL DEFAULT 3,
-                   available_at TEXT NOT NULL,
-                   idempotency_key TEXT NOT NULL,
-                   created_at TEXT NOT NULL,
-                   UNIQUE(workspace_id, idempotency_key)
-                 );
-                 INSERT INTO tasks(
-                   id, workspace_id, campaign_id, content_id, destination_id, account_id, platform,
-                   kind, priority, status, attempts, max_attempts, available_at, idempotency_key, created_at
-                 )
-                 SELECT
-                   id, workspace_id, campaign_id, content_id, destination_id, account_id, platform,
-                   kind, priority, status, attempts, max_attempts, available_at,
-                   COALESCE(NULLIF(idempotency_key, ''), id), created_at
-                 FROM tasks_v10_old;
-                 DROP TABLE tasks_v10_old;
-                 CREATE INDEX IF NOT EXISTS idx_tasks_ready
-                   ON tasks(status, available_at, priority);
-                 CREATE INDEX IF NOT EXISTS idx_tasks_destination
-                   ON tasks(workspace_id, destination_id);
-                 PRAGMA user_version = 10;"
-            )?
-    }
-;
+        connection.execute_batch(
+            "ALTER TABLE tasks RENAME TO tasks_v10_old;
+             CREATE TABLE tasks (
+               id TEXT PRIMARY KEY,
+               workspace_id TEXT NOT NULL DEFAULT 'default',
+               campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+               content_id TEXT REFERENCES content_items(id) ON DELETE RESTRICT,
+               destination_id TEXT,
+               account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+               platform TEXT NOT NULL,
+               kind TEXT NOT NULL,
+               priority INTEGER NOT NULL DEFAULT 0,
+               status TEXT NOT NULL,
+               attempts INTEGER NOT NULL DEFAULT 0,
+               max_attempts INTEGER NOT NULL DEFAULT 3,
+               available_at TEXT NOT NULL,
+               idempotency_key TEXT NOT NULL,
+               created_at TEXT NOT NULL,
+               UNIQUE(workspace_id, idempotency_key)
+             );
+             INSERT INTO tasks(
+               id, workspace_id, campaign_id, content_id, destination_id, account_id, platform,
+               kind, priority, status, attempts, max_attempts, available_at, idempotency_key, created_at
+             )
+             SELECT
+               id, workspace_id, campaign_id, content_id, destination_id, account_id, platform,
+               kind, priority, status, attempts, max_attempts, available_at,
+               COALESCE(NULLIF(idempotency_key, ''), id), created_at
+             FROM tasks_v10_old;
+             DROP TABLE tasks_v10_old;
+             CREATE INDEX IF NOT EXISTS idx_tasks_ready
+               ON tasks(status, available_at, priority);
+             CREATE INDEX IF NOT EXISTS idx_tasks_destination
+               ON tasks(workspace_id, destination_id);
+             PRAGMA user_version = 10;"
+        )?;
     }
 
-    connection.execute_batch("PRAGMA user_version = 10;")?;
+
 }
 
 const INTEGRITY_TRIGGERS: &str = r#"
