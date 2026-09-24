@@ -5,7 +5,17 @@ export interface RetryPolicy {
 }
 
 function validateRetryPolicy(policy: RetryPolicy): void {
-  validateRetryPolicy(policy);
+  if (
+    !Number.isInteger(policy.maxAttempts) ||
+    policy.maxAttempts < 1 ||
+    policy.maxAttempts > 10 ||
+    !Number.isFinite(policy.baseDelayMs) ||
+    policy.baseDelayMs < 0 ||
+    !Number.isFinite(policy.maxDelayMs) ||
+    policy.maxDelayMs < policy.baseDelayMs
+  ) {
+    throw new RangeError("invalid retry policy");
+  }
 }
 
 export function calculateRetryDelay(
