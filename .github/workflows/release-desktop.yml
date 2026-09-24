@@ -35,6 +35,9 @@ jobs:
         run: pnpm verify:workspace
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Desktop IPC contract
+        run: pnpm verify:ipc
       - name: Lint
         run: pnpm lint
       - name: Tests
