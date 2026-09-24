@@ -62,6 +62,7 @@ interface ContactView {
 
 interface ConversationView {
   readonly id: string;
+  readonly account_id?: string;
   readonly contact_id?: string;
   readonly platform: string;
   readonly external_thread_id?: string;
@@ -161,6 +162,7 @@ export function App(): ReactElement {
   const [contacts, setContacts] = useState<readonly ContactView[]>([]);
   const [conversations, setConversations] = useState<readonly ConversationView[]>([]);
   const [conversationId, setConversationId] = useState("");
+  const [conversationAccountId, setConversationAccountId] = useState("");
   const [conversationPlatform, setConversationPlatform] = useState("facebook");
   const [conversationStatus, setConversationStatus] = useState("new");
   const [externalThreadId, setExternalThreadId] = useState("");
@@ -402,14 +404,25 @@ export function App(): ReactElement {
     }
     try {
       setError("");
+      if (!conversationAccountId) {
+        setError("اختر الحساب المرتبط بالمحادثة");
+        return;
+      }
+      const selectedConversationAccount = accounts.find((item) => item.id === conversationAccountId);
+      if (!selectedConversationAccount || selectedConversationAccount.platform !== conversationPlatform) {
+        setError("حساب المحادثة يجب أن يطابق منصة المحادثة");
+        return;
+      }
       await callNative<ConversationView>("conversation_upsert", {
         id: conversationId.trim(),
+        account_id: conversationAccountId,
         contact_id: contactId.trim() || null,
         platform: conversationPlatform,
         external_thread_id: externalThreadId.trim() || null,
         status: conversationStatus,
       });
       setConversationId("");
+      setConversationAccountId("");
       setExternalThreadId("");
       await loadInbox();
     } catch (caught: unknown) {
@@ -981,6 +994,22 @@ export function App(): ReactElement {
           <label>
             معرف المحادثة
             <input value={conversationId} onChange={(event) => setConversationId(event.target.value)} placeholder="thread-001" />
+          </label>
+          <label>
+            الحساب المرتبط
+            <select value={conversationAccountId} onChange={(event) => {
+              const id = event.target.value;
+              setConversationAccountId(id);
+              const account = accounts.find((item) => item.id === id);
+              if (account) setConversationPlatform(account.platform);
+            }}>
+              <option value="">اختر حساباً</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.display_name} • {account.platform}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             العميل المرتبط (اختياري)
