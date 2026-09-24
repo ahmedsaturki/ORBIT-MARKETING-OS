@@ -738,7 +738,6 @@ fn task_enqueue(
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
     let kind = validate_task_kind(&kind).map_err(|error| error.to_string())?;
-    let kind = validate_label(&kind).map_err(|error| error.to_string())?;
     let idempotency_key = idempotency_key
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
@@ -762,8 +761,9 @@ fn task_enqueue(
                  AND ca.workspace_id=?3
                  AND c.workspace_id=?3
                  AND a.workspace_id=?3
+                 AND a.platform=?4
              )",
-            params![campaign_id, account_id, DEFAULT_WORKSPACE_ID],
+            params![campaign_id, account_id, DEFAULT_WORKSPACE_ID, platform],
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
