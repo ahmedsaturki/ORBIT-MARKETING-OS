@@ -5,6 +5,12 @@ const text = async (relative) => readFile(new URL(relative, root), "utf8");
 const json = async (relative) => JSON.parse(await text(relative));
 
 const rootPackage = await json("package.json");
+for (const script of ["verify:workspace", "verify:ipc", "verify:release", "security:scan", "test:runtime", "test:performance", "test:e2e"]) {
+  if (typeof rootPackage.scripts?.[script] !== "string") {
+    throw new Error("Root package script is missing: " + script);
+  }
+}
+
 const packages = await Promise.all([
   json("packages/core/package.json"),
   json("packages/desktop/package.json"),
