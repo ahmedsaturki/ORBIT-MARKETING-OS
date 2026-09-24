@@ -2,6 +2,9 @@ import type { Approval, Campaign, SocialAccount, Task } from "../types/index.js"
 import { evaluateApproval } from "./approval.js";
 
 export type ExecutionBlockReason =
+  | "workspace_mismatch"
+  | "account_mismatch"
+  | "task_platform_mismatch"
   | "account_not_connected"
   | "approval_required"
   | "daily_limit_reached"
@@ -30,6 +33,36 @@ export interface ExecutionPolicyDecision {
  * to perform an external side effect.
  */
 export function evaluateExecutionPolicy(context: ExecutionPolicyContext): ExecutionPolicyDecision {
+  if (
+    context.task.workspaceId !== context.account.workspaceId ||
+    context.task.workspaceId !== context.campaign.workspaceId
+  ) {
+    return {
+      allowed: false,
+      reason: "workspace_mismatch",
+      message: "Account, campaign, and task must belong to the same workspace.",
+    };
+  }
+
+  if (
+    context.task.accountId !== context.account.id ||
+    context.task.campaignId !== context.campaign.id
+  ) {
+    return {
+      allowed: false,
+      reason: "account_mismatch",
+      message: "Task references do not match the selected account and campaign.",
+    };
+  }
+
+  if (context.task.platform !== context.account.platform) {
+    return {
+      allowed: false,
+      reason: "task_platform_mismatch",
+      message: "Task platform does not match the account platform.",
+    };
+  }
+
   if (context.account.status !== "connected") {
     return {
       allowed: false,
