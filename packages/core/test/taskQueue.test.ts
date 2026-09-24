@@ -144,6 +144,19 @@ describe("TaskQueue", () => {
     ).toThrow("Task idempotency key already exists");
   });
 
+  it("allows the same idempotency key in different workspaces", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+
+    expect(() =>
+      instance.enqueue({
+        ...baseTask,
+        id: "task-2",
+        workspaceId: "workspace-2",
+      }),
+    ).not.toThrow();
+  });
+
   it("parks and resumes approval-gated tasks", () => {
     const instance = queue();
     instance.enqueue(baseTask);
