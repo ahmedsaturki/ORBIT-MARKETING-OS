@@ -3341,7 +3341,11 @@ fn approval_request(
     }
 
     let timestamp = chrono_like_timestamp();
-    connection
+    let transaction = connection
+        .unchecked_transaction()
+        .map_err(|error| error.to_string())?;
+
+    transaction
         .execute(
             "INSERT INTO approvals(
                id, workspace_id, content_id, requested_by, reviewer_ids_json, status, note
@@ -3349,17 +3353,25 @@ fn approval_request(
             params![id, workspace_id, content_id, requested_by, reviewer_ids_json, note],
         )
         .map_err(|error| error.to_string())?;
-    connection
+    transaction
         .execute(
             "UPDATE content_items SET approval_status='pending', updated_at=?1
              WHERE id=?2 AND workspace_id=?3",
             params![timestamp, content_id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
-    write_audit(&connection, "content", "approval_request", "success", "user", Some(&content_id))
-        .map_err(|error| error.to_string())?;
+    append_audit_event(
+        &transaction,
+        &workspace_id,
+        "content",
+        "approval_request",
+        "success",
+        "user",
+        Some(&content_id),
+    )
+    .map_err(|error| error.to_string())?;
 
-    Ok(ApprovalView {
+    let view = ApprovalView {
         id,
         content_id,
         requested_by,
@@ -3367,7 +3379,10 @@ fn approval_request(
         decided_by: None,
         decided_at: None,
         note,
-    })
+    };
+
+    transaction.commit().map_err(|error| error.to_string())?;
+    Ok(view)
 }
 
 #[tauri::command]
@@ -3417,7 +3432,11 @@ fn approval_decide(
     }
 
     let timestamp = chrono_like_timestamp();
-    connection
+    let transaction = connection
+        .unchecked_transaction()
+        .map_err(|error| error.to_string())?;
+
+    transaction
         .execute(
             "UPDATE approvals
              SET status=?1, decided_by=?2, decided_at=?3, note=?4
@@ -3425,17 +3444,25 @@ fn approval_decide(
             params![status, decided_by, timestamp, note, &id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
-    connection
+    transaction
         .execute(
             "UPDATE content_items SET approval_status=?1, updated_at=?2
              WHERE id=?3 AND workspace_id=?4",
             params![status, timestamp, content_id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
-    write_audit(&connection, "content", "approval_decide", "success", "user", Some(&content_id))
-        .map_err(|error| error.to_string())?;
+    append_audit_event(
+        &transaction,
+        &workspace_id,
+        "content",
+        "approval_decide",
+        "success",
+        "user",
+        Some(&content_id),
+    )
+    .map_err(|error| error.to_string())?;
 
-    Ok(ApprovalView {
+    let view = ApprovalView {
         id,
         content_id,
         requested_by,
@@ -3443,7 +3470,10 @@ fn approval_decide(
         decided_by: Some(decided_by),
         decided_at: Some(timestamp),
         note: note.or(old_note),
-    })
+    };
+
+    transaction.commit().map_err(|error| error.to_string())?;
+    Ok(view)
 }
 
 #[tauri::command]
