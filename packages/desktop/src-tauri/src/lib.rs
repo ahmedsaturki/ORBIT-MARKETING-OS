@@ -3854,6 +3854,10 @@ fn validate_backup_name(name: &str) -> Result<String, AppError> {
     Ok(value.to_string())
 }
 
+fn backup_filename_timestamp() -> String {
+    chrono_like_timestamp().replace(':', "-")
+}
+
 #[tauri::command]
 fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, String> {
     if password.is_empty() {
@@ -3885,7 +3889,7 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
 
     let payload = seal(&password, &B64.encode(bytes)).map_err(|error| error.to_string())?;
     let payload_json = serde_json::to_string(&payload).map_err(|error| error.to_string())?;
-    let filename = format!("orbit-{}-{}.orbitbackup", chrono_like_timestamp(), uuid_like());
+    let filename = format!("orbit-{}-{}.orbitbackup", backup_filename_timestamp(), uuid_like());
     let destination = backups.join(&filename);
     write_private_file(&destination, &payload_json).map_err(|error| error.to_string())?;
     write_audit(&open_db(&app).map_err(|error| error.to_string())?, "backup", "create", "success", "user", Some(&filename))
@@ -4714,6 +4718,13 @@ mod tests {
         assert!(validate_label("vault-entry").is_ok());
         assert!(validate_label("   ").is_err());
         assert!(validate_label(&"x".repeat(201)).is_err());
+    }
+
+    #[test]
+    fn backup_filename_timestamp_is_windows_safe() {
+        let filename = backup_filename_timestamp();
+        assert!(!filename.contains(':'));
+        assert!(filename.ends_with('Z'));
     }
 
     #[test]
