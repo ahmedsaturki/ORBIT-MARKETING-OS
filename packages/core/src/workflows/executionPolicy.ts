@@ -108,6 +108,25 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
     };
   }
 
+  if (context.task.kind !== "sync" && !context.task.contentId) {
+    return {
+      allowed: false,
+      reason: "content_required",
+      message: "Content tasks must reference a content item before execution.",
+    };
+  }
+
+  if (
+    context.task.contentId &&
+    !context.campaign.contentIds.includes(context.task.contentId)
+  ) {
+    return {
+      allowed: false,
+      reason: "content_scope_mismatch",
+      message: "The task content does not belong to the campaign.",
+    };
+  }
+
   if (context.task.kind !== "sync") {
     const approval = evaluateApproval(
       {
