@@ -27,14 +27,13 @@ const campaign: Campaign = {
 };
 
 function makeTask(kind: Task["kind"] = "publish"): Task {
-  return {
+  const base: Task = {
     id: "task-1",
     workspaceId: "workspace-1",
     campaignId: "campaign-1",
     accountId: "account-1",
     platform: "facebook",
     kind,
-    contentId: kind === "sync" ? undefined : "content-1",
     priority: 10,
     status: "pending",
     attempts: 0,
@@ -43,6 +42,7 @@ function makeTask(kind: Task["kind"] = "publish"): Task {
     idempotencyKey: "task-1-" + kind,
     createdAt: "2026-09-24T00:00:00.000Z",
   };
+  return kind === "sync" ? base : { ...base, contentId: "content-1" };
 }
 
 function queue(task: Task): TaskQueue {
