@@ -115,8 +115,11 @@ try {
   if (!["ok", "degraded"].includes(body?.status)) {
     throw new Error("health status contract mismatch");
   }
-  if (body?.ai?.status !== "ok") {
-    throw new Error("fake Ollama fixture must report healthy AI state");
+  const loopbackBrowserBlocked = await fetch(`http://127.0.0.1:${port}/api/health`, {
+    headers: { Origin: "https://untrusted.example" },
+  });
+  if (loopbackBrowserBlocked.status !== 403) {
+    throw new Error("loopback runtime must reject unconfigured browser origins");
   }
 
   const generation = await fetch(`http://127.0.0.1:${port}/api/generate-content`, {
