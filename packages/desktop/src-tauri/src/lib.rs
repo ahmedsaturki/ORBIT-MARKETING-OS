@@ -408,7 +408,6 @@ struct AutomationRulePackView {
 }
 
 #[derive(Debug, Serialize)]
-#[derive(Debug, Serialize)]
 struct ContentVariantView {
     content_id: String,
     platform: String,
