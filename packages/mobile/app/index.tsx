@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
@@ -7,7 +8,7 @@ import type { RuntimeHealth } from "../src/services/runtimeClient";
 
 const ENDPOINT_KEY = "orbit.runtime.endpoint";
 
-export default function HomeScreen(): JSX.Element {
+export default function HomeScreen(): ReactElement {
   const [endpoint, setEndpoint] = useState("http://127.0.0.1:3000");
   const [authToken, setAuthToken] = useState("");
   const [health, setHealth] = useState<RuntimeHealth | null>(null);
