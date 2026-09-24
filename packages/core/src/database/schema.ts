@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS content_variants (
 
 CREATE TABLE IF NOT EXISTS campaign_accounts (
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  content_id TEXT REFERENCES content_items(id) ON DELETE RESTRICT,
   account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
   PRIMARY KEY (campaign_id, account_id)
 );
