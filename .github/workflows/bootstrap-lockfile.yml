@@ -1,0 +1,44 @@
+name: Bootstrap pnpm lockfile
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: github.ref_name == 'rebuild/orbit-production'
+    runs-on: [self-hosted, x64]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate lockfile
+        run: pnpm install --lockfile-only --ignore-scripts
+
+      - name: Verify lockfile exists
+        run: test -s pnpm-lock.yaml
+
+      - name: Commit lockfile to rebuild branch
+        shell: bash
+        run: |
+          git config user.name "ORBIT Automation"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git diff --cached --quiet && {
+            echo "Lockfile already current."
+            exit 0
+          }
+          git commit -m "chore(ci): bootstrap pnpm lockfile"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
