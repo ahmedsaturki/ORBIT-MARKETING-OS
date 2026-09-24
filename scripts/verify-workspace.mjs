@@ -209,7 +209,24 @@ const workflowFiles = [
   ".github/workflows/release-mobile.yml",
   ".github/workflows/vercel-web.yml",
   ".github/workflows/self-hosted-verify.yml",
+  ".github/workflows/bootstrap-lockfile.yml",
 ];
+const bootstrapWorkflow = await readFile(join(root, ".github/workflows/bootstrap-lockfile.yml"), "utf8");
+if (!bootstrapWorkflow.includes("github.ref_name == 'rebuild/orbit-production'")) {
+  throw new Error("Lockfile bootstrap must be restricted to rebuild/orbit-production");
+}
+if (!bootstrapWorkflow.includes("contents: write")) {
+  throw new Error("Lockfile bootstrap requires explicit contents: write permission");
+}
+if (!bootstrapWorkflow.includes("git push origin \"HEAD:${GITHUB_REF_NAME}\"")) {
+  throw new Error("Lockfile bootstrap must push only the selected branch");
+}
+
+const selfHostedWorkflow = await readFile(join(root, ".github/workflows/self-hosted-verify.yml"), "utf8");
+if (!selfHostedWorkflow.includes("github.ref_name == 'rebuild/orbit-production'")) {
+  throw new Error("Self-hosted verification must be restricted to rebuild/orbit-production");
+}
+
 for (const workflow of workflowFiles) {
   const content = await readFile(join(root, workflow), "utf8");
   if (/runs-on:\s*ubuntu-latest/.test(content) && !content.includes("timeout-minutes:")) {
