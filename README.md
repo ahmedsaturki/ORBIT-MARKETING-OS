@@ -36,6 +36,7 @@ Core checks:
 
 ```bash
 pnpm typecheck
+pnpm lint
 pnpm test
 pnpm build
 pnpm format:check
