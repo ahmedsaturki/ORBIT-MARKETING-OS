@@ -73,6 +73,32 @@ export class TaskQueue {
     return this.transition(id, "pending");
   }
 
+  /** Parks a claimed external task until an approval decision exists. */
+  public awaitApproval(id: string): Task {
+    return this.transition(id, "awaiting_approval");
+  }
+
+  /** Resumes an approval-gated task once approval is present. */
+  public resume(id: string): Task {
+    const task = this.requireTask(id);
+    if (task.status !== "awaiting_approval") {
+      throw new Error("Only approval-waiting tasks can resume: " + id);
+    }
+    return this.setTask({ ...task, status: "pending" });
+  }
+
+  /** Defers a claimed task without consuming an attempt. */
+  public defer(id: string, availableAt: string): Task {
+    if (Number.isNaN(Date.parse(availableAt))) {
+      throw new RangeError("availableAt must be a valid ISO timestamp");
+    }
+    const task = this.requireTask(id);
+    if (task.status !== "running") {
+      throw new Error("Only running tasks can defer: " + id);
+    }
+    return this.setTask({ ...task, status: "pending", availableAt });
+  }
+
   /** Cancels a task so workers cannot claim it again. */
   public cancel(id: string): Task {
     return this.transition(id, "cancelled");
