@@ -8,7 +8,7 @@ The repository contains `vercel.json` plus a guarded GitHub Actions deployment w
 
 The deployment path must use Vercel's CI build output flow (`vercel pull` → `vercel build` → `vercel deploy --prebuilt`). A normal Next.js build alone is not treated as Vercel Build Output evidence.
 
-An actual Vercel project and deployment are still unverified for ORBIT.
+The Vercel project exists and receives Git deployments from `rebuild/orbit-production`. Release verification is still blocked by the dependency metadata fetch failure documented in `docs/VERIFICATION_BLOCKERS.md`.
 
 ## Desktop
 
