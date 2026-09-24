@@ -13,7 +13,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | DATA-01 | Local SQLite persistence | clean runtime test | UNVERIFIED | SQLite layer not yet implemented |
 | DATA-02 | Migration safety | forward migration + backup restore | UNVERIFIED | Migrations pending |
 | DATA-03 | 1,000 contacts searchable | performance benchmark | UNVERIFIED | Benchmark pending |
-| QUE-01 | Persistent queue | restart/recovery test | PARTIAL | Queue state machine implemented (`packages/core/src/queue`); persistence/restart not yet runtime-tested |
+| QUE-01 | Persistent queue | restart/recovery test | PASS | `packages/core/src/queue/persistence.ts` + `test/queue-persistence.test.ts` (file store restart restore, running→retrying/failed recovery, corrupt snapshot rejected, atomic save) |
 | QUE-02 | Bounded retries | deterministic retry tests | PASS | `packages/core/test/queue.test.ts` (shouldRetry, scheduleRetry, backoff bounds) |
 | QUE-03 | Circuit breaker | fault-injection test | PASS | `packages/core/test/policy.test.ts` (failure injection opens breaker; half-open after pause) |
 | CAMP-01 | Campaign creates tasks | integration test | UNVERIFIED | Campaign→task integration pending |
@@ -30,7 +30,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | CONN-01 | Capability handshake | connector contract test | PASS | `packages/core/test/connectors.test.ts` (handshake accepts/rejects declared vs implemented) |
 | CONN-02 | Unsupported action rejected | negative connector test | PASS | `packages/core/test/connectors.test.ts` (executeCapability rejects undeclared capability) |
 | CONN-03 | Challenge causes safe stop | browser fixture test | PARTIAL | Logic PASS (`handleChallenge` returns requiresIntervention) in `connectors.test.ts`; browser fixture still pending |
-| WEB-01 | PWA manifest/service worker | production browser test | PARTIAL | Production `dist/` contains valid `manifest.webmanifest`, `sw.js`, icons; registration wired in `src/main.tsx` (prod only). Live browser install/offline test pending |
+| WEB-01 | PWA manifest/service worker | production browser test | PARTIAL | Production server smoke test: `/manifest.webmanifest`, `/sw.js`, `/` all HTTP 200; registration wired in `src/main.tsx` (prod only). Browser install/offline test still pending |
 | MOB-01 | Mobile control surface | Expo typecheck/build test | UNVERIFIED | Expo app not yet scaffolded |
 | REL-01 | Reproducible workspace install | clean CI checkout | PARTIAL | `package-lock.json` + `packages/core/package-lock.json` committed; CI workflow at `.github/workflows/ci.yml` (needs first green run on GitHub) |
 | REL-02 | Signed desktop artifact | release pipeline evidence | UNVERIFIED | Signing keys/pipeline not configured |
@@ -39,7 +39,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | OPS-02 | 24h stability | soak-test evidence | UNVERIFIED | Soak run pending |
 | PERF-01 | Startup target | measured benchmark | UNVERIFIED | Benchmark pending |
 | PERF-02 | Memory target | measured benchmark | UNVERIFIED | Benchmark pending |
-| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); latest run ~94% lines on core |
+| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); 38 tests, clean run ~95.85% lines |
 | QA-02 | Critical E2E paths | Playwright report | UNVERIFIED | Playwright suite pending |
 | DOC-01 | User guide matches product | documentation review | PARTIAL | `README.md` covers install/run/scripts; full user guide pending product freeze |
 | DOC-02 | Security model documented | security review | PASS | `docs/SECURITY_MODEL.md` documents trust boundaries, gates, audit chain, release integrity |
@@ -55,4 +55,4 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 
 - No `FAIL` entries.
 - Multiple `UNVERIFIED` runtime requirements remain → **not production-ready** claim is blocked per gate rules.
-- Core domain gates (approval, retries, circuit breaker, connector handshake, audit chain) are covered by deterministic unit tests.
+- Core domain gates (approval, retries, persistent queue recovery, circuit breaker, connector handshake, audit chain) are covered by deterministic unit tests (38 tests).
