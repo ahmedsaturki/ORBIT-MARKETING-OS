@@ -2848,6 +2848,7 @@ fn load_rule_config(
     Ok(None)
 }
 
+#[tauri::command]
 fn automation_rule_pack_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -4602,6 +4603,7 @@ fn verify_audit_chain(connection: &Connection, workspace_id: &str) -> Result<boo
     Ok(true)
 }
 
+#[tauri::command]
 fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
