@@ -205,6 +205,23 @@ for (const entry of rustSources) {
 if (!rust.includes("CREATE TABLE IF NOT EXISTS media_assets")) {
   throw new Error("Media metadata persistence table is missing");
 }
+if (!rust.includes("const SCHEMA_VERSION: i64 = 10;")) {
+  throw new Error("Native schema version must be 10");
+}
+if (!rust.includes("UNIQUE(workspace_id, idempotency_key)")) {
+  throw new Error("Task idempotency must be workspace-scoped");
+}
+if (!rust.includes('connection.execute_batch("PRAGMA user_version = 10;")?;')) {
+  throw new Error("Schema migration must finalize at v10");
+}
+if (!rust.includes("recover_interrupted_tasks(&connection)?;")) {
+  throw new Error("Startup recovery must be wired into application startup");
+}
+const openDbMatch = rust.match(/fn open_db\([\s\S]*?\n\}\n/);
+if (!openDbMatch || openDbMatch[0].includes("recover_interrupted_tasks")) {
+  throw new Error("Startup recovery must not run from every open_db call");
+}
+
 if (!rust.includes("CREATE TABLE IF NOT EXISTS automation_rule_packs")) {
   throw new Error("Automation rule-pack persistence table is missing");
 }
