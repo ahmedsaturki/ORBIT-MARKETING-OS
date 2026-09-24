@@ -1529,6 +1529,24 @@ async fn telegram_execute_task(
     let content_id = content_id.ok_or_else(|| "task has no linked content".to_string())?;
     let destination_id = destination_id.ok_or_else(|| "task has no Telegram destination".to_string())?;
 
+    if !verify_audit_chain(&connection, &workspace_id)? {
+        connection
+            .execute(
+                "UPDATE tasks
+                 SET status='blocked'
+                 WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                params![&task_id, &workspace_id],
+            )
+            .map_err(|error| error.to_string())?;
+        return Ok(TelegramExecutionView {
+            task_id,
+            status: "blocked".to_string(),
+            external_message_id: None,
+            message: "Audit integrity verification failed. External execution is blocked until the local audit database is investigated.".to_string(),
+            retry_at: None,
+        });
+    }
+
     let (completed_today, consecutive_failures) =
         load_execution_counters(&connection, &workspace_id, &account_id)
             .map_err(|error| error.to_string())?;
@@ -5462,6 +5480,42 @@ mod tests {
             [],
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn audit_integrity_gate_is_fail_closed_for_external_execution() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection.execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection)
+            .expect("schema migration should succeed");
+
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-1', 'Workspace', '1')",
+                [],
+            )
+            .expect("workspace should be inserted");
+
+        assert!(verify_audit_chain(&connection, "workspace-1")
+            .expect("empty audit chain should verify"));
+        connection
+            .execute(
+                "INSERT INTO audit_events(
+                   id, workspace_id, timestamp, category, action, outcome,
+                   actor, entity_id, metadata_json, previous_hash, hash
+                 )
+                 VALUES ('audit-1', 'workspace-1', '2026-01-01T00:00:00Z',
+                         'task', 'test', 'success', 'system', NULL, NULL,
+                         'GENESIS', 'tampered')",
+                [],
+            )
+            .expect("tampered audit record should be inserted");
+
+        assert!(!verify_audit_chain(&connection, "workspace-1")
+            .expect("tampered audit chain should return false"));
     }
 
     #[test]
