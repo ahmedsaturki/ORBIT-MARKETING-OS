@@ -39,7 +39,7 @@ Legend:
 | Performance/soak | UNVERIFIED | Benchmarks and 24h soak not executed |
 | Desktop signing | BLOCKED | Signing credentials are intentionally absent; validation builds only |
 | Mobile production signing | BLOCKED | Current workflow produces debug validation APK |
-| Vercel production deployment | BLOCKED | Automatic Git builds are disabled repository-side; historical rebuild deployments are not a verified success and the latest concrete ERROR failed at install because the lockfile was absent |
+| Vercel production deployment | BLOCKED | A READY production deployment exists for legacy `main`; rebuild deployment is still unverified. Repository-side rebuild config uses guarded prebuilt deployment |
 | Billing/payment | BLOCKED | No commercial payment provider configuration is verified |
 | Production launch | BLOCKED | Any applicable UNVERIFIED/BLOCKED runtime or distribution gate prevents release claim |
 
@@ -49,7 +49,7 @@ The latest rebuild CI run `36047914345` created jobs `107795977054` and `1077959
 
 ## Zero-cost verification fallback
 
-A manual self-hosted verification workflow is available at `.github/workflows/self-hosted-verify.yml`. A separate branch-restricted lockfile bootstrap workflow is available at `.github/workflows/bootstrap-lockfile.yml`. Both require an actual `self-hosted, x64` runner and the bootstrap flow generates the lockfiles reproducibly.
+A manual self-hosted verification workflow is available at `.github/workflows/self-hosted-verify.yml`. A separate branch-restricted lockfile bootstrap workflow is available at `.github/workflows/bootstrap-lockfile.yml`. Both require an actual `self-hosted, x64, linux` runner and the bootstrap flow generates the lockfiles reproducibly.
 
 ## Release rule
 
