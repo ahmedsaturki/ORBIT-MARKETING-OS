@@ -21,6 +21,12 @@ export function buildCampaignTasks(
   if (campaign.accountIds.length === 0) {
     throw new Error("Cannot create tasks for a campaign without accounts");
   }
+  if (new Set(campaign.accountIds).size !== campaign.accountIds.length) {
+    throw new Error("Campaign account ids must be unique");
+  }
+  if (!campaign.id.trim() || !campaign.workspaceId.trim()) {
+    throw new Error("Campaign id and workspace id are required");
+  }
   if (template.priority !== undefined && (!Number.isInteger(template.priority) || template.priority < 0)) {
     throw new RangeError("priority must be a non-negative integer");
   }
@@ -34,7 +40,7 @@ export function buildCampaignTasks(
     throw new RangeError("maxAttempts must be a positive integer");
   }
 
-  return campaign.accountIds.map((accountId, index) => ({
+  return campaign.accountIds.map((accountId) => ({
     id: campaign.id + ":task:" + platform + ":" + template.taskKind + ":" + accountId,
     workspaceId: campaign.workspaceId,
     campaignId: campaign.id,
