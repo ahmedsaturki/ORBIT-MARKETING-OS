@@ -79,6 +79,7 @@ Inbox message writes verify that the conversation belongs to the active local wo
 - `backup_list`
 - `backup_restore`
 - `audit_list`
+- `audit_verify`
 
 Backups are encrypted locally and restore performs SQLite integrity validation before replacement. Audit records are workspace-scoped.
 
