@@ -183,10 +183,10 @@ describe("task execution orchestrator", () => {
         queue: taskQueue,
         connectors: registry,
         audit: new AuditLog(),
-        loadContext: async () => ({
-          ...context(task),
-          approval: undefined,
-        }),
+        loadContext: async () => {
+          const { approval: _approval, ...withoutApproval } = context(task);
+          return withoutApproval;
+        },
       },
       claimed!,
       true,
@@ -289,7 +289,10 @@ describe("task execution orchestrator", () => {
         queue: taskQueue,
         connectors: registry,
         audit: new AuditLog(),
-        loadContext: async () => ({ ...context(task), approval: undefined }),
+        loadContext: async () => {
+          const { approval: _approval, ...withoutApproval } = context(task);
+          return withoutApproval;
+        },
       },
       claimed!,
       false,
