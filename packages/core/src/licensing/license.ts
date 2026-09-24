@@ -18,6 +18,40 @@ export interface LicenseToken {
 
 const textEncoder = new TextEncoder();
 
+function isNonEmptyBoundedString(value: unknown, maxLength: number): value is string {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= maxLength;
+}
+
+function isFiniteNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+function validatePayload(payload: LicensePayload): void {
+  if (!isNonEmptyBoundedString(payload.licenseId, 200)) throw new Error("Invalid license payload");
+  if (!isNonEmptyBoundedString(payload.subject, 200)) throw new Error("Invalid license payload");
+  if (!["basic", "pro", "agency", "lifetime"].includes(payload.plan)) throw new Error("Invalid license payload");
+  if (!isNonEmptyBoundedString(payload.issuedAt, 100) || Number.isNaN(Date.parse(payload.issuedAt))) {
+    throw new Error("Invalid license payload");
+  }
+  if (payload.expiresAt !== undefined && (typeof payload.expiresAt !== "string" || Number.isNaN(Date.parse(payload.expiresAt)))) {
+    throw new Error("Invalid license payload");
+  }
+  if (!isFiniteNonNegativeInteger(payload.maxDevices) || payload.maxDevices < 1) {
+    throw new Error("Invalid license payload");
+  }
+  if (!isFiniteNonNegativeInteger(payload.accountLimit) || payload.accountLimit < 1) {
+    throw new Error("Invalid license payload");
+  }
+  if (
+    !Array.isArray(payload.features) ||
+    payload.features.length > 100 ||
+    payload.features.some((feature) => !isNonEmptyBoundedString(feature, 100))
+  ) {
+    throw new Error("Invalid license payload");
+  }
+}
+
+
 function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -74,11 +108,13 @@ export function createLicenseToken(
 }
 
 export function parseLicenseToken(token: string): LicenseToken {
-  const [payloadPart, signaturePart] = token.split(".");
+  const parts = token.split(".");
+  if (parts.length !== 2) throw new Error("Invalid license token");
+  const [payloadPart, signaturePart] = parts;
   if (!payloadPart || !signaturePart) throw new Error("Invalid license token");
 
   const payload = decodeJson<LicensePayload>(payloadPart);
-  if (!payload.licenseId || !payload.subject) throw new Error("Invalid license payload");
+  validatePayload(payload);
 
   return {
     payload,
@@ -111,6 +147,7 @@ export async function verifyLicenseToken(
   }
 
   try {
+    validatePayload(parsed.payload);
     const key = await crypto.subtle.importKey(
       "raw",
       publicKeyBytes,
@@ -130,6 +167,10 @@ export async function verifyLicenseToken(
   }
 
   const now = context.now ?? new Date();
+  const issuedAt = new Date(parsed.payload.issuedAt);
+  if (issuedAt.getTime() > now.getTime()) {
+    return { valid: false, reason: "malformed", payload: parsed.payload };
+  }
   if (parsed.payload.expiresAt && new Date(parsed.payload.expiresAt).getTime() < now.getTime()) {
     return { valid: false, reason: "expired", payload: parsed.payload };
   }
