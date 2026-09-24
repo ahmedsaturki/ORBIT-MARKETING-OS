@@ -22,6 +22,7 @@ describe("campaign validation", () => {
   it("rejects campaigns without accounts", () => {
     const result = validateCampaign({
       id: "camp-1",
+      workspaceId: "workspace-1",
       name: "Launch",
       status: "draft",
       accountIds: [],
