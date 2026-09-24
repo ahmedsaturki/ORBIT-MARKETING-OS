@@ -520,6 +520,12 @@ export function App(): ReactElement {
     }
   };
 
+  useEffect(() => {
+    void checkHealth();
+    void loadAudit();
+    void loadLicense();
+  }, []);
+
   return (
     <main className="shell">
       <header className="hero">
