@@ -27,6 +27,7 @@ export interface TaskQueueOptions {
 export class TaskQueue {
   private readonly tasks = new Map<string, Task>();
   private readonly idempotencyKeys = new Set<string>();
+  private readonly executingTaskIds = new Set<string>();
 
   private idempotencyKey(task: Task): string {
     return `${task.workspaceId}\u0000${task.idempotencyKey}`;
@@ -142,6 +143,22 @@ export class TaskQueue {
     const retryDelay = calculateRetryDelay(nextAttempt, this.options.retryPolicy);
     const availableAt = new Date(new Date(normalizedNow).getTime() + retryDelay).toISOString();
     return { ...this.setTask({ ...task, attempts: nextAttempt, status: "pending", availableAt }) };
+  }
+
+  /** Atomically reserves a running task for one execution orchestrator. */
+  public tryBeginExecution(id: string): boolean {
+    const task = this.requireTask(id);
+    if (task.status !== "running") {
+      throw new Error("Only running tasks may begin execution: " + id);
+    }
+    if (this.executingTaskIds.has(id)) return false;
+    this.executingTaskIds.add(id);
+    return true;
+  }
+
+  /** Releases a previously acquired execution reservation. */
+  public endExecution(id: string): void {
+    this.executingTaskIds.delete(id);
   }
 
   /** Returns a point-in-time count of all queue states. */
