@@ -119,6 +119,74 @@ if (!desktopPackage.dependencies?.["@orbit/core"]) {
 }
 
 const ignored = new Set([".git", "node_modules", ".next", "out", "dist", "build", ".turbo", ".expo"]);
+
+const productionRoots = [
+  "packages/core/src",
+  "packages/desktop/src",
+  "packages/mobile",
+  "packages/web/src",
+  "packages/shared-ui/src",
+];
+
+const forbiddenTypeScriptAny = /\b(?:any\[\]|any\b|as\s+any\b|Record<[^>]*,\s*any\s*>)/;
+async function scanProductionSource(dir) {
+  for (const entry of await readdir(join(root, dir), { withFileTypes: true })) {
+    if (ignored.has(entry.name)) continue;
+    const full = join(root, dir, entry.name);
+    if (entry.isDirectory()) {
+      await scanProductionSource(join(dir, entry.name));
+      continue;
+    }
+    if (!/\.(?:ts|tsx|mjs)$/.test(entry.name)) continue;
+    if (relative(root, full) === "scripts/verify-workspace.mjs") continue;
+    const content = await readFile(full, "utf8");
+    if (forbiddenTypeScriptAny.test(content)) {
+      throw new Error("Production source uses implicit any in " + relative(root, full));
+    }
+  }
+}
+
+for (const sourceRoot of productionRoots) {
+  await scanProductionSource(sourceRoot);
+}
+
+const sensitiveDesktopCommands = {
+  backup_create: ["owner", "admin"],
+  backup_list: ["owner", "admin"],
+  backup_restore: ["owner", "admin"],
+  vault_put: ["owner", "admin"],
+  vault_get: ["owner", "admin"],
+  vault_delete: ["owner", "admin"],
+  account_upsert: ["owner", "admin"],
+  account_delete: ["owner", "admin"],
+  task_enqueue: ["owner", "admin", "editor"],
+  task_claim_next: ["owner", "admin", "operator"],
+  task_set_status: ["owner", "admin", "operator"],
+  content_upsert: ["owner", "admin", "editor"],
+  approval_decide: ["owner", "admin", "reviewer"],
+};
+
+for (const command of Object.keys(sensitiveDesktopCommands)) {
+  const match = rust.match(
+    new RegExp("#\\[tauri::command\\][\\s\\S]*?fn\\s+" + command + "\\s*\\(", "g"),
+  );
+  if (!match) throw new Error("Missing sensitive Tauri command: " + command);
+  const start = rust.indexOf("fn " + command + "(");
+  const next = [...rust.matchAll(/#\\[tauri::command\\][\\s\\S]*?fn\\s+[A-Za-z_][A-Za-z0-9_]*\\s*\\(/g)]
+    .map((value) => value.index)
+    .filter((index) => index !== undefined && index > start)
+    .sort((a, b) => a - b)[0] ?? rust.length;
+  const segment = rust.slice(start, next);
+  if (!segment.includes("require_workspace_role(")) {
+    throw new Error("Sensitive Tauri command is not role-gated: " + command);
+  }
+}
+
+const webVercel = JSON.parse(await readFile(join(root, "packages/web/vercel.json"), "utf8"));
+if (webVercel.framework !== "nextjs") throw new Error("Web Vercel framework must be nextjs");
+if (webVercel.outputDirectory !== "out") throw new Error("Web Vercel output directory must be out");
+
+
 const forbiddenFragments = ["next lint", "typecheck:all", "test:all", "build:all", "app.get(\"*\")", "app.get(\'/*\')"];
 
 async function scan(dir) {
