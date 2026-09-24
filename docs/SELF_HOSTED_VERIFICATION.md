@@ -68,3 +68,18 @@ Use the runner for this private repository only. Keep the runner machine patched
 ## 5. Release rule
 
 A successful self-hosted verification run is valid execution evidence for the corresponding technical gates, but signing, third-party platform authorization, payment configuration, and other external release prerequisites remain separate gates.
+
+
+## One-click lockfile bootstrap
+
+After the self-hosted runner is registered with labels `orbit,x64`, use:
+
+**Actions → Bootstrap Lockfile → Run workflow**
+
+The workflow generates the real `pnpm-lock.yaml` with pnpm 10.17.1 and commits it to the selected branch. No hand-written lockfile is used.
+
+Then run:
+
+**Actions → Self-Hosted Verification → Run workflow**
+
+The verification workflow consumes that committed lockfile with `pnpm install --frozen-lockfile`.
