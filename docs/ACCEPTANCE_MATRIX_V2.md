@@ -1,0 +1,52 @@
+# ORBIT Acceptance Matrix v2
+
+Status vocabulary: `PASS`, `FAIL`, `PARTIAL`, `UNVERIFIED`, `NOT_APPLICABLE`.
+
+A feature cannot be marked PASS from source inspection alone when the requirement is runtime behavior.
+
+| ID | Requirement | Evidence required |
+|---|---|---|
+| SEC-01 | Secrets encrypted at rest | cryptographic tests + restore test |
+| SEC-02 | Secrets excluded from logs/analytics | redaction tests + log scan |
+| SEC-03 | Renderer capability isolation | Tauri capability review + E2E |
+| SEC-04 | License tamper detection | mutation/forgery tests |
+| DATA-01 | Local SQLite persistence | clean runtime test |
+| DATA-02 | Migration safety | forward migration + backup restore |
+| DATA-03 | 1,000 contacts searchable | performance benchmark |
+| QUE-01 | Persistent queue | restart/recovery test |
+| QUE-02 | Bounded retries | deterministic retry tests |
+| QUE-03 | Circuit breaker | fault-injection test |
+| CAMP-01 | Campaign creates tasks | integration test |
+| CAMP-02 | Account membership enforced | negative integration test |
+| CAMP-03 | Approval gates block execution | workflow test |
+| CONT-01 | Content variants | local AI fixture/provider test |
+| CONT-02 | Media metadata/search | indexing test |
+| INBOX-01 | Unified conversation model | connector fixture integration |
+| CRM-01 | Conversation-contact linking | relational integration test |
+| SYNC-01 | Offline edits survive restart | device simulation test |
+| SYNC-02 | Concurrent edits converge | Yjs convergence test |
+| BACK-01 | Encrypted backup | backup/restore test |
+| BACK-02 | Corrupt backup rejected | integrity test |
+| CONN-01 | Capability handshake | connector contract test |
+| CONN-02 | Unsupported action rejected | negative connector test |
+| CONN-03 | Challenge causes safe stop | browser fixture test |
+| WEB-01 | PWA manifest/service worker | production browser test |
+| MOB-01 | Mobile control surface | Expo typecheck/build test |
+| REL-01 | Reproducible workspace install | clean CI checkout |
+| REL-02 | Signed desktop artifact | release pipeline evidence |
+| REL-03 | Checksums match distributed artifacts | release verification |
+| OPS-01 | Crash recovery | forced termination test |
+| OPS-02 | 24h stability | soak-test evidence |
+| PERF-01 | Startup target | measured benchmark |
+| PERF-02 | Memory target | measured benchmark |
+| QA-01 | Unit coverage threshold | coverage report |
+| QA-02 | Critical E2E paths | Playwright report |
+| DOC-01 | User guide matches product | documentation review |
+| DOC-02 | Security model documented | security review |
+
+## Gate rules
+
+- Any `FAIL` in SEC, DATA, QUE, CAMP, CONN or REL blocks release.
+- Any `UNVERIFIED` runtime requirement blocks the claim "production ready".
+- Performance targets are measured, never inferred from code size.
+- Real-platform tests must be controlled and must not be used to claim immunity from platform enforcement.
