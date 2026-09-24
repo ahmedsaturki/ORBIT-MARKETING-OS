@@ -31,6 +31,10 @@ jobs:
         run: pnpm --filter @orbit/web lint
       - name: Web build
         run: pnpm --filter @orbit/web build
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Web E2E
+        run: pnpm test:e2e
 
   deploy:
     needs: quality
