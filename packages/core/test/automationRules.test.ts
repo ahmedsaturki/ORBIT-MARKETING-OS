@@ -35,6 +35,15 @@ describe("automation rule packs", () => {
     expect(resolveAutomationRule(pack, "message")).toBeUndefined();
   });
 
+  it("rejects enabled external rules that skip confirmation", () => {
+    const result = validateAutomationRulePack({
+      ...pack,
+      rules: [{ ...pack.rules[0]!, requiresConfirmation: false }],
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain("enabled external rules must require confirmation");
+  });
+
   it("rejects duplicate ids, bad platform and unsafe timeout/attempt bounds", () => {
     const result = validateAutomationRulePack({
       ...pack,
