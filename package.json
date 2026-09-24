@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "clean": "turbo run clean && rimraf node_modules .turbo",
     "verify:workspace": "node scripts/verify-workspace.mjs",
+    "verify:ipc": "node scripts/verify-ipc.mjs",
     "runtime:dev": "tsx server.ts",
     "runtime:start": "tsx server.ts",
     "test:runtime": "node scripts/runtime-smoke.mjs",
