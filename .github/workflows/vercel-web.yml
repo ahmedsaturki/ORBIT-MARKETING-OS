@@ -11,7 +11,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Check Vercel credentials
         id: gate
@@ -44,13 +44,25 @@ jobs:
         if: steps.gate.outputs.enabled == 'true'
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build web
+      - name: Pull Vercel project settings
         if: steps.gate.outputs.enabled == 'true'
-        run: pnpm --filter @orbit/web build
+        run: pnpm dlx vercel@59.23.1 pull --yes --environment=production --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-      - name: Deploy
+      - name: Build Vercel output
         if: steps.gate.outputs.enabled == 'true'
-        run: pnpm dlx vercel@50.2.1 deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+        run: pnpm dlx vercel@59.23.1 build --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy prebuilt output
+        if: steps.gate.outputs.enabled == 'true'
+        run: pnpm dlx vercel@59.23.1 deploy --prebuilt --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
