@@ -5491,6 +5491,57 @@ mod tests {
     }
 
     #[test]
+    fn contact_search_handles_1000_workspace_records() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-search', 'Search', '2026-09-24T00:00:00Z')",
+                [],
+            )
+            .expect("workspace should exist");
+
+        for index in 0..1_000 {
+            connection
+                .execute(
+                    "INSERT INTO contacts(
+                       id, workspace_id, display_name, status, created_at, updated_at
+                     ) VALUES (?1, 'workspace-search', ?2, 'lead', '2026-09-24T00:00:00Z', '2026-09-24T00:00:00Z')",
+                    params![
+                        format!("contact-{index}"),
+                        format!("Contact {index}")
+                    ],
+                )
+                .expect("contact should insert");
+        }
+
+        let started = std::time::Instant::now();
+        let matching: Vec<String> = connection
+            .prepare(
+                "SELECT id
+                 FROM contacts
+                 WHERE workspace_id=?1
+                   AND (display_name LIKE ?2 OR phone LIKE ?2 OR email LIKE ?2)
+                 ORDER BY updated_at DESC
+                 LIMIT 50",
+            )
+            .expect("search query should prepare")
+            .query_map(params!["workspace-search", "%Contact 0999%"], |row| row.get(0))
+            .expect("search query should execute")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("search results should decode");
+
+        assert_eq!(matching, vec!["contact-999".to_string()]);
+        assert!(
+            started.elapsed() < std::time::Duration::from_millis(500),
+            "1000-contact search exceeded 500ms"
+        );
+    }
+
+    #[test]
     fn task_migration_normalizes_legacy_timestamps() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
         connection
