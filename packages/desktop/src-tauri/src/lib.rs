@@ -5569,6 +5569,28 @@ mod tests {
     }
 
     #[test]
+    fn schema_migration_reaches_v10_and_is_idempotent_afterwards() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection.execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection)
+            .expect("initial migration should succeed");
+
+        let first: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("schema version should be readable");
+        assert_eq!(first, SCHEMA_VERSION);
+
+        migrate_schema(&connection)
+            .expect("second migration should be a no-op");
+        let second: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("schema version should still be readable");
+        assert_eq!(second, SCHEMA_VERSION);
+    }
+
+    #[test]
     fn migrates_global_task_idempotency_constraint_to_workspace_scoped_constraint() {
         let connection = Connection::open_in_memory()
             .expect("in-memory SQLite should be available");
