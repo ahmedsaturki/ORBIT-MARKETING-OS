@@ -1,7 +1,0 @@
-{
-  "framework": "nextjs",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm build",
-  "outputDirectory": "out",
-  "ignoreCommand": "if [ ! -f ../../pnpm-lock.yaml ]; then echo 'Committed pnpm-lock.yaml is required.'; exit 1; fi; if [ -z \"${VERCEL_GIT_PREVIOUS_SHA:-}\" ] || [ -z \"${VERCEL_GIT_COMMIT_SHA:-}\" ]; then exit 1; fi; git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" \"$VERCEL_GIT_COMMIT_SHA\" -- . ../../vercel.json ../../package.json ../../pnpm-workspace.yaml ../../pnpm-lock.yaml"
-}
