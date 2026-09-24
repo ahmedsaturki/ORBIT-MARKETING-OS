@@ -14,7 +14,7 @@ function validateRetryPolicy(policy: RetryPolicy): void {
     !Number.isFinite(policy.maxDelayMs) ||
     policy.maxDelayMs < policy.baseDelayMs
   ) {
-    throw new RangeError("invalid retry policy");
+    throw new RangeError("retryPolicy.maxAttempts must be an integer between 1 and 10");
   }
 }
 

@@ -43,7 +43,7 @@ export class TaskQueue {
       !Number.isFinite(options.retryPolicy.maxDelayMs) ||
       options.retryPolicy.maxDelayMs < options.retryPolicy.baseDelayMs
     ) {
-      throw new RangeError("invalid retry policy");
+      throw new RangeError("retryPolicy.maxAttempts must be an integer between 1 and 10");
     }
   }
 

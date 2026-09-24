@@ -26,8 +26,8 @@ describe("TaskQueue", () => {
     const queue = new TaskQueue({
       retryPolicy: { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 },
     });
-    queue.enqueue(task({ id: "low", priority: 1 }));
-    queue.enqueue(task({ id: "high", priority: 9 }));
+    queue.enqueue(task({ id: "low", priority: 1, idempotencyKey: "low" }));
+    queue.enqueue(task({ id: "high", priority: 9, idempotencyKey: "high" }));
 
     const claimed = queue.claimNext("2026-09-24T10:01:00.000Z");
     expect(claimed?.id).toBe("high");

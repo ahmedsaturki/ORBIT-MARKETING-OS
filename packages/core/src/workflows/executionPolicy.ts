@@ -77,6 +77,18 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
   }
 
   if (
+    context.task.kind !== "sync" &&
+    context.task.contentId &&
+    !context.campaign.contentIds.includes(context.task.contentId)
+  ) {
+    return {
+      allowed: false,
+      reason: "content_scope_mismatch",
+      message: "The task content does not belong to the campaign.",
+    };
+  }
+
+  if (
     context.approval &&
     (context.approval.workspaceId !== context.task.workspaceId ||
       !context.campaign.contentIds.includes(context.approval.contentId) ||
@@ -167,17 +179,6 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
         message: "The referenced content is not approved for external delivery.",
       };
     }
-  }
-
-  if (
-    context.task.contentId &&
-    !context.campaign.contentIds.includes(context.task.contentId)
-  ) {
-    return {
-      allowed: false,
-      reason: "content_scope_mismatch",
-      message: "The task content does not belong to the campaign.",
-    };
   }
 
   if (context.task.kind !== "sync") {

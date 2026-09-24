@@ -221,9 +221,9 @@ describe("TaskQueue", () => {
     const instance = queue();
     instance.enqueue({ ...baseTask, id: "approval", idempotencyKey: "approval" });
     instance.enqueue({ ...baseTask, id: "action", idempotencyKey: "action" });
-    instance.claimNext("2026-09-24T00:00:01.000Z");
+    expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("approval");
     instance.awaitApproval("approval");
-    instance.claimNext("2026-09-24T00:00:01.000Z");
+    expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("action");
     instance.awaitUserAction("action");
 
     expect(instance.stats()).toMatchObject({
