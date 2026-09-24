@@ -5,70 +5,8 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
+      "types": "./src/index.ts",
       "default": "./dist/index.js"
-    },
-    "./security": {
-      "types": "./dist/security/index.d.ts",
-      "import": "./dist/security/index.js"
-    },
-    "./campaigns": {
-      "types": "./dist/campaigns/index.d.ts",
-      "import": "./dist/campaigns/index.js"
-    },
-    "./queue": {
-      "types": "./dist/queue/index.d.ts",
-      "import": "./dist/queue/index.js"
-    },
-    "./types": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/types/index.js"
-    },
-    "./connectors": {
-      "types": "./dist/connectors/index.d.ts",
-      "import": "./dist/connectors/index.js"
-    },
-    "./database": {
-      "types": "./dist/database/index.d.ts",
-      "import": "./dist/database/index.js"
-    },
-    "./audit": {
-      "types": "./dist/audit/index.d.ts",
-      "import": "./dist/audit/index.js"
-    },
-    "./package.json": "./package.json",
-    "./content": {
-      "types": "./dist/content/index.d.ts",
-      "import": "./dist/content/index.js"
-    },
-    "./media": {
-      "types": "./dist/media/index.d.ts",
-      "import": "./dist/media/index.js"
-    },
-    "./analytics": {
-      "types": "./dist/analytics/index.d.ts",
-      "import": "./dist/analytics/index.js"
-    },
-    "./automation": {
-      "types": "./dist/automation/index.d.ts",
-      "import": "./dist/automation/index.js"
-    },
-    "./access": {
-      "types": "./dist/access/control.d.ts",
-      "import": "./dist/access/control.js"
-    },
-    "./licensing": {
-      "types": "./dist/licensing/index.d.ts",
-      "import": "./dist/licensing/index.js"
-    },
-    "./sync": {
-      "types": "./dist/sync/index.d.ts",
-      "import": "./dist/sync/index.js"
-    },
-    "./workflows": {
-      "types": "./dist/workflows/index.d.ts",
-      "import": "./dist/workflows/index.js"
     }
   },
   "scripts": {

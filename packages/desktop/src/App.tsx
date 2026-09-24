@@ -1022,7 +1022,7 @@ export function App(): ReactElement {
         plaintext: secret,
         password,
       });
-      setStored(result.payloadVersion === 1);
+      setStored(result.payload_version === 1);
       setSecret("");
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل حفظ السجل المشفر");
