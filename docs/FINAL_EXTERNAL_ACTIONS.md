@@ -10,9 +10,9 @@ The codebase is intentionally not marked production-ready yet. The remaining act
 2. Register the user's owned Windows/Linux/macOS machine.
 3. Ensure the runner is `Online/Idle` and advertises the standard `self-hosted` + `x64` labels used by the workflows. No custom `orbit` label is required.
 4. Confirm the runner is **Idle/Online**.
-5. From **Actions → Bootstrap pnpm lockfile → Run workflow**, select `rebuild/orbit-production`.
-6. Verify that both `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` were committed to the branch.
-7. From **Actions → Self-Hosted Verification → Run workflow**, select `rebuild/orbit-production`.
+5. From **Actions → Bootstrap pnpm lockfile → Run workflow**, select `rebuild/orbit-production-consolidated`.
+6. Verify that both `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` were committed to the selected branch.
+7. From **Actions → Self-Hosted Verification → Run workflow**, select `rebuild/orbit-production-consolidated`.
 8. Do not promote or merge unless the verification job is green and the release matrix has current evidence.
 
 ## B. Web deployment
