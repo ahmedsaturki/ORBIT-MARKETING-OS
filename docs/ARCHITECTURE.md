@@ -45,7 +45,7 @@ AES-256-GCM encrypted records
 local SQLite / local files
 ```
 
-The shared TypeScript package contains the authenticated AES-256-GCM primitive and credential redaction. Native KDF and secure-storage integration remain desktop implementation work.
+The shared TypeScript package contains the authenticated AES-256-GCM primitive, credential redaction, and workspace authorization contracts. The desktop runtime provides native Argon2id, encrypted storage, and a persisted active-workspace context.
 
 ## Sync boundary
 
@@ -62,7 +62,7 @@ A feature is complete only after implementation, automated tests, build/typechec
 
 ## Current desktop workspace model
 
-The core domain is workspace-aware, but the current Tauri desktop runtime uses a single local workspace identifier (`default`) while the workspace-management UI and multi-workspace persistence layer are still pending. This is intentional: no multi-tenant capability is claimed until it is implemented and tested end-to-end.
+The core domain and desktop runtime are workspace-aware. Tauri persists an active workspace identifier locally and exposes workspace list/create/select commands; every workspace-scoped operation resolves against that active context. End-to-end multi-user identity/RBAC remains a separate release gate.
 
 External platform actions are gated by account/campaign/task integrity, approval, local safety limits, explicit user authorization, connector capabilities, and challenge handling.
 
