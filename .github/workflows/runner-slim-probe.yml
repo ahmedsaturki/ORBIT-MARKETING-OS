@@ -1,0 +1,20 @@
+name: Runner Slim Probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["rebuild/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - name: Probe
+        run: |
+          echo "runner-started"
+          node --version
+          pnpm --version || true
