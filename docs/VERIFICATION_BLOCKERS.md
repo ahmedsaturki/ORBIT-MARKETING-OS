@@ -1,6 +1,6 @@
 # Verification Blockers
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 
 ## 1. GitHub Actions hosted-runner blocker
 
