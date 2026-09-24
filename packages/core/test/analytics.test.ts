@@ -19,6 +19,19 @@ describe("analytics primitives", () => {
     expect(metrics.failureRate).toBeCloseTo(1 / 3);
   });
 
+  it("does not mix metrics from different campaigns", () => {
+    const metrics = aggregateCampaignMetrics(
+      [
+        { campaignId: "c1", status: "succeeded", timestamp: "2026-09-24T01:00:00.000Z" },
+        { campaignId: "c2", status: "failed", timestamp: "2026-09-24T02:00:00.000Z" },
+      ],
+      "c1",
+    );
+    expect(metrics.attempted).toBe(1);
+    expect(metrics.succeeded).toBe(1);
+    expect(metrics.failed).toBe(0);
+  });
+
   it("sorts and filters metric points deterministically", () => {
     const series = buildMetricSeries([
       { timestamp: "2026-09-24T03:00:00.000Z", value: 3 },
