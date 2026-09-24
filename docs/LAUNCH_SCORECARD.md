@@ -12,13 +12,13 @@ Legend:
 | Gate | Current state | Evidence / blocker |
 |---|---|---|
 | Core domain/security | IMPLEMENTED | Typed domain, queue, policy, RBAC, encryption/redaction, audit integrity |
-| Queue invariants | IMPLEMENTED | Idempotency, state validation, defensive copies, retry tests |
+| Queue invariants | IMPLEMENTED | Workspace-scoped idempotency, normalized scheduling timestamps, bounded retries, defensive copies, regression tests |
 | Execution orchestrator | IMPLEMENTED | Policy → confirmation → connector → audit → queue |
 | Connector contract | IMPLEMENTED | Capability checks, registry, authorization, fixture |
-| Telegram native path | IMPLEMENTED | Token validation, approval, rate-limit handling, ambiguous-delivery stop |
+| Telegram native path | IMPLEMENTED | Token validation, approval, daily/circuit safety budgets, rate-limit handling, ambiguous/invalid-delivery stop |
 | Workspace isolation | IMPLEMENTED | Persisted active workspace, memberships, scoped vault |
 | SQLite integrity | IMPLEMENTED | FK enforcement, busy timeout, workspace integrity triggers |
-| Migration path | IMPLEMENTED | Migration chain through schema v10 with legacy backfill, including workspace-scoped vault, workspace-scoped task idempotency, and startup recovery |
+| Migration path | IMPLEMENTED | Migration chain through schema v10 with legacy backfill and transactional v8/v10 destructive changes |
 | Desktop UI | IMPLEMENTED | Workspace switching, content, approvals, tasks, CRM, inbox, backup, license, audit |
 | Web product surface | IMPLEMENTED | Next.js static app, pricing, legal, PWA |
 | Local AI Studio | IMPLEMENTED | Typed local runtime client, chat/content/image UI, loopback-only boundary; execution evidence pending |
@@ -32,24 +32,24 @@ Legend:
 | Clean install | UNVERIFIED | Requires clean checkout execution and lockfile evidence |
 | Typecheck/lint/tests/build | BLOCKED | GitHub hosted runner currently fails before steps; zero-cost self-hosted verification workflow is available |
 | Rust fmt/test/clippy | BLOCKED | Same runner-allocation failure |
-| Native SQLite integration | UNVERIFIED | Tests exist; no clean runtime execution evidence yet |
-| Connector real-platform E2E | UNVERIFIED | Telegram path exists; controlled live integration evidence still required |
-| Browser E2E/accessibility | UNVERIFIED | No successful clean browser run recorded |
-| Security/dependency audit | UNVERIFIED | Automated dependency analysis is not yet a completed release gate |
+| Native SQLite integration | UNVERIFIED | Tests exist; no clean native runtime execution evidence yet |
+| Connector real-platform E2E | UNVERIFIED | Telegram/LinkedIn paths exist; controlled live/API evidence still required |
+| Browser E2E/accessibility | UNVERIFIED | Tests are present; no successful clean browser run recorded |
+| Security/dependency audit | UNVERIFIED | Static source scan clean for critical patterns; automated dependency analysis not completed |
 | Performance/soak | UNVERIFIED | Benchmarks and 24h soak not executed |
 | Desktop signing | BLOCKED | Signing credentials are intentionally absent; validation builds only |
 | Mobile production signing | BLOCKED | Current workflow produces debug validation APK |
-| Vercel production deployment | BLOCKED | Connected `orbit-marketing-os` project exists. Automatic Git builds are now disabled repository-side; recent historical attempts were CANCELED and the last concrete ERROR deployment failed during install. A successful guarded prebuilt deployment remains required, and committed lockfiles are still required. |
+| Vercel production deployment | BLOCKED | Automatic Git builds are disabled repository-side; historical rebuild deployments are not a verified success and the latest concrete ERROR failed at install because the lockfile was absent |
 | Billing/payment | BLOCKED | No commercial payment provider configuration is verified |
 | Production launch | BLOCKED | Any applicable UNVERIFIED/BLOCKED runtime or distribution gate prevents release claim |
 
 ## Current infrastructure blocker
 
-GitHub Actions jobs for the rebuild branch are being created but can fail before the first step is registered, with no runner allocation metadata. The latest observed CI job (`107770331541`, run `36040244621`) ended `failure` before workflow steps were registered. The same behavior was reproduced previously with a minimal runner probe. This is treated as execution-infrastructure evidence, not source-build evidence.
+The latest rebuild CI run `36042604609` created job `107778208436` and failed before any workflow step executed: `runner_id=0`, empty runner name, and `steps=[]`. This is execution-infrastructure evidence, not source-build evidence.
 
 ## Zero-cost verification fallback
 
-A manual self-hosted verification workflow is available at `.github/workflows/self-hosted-verify.yml`. It requires real committed `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` files before execution.
+A manual self-hosted verification workflow is available at `.github/workflows/self-hosted-verify.yml`. A separate branch-restricted lockfile bootstrap workflow is available at `.github/workflows/bootstrap-lockfile.yml`. Both require an actual `self-hosted, x64` runner and the bootstrap flow generates the lockfiles reproducibly.
 
 ## Release rule
 

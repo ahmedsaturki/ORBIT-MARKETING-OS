@@ -1,47 +1,64 @@
 # ORBIT Current Verification Snapshot — 2026-09-24
 
-Source snapshot commit: `0d2494746cf6f62f045dadae0050639775ccc0dc`
+Source implementation head at snapshot: `0ab18e6375cd224052ce2a3b1cedae548e1f3b9c`
 
 ## Live repository state
 
 - Active branch: `rebuild/orbit-production`
 - PR #2: open, draft, unmerged
-- Latest hosted CI run: `36040244621`
-- Latest CI job: `107770331541`
+- Latest hosted CI run: `36042604609`
+- Latest CI job: `107778208436`
 - Latest CI conclusion: `failure`
+- Runner metadata: `runner_id=0`, runner name empty
 - Workflow steps registered: none
 - Interpretation: runner allocation/execution infrastructure failure; no TypeScript/Rust/test result is implied.
 
-## Vercel
+## Local execution environment
 
-- Project: `orbit-marketing-os`
-- Repository-side automatic Git deployments: disabled.
-- Current commit status from GitHub has no Vercel failure context after the disablement change.
-- Historical last concrete Vercel ERROR deployment failed at `bash scripts/vercel-install.sh` because `pnpm-lock.yaml` was absent.
-- Successful guarded prebuilt production deployment remains unverified.
-- Project metadata has historically reported framework `vite`; repository contract remains Next.js static export to `packages/web/out`.
+- Node.js: `v22.16.0`
+- npm: `10.9.2`
+- Corepack: `0.32.0`
+- pnpm: not installed
+- npm registry DNS/network: unavailable from this execution environment
+- pnpm cache: no local package/cache entry available
+- Result: no reproducible `pnpm-lock.yaml` or `Cargo.lock` is fabricated.
 
-## Completed source hardening in this snapshot
+## Source hardening completed in this line
 
-- SQLite schema v10 + workspace-scoped task idempotency.
-- Atomic/idempotent startup recovery for interrupted tasks.
-- Workspace/RBAC and approval actor/reviewer enforcement.
+- Native SQLite schema v10 with workspace-scoped task idempotency.
+- v10 task migration guarded by version check and wrapped in a transaction.
+- Workspace/RBAC enforcement and runtime-derived approval identity.
 - Atomic approval + audit transactions.
 - Audit-integrity fail-closed external Telegram execution.
-- Media import authorization before filesystem access.
-- UTC-normalized native/core scheduling and bounded retries.
-- LinkedIn API default `202609`.
-- React 19 scoped JSX cleanup.
-- Desktop consumption of `@orbit/core` platform types.
-- PWA offline fallback hardening.
-- Vercel automatic Git-build disablement with prebuilt-only release path.
+- Invalid/ambiguous Telegram delivery responses park in human-intervention state.
+- UTC-normalized native/core task scheduling and bounded retry budgets across rule-pack, native, and core queue layers.
+- Account authorization/session state synchronization after upsert.
+- Typed/serializable desktop IPC views and stronger IPC verification.
+- LinkedIn connector default API version `202609`.
+- Compatibility-shell formatting cleanup.
+- Repository-wide secret-pattern/tree scan found no tracked private-key/credential files; only `.env.example` matched the sensitive filename allowlist.
+
+## CI/release infrastructure
+
+- Branch-restricted bootstrap and full self-hosted verification workflows are exposed from `main` for manual dispatch while remaining restricted to `rebuild/orbit-production`.
+- GitHub-hosted runner allocation remains the current execution blocker.
+- Current repository contains no committed `pnpm-lock.yaml` or `packages/desktop/src-tauri/Cargo.lock`.
+
+## Vercel
+
+- Project: `orbit-marketing-os`.
+- Automatic Git builds are disabled repository-side.
+- Historical concrete rebuild deployment: ERROR during `bash scripts/vercel-install.sh` because `pnpm-lock.yaml` was absent.
+- Repository contract remains Next.js static export to `packages/web/out`.
+- Effective Vercel project framework/Root Directory still require external verification.
+- Successful guarded prebuilt production deployment and rollback remain unverified.
 
 ## Remaining release gates
 
 1. Real dependency resolution + committed `pnpm-lock.yaml` and `Cargo.lock`.
-2. Clean TS/Rust/runtime/browser/device execution evidence.
+2. Clean TypeScript/Rust/runtime/browser/device execution evidence.
 3. Real authorized connector/platform verification.
-4. Security/dependency review, performance benchmarks and soak.
+4. Security/dependency audit, performance benchmarks, and soak.
 5. Desktop/mobile signing and production distribution.
 6. Successful Vercel prebuilt deployment + rollback test.
 7. Commercial billing/payment and final legal/commercial review.

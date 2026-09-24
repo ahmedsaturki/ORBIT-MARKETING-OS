@@ -17,27 +17,35 @@ The active implementation branch is `rebuild/orbit-production`. PR #2 remains in
 ## Hardening completed in this line
 
 - workspace/RBAC checks are applied before protected mutations/reads;
-- approval actor identity and reviewer role are validated;
+- approval actor identity is derived from the local runtime user rather than client-supplied actor fields;
 - approval mutations and their audit records are committed atomically;
 - audit integrity failure blocks external Telegram execution;
 - startup recovery runs once at application startup and is idempotent;
-- task scheduling uses normalized UTC timestamps and bounded retry ceilings;
+- task scheduling uses normalized UTC timestamps;
+- task retry ceilings are bounded consistently at 10 across core queue, campaign task factory, native task persistence, and rule-pack execution;
 - task idempotency is workspace-scoped with v9→v10 migration support;
-- account authorization/session state remains synchronized after upsert;
+- v8 vault migration and v10 task migration use transactional schema changes;
+- account authorization/session state remains synchronized after upsert and persisted session presence is reflected in the returned view;
 - media import authorizes before filesystem access;
-- Desktop consumes typed `@orbit/core` contracts;
+- Desktop consumes typed `@orbit/core` contracts and serializable IPC views;
+- IPC verification prevents client-supplied approval actor identity from returning;
 - all tracked TSX files use scoped React element types;
 - Vercel installer/ignore scripts fail closed without a reproducible lockfile.
 
 ## Current execution evidence
 
 Latest observed hosted GitHub Actions CI on the rebuild line:
-- run `36039581003`
-- job `107768119208`
+- run `36042604609`
+- job `107778208436`
 - conclusion: `failure`
-- no workflow steps were registered before failure; therefore this is not source-level build evidence.
+- runner_id: `0`
+- runner name: empty
+- steps: `[]`
+- no usable workflow step/log evidence was produced.
 
-The connected Vercel project has no verified successful deployment. Automatic Git builds are now disabled repository-side; historical rebuild attempts were canceled and the last concrete ERROR deployment failed at the install step because the repository lacked the required lockfile.
+The current execution environment cannot generate a reproducible lockfile because pnpm is not installed and the npm registry is unreachable. No fake lockfile is committed.
+
+The connected Vercel project has no verified successful deployment. Automatic Git builds are disabled repository-side; the historical concrete ERROR deployment failed during the install script because the lockfile was absent.
 
 ## Remaining release gates
 
