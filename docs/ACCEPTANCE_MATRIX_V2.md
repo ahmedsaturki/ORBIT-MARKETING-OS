@@ -37,9 +37,9 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | REL-03 | Checksums match distributed artifacts | release verification | PARTIAL | `npm run checksums` writes `dist/SHA256SUMS.txt`; CI uploads artifact; distribution-side match pending |
 | OPS-01 | Crash recovery | forced termination test | PASS | `test/crash-recovery.test.ts` (child process runs production queue+SQLite code, SIGKILL'd mid-open-transaction; running task → retrying with `interrupted_before_restart`, committed rows survive, uncommitted transaction rolls back, `integrity_check` ok, recovery idempotent on reopen) |
 | OPS-02 | 24h stability | soak-test evidence | UNVERIFIED | Soak run pending |
-| PERF-01 | Startup target | measured benchmark | UNVERIFIED | Benchmark pending |
-| PERF-02 | Memory target | measured benchmark | UNVERIFIED | Benchmark pending |
-| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); 115 tests, clean run 95.64% lines / 88.48% branches / 97.72% funcs |
+| PERF-01 | Startup target | measured benchmark | PASS | `test/perf-benchmark.test.ts` spawns production server (`NODE_ENV=production`) and measures spawn→`/api/health` first-200: 1.9–5.6s measured (idle vs parallel suite load), asserted ≤8000ms budget; free-port probe avoids this machine's dead 45000–48999 TCP range; process tree killed after each run |
+| PERF-02 | Memory target | measured benchmark | PASS | `test/perf-benchmark.test.ts` + `test/fixtures/perf-memory-worker.mjs`: after 1,000 contacts + 500 queue tasks + 500 inbox messages + 200 media assets + 100 variant generations, worker self-reports RSS 70.9–77.6MB (≤200MB budget) and heapUsed ~10.6MB (≤100MB budget); workload counts asserted before trusting the number |
+| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); 117 tests, clean run 95.64% lines / 88.48% branches / 97.72% funcs |
 | QA-02 | Critical E2E paths | Playwright report | UNVERIFIED | Playwright suite pending |
 | DOC-01 | User guide matches product | documentation review | PARTIAL | `README.md` covers install/run/scripts; full user guide pending product freeze |
 | DOC-02 | Security model documented | security review | PASS | `docs/SECURITY_MODEL.md` documents trust boundaries, gates, audit chain, release integrity |
@@ -55,4 +55,4 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 
 - No `FAIL` entries.
 - Multiple `UNVERIFIED` runtime requirements remain → **not production-ready** claim is blocked per gate rules.
-- Core domain gates (approval, retries, persistent queue recovery, circuit breaker, connector handshake, audit chain, SQLite persistence, migrations, encrypted backup, corruption rejection, campaign membership, secret vault/redaction, license tampering, content variants, media index, unified inbox) are covered by deterministic unit tests (115 tests).
+- Core domain gates (approval, retries, persistent queue recovery, circuit breaker, connector handshake, audit chain, SQLite persistence, migrations, encrypted backup, corruption rejection, campaign membership, secret vault/redaction, license tampering, content variants, media index, unified inbox, startup/memory budgets) are covered by deterministic unit tests (117 tests).
