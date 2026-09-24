@@ -86,7 +86,15 @@ function mapOutcome(
       };
     }
     case "blocked": {
-      queue.block(task.id);
+      if (
+        outcome.reason === "platform_challenge" ||
+        outcome.reason === "authorization_required" ||
+        outcome.reason === "user_confirmation_required"
+      ) {
+        queue.awaitUserAction(task.id);
+      } else {
+        queue.block(task.id);
+      }
       audit(log, task, "blocked", "execution.blocked", {
         reason: outcome.reason,
         message: outcome.message,
@@ -178,7 +186,7 @@ export async function executeClaimedTask(
   }
 
   if (task.kind !== "sync" && !userConfirmed) {
-    dependencies.queue.release(task.id);
+    dependencies.queue.awaitUserAction(task.id);
     audit(dependencies.audit, task, "blocked", "execution.confirmation_required", {
       reason: "confirmation_required",
       resumable: true,
