@@ -13,10 +13,13 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | DATA-01 | Local SQLite persistence | clean runtime test |
 | DATA-02 | Migration safety | forward migration + backup restore |
 | DATA-03 | 1,000 contacts searchable | performance benchmark |
+| WS-01 | Workspace membership is required for workspace access | native SQLite membership test + IPC negative test |
+| WS-02 | Workspace switching persists and scopes data | restart test + multi-workspace integration test |
 | QUE-01 | Persistent queue | restart/recovery test |
 | QUE-02 | Bounded retries | deterministic retry tests |
 | QUE-03 | Circuit breaker | fault-injection test |
 | QUE-04 | Human-intervention wait state | task parks and resumes without consuming an attempt |
+| RBAC-01 | Sensitive IPC operations require role authorization | role matrix test + native IPC integration |
 | CAMP-01 | Campaign creates tasks | integration test |
 | CAMP-02 | Account membership enforced | negative integration test |
 | CAMP-03 | Approval gates block execution | workflow test |
