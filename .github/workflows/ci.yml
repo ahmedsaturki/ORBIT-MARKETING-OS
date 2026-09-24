@@ -44,6 +44,9 @@ jobs:
       - name: Tests
         run: pnpm test
 
+      - name: Core coverage
+        run: pnpm --filter @orbit/core test:coverage
+
       - name: Build
         run: pnpm build
 
