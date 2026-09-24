@@ -58,10 +58,11 @@ function policyContext(input: ExecutionRunnerInput): ExecutionPolicyContext {
 }
 
 /**
- * The only supported high-level path from campaign/task state to a connector.
+ * Policy-and-connector runner for one task.
  *
  * Every externally-visible task passes policy, connector lookup, capability
- * compatibility, and explicit user authorization before execution.
+ * compatibility, and explicit user authorization before connector execution.
+ * Persistence/audit orchestration is provided by executeClaimedTask().
  */
 export class ExecutionRunner {
   public constructor(private readonly registry: ConnectorRegistry) {}
@@ -76,7 +77,7 @@ export class ExecutionRunner {
       };
     }
 
-    if (!input.userConfirmed) {
+    if (input.task.kind !== "sync" && !input.userConfirmed) {
       return {
         status: "blocked",
         reason: "authorization_required",
@@ -93,22 +94,30 @@ export class ExecutionRunner {
       };
     }
 
-    try {
-      assertSupportedTask(connector, input.task);
-    } catch (error: unknown) {
-      return {
-        status: "blocked",
-        reason: "unsupported_action",
-        message: error instanceof Error ? error.message : "Connector rejected the task.",
-      };
+    if (input.task.kind !== "sync") {
+      try {
+        assertSupportedTask(connector, input.task);
+      } catch (error: unknown) {
+        return {
+          status: "blocked",
+          reason: "unsupported_action",
+          message: error instanceof Error ? error.message : "Connector rejected the task.",
+        };
+      }
     }
 
     let outcome: ConnectorOutcome;
     try {
-      outcome = await connector.execute(input.task, {
-        accountId: input.account.id,
-        userConfirmed: input.userConfirmed,
-      });
+      outcome =
+        input.task.kind === "sync"
+          ? await connector.sync({
+              accountId: input.account.id,
+              userConfirmed: input.userConfirmed,
+            })
+          : await connector.execute(input.task, {
+              accountId: input.account.id,
+              userConfirmed: input.userConfirmed,
+            });
     } catch (error: unknown) {
       return {
         status: "failed",
