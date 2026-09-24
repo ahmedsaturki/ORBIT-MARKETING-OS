@@ -11,7 +11,7 @@
     "build": "expo export --platform web",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "node --test"
+    "test": "tsx --test"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -26,7 +26,8 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "tsx": "4.23.15"
   },
   "engines": {
     "node": ">=22 <25"
