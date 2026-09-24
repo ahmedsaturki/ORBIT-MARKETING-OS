@@ -127,6 +127,10 @@ export async function executeClaimedTask(
   userConfirmed: boolean,
   now: string,
 ): Promise<TaskExecutionResult> {
+  if (task.status !== "running") {
+    throw new Error("Only claimed running tasks may be executed.");
+  }
+
   const context = await dependencies.loadContext(task);
   const decision = evaluateExecutionPolicy({ ...context, task });
 
