@@ -46,7 +46,7 @@ No production-ready or commercial-launch claim is valid until every applicable g
 
 The rebuild branch currently contains the intended CI, Rust, release-desktop, and release-mobile workflow definitions, but the latest Actions runs are still failing before any workflow step executes; GitHub reports completed failed jobs with no step records. This is tracked as an execution-infrastructure blocker, not treated as evidence of a source-level build failure.
 
-The current environment used for source work cannot reach the npm registry, so a real `pnpm-lock.yaml` was not fabricated. CI is configured to generate a lockfile on the clean runner and immediately perform a frozen install from it.
+The current source environment cannot reach GitHub/npm through its shell network, so a real pnpm-lock.yaml was not fabricated. CI is configured to generate and validate a lockfile on a clean runner; that evidence remains blocked by the GitHub Actions runner failure.
 
 A Vercel project `orbit-marketing-os` is connected to this repository and receives deployments from `rebuild/orbit-production`. The current deployment path remains UNVERIFIED for release because Vercel installs are failing at the dependency-metadata fetch stage (`ERR_PNPM_META_FETCH_FAIL`), and the project metadata currently reports `vite` while the intended web app is `packages/web` with Next.js. No production web URL is claimed.
 
