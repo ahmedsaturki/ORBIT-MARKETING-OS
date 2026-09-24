@@ -27,3 +27,5 @@ Require clean-install tests, Rust fmt/test/clippy, workspace typecheck/build/tes
 Only after Stage 3 evidence is complete should web, desktop, mobile, and commercial licensing be published.
 
 No stage provides immunity from third-party enforcement or service changes.
+
+- [Launch Scorecard](./LAUNCH_SCORECARD.md)
