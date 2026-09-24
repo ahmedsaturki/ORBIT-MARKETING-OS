@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 
 const ollamaPort = "3110";
 
-const unsafeRuntimeCheck = (await import("node:child_process"));
+const { spawnSync } = await import("node:child_process");
 let capturedOllamaBody = null;
 const ollamaServer = createServer((req, res) => {
   if (req.method === "GET" && req.url === "/api/tags") {
@@ -48,7 +48,7 @@ for (const url of [
   "http://user:password@example.com:11434",
   "http://example.com:11434",
 ]) {
-  const probe = unsafeRuntimeCheck.spawnSync("node", ["-e", "import './server.ts'"], {
+  const probe = spawnSync("pnpm", ["exec", "tsx", "server.ts"], {
     env: { ...process.env, OLLAMA_BASE_URL: url, PORT: "3199" },
     encoding: "utf8",
   });
