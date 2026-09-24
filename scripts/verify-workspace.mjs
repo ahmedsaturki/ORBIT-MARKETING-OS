@@ -256,8 +256,12 @@ for (const entry of rustSources) {
 }
 
 const registeredHandler = rustSources
-  .map((entry) => entry.content)
-  .filter((content) => content.includes(".invoke_handler(tauri::generate_handler!["))
+  .map((entry) => {
+    const marker = ".invoke_handler(tauri::generate_handler![";
+    const index = entry.content.lastIndexOf(marker);
+    return index >= 0 ? entry.content.slice(index) : "";
+  })
+  .filter(Boolean)
   .join("\n");
 
 for (const command of tauriCommandDefinitions) {
