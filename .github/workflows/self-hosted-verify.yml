@@ -53,6 +53,9 @@ jobs:
       - name: Workspace sanity
         run: pnpm verify:workspace
 
+      - name: Secret scan
+        run: pnpm security:scan
+
       - name: Typecheck
         run: pnpm typecheck
 
