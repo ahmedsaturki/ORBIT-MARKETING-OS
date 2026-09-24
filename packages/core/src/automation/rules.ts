@@ -45,6 +45,9 @@ export function validateAutomationRulePack(
       errors.push("rule contains unsupported task kind");
     }
     if (rule.taskKinds.length === 0) errors.push("rule must target at least one task kind");
+    if (rule.enabled && rule.taskKinds.some((kind) => kind !== "sync") && !rule.requiresConfirmation) {
+      errors.push("enabled external rules must require confirmation");
+    }
     if (!Number.isInteger(rule.maxAttempts) || rule.maxAttempts < 1 || rule.maxAttempts > 10) {
       errors.push("rule maxAttempts must be between 1 and 10");
     }
