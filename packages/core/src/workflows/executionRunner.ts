@@ -68,6 +68,14 @@ export class ExecutionRunner {
   public constructor(private readonly registry: ConnectorRegistry) {}
 
   public async run(input: Omit<ExecutionRunnerInput, "connectorRegistry">): Promise<ExecutionRunnerResult> {
+    if (input.task.status !== "running") {
+      return {
+        status: "blocked",
+        reason: "policy",
+        message: "Only claimed running tasks may be executed.",
+      };
+    }
+
     const decision = evaluateExecutionPolicy(policyContext({ ...input, connectorRegistry: this.registry }));
     if (!decision.allowed) {
       return {
