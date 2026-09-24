@@ -74,6 +74,7 @@ describe("TaskQueue", () => {
 
     expect(queue.stats()).toEqual({
       pending: 0,
+      awaiting_approval: 0,
       running: 0,
       succeeded: 1,
       failed: 0,
