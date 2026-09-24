@@ -1342,7 +1342,7 @@ fn task_set_status(
 
     let valid_transition = match current.as_str() {
         "pending" => matches!(status.as_str(), "blocked" | "cancelled"),
-        "running" => matches!(status.as_str(), "succeeded" | "blocked" | "cancelled"),
+        "running" => matches!(status.as_str(), "blocked" | "cancelled"),
         "succeeded" | "failed" | "blocked" | "cancelled" => false,
         _ => false,
     };
@@ -2164,6 +2164,18 @@ mod tests {
         assert_eq!(retry_delay_ms(2), 2_000);
         assert_eq!(retry_delay_ms(7), 60_000);
         assert_eq!(retry_delay_ms(30), 60_000);
+    }
+
+    #[test]
+    fn manual_status_cannot_mark_running_task_succeeded() {
+        let current = "running";
+        let requested = "succeeded";
+        let valid = match current {
+            "pending" => matches!(requested, "blocked" | "cancelled"),
+            "running" => matches!(requested, "blocked" | "cancelled"),
+            _ => false,
+        };
+        assert!(!valid);
     }
 
     #[test]
