@@ -48,6 +48,22 @@ describe("TaskQueue", () => {
     expect(retried.availableAt).toBe("2026-09-24T10:00:01.000Z");
   });
 
+  it("rejects retry budgets above the platform-safe ceiling", () => {
+    expect(
+      () =>
+        new TaskQueue({
+          retryPolicy: { maxAttempts: 11, baseDelayMs: 100, maxDelayMs: 1000 },
+        }),
+    ).toThrow("retryPolicy.maxAttempts must be an integer between 1 and 10");
+
+    const queue = new TaskQueue({
+      retryPolicy: { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 },
+    });
+    expect(() => queue.enqueue(task({ maxAttempts: 11 }))).toThrow(
+      "maxAttempts must be an integer between 1 and 10",
+    );
+  });
+
   it("marks terminal failure after the task attempt budget", () => {
     const queue = new TaskQueue({
       retryPolicy: { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 },
