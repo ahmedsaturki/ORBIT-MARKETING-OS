@@ -38,6 +38,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Workspace sanity
         run: pnpm verify:workspace
+
+      - name: Desktop IPC contract
+        run: pnpm verify:ipc
       - name: Mobile typecheck
         run: pnpm --filter @orbit/mobile typecheck
       - name: Mobile tests
