@@ -226,6 +226,20 @@ describe("TaskQueue", () => {
     );
   });
 
+  it("does not expose mutable internal task state", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+
+    const read = instance.get(baseTask.id);
+    expect(read).toBeDefined();
+    (read as { status: Task["status"] }).status = "succeeded";
+    expect(instance.get(baseTask.id)?.status).toBe("pending");
+
+    const snapshot = instance.snapshot();
+    (snapshot[0] as { status: Task["status"] }).status = "cancelled";
+    expect(instance.get(baseTask.id)?.status).toBe("pending");
+  });
+
   it("rejects malformed queue tasks", () => {
     const instance = queue();
     expect(() => instance.enqueue({ ...baseTask, idempotencyKey: " " })).toThrow(
