@@ -32,7 +32,7 @@ Linux / WSL / macOS:
 bash ./scripts/bootstrap-lockfile.sh
 ```
 
-Review `pnpm-lock.yaml` and commit it to the rebuild branch. Do not hand-write or fabricate the lockfile.
+Review `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock`, then commit both to the rebuild branch. Do not hand-write or fabricate either lockfile.
 
 Required toolchain:
 
@@ -72,7 +72,7 @@ After the self-hosted x64 runner is registered, use:
 
 **Actions → Bootstrap Lockfile → Run workflow**
 
-The workflow generates the real `pnpm-lock.yaml` with pnpm 10.17.1 and commits it to the selected branch. No hand-written lockfile is used.
+The workflow generates the real `pnpm-lock.yaml` with pnpm 10.17.1 and `packages/desktop/src-tauri/Cargo.lock` with Rust 1.98.1, then commits both to the selected branch. No hand-written lockfiles are used.
 
 Then run:
 
