@@ -473,9 +473,29 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
     connection.execute_batch("PRAGMA user_version = 4;")?;
 }
 
+fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> {
+    for name in ["orbit.restore.sqlite3", "orbit.previous.sqlite3", "backups/orbit-backup-source.sqlite3"] {
+        let path = app_data.join(name);
+        if path.exists() {
+            fs::remove_file(path)?;
+        }
+    }
+}
+
+fn write_private_file(path: &PathBuf, contents: &str) -> Result<(), AppError> {
+    fs::write(path, contents)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(())
+}
+
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     let app_data = app.path().app_data_dir().map_err(|_| AppError::Path)?;
     fs::create_dir_all(&app_data)?;
+    cleanup_stale_database_artifacts(&app_data)?;
     let db_path: PathBuf = app_data.join("orbit.sqlite3");
     let connection = Connection::open(db_path)?;
     connection.execute_batch(
@@ -1711,7 +1731,7 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
     let payload_json = serde_json::to_string(&payload).map_err(|error| error.to_string())?;
     let filename = format!("orbit-{}.orbitbackup", chrono_like_timestamp());
     let destination = backups.join(&filename);
-    fs::write(&destination, payload_json).map_err(|error| error.to_string())?;
+    write_private_file(&destination, &payload_json).map_err(|error| error.to_string())?;
     write_audit(&open_db(&app).map_err(|error| error.to_string())?, "backup", "create", "success", "user", Some(&filename))
         .map_err(|error| error.to_string())?;
 
