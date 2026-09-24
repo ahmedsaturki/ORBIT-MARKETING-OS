@@ -1,18 +1,18 @@
 # Verification Blockers
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 
 ## 1. GitHub Actions hosted-runner blocker
 
 Current rebuild HEAD at the latest source revision:
 
-`badba95f247acc60e6234a85466ee5c9059b3652`
+`049cc864d6414c8c3d9d56620de497dd9340b3ef`
 
 The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
 
 Latest observed hosted-runner behavior:
 
-- The newest observed CI run (`36050298475`) has two jobs; both fail before step registration with `runner_id=0`, empty runner name, and no step records.
+- The newest observed CI attempt for the rebuild line still fails before step registration with `runner_id=0`, empty runner name, and `steps=[]`.
 - Multiple consecutive runs show the same pre-execution signature.
 
 A deliberately minimal runner probe was also tested earlier and failed before any workflow step executed. It was removed after diagnosis.
@@ -25,8 +25,8 @@ The current source environment cannot resolve GitHub/npm through shell networkin
 
 The repository now provides:
 
-- `scripts/bootstrap-lockfile.ps1` for Windows.
-- `scripts/bootstrap-lockfile.sh` for Linux/WSL/macOS.
+- `scripts/bootstrap-lockfile.ps1` for local Windows preparation.
+- `scripts/bootstrap-lockfile.sh` for Linux/WSL/macOS preparation.
 - `.github/workflows/self-hosted-verify.yml` as a manual full verification path on an owned runner.
 
 ## 3. Vercel deployment evidence
