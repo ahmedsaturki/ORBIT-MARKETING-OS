@@ -1068,11 +1068,17 @@ fn approval_decide(
         )
         .optional()
         .map_err(|error| error.to_string())?;
-    let Some((content_id, requested_by, old_status, _reviewer_ids_json, old_note)) = current else {
+    let Some((content_id, requested_by, old_status, reviewer_ids_json, old_note)) = current else {
         return Err(AppError::NotFound.to_string());
     };
     if old_status != "pending" {
         return Err("only pending approvals can be decided".to_string());
+    }
+
+    let reviewer_ids: Vec<String> = serde_json::from_str(&reviewer_ids_json)
+        .map_err(|_| "stored reviewer list is invalid".to_string())?;
+    if !reviewer_ids.iter().any(|reviewer| reviewer == &decided_by) {
+        return Err("decider is not an authorized reviewer".to_string());
     }
 
     let timestamp = chrono_like_timestamp();
