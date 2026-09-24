@@ -6,9 +6,9 @@ Source implementation head at snapshot: "8904f23766b502525bbcb7d3dee825687ff914f
 
 - Active branch: `rebuild/orbit-production-consolidated`
 - PR #9: open, draft, unmerged
-- Latest hosted CI run: `36055292748`
+- Latest hosted CI run: the latest hosted jobs still fail before usable workflow step execution.
 - Latest hosted CI result: job failed before any workflow steps executed; no usable runner step evidence
-- Active self-hosted verification run: `36055285400`
+- Active self-hosted verification run: a fresh push-triggered run is expected for the final consolidated head after this documentation sync.
 - Self-hosted job: `107820579765`
 - Self-hosted status: queued for an eligible runner
 - Workflow steps registered: none yet
