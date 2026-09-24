@@ -8,6 +8,7 @@ const ENDPOINT_KEY = "orbit.runtime.endpoint";
 
 export default function HomeScreen(): JSX.Element {
   const [endpoint, setEndpoint] = useState("http://127.0.0.1:3000");
+  const [authToken, setAuthToken] = useState("");
   const [health, setHealth] = useState<RuntimeHealth | null>(null);
   const [status, setStatus] = useState("لم يتم الاتصال بعد.");
 
@@ -24,9 +25,10 @@ export default function HomeScreen(): JSX.Element {
       return;
     }
     await AsyncStorage.setItem(ENDPOINT_KEY, clean);
+    await AsyncStorage.setItem("orbit.runtime.auth", authToken.trim());
     setStatus("جاري فحص runtime...");
     try {
-      const result = await fetchRuntimeHealth(clean);
+      const result = await fetchRuntimeHealth(clean, authToken);
       setHealth(result);
       setStatus("الحالة: " + result.status);
     } catch (error: unknown) {
@@ -54,6 +56,17 @@ export default function HomeScreen(): JSX.Element {
             keyboardType="url"
             style={styles.input}
             placeholder="http://192.168.1.10:3000"
+            placeholderTextColor="#64748b"
+          />
+          <Text style={styles.label}>رمز الوصول للشبكة المحلية (اختياري على localhost)</Text>
+          <TextInput
+            value={authToken}
+            onChangeText={setAuthToken}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+            style={styles.input}
+            placeholder="Bearer token"
             placeholderTextColor="#64748b"
           />
           <Pressable onPress={() => void saveAndCheck()} style={styles.button}>
