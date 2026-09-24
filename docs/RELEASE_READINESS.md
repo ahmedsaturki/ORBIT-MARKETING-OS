@@ -54,7 +54,7 @@ No production-ready or commercial-launch claim is valid until every applicable g
 
 The rebuild branch currently contains the intended CI, Rust, release-desktop, and release-mobile workflow definitions, but the latest Actions runs are still failing before any workflow step executes; GitHub reports completed failed jobs with no step records. This is tracked as an execution-infrastructure blocker, not treated as evidence of a source-level build failure.
 
-The current source environment cannot reach GitHub/npm through its shell network, so a real pnpm-lock.yaml was not fabricated. The normal CI and release workflows require a committed lockfile and use frozen installs. A separate, branch-restricted self-hosted bootstrap workflow/script exists to generate the lockfile; that bootstrap evidence is still pending.
+The current source environment cannot reach GitHub/npm through its shell network, so a real pnpm-lock.yaml was not fabricated. The normal CI and release workflows require a committed lockfile and use frozen installs. A separate, branch-restricted self-hosted bootstrap workflow/script exists to generate both lockfiles; that bootstrap evidence is still pending.
 
 A Vercel project `orbit-marketing-os` exists. Repository-side deployment configuration is canonical at the repository root: Next.js, `pnpm install --frozen-lockfile`, `pnpm --dir packages/web build`, and `packages/web/out`. Recent concrete deployments reached Vercel's configuration/ignore stage and failed before a usable deployment was established; the repository-side `ignoreCommand` was subsequently hardened and moved into `scripts/vercel-ignore.sh`. A fresh successful deployment is still required to verify the effective project settings.
 
@@ -78,7 +78,7 @@ The connected Vercel project is `orbit-marketing-os`. The repository configurati
 The default branch now also exposes branch-restricted `Bootstrap pnpm lockfile` and `Self-Hosted Verification` workflow definitions so their manual `workflow_dispatch` controls are available from GitHub's Actions UI. Both workflows refuse refs other than `rebuild/orbit-production`.
 
 
-- Branch HEAD: `c054125d43c0f215a34c71f08f09b1acbf34b2f6`.
+- Branch HEAD: `4d0f502272f69e6f3b40d35c4d062d4ba7153ba4`.
 - PR #2 remains open, draft, and unmerged.
 - The latest hosted `CI` run for the branch completed with `failure` before workflow steps were registered.
 - The latest lockfile bootstrap run for the branch remains `queued`; previous bootstrap runs were cancelled by its concurrency policy.
