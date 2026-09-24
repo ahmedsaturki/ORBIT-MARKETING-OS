@@ -312,6 +312,11 @@ struct ContentView {
     tags_json: String,
     updated_at: String,
 }
+struct ContentVariantView {
+    content_id: String,
+    platform: String,
+    body: Option<String>,
+}
 
 #[derive(Debug, Serialize)]
 struct ApprovalView {
@@ -1343,8 +1348,17 @@ async fn telegram_execute_task(
 
     let (body, approval_status) = connection
         .query_row(
-            "SELECT body, approval_status FROM content_items WHERE id=?1 AND workspace_id=?2",
-            params![&content_id, workspace_id],
+            "SELECT COALESCE(
+               (
+                 SELECT v.body
+                 FROM content_variants v
+                 WHERE v.content_id=ci.id AND v.platform='telegram'
+               ),
+               ci.body
+             ), ci.approval_status
+             FROM content_items ci
+             WHERE ci.id=?1 AND ci.workspace_id=?2",
+            params![&content_id, &workspace_id],
             |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
         )
         .map_err(|error| error.to_string())?;
@@ -2139,6 +2153,106 @@ fn content_list(app: tauri::AppHandle) -> Result<Vec<ContentView>, String> {
                 approval_status: row.get(3)?,
                 tags_json: row.get(4)?,
                 updated_at: row.get(5)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn content_variant_upsert(
+    app: tauri::AppHandle,
+    content_id: String,
+    platform: String,
+    body: Option<String>,
+) -> Result<ContentVariantView, String> {
+    let workspace_id = active_workspace_id();
+    let content_id = validate_label(&content_id).map_err(|error| error.to_string())?;
+    let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
+    let body = body.map(|value| value.trim().to_string());
+    if body.as_ref().is_some_and(|value| value.len() > 100_000) {
+        return Err("invalid content variant body".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let exists: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM content_items WHERE id=?1 AND workspace_id=?2
+             )",
+            params![&content_id, &workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !exists {
+        return Err(AppError::NotFound.to_string());
+    }
+
+    connection
+        .execute(
+            "INSERT INTO content_variants(content_id, platform, body)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(content_id, platform) DO UPDATE SET body=excluded.body",
+            params![&content_id, &platform, &body],
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit(
+        &connection,
+        "content",
+        "variant_upsert",
+        "success",
+        "user",
+        Some(&content_id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(ContentVariantView {
+        content_id,
+        platform,
+        body,
+    })
+}
+
+#[tauri::command]
+fn content_variant_list(
+    app: tauri::AppHandle,
+    content_id: Option<String>,
+) -> Result<Vec<ContentVariantView>, String> {
+    let workspace_id = active_workspace_id();
+    let content_id = content_id
+        .map(|value| validate_label(&value))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT v.content_id, v.platform, v.body
+             FROM content_variants v
+             JOIN content_items c ON c.id=v.content_id
+             WHERE c.workspace_id=?1
+               AND (?2 IS NULL OR v.content_id=?2)
+             ORDER BY v.platform ASC",
+        )
+        .map_err(|error| error.to_string())?;
+
+    let rows = statement
+        .query_map(params![&workspace_id, &content_id], |row| {
+            Ok(ContentVariantView {
+                content_id: row.get(0)?,
+                platform: row.get(1)?,
+                body: row.get(2)?,
             })
         })
         .map_err(|error| error.to_string())?;
@@ -4231,6 +4345,8 @@ pub fn run() {
             campaign_list,
             content_upsert,
             content_list,
+            content_variant_upsert,
+            content_variant_list,
             campaign_attach_content,
             approval_request,
             approval_decide,
