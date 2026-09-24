@@ -1,10 +1,27 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
-const rust = await readFile(join(root, "packages/desktop/src-tauri/src/lib.rs"), "utf8");
+const rustRoot = join(root, "packages", "desktop", "src-tauri", "src");
 const app = await readFile(join(root, "packages/desktop/src/App.tsx"), "utf8");
+
+async function collectRustSourcePaths(dir) {
+  const paths = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      paths.push(...await collectRustSourcePaths(full));
+    } else if (entry.isFile() && entry.name.endsWith(".rs")) {
+      paths.push(full);
+    }
+  }
+  return paths;
+}
+
+const rustSources = await collectRustSourcePaths(rustRoot);
+const rustContents = await Promise.all(rustSources.map((path) => readFile(path, "utf8")));
+const rust = rustContents.join("\n");
 
 const rustCommands = new Set(
   [...rust.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(
@@ -51,8 +68,10 @@ for (const command of rustCommands) {
 console.log(
   "Desktop IPC contract checks passed:",
   JSON.stringify({
+    rustSourceFiles: rustSources.length,
     rustCommands: rustCommands.size,
     registeredCommands: registeredCommands.size,
     uiCommands: uiCommands.size,
+    uncalledCommands: [...rustCommands].filter((command) => registeredCommands.has(command) && !uiCommands.has(command)),
   }),
 );
