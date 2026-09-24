@@ -122,6 +122,13 @@ try {
     throw new Error("loopback runtime must reject unconfigured browser origins");
   }
 
+  const tauriOriginHealth = await fetch(`http://127.0.0.1:${port}/api/health`, {
+    headers: { Origin: "http://tauri.localhost" },
+  });
+  if (tauriOriginHealth.status !== 200) {
+    throw new Error("official Tauri webview origin must be allowed by default");
+  }
+
   const generation = await fetch(`http://127.0.0.1:${port}/api/generate-content`, {
     method: "POST",
     headers: { "content-type": "application/json" },
