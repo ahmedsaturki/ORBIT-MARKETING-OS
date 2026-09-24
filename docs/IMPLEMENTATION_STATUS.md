@@ -14,6 +14,13 @@ Updated: 2026-09-24
 - A Tauri v2 desktop backend exists with local SQLite, Argon2id, AES-256-GCM, encrypted session/vault storage, campaigns/tasks, CRM/inbox, backup/restore, audit commands, and a persisted active-workspace context with workspace list/create/select IPC.
 - Rust formatting/check/clippy workflow and repository release/security gates are defined.
 
+## Latest hardening fixes
+
+- Native account upsert now persists the submitted authorization status during updates, with regression coverage.
+- Native task scheduling now normalizes ​RFC3339 timestamps to UTC before persistence/claim comparison and bounds `max_attempts` to 1..=10.
+- LinkedIn connector default API version is `202609`, matching the active September 2026 Marketing API release.
+- Workspace sanity verification now detects duplicate consecutive Rust derive attributes.
+
 ## Workspace/RBAC status
 
 Workspace switching is now implemented in the desktop runtime and UI. Typed RBAC contracts are present in `@orbit/core`. End-to-end identity, membership persistence, and enforcement at every IPC command remain release-gated until integration tests prove them.
