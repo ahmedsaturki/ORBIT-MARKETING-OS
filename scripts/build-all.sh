@@ -4,15 +4,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-if [ -f pnpm-lock.yaml ]; then
-  pnpm install --frozen-lockfile
-else
-  pnpm install --lockfile-only --ignore-scripts
-  test -f pnpm-lock.yaml
-  pnpm install --frozen-lockfile
+if [ ! -s pnpm-lock.yaml ]; then
+  echo "pnpm-lock.yaml is required. Run scripts/bootstrap-lockfile.sh first."
+  exit 1
 fi
 
 pnpm verify:workspace
+pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm lint
 pnpm test
