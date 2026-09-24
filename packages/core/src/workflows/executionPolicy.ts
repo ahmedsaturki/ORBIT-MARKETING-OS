@@ -1,4 +1,4 @@
-import type { Approval, Campaign, SocialAccount, Task } from "../types/index.js";
+import type { Approval, Campaign, ContentItem, SocialAccount, Task } from "../types/index.js";
 import { evaluateApproval } from "./approval.js";
 
 export type ExecutionBlockReason =
@@ -10,6 +10,7 @@ export type ExecutionBlockReason =
   | "approval_scope_mismatch"
   | "content_required"
   | "content_scope_mismatch"
+  | "content_not_approved"
   | "daily_limit_reached"
   | "circuit_breaker_open"
   | "campaign_not_runnable";
@@ -18,6 +19,7 @@ export interface ExecutionPolicyContext {
   readonly account: SocialAccount;
   readonly campaign: Campaign;
   readonly task: Task;
+  readonly content?: ContentItem;
   readonly approval?: Approval;
   readonly actionsToday: number;
   readonly dailyLimit: number;
@@ -111,6 +113,28 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
       reason: "circuit_breaker_open",
       message: "The execution circuit breaker is open after repeated failures.",
     };
+  }
+
+  if (context.task.kind !== "sync" && context.content) {
+    if (
+      context.content.workspaceId !== context.task.workspaceId ||
+      context.content.id !== context.task.contentId ||
+      !context.campaign.contentIds.includes(context.content.id)
+    ) {
+      return {
+        allowed: false,
+        reason: "content_scope_mismatch",
+        message: "The content item does not belong to the task workspace and campaign.",
+      };
+    }
+
+    if (context.content.approvalStatus !== "approved") {
+      return {
+        allowed: false,
+        reason: "content_not_approved",
+        message: "The referenced content is not approved for external delivery.",
+      };
+    }
   }
 
   if (context.task.kind !== "sync" && !context.task.contentId) {

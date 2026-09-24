@@ -34,6 +34,8 @@ function makeTask(kind: Task["kind"] = "publish"): Task {
     accountId: "account-1",
     platform: "facebook",
     kind,
+    contentId: kind === "sync" ? undefined : "content-1",
+    destinationId: kind === "sync" ? undefined : "destination-1",
     priority: 10,
     status: "pending",
     attempts: 0,
@@ -57,6 +59,17 @@ function context(task: Task) {
   return {
     account,
     campaign,
+    content: {
+      id: "content-1",
+      workspaceId: "workspace-1",
+      title: "Approved",
+      body: "Hello",
+      platformVariants: { facebook: "Hello", instagram: undefined, telegram: undefined, whatsapp: undefined, linkedin: undefined, tiktok: undefined },
+      approvalStatus: "approved" as const,
+      tags: [],
+      createdAt: "2026-09-24T00:00:00.000Z",
+      updatedAt: "2026-09-24T00:00:00.000Z",
+    },
     approval: {
       id: "approval-1",
       workspaceId: "workspace-1",

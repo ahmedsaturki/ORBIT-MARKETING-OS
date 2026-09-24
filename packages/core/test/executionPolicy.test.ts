@@ -40,10 +40,30 @@ const task: Task = {
   createdAt: "2026-09-24T00:00:00.000Z",
 };
 
+const approvedContent: ContentItem = {
+  id: "content-1",
+  workspaceId: "workspace-1",
+  title: "Approved",
+  body: "Hello",
+  platformVariants: {
+    facebook: "Hello",
+    instagram: undefined,
+    telegram: undefined,
+    whatsapp: undefined,
+    linkedin: undefined,
+    tiktok: undefined,
+  },
+  approvalStatus: "approved",
+  tags: [],
+  createdAt: "2026-09-24T00:00:00.000Z",
+  updatedAt: "2026-09-24T00:00:00.000Z",
+};
+
 const context = {
   account,
   campaign,
-  task,
+  task: { ...task, contentId: "content-1", destinationId: "destination-1" },
+  content: approvedContent,
   actionsToday: 0,
   dailyLimit: 10,
   consecutiveFailures: 0,
@@ -121,6 +141,22 @@ describe("execution policy", () => {
       },
     });
     expect(decision.reason).toBe("approval_scope_mismatch");
+  });
+
+  it("blocks external execution when content is not approved", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      content: { ...approvedContent, approvalStatus: "draft" },
+    });
+    expect(decision.reason).toBe("content_not_approved");
+  });
+
+  it("blocks mismatched content workspace before approval", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      content: { ...approvedContent, workspaceId: "other-workspace" },
+    });
+    expect(decision.reason).toBe("content_scope_mismatch");
   });
 
   it("fails closed without approval", () => {
