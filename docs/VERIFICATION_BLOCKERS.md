@@ -6,16 +6,15 @@ Updated: 2026-09-24
 
 Current rebuild HEAD:
 
-`d51687d07dea96f61f509804f590df6e6ee40fca`
+`93a5659cdb0432af31ded892d84a350e3ce86f76`
 
 The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
 
-Latest observed runs:
+Latest observed hosted-runner behavior:
 
-- CI: `36001357506` → completed / failure.
-- Rebuild Rust: `36001357473` → completed / failure.
-- Their associated jobs report `steps: []`.
-- Job metadata reports `runner_id=0` and an empty runner name.
+- The newest CI and Rebuild Rust runs for the moving rebuild branch continue to reach `queued`/then fail before step registration.
+- The previously isolated Runner Probe also failed before its first step and has been removed.
+- No fresh successful hosted-runner execution has been verified.
 
 A deliberately minimal runner probe was also tested earlier and failed before any workflow step executed. It was removed after diagnosis.
 
@@ -40,7 +39,7 @@ The latest verified deployment diagnostics identified and then addressed these c
 1. `ignoreCommand` exceeded Vercel's 256-character schema limit.
 2. The shortened command then failed when `VERCEL_GIT_PREVIOUS_SHA` was empty and `git diff` received an empty revision.
 
-The repository `vercel.json` has now been hardened so missing Git revision context does not produce a fatal `bad revision` error. A successful deployment still requires a fresh deployment result after this fix.
+The repository `vercel.json` has now been hardened so missing Git revision context does not produce a fatal `bad revision` error. No fresh deployment has appeared after this fix yet, so a successful Vercel build is still unverified.
 
 The project metadata previously reported framework `vite` while the repository deployment contract targets Next.js static output. This remains a project-configuration verification item until a successful deployment confirms the effective build settings.
 
