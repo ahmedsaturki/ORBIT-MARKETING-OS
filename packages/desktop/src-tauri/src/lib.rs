@@ -1145,6 +1145,21 @@ fn conversation_upsert(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
+    if let Some(contact_id) = &contact_id {
+        let contact_exists: bool = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM contacts WHERE id=?1 AND workspace_id=?2
+                 )",
+                params![contact_id, DEFAULT_WORKSPACE_ID],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if !contact_exists {
+            return Err(AppError::NotFound.to_string());
+        }
+    }
+
     let timestamp = chrono_like_timestamp();
     connection
         .execute(
