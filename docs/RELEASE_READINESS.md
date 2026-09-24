@@ -78,7 +78,7 @@ The connected Vercel project is `orbit-marketing-os`. The repository configurati
 The default branch now also exposes branch-restricted `Bootstrap pnpm lockfile` and `Self-Hosted Verification` workflow definitions so their manual `workflow_dispatch` controls are available from GitHub's Actions UI. Both workflows refuse refs other than `rebuild/orbit-production`.
 
 
-- Branch HEAD: `4a93952ac8b57d20e6bf0f0b3f436b0e62564588`.
+- Branch HEAD: `e60a1c83aa8d2997af06fa8ce5f1a7fd387574e5`.
 - PR #2 remains open, draft, and unmerged.
 - The latest hosted `CI` run (`36032108431`, job `107743139525`) failed before workflow steps were registered.
 - The latest lockfile bootstrap run for the branch remains `queued`; previous bootstrap runs were cancelled by its concurrency policy.
