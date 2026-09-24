@@ -100,7 +100,7 @@ for (const fragment of [
 const selfHosted = await text(".github/workflows/self-hosted-verify.yml");
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
-  "github.ref_name == 'rebuild/orbit-production' && github.actor == 'ahmedsaturki'",
+  "(github.ref_name == 'rebuild/orbit-production' || github.ref_name == 'rebuild/orbit-production-consolidated') && github.actor == 'ahmedsaturki'",
   "run: bash scripts/self-hosted-preflight.sh",
   "pnpm install --frozen-lockfile",
   "pnpm --filter @orbit/core test:coverage",
@@ -130,6 +130,7 @@ const commitLockfiles = await text("scripts/commit-lockfiles.mjs");
 for (const fragment of [
   "GITHUB_REF_NAME",
   "rebuild/orbit-production",
+  "rebuild/orbit-production-consolidated",
   'execFileSync("git", ["add"',
   'execFileSync("git", ["commit"',
   'execFileSync("git", ["push"',
