@@ -430,6 +430,10 @@ fn validate_telegram_token(token: &str) -> Result<String, AppError> {
     Ok(value.to_string())
 }
 
+fn telegram_delivery_status_is_ambiguous(status_code: u16) -> bool {
+    status_code == 408 || (500..600).contains(&status_code)
+}
+
 fn parse_retry_timestamp(retry_after_seconds: u64) -> String {
     let seconds = retry_after_seconds.clamp(1, 86_400);
     let retry_at = OffsetDateTime::now_utc() + Duration::seconds(seconds as i64);
@@ -1249,6 +1253,25 @@ async fn telegram_execute_task(
             status: "awaiting_user_action".to_string(),
             external_message_id: None,
             message: "Telegram authorization failed; re-authorize the account.".to_string(),
+            retry_at: None,
+        });
+    }
+
+    if telegram_delivery_status_is_ambiguous(status_code.as_u16()) {
+        connection
+            .execute(
+                "UPDATE tasks
+                 SET status='awaiting_user_action'
+                 WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                params![&task_id, active_workspace_id()],
+            )
+            .map_err(|error| error.to_string())?;
+        telegram_task_audit(&connection, &task_id, "delivery_status_unknown", "blocked")?;
+        return Ok(TelegramExecutionView {
+            task_id,
+            status: "awaiting_user_action".to_string(),
+            external_message_id: None,
+            message: "Telegram delivery status is ambiguous. Verify delivery before retrying to avoid duplicates.".to_string(),
             retry_at: None,
         });
     }
@@ -3405,6 +3428,15 @@ mod tests {
                 second.8.as_deref(),
             )
         );
+    }
+
+    #[test]
+    fn telegram_ambiguous_delivery_statuses_are_detected() {
+        assert!(telegram_delivery_status_is_ambiguous(408));
+        assert!(telegram_delivery_status_is_ambiguous(500));
+        assert!(telegram_delivery_status_is_ambiguous(503));
+        assert!(!telegram_delivery_status_is_ambiguous(400));
+        assert!(!telegram_delivery_status_is_ambiguous(429));
     }
 
     #[test]
