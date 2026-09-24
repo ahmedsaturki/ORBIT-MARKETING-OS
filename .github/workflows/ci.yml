@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install core dependencies
+        run: npm ci
+        working-directory: packages/core
+
+      - name: Typecheck app
+        run: npm run lint
+
+      - name: Typecheck core
+        run: npm run typecheck
+        working-directory: packages/core
+
+      - name: Core unit tests with coverage
+        run: npm run test:coverage
+        working-directory: packages/core
+
+      - name: Production build
+        run: npm run build
+
+      - name: Verify dist artifacts exist
+        run: |
+          test -f dist/index.html
+          test -f dist/manifest.webmanifest
+          test -f dist/sw.js
+
+      - name: Generate checksums
+        run: npm run checksums
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums-node-${{ matrix.node-version }}
+          path: dist/SHA256SUMS.txt

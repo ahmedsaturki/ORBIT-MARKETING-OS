@@ -42,4 +42,37 @@ describe("approval gate", () => {
   it("allows an approved workflow decision", () => {
     expect(evaluateApproval(content, approved).allowedToPublish).toBe(true);
   });
+
+  it("blocks rejected workflow decisions", () => {
+    const rejected: Approval = { ...approved, status: "rejected" };
+    const decision = evaluateApproval(content, rejected);
+    expect(decision.allowedToPublish).toBe(false);
+    expect(decision.reason).toBe("rejected");
+  });
+
+  it("blocks changes_requested decisions", () => {
+    const changes: Approval = { ...approved, status: "changes_requested" };
+    const decision = evaluateApproval(content, changes);
+    expect(decision.allowedToPublish).toBe(false);
+    expect(decision.reason).toBe("changes_requested");
+  });
+
+  it("blocks pending decisions", () => {
+    const pending: Approval = { ...approved, status: "pending" };
+    const decision = evaluateApproval(content, pending);
+    expect(decision.allowedToPublish).toBe(false);
+    expect(decision.reason).toBe("pending");
+  });
+
+  it("blocks draft workflow decisions", () => {
+    const draft: Approval = { ...approved, status: "draft" };
+    const decision = evaluateApproval(content, draft);
+    expect(decision.allowedToPublish).toBe(false);
+    expect(decision.reason).toBe("pending");
+  });
+
+  it("allows draft content when no approval workflow is configured", () => {
+    const draftContent = { ...content, approvalStatus: "draft" as const };
+    expect(evaluateApproval(draftContent).allowedToPublish).toBe(true);
+  });
 });
