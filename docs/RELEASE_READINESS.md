@@ -57,3 +57,7 @@ A Vercel project `orbit-marketing-os` is connected to this repository and receiv
 Offline commercial licensing is now wired through the Desktop runtime. The application verifies Ed25519-signed tokens against an embedded public key, checks payload/date/account-limit constraints, stores the active token locally, and exposes install/status/remove controls. The private signing key is not stored in Git.
 
 Global multi-device seat counting remains intentionally unclaimed because the current product has no coordinating licensing service.
+
+## Vercel deployment diagnosis
+
+The connected `orbit-marketing-os` project exists, but recent Git deployments are failing at the Vercel build step with `NEXT_NO_VERSION`. The deployment metadata reports framework `vite`, while the repository's Web product is Next.js. The repository now exposes the Next.js version at the monorepo root as a compatibility fallback, but project-level Root Directory/Framework configuration should still point at `packages/web` / Next.js before a release claim.
