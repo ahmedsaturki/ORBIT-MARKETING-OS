@@ -7,13 +7,14 @@ use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use rand::RngCore;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{fs, path::PathBuf};
 use tauri::Manager;
 use thiserror::Error;
 use zeroize::Zeroizing;
 
 const DEFAULT_WORKSPACE_ID: &str = "default";
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 
 const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS vault_records (
@@ -110,7 +111,9 @@ CREATE TABLE IF NOT EXISTS audit_events (
   outcome TEXT NOT NULL,
   actor TEXT NOT NULL,
   entity_id TEXT,
-  metadata_json TEXT
+  metadata_json TEXT,
+  previous_hash TEXT NOT NULL DEFAULT 'GENESIS',
+  hash TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_contacts_updated
@@ -231,6 +234,8 @@ struct AuditView {
     actor: String,
     entity_id: Option<String>,
     metadata_json: Option<String>,
+    previous_hash: String,
+    hash: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -257,7 +262,7 @@ fn has_column(connection: &Connection, table: &str, column: &str) -> Result<bool
 fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
 
-    if version < SCHEMA_VERSION {
+    if version < 2 {
         let migrations = [
             ("accounts", "workspace_id", "ALTER TABLE accounts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
             ("campaigns", "workspace_id", "ALTER TABLE campaigns ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default'"),
@@ -285,7 +290,67 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         )?;
     }
 
-    Ok(())
+    if version < 3 {
+        if !has_column(connection, "audit_events", "previous_hash")? {
+            connection.execute_batch(
+                "ALTER TABLE audit_events ADD COLUMN previous_hash TEXT NOT NULL DEFAULT 'GENESIS'",
+            )?;
+        }
+        if !has_column(connection, "audit_events", "hash")? {
+            connection.execute_batch(
+                "ALTER TABLE audit_events ADD COLUMN hash TEXT NOT NULL DEFAULT ''",
+            )?;
+        }
+
+        let transaction = connection.unchecked_transaction()?;
+        let mut statement = transaction.prepare(
+            "SELECT rowid, id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json
+             FROM audit_events
+             WHERE workspace_id=?1
+             ORDER BY rowid ASC",
+        )?;
+        let rows = statement.query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, String>(5)?,
+                row.get::<_, String>(6)?,
+                row.get::<_, String>(7)?,
+                row.get::<_, Option<String>>(8)?,
+                row.get::<_, Option<String>>(9)?,
+            ))
+        })?;
+
+        let mut previous_hash = "GENESIS".to_string();
+        for row in rows {
+            let (rowid, id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json) = row?;
+            let hash = audit_hash(
+                &previous_hash,
+                &id,
+                &workspace_id,
+                &timestamp,
+                &category,
+                &action,
+                &outcome,
+                &actor,
+                entity_id.as_deref(),
+                metadata_json.as_deref(),
+            );
+            transaction.execute(
+                "UPDATE audit_events SET previous_hash=?1, hash=?2 WHERE rowid=?3",
+                params![previous_hash, hash, rowid],
+            )?;
+            previous_hash = hash;
+        }
+
+        drop(statement);
+        transaction.commit()?;
+    }
+
+    connection.execute_batch("PRAGMA user_version = 3;")?;
 }
 
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
@@ -1101,6 +1166,27 @@ fn backup_restore(
     Ok(true)
 }
 
+fn audit_hash(
+    previous_hash: &str,
+    id: &str,
+    workspace_id: &str,
+    timestamp: &str,
+    category: &str,
+    action: &str,
+    outcome: &str,
+    actor: &str,
+    entity_id: Option<&str>,
+    metadata_json: Option<&str>,
+) -> String {
+    let canonical = format!(
+        "{previous_hash}\n{id}\n{workspace_id}\n{timestamp}\n{category}\n{action}\n{outcome}\n{actor}\n{}\n{}",
+        entity_id.unwrap_or(""),
+        metadata_json.unwrap_or(""),
+    );
+    let digest = Sha256::digest(canonical.as_bytes());
+    digest.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
 fn write_audit(
     connection: &Connection,
     category: &str,
@@ -1109,20 +1195,48 @@ fn write_audit(
     actor: &str,
     entity_id: Option<&str>,
 ) -> Result<(), rusqlite::Error> {
+    let id = uuid_like();
+    let timestamp = chrono_like_timestamp();
+    let previous_hash: String = connection
+        .query_row(
+            "SELECT hash FROM audit_events WHERE workspace_id=?1 ORDER BY rowid DESC LIMIT 1",
+            params![DEFAULT_WORKSPACE_ID],
+            |row| row.get(0),
+        )
+        .optional()?
+        .filter(|value: &String| !value.is_empty())
+        .unwrap_or_else(|| "GENESIS".to_string());
+
+    let hash = audit_hash(
+        &previous_hash,
+        &id,
+        DEFAULT_WORKSPACE_ID,
+        &timestamp,
+        category,
+        action,
+        outcome,
+        actor,
+        entity_id,
+        None,
+    );
+
     connection.execute(
         "INSERT INTO audit_events(
-           id, workspace_id, timestamp, category, action, outcome, actor, entity_id
+           id, workspace_id, timestamp, category, action, outcome, actor,
+           entity_id, metadata_json, previous_hash, hash
          )
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, ?10)",
         params![
-            uuid_like(),
+            id,
             DEFAULT_WORKSPACE_ID,
-            chrono_like_timestamp(),
+            timestamp,
             category,
             action,
             outcome,
             actor,
-            entity_id
+            entity_id,
+            previous_hash,
+            hash
         ],
     )?;
     Ok(())
@@ -1327,10 +1441,10 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
-            "SELECT id, timestamp, category, action, outcome, actor, entity_id, metadata_json
+            "SELECT id, timestamp, category, action, outcome, actor, entity_id, metadata_json, previous_hash, hash
              FROM audit_events
              WHERE workspace_id=?1
-             ORDER BY timestamp DESC LIMIT ?2",
+             ORDER BY rowid DESC LIMIT ?2",
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
@@ -1344,11 +1458,70 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
                 actor: row.get(5)?,
                 entity_id: row.get(6)?,
                 metadata_json: row.get(7)?,
+                previous_hash: row.get(8)?,
+                hash: row.get(9)?,
             })
         })
         .map_err(|error| error.to_string())?;
 
     rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json, previous_hash, hash
+             FROM audit_events
+             WHERE workspace_id=?1
+             ORDER BY rowid ASC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, String>(5)?,
+                row.get::<_, String>(6)?,
+                row.get::<_, Option<String>>(7)?,
+                row.get::<_, Option<String>>(8)?,
+                row.get::<_, String>(9)?,
+                row.get::<_, String>(10)?,
+            ))
+        })
+        .map_err(|error| error.to_string())?;
+
+    let mut previous_hash = "GENESIS".to_string();
+    for row in rows {
+        let (id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json, stored_previous, stored_hash) =
+            row.map_err(|error| error.to_string())?;
+        if stored_previous != previous_hash {
+            return Ok(false);
+        }
+        let expected = audit_hash(
+            &previous_hash,
+            &id,
+            &workspace_id,
+            &timestamp,
+            &category,
+            &action,
+            &outcome,
+            &actor,
+            entity_id.as_deref(),
+            metadata_json.as_deref(),
+        );
+        if stored_hash != expected {
+            return Ok(false);
+        }
+        previous_hash = stored_hash;
+    }
+
+    Ok(true)
 }
 
 fn chrono_like_timestamp() -> String {
@@ -1479,7 +1652,8 @@ pub fn run() {
             message_add,
             inbox_list,
             message_list,
-            audit_list
+            audit_list,
+            audit_verify
         ])
         .run(tauri::generate_context!());
 
