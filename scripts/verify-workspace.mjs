@@ -7,6 +7,7 @@ const requiredFiles = [
   "package.json",
   "pnpm-workspace.yaml",
   "turbo.json",
+  "pnpm-lock.yaml",
   "tsconfig.base.json",
   "docs/ACCEPTANCE_MATRIX_V2.md",
   "docs/RELEASE_GATES.md",

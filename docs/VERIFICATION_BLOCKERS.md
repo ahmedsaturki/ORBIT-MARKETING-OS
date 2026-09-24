@@ -4,9 +4,9 @@ Updated: 2026-09-24
 
 ## 1. GitHub Actions hosted-runner blocker
 
-Current rebuild HEAD at the latest checked commit:
+Current rebuild HEAD at the latest source revision:
 
-`e91bcdf52e8c55434aed9e78bb750a94f16352ab`
+`664d44d6544beba8ede82775f46b9a1ff29ca06b`
 
 The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
 
