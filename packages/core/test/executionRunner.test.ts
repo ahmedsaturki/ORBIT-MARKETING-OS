@@ -81,7 +81,7 @@ describe("ExecutionRunner", () => {
       circuitBreakerThreshold: 3,
       userConfirmed: false,
     });
-    expect(result).toMatchObject({ status: "failed" });
+    expect(result).toMatchObject({ status: "blocked", reason: "authorization_required" });
   });
 
   it("returns a safe blocked state for connector challenges", async () => {
