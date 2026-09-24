@@ -1,4 +1,5 @@
 import type { Approval, Campaign, SocialAccount, Task } from "../types/index.js";
+import type { ExecutionBlockReason } from "./executionPolicy.js";
 import { ConnectorRegistry } from "../connectors/registry.js";
 import {
   assertSupportedTask,
@@ -13,13 +14,10 @@ export type ExecutionRunnerResult =
   | {
       readonly status: "blocked";
       readonly reason:
-        | "policy"
+        | ExecutionBlockReason
+        | "task_not_running"
         | "connector_unavailable"
-        | "unsupported_action"
-        | "platform_challenge"
-        | "authorization_required"
-        | "platform_limit"
-        | "delivery_status_unknown";
+        | "unsupported_action";
       readonly message: string;
     }
   | {
@@ -72,7 +70,7 @@ export class ExecutionRunner {
     if (input.task.status !== "running") {
       return {
         status: "blocked",
-        reason: "policy",
+        reason: "campaign_not_runnable",
         message: "Only claimed running tasks may be executed.",
       };
     }
@@ -81,7 +79,7 @@ export class ExecutionRunner {
     if (!decision.allowed) {
       return {
         status: "blocked",
-        reason: "policy",
+        reason: decision.reason,
         message: decision.message,
       };
     }
