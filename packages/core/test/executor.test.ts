@@ -276,7 +276,7 @@ describe("task execution orchestrator", () => {
       status: "blocked",
       reason: "confirmation_required",
     });
-    expect(taskQueue.get(task.id)?.status).toBe("pending");
+    expect(taskQueue.get(task.id)?.status).toBe("awaiting_user_action");
   });
 
   it("stops on a platform challenge and records a blocked audit event", async () => {
@@ -303,7 +303,7 @@ describe("task execution orchestrator", () => {
       status: "blocked",
       reason: "platform_challenge",
     });
-    expect(taskQueue.get(task.id)?.status).toBe("blocked");
+    expect(taskQueue.get(task.id)?.status).toBe("awaiting_user_action");
     expect(audit.list()[0]?.outcome).toBe("blocked");
   });
 
