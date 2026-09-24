@@ -251,7 +251,7 @@ describe("task execution orchestrator", () => {
       status: "blocked",
       reason: "confirmation_required",
     });
-    expect(taskQueue.get(task.id)?.status).toBe("pending");
+    expect(taskQueue.get(task.id)?.status).toBe("awaiting_user_action");
   });
 
   it("blocks external execution before the connector when confirmation is missing", async () => {
