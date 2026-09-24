@@ -75,6 +75,11 @@ Status meanings:
 
 ## Hard external blockers
 
+### Vercel current deployment evidence
+
+The latest observed Vercel deployment for this branch (`dpl_3n2HPvxjcSHqph9Von3As7e1ZDZG`) reached the build phase and then failed with `ERR_PNPM_META_FETCH_FAIL` during `pnpm install --no-frozen-lockfile`. The deployment metadata still reports the project framework as `vite`. The connected runtime does not expose working build-log retrieval, so no more specific registry/package cause is asserted.
+
+
 ### GitHub Actions
 
 Current hosted jobs fail before the first step:
