@@ -240,6 +240,34 @@ describe("TaskQueue", () => {
     expect(instance.get(baseTask.id)?.status).toBe("pending");
   });
 
+  it("does not expose mutable internal queue state", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+
+    const claimed = instance.claimNext("2026-09-24T00:00:01.000Z");
+    expect(claimed).toBeDefined();
+    const returned = instance.get("task-1");
+    if (!returned) throw new Error("task should exist");
+    (returned as { status: Task["status"] }).status = "succeeded";
+
+    expect(instance.get("task-1")?.status).toBe("running");
+    expect(instance.snapshot()[0]?.status).toBe("running");
+  });
+
+  it("does not retry past the lower of policy and task attempt budgets", () => {
+    const instance = new TaskQueue({
+      retryPolicy: { maxAttempts: 2, baseDelayMs: 100, maxDelayMs: 1000 },
+    });
+    instance.enqueue({ ...baseTask, maxAttempts: 5 });
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+    const retried = instance.fail("task-1", "2026-09-24T00:00:01.000Z");
+    expect(retried.status).toBe("pending");
+    instance.claimNext("2026-09-24T00:00:03.000Z");
+    const terminal = instance.fail("task-1", "2026-09-24T00:00:03.000Z");
+    expect(terminal.status).toBe("failed");
+    expect(terminal.attempts).toBe(2);
+  });
+
   it("rejects malformed queue tasks", () => {
     const instance = queue();
     expect(() => instance.enqueue({ ...baseTask, idempotencyKey: " " })).toThrow(
