@@ -953,6 +953,32 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
                kind, priority, status, attempts, max_attempts, available_at,
                COALESCE(NULLIF(idempotency_key, ''), id), created_at
              FROM tasks_v10_old;
+
+             let legacy_tasks: Vec<(String, String, String)> = {
+                 let mut statement = transaction.prepare(
+                     "SELECT id, available_at, created_at FROM tasks ORDER BY rowid ASC",
+                 )?;
+                 let rows = statement.query_map([], |row| {
+                     Ok((
+                         row.get::<_, String>(0)?,
+                         row.get::<_, String>(1)?,
+                         row.get::<_, String>(2)?,
+                     ))
+                 })?;
+                 rows.collect::<Result<Vec<_>, _>>()?
+             };
+
+             for (id, available_at, created_at) in legacy_tasks {
+                 let normalized_available = normalize_rfc3339_utc(&available_at)
+                     .map_err(|_| rusqlite::Error::InvalidParameterName("invalid legacy available_at".to_string()))?;
+                 let normalized_created = normalize_rfc3339_utc(&created_at)
+                     .map_err(|_| rusqlite::Error::InvalidParameterName("invalid legacy created_at".to_string()))?;
+                 transaction.execute(
+                     "UPDATE tasks SET available_at=?1, created_at=?2 WHERE id=?3",
+                     params![normalized_available, normalized_created, id],
+                 )?;
+             }
+
              DROP TABLE tasks_v10_old;
              CREATE INDEX IF NOT EXISTS idx_tasks_ready
                ON tasks(status, available_at, priority);
@@ -5413,6 +5439,71 @@ mod tests {
         assert!(validate_retry_policy_limits(11, 30_000).is_err());
         assert!(validate_retry_policy_limits(3, 999).is_err());
         assert!(validate_retry_policy_limits(3, 300_001).is_err());
+    }
+
+    #[test]
+    fn task_migration_normalizes_legacy_timestamps() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-1', 'Workspace', '2026-09-24T00:00:00Z')",
+                [],
+            )
+            .expect("workspace should exist");
+        connection
+            .execute(
+                "INSERT INTO accounts(
+                   id, workspace_id, platform, display_name, status, created_at, updated_at
+                 ) VALUES (
+                   'account-1', 'workspace-1', 'telegram', 'Telegram', 'connected',
+                   '2026-09-24T00:00:00Z', '2026-09-24T00:00:00Z'
+                 )",
+                [],
+            )
+            .expect("account should exist");
+        connection
+            .execute(
+                "INSERT INTO campaigns(
+                   id, workspace_id, name, status, created_at
+                 ) VALUES (
+                   'campaign-1', 'workspace-1', 'Campaign', 'scheduled',
+                   '2026-09-24T00:00:00Z'
+                 )",
+                [],
+            )
+            .expect("campaign should exist");
+        connection
+            .execute(
+                "INSERT INTO tasks(
+                   id, workspace_id, campaign_id, account_id, platform, kind, priority,
+                   status, attempts, max_attempts, available_at, idempotency_key, created_at
+                 ) VALUES (
+                   'task-1', 'workspace-1', 'campaign-1', 'account-1', 'telegram', 'sync', 0,
+                   'pending', 0, 3, '2026-09-24T18:00:00+03:00', 'task-1',
+                   '2026-09-24T18:00:00+03:00'
+                 )",
+                [],
+            )
+            .expect("legacy task should exist");
+        connection
+            .execute_batch("PRAGMA user_version = 9;")
+            .expect("legacy version should be set");
+
+        migrate_schema(&connection).expect("v10 migration should succeed");
+
+        let timestamps: (String, String) = connection
+            .query_row(
+                "SELECT available_at, created_at FROM tasks WHERE id='task-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("migrated task should exist");
+        assert_eq!(timestamps.0, "2026-09-24T15:00:00Z");
+        assert_eq!(timestamps.1, "2026-09-24T15:00:00Z");
     }
 
     #[test]
