@@ -19,7 +19,8 @@
     "runtime:dev": "tsx server.ts",
     "runtime:start": "tsx server.ts",
     "test:runtime": "node scripts/runtime-smoke.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "verify:release": "node scripts/release-sanity.mjs"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
