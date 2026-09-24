@@ -96,10 +96,7 @@ describe("execution policy", () => {
   });
 
   it("requires content linkage for publish tasks", () => {
-    const { contentId: _contentId, ...taskWithoutContent } = {
-      ...context.task,
-      destinationId: "destination-1",
-    };
+    const { contentId: _contentId, ...taskWithoutContent } = context.task;
     const decision = evaluateExecutionPolicy({
       ...context,
       approval: {

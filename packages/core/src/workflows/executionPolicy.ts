@@ -125,6 +125,14 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
     };
   }
 
+  if (context.task.kind !== "sync" && !context.task.contentId) {
+    return {
+      allowed: false,
+      reason: "content_required",
+      message: "Content tasks must reference a content item before execution.",
+    };
+  }
+
   if (context.task.kind !== "sync" && !context.content) {
     return {
       allowed: false,
@@ -153,14 +161,6 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
         message: "The referenced content is not approved for external delivery.",
       };
     }
-  }
-
-  if (context.task.kind !== "sync" && !context.task.contentId) {
-    return {
-      allowed: false,
-      reason: "content_required",
-      message: "Content tasks must reference a content item before execution.",
-    };
   }
 
   if (
