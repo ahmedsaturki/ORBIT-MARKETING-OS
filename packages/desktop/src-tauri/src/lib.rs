@@ -763,9 +763,18 @@ WHEN NOT EXISTS (
     AND c.workspace_id = NEW.workspace_id
     AND a.workspace_id = NEW.workspace_id
     AND a.platform = NEW.platform
+    AND (
+      NEW.content_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM content_items i
+        WHERE i.id = NEW.content_id
+          AND i.workspace_id = NEW.workspace_id
+      )
+    )
 )
 BEGIN
-  SELECT RAISE(ABORT, 'task workspace/account/platform mismatch');
+  SELECT RAISE(ABORT, 'task workspace/account/content/platform mismatch');
 END;
 
 CREATE TRIGGER IF NOT EXISTS orbit_tasks_update_workspace
@@ -778,9 +787,18 @@ WHEN NOT EXISTS (
     AND c.workspace_id = NEW.workspace_id
     AND a.workspace_id = NEW.workspace_id
     AND a.platform = NEW.platform
+    AND (
+      NEW.content_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM content_items i
+        WHERE i.id = NEW.content_id
+          AND i.workspace_id = NEW.workspace_id
+      )
+    )
 )
 BEGIN
-  SELECT RAISE(ABORT, 'task workspace/account/platform mismatch');
+  SELECT RAISE(ABORT, 'task workspace/account/content/platform mismatch');
 END;
 
 CREATE TRIGGER IF NOT EXISTS orbit_conversations_insert_workspace
@@ -1428,7 +1446,6 @@ fn workspace_create(
 fn workspace_select(app: tauri::AppHandle, id: String) -> Result<WorkspaceView, String> {
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
     let user_id = local_user_id(&connection).map_err(|error| error.to_string())?;
     let workspace = connection
         .query_row(
@@ -2658,8 +2675,10 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
         return Err(AppError::InvalidPassword.to_string());
     }
 
-    let _connection = open_db(&app).map_err(|error| error.to_string())?;
-    drop(_connection);
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role(&connection, &["owner", "admin"])
+        .map_err(|error| error.to_string())?;
+    drop(connection);
     let app_data = app.path().app_data_dir().map_err(|_| AppError::Path.to_string())?;
     let database_path = app_data.join("orbit.sqlite3");
     let backups = backup_directory(&app).map_err(|error| error.to_string())?;
@@ -2692,6 +2711,10 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
 
 #[tauri::command]
 fn backup_list(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role(&connection, &["owner", "admin"])
+        .map_err(|error| error.to_string())?;
+    drop(connection);
     let backups = backup_directory(&app).map_err(|error| error.to_string())?;
     let mut names = fs::read_dir(backups)
         .map_err(|error| error.to_string())?
@@ -2715,6 +2738,11 @@ fn backup_restore(
     if password.is_empty() {
         return Err(AppError::InvalidPassword.to_string());
     }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role(&connection, &["owner", "admin"])
+        .map_err(|error| error.to_string())?;
+    drop(connection);
 
     let filename = validate_backup_name(&filename).map_err(|error| error.to_string())?;
     if !filename.ends_with(".orbitbackup") {
