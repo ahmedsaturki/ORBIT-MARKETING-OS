@@ -57,3 +57,6 @@ A feature is not release-complete merely because its source code exists. Release
 - documentation
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md](docs/ACCEPTANCE_MATRIX_V2.md), and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
+
+
+Launch control: `docs/LAUNCH_SCORECARD.md`
