@@ -5,6 +5,7 @@ import type { Task } from "../src/types/index.js";
 function task(overrides: Partial<Task> = {}): Task {
   return {
     id: "task-1",
+    workspaceId: "workspace-1",
     campaignId: "camp-1",
     accountId: "acc-1",
     platform: "facebook",
@@ -14,6 +15,7 @@ function task(overrides: Partial<Task> = {}): Task {
     attempts: 0,
     maxAttempts: 3,
     availableAt: "2026-09-24T10:00:00.000Z",
+    idempotencyKey: "task-1",
     createdAt: "2026-09-24T09:00:00.000Z",
     ...overrides,
   };
