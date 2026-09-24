@@ -6,6 +6,8 @@ cd "$ROOT"
 
 test -f pnpm-lock.yaml
 pnpm verify:workspace
+pnpm verify:release
+pnpm security:scan
 pnpm install --frozen-lockfile
 pnpm --filter @orbit/web typecheck
 pnpm --filter @orbit/web lint
