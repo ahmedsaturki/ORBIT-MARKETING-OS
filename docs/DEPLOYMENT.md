@@ -4,7 +4,7 @@
 
 The web package is a static Next.js export into `packages/web/out`. For a local smoke preview, serve that directory with any static HTTP server (for example Python's built-in `http.server`); `next start` is intentionally not used with static export.
 
-The repository contains `vercel.json` plus a guarded GitHub Actions deployment workflow. The workflow only activates when `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` are available.
+The repository contains `vercel.json` plus guarded GitHub Actions deployment workflows. The standard workflow is the repository-side path; `.github/workflows/web-release-selfhosted.yml` is the zero-cost owner-only release path for environments where GitHub-hosted runner allocation is unavailable. The workflow only activates when `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` are available.
 
 The deployment path must use Vercel's CI build output flow (`vercel pull` → `vercel build` → `vercel deploy --prebuilt`). A normal Next.js build alone is not treated as Vercel Build Output evidence.
 
@@ -26,7 +26,7 @@ The runtime is designed for local Ollama use. Cloud AI is not required by the cu
 
 ## Release gate
 
-A web deployment alone does not make desktop/mobile/product release-ready. Use `docs/ACCEPTANCE_MATRIX_V2.md`, `docs/RELEASE_GATES.md`, and `docs/RELEASE_READINESS.md` as the release control set.
+A web deployment alone does not make desktop/mobile/product release-ready. A successful web release must come from the verified `main` commit after the rebuild has been merged and must pass `scripts/verify-live-web.mjs` against the deployed URL. Use `docs/ACCEPTANCE_MATRIX_V2.md`, `docs/RELEASE_GATES.md`, and `docs/RELEASE_READINESS.md` as the release control set.
 
 ## Monorepo build filtering
 
