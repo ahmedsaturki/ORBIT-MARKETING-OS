@@ -57,7 +57,15 @@ const server = createServer(async (req, res) => {
       extension === ".svg" ? "image/svg+xml" :
       "application/octet-stream";
 
-    res.writeHead(200, { "content-type": contentType, "cache-control": "no-store" });
+    res.writeHead(200, {
+      "content-type": contentType,
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "permissions-policy": "camera=(), microphone=(), geolocation=()",
+      "cross-origin-opener-policy": "same-origin",
+      "cross-origin-resource-policy": "same-origin",
+    });
     res.end(await readFile(target));
   } catch {
     res.writeHead(500, { "content-type": "text/plain; charset=utf-8" });
