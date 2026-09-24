@@ -114,8 +114,8 @@ for (const fragment of [
   "pnpm test:performance",
   "pnpm test:e2e",
   "cargo fmt --all -- --check",
-  "cargo test --workspace --all-targets",
-  "cargo clippy --workspace --all-targets -- -D warnings",
+  "cargo test --locked --workspace --all-targets",
+  "cargo clippy --locked --workspace --all-targets -- -D warnings",
 ]) {
   if (!selfHosted.includes(fragment)) throw new Error("Self-hosted verification gate missing: " + fragment);
 }
