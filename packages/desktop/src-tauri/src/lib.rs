@@ -894,7 +894,8 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
 
     if version < 8 {
         if !has_column(connection, "vault_records", "workspace_id")? {
-            connection.execute_batch(
+            let transaction = connection.unchecked_transaction()?;
+            transaction.execute_batch(
                 "CREATE TABLE IF NOT EXISTS vault_records (
                    label TEXT PRIMARY KEY,
                    payload_json TEXT NOT NULL,
@@ -913,12 +914,14 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
                  DROP TABLE vault_records;
                  ALTER TABLE vault_records_v8 RENAME TO vault_records;",
             )?;
+            transaction.commit()?;
         }
     }
 
 
     if version < 10 {
-        connection.execute_batch(
+        let transaction = connection.unchecked_transaction()?;
+        transaction.execute_batch(
             "ALTER TABLE tasks RENAME TO tasks_v10_old;
              CREATE TABLE tasks (
                id TEXT PRIMARY KEY,
@@ -954,6 +957,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
                ON tasks(workspace_id, destination_id);
              PRAGMA user_version = 10;"
         )?;
+        transaction.commit()?;
     }
 
 
@@ -1120,8 +1124,6 @@ fn create_integrity_triggers(connection: &Connection) -> Result<(), AppError> {
     Ok(())
 }
 
-/// Reconcile tasks left in "running" state by the previous application process.
-/// This must run once during application startup, not from every SQLite connection opener.
 /// Reconcile tasks left in "running" state by the previous application process.
 /// This must run once during application startup, not from every SQLite connection opener.
 fn recover_interrupted_tasks(connection: &Connection) -> Result<usize, AppError> {
