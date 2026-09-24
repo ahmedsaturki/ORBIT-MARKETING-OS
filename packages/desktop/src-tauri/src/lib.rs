@@ -1950,6 +1950,14 @@ fn account_upsert(
         return Err("account id already belongs to another workspace".to_string());
     }
 
+    let has_encrypted_session: bool = connection
+        .query_row(
+            "SELECT session_payload_json IS NOT NULL FROM accounts WHERE id=?1 AND workspace_id=?2",
+            params![&id, &workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+
     write_audit(&connection, "account", "upsert", "success", "user", Some(&id))
         .map_err(|error| error.to_string())?;
 
@@ -1959,7 +1967,7 @@ fn account_upsert(
         display_name,
         username,
         status: status.to_string(),
-        has_encrypted_session: session_payload_json.is_some(),
+        has_encrypted_session,
     })
 }
 
@@ -4581,14 +4589,16 @@ mod tests {
             )
             .expect("account upsert should succeed");
 
-        let status: String = connection
+        let state: (String, bool) = connection
             .query_row(
-                "SELECT status FROM accounts WHERE id='account-1'",
+                "SELECT status, session_payload_json IS NOT NULL
+                 FROM accounts
+                 WHERE id='account-1'",
                 [],
-                |row| row.get(0),
+                |row| Ok((row.get(0)?, row.get(1)?)),
             )
-            .expect("account status should be readable");
-        assert_eq!(status, "connected");
+            .expect("account state should be readable");
+        assert_eq!(state, ("connected".to_string(), true));
     }
 
     #[test]
