@@ -5,6 +5,7 @@ export interface CampaignTaskTemplate {
   readonly priority?: number;
   readonly maxAttempts?: number;
   readonly availableAt?: string;
+  readonly contentId?: string;
 }
 
 /**
@@ -35,6 +36,16 @@ export function buildCampaignTasks(
   const availableAt = template.availableAt ?? createdAt;
   const priority = template.priority ?? 0;
   const maxAttempts = template.maxAttempts ?? 3;
+  const contentId =
+    template.contentId ??
+    (template.taskKind === "sync" ? undefined : campaign.contentIds.length === 1 ? campaign.contentIds[0] : undefined);
+
+  if (template.taskKind !== "sync" && campaign.contentIds.length > 1 && !template.contentId) {
+    throw new Error("contentId is required when a campaign targets multiple content items");
+  }
+  if (contentId && !campaign.contentIds.includes(contentId)) {
+    throw new Error("contentId is not part of campaign");
+  }
 
   if (maxAttempts < 1 || !Number.isInteger(maxAttempts)) {
     throw new RangeError("maxAttempts must be a positive integer");
