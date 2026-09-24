@@ -83,6 +83,7 @@ const selfHosted = await text(".github/workflows/self-hosted-verify.yml");
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
   "github.ref_name == 'rebuild/orbit-production' && github.actor == 'ahmedsaturki'",
+  "run: bash scripts/self-hosted-preflight.sh",
   "pnpm install --frozen-lockfile",
   "pnpm --filter @orbit/core test:coverage",
   "pnpm test:runtime",
@@ -99,6 +100,7 @@ const bootstrap = await text(".github/workflows/bootstrap-lockfile.yml");
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
   "github.ref_name == 'rebuild/orbit-production' && github.actor == 'ahmedsaturki'",
+  "run: bash scripts/self-hosted-preflight.sh",
   "pnpm install --lockfile-only --ignore-scripts",
   "cargo generate-lockfile",
   "git add pnpm-lock.yaml packages/desktop/src-tauri/Cargo.lock",
