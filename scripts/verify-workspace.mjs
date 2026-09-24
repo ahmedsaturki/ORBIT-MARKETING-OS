@@ -12,6 +12,7 @@ const requiredFiles = [
   "tsconfig.base.json",
   "docs/ACCEPTANCE_MATRIX_V2.md",
   "docs/RELEASE_GATES.md",
+  "docs/SELF_HOSTED_RUNNER.md",
   "packages/core/package.json",
   "packages/core/src/access/control.ts",
   "packages/core/src/content/catalog.ts",
