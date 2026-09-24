@@ -20,8 +20,34 @@ use time::{format_description::well_known::Rfc3339, Duration, OffsetDateTime};
 use thiserror::Error;
 use zeroize::Zeroizing;
 
-const active_workspace_id(): &str = "default";
+const DEFAULT_WORKSPACE_ID: &str = "default";
 const SCHEMA_VERSION: i64 = 6;
+
+static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
+
+fn active_workspace_lock() -> &'static RwLock<String> {
+    ACTIVE_WORKSPACE_ID.get_or_init(|| RwLock::new(DEFAULT_WORKSPACE_ID.to_string()))
+}
+
+fn active_workspace_id() -> String {
+    match active_workspace_lock().read() {
+        Ok(value) => value.clone(),
+        Err(poisoned) => poisoned.into_inner().clone(),
+    }
+}
+
+fn set_active_workspace_id(workspace_id: &str) -> Result<(), AppError> {
+    match active_workspace_lock().write() {
+        Ok(mut value) => {
+            *value = workspace_id.to_string();
+            Ok(())
+        }
+        Err(poisoned) => {
+            *poisoned.into_inner() = workspace_id.to_string();
+            Ok(())
+        }
+    }
+}
 
 const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS workspaces (
