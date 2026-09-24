@@ -91,7 +91,7 @@ interface AutomationRulePackView {
 
 interface ContentVariantView {
   readonly content_id: string;
-  readonly platform: string;
+  readonly platform: Platform;
   readonly body: string | null;
 }
 
@@ -172,6 +172,19 @@ interface TelegramExecutionView {
   readonly external_message_id: number | null;
   readonly message: string;
   readonly retry_at: string | null;
+}
+
+const SUPPORTED_PLATFORMS: readonly Platform[] = [
+  "facebook",
+  "instagram",
+  "telegram",
+  "whatsapp",
+  "linkedin",
+  "tiktok",
+];
+
+function isPlatform(value: string): value is Platform {
+  return SUPPORTED_PLATFORMS.includes(value as Platform);
 }
 
 interface LicenseStatus {
@@ -1607,6 +1620,7 @@ export function App(): ReactElement {
                 value={variantPlatform}
                 onChange={(event) => {
                   const platform = event.target.value;
+                  if (!isPlatform(platform)) return;
                   setVariantPlatform(platform);
                   const current = contentVariants.find((item) => item.platform === platform);
                   setVariantBody(current?.body ?? "");
@@ -2046,7 +2060,13 @@ export function App(): ReactElement {
           </label>
           <label>
             المنصة
-            <select value={accountPlatform} onChange={(event) => setAccountPlatform(event.target.value)}>
+            <select
+              value={accountPlatform}
+              onChange={(event) => {
+                const platform = event.target.value;
+                if (isPlatform(platform)) setAccountPlatform(platform);
+              }}
+            >
               <option value="facebook">Facebook</option>
               <option value="instagram">Instagram</option>
               <option value="telegram">Telegram</option>
