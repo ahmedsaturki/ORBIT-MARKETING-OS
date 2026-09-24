@@ -1073,8 +1073,9 @@ async fn telegram_execute_task(
     let workspace_id = active_workspace_id();
     let task_id = validate_label(&task_id).map_err(|error| error.to_string())?;
     let auth_connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(
+    require_workspace_role_for(
         &auth_connection,
+        &workspace_id,
         &["owner", "admin", "operator"],
     )
     .map_err(|error| error.to_string())?;
