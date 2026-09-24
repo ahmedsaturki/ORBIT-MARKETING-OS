@@ -40,6 +40,8 @@ git --version
 curl --version
 ```
 
+Before registration, run `./scripts/self-hosted-preflight.sh`. It verifies Linux/WSL, Node 22, pnpm 10.17.1, Rust 1.98.1, disk space, and HTTPS access to GitHub, npm, and crates.io.
+
 Then use GitHub's generated Linux x64 runner commands. For the first validation, run the runner interactively:
 
 ```bash
