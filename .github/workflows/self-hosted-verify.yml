@@ -1,0 +1,100 @@
+name: Self-Hosted Verification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orbit-self-hosted-verification
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.ref_name == 'rebuild/orbit-production'
+    name: Full verification on owned runner
+    runs-on: [self-hosted, x64]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify host toolchain
+        run: |
+          node --version
+          pnpm --version
+          rustc --version
+          cargo --version
+
+      - name: Require committed lockfile
+        run: node -e "const fs=require('node:fs'); if(!fs.existsSync('pnpm-lock.yaml')) process.exit(1)"
+
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
+        with:
+          toolchain: 1.98.1
+          components: rustfmt,clippy
+
+      - name: Install dependencies reproducibly
+        run: pnpm install --frozen-lockfile
+
+      - name: Workspace sanity
+        run: pnpm verify:workspace
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Desktop IPC contract
+        run: pnpm verify:ipc
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit and integration tests
+        run: pnpm test
+
+      - name: Core coverage
+        run: pnpm --filter @orbit/core test:coverage
+
+      - name: Runtime smoke
+        run: pnpm test:runtime
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install Playwright Chromium on Linux
+        if: runner.os == 'Linux'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright Chromium on Windows/macOS
+        if: runner.os != 'Linux'
+        run: pnpm exec playwright install chromium
+
+      - name: Browser E2E
+        run: pnpm test:e2e
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Linux Tauri dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Rust format/check/test/clippy
+        working-directory: packages/desktop/src-tauri
+        run: |
+          cargo fmt --all -- --check
+          cargo check --workspace --all-targets
+          cargo test --workspace --all-targets
+          cargo clippy --workspace --all-targets -- -D warnings
