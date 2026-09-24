@@ -7,6 +7,7 @@ describe("campaign validation", () => {
   it("accepts a valid campaign", () => {
     const result = validateCampaign({
       id: "camp-1",
+      workspaceId: "workspace-1",
       name: "Launch",
       status: "draft",
       accountIds: ["acc-1"],
