@@ -421,7 +421,14 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
 
     if version < 4 {
         connection.execute_batch(
-            "CREATE TABLE IF NOT EXISTS content_items (
+            "CREATE TABLE IF NOT EXISTS messages (
+                id TEXT PRIMARY KEY,
+                conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+                direction TEXT NOT NULL,
+                body TEXT NOT NULL,
+                sent_at TEXT NOT NULL
+             );
+             CREATE TABLE IF NOT EXISTS content_items (
                 id TEXT PRIMARY KEY,
                 workspace_id TEXT NOT NULL DEFAULT 'default',
                 title TEXT NOT NULL,
@@ -2475,6 +2482,8 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
 
         assert!(has_column(&connection, "tasks", "workspace_id").expect("workspace column check"));
         assert!(has_column(&connection, "tasks", "idempotency_key").expect("idempotency column check"));
+        assert!(has_column(&connection, "messages", "external_message_id").expect("message external id column check"));
+        assert!(has_column(&connection, "conversations", "account_id").expect("conversation account column check"));
 
         let values: (String, String) = connection
             .query_row(
