@@ -4589,7 +4589,6 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
     rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
 }
 
-#[tauri::command]
 fn verify_audit_chain(connection: &Connection, workspace_id: &str) -> Result<bool, String> {
     let mut statement = connection
         .prepare(
