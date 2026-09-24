@@ -891,7 +891,31 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         )?;
     }
 
-    if version < 10 {
+    if version < 8 {
+        if !has_column(connection, "vault_records", "workspace_id")? {
+            connection.execute_batch(
+                "CREATE TABLE IF NOT EXISTS vault_records (
+                   label TEXT PRIMARY KEY,
+                   payload_json TEXT NOT NULL,
+                   updated_at TEXT NOT NULL
+                 );
+                 CREATE TABLE vault_records_v8 (
+                   workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+                   label TEXT NOT NULL,
+                   payload_json TEXT NOT NULL,
+                   updated_at TEXT NOT NULL,
+                   PRIMARY KEY (workspace_id, label)
+                 );
+                 INSERT INTO vault_records_v8(workspace_id, label, payload_json, updated_at)
+                 SELECT 'default', label, payload_json, updated_at
+                 FROM vault_records;
+                 DROP TABLE vault_records;
+                 ALTER TABLE vault_records_v8 RENAME TO vault_records;",
+            )?;
+        }
+    }
+
+
         connection.execute_batch(
             "ALTER TABLE tasks RENAME TO tasks_v10_old;
              CREATE TABLE tasks (
@@ -930,31 +954,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         )?;
     }
 
-    if version < 8 {
-        if !has_column(connection, "vault_records", "workspace_id")? {
-            connection.execute_batch(
-                "CREATE TABLE IF NOT EXISTS vault_records (
-                   label TEXT PRIMARY KEY,
-                   payload_json TEXT NOT NULL,
-                   updated_at TEXT NOT NULL
-                 );
-                 CREATE TABLE vault_records_v8 (
-                   workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
-                   label TEXT NOT NULL,
-                   payload_json TEXT NOT NULL,
-                   updated_at TEXT NOT NULL,
-                   PRIMARY KEY (workspace_id, label)
-                 );
-                 INSERT INTO vault_records_v8(workspace_id, label, payload_json, updated_at)
-                 SELECT 'default', label, payload_json, updated_at
-                 FROM vault_records;
-                 DROP TABLE vault_records;
-                 ALTER TABLE vault_records_v8 RENAME TO vault_records;",
-            )?;
-        }
-    }
-
-    connection.execute_batch("PRAGMA user_version = 9;")?;
+    connection.execute_batch("PRAGMA user_version = 10;")?;
 }
 
 const INTEGRITY_TRIGGERS: &str = r#"
