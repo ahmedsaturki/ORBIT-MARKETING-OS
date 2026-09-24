@@ -4,7 +4,7 @@ use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Key, Nonce,
 };
-use argon2::Argon2;
+use argon2::{Algorithm, Argon2, Params, Version};
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use rand::RngCore;
 use rusqlite::{params, Connection, OptionalExtension};
@@ -478,6 +478,12 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     fs::create_dir_all(&app_data)?;
     let db_path: PathBuf = app_data.join("orbit.sqlite3");
     let connection = Connection::open(db_path)?;
+    connection.execute_batch(
+        "PRAGMA foreign_keys = ON;
+         PRAGMA journal_mode = WAL;
+         PRAGMA synchronous = NORMAL;
+         PRAGMA busy_timeout = 5000;",
+    )?;
     connection.execute_batch(SCHEMA)?;
     migrate_schema(&connection)?;
     Ok(connection)
@@ -489,7 +495,10 @@ fn derive_key(password: &str, salt: &[u8]) -> Result<Zeroizing<[u8; 32]>, AppErr
     }
 
     let mut output = Zeroizing::new([0u8; 32]);
-    Argon2::default()
+    let params = Params::new(64 * 1024, 3, 1, Some(32))
+        .map_err(|_| AppError::InvalidPassword)?;
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    argon2
         .hash_password_into(password.as_bytes(), salt, &mut output[..])
         .map_err(|_| AppError::InvalidPassword)?;
     Ok(output)
@@ -1783,6 +1792,10 @@ fn backup_restore(
         }
         let _ = fs::remove_file(&temporary);
         return Err(error.to_string());
+    }
+
+    if previous.exists() {
+        fs::remove_file(&previous).map_err(|error| error.to_string())?;
     }
 
     Ok(true)
