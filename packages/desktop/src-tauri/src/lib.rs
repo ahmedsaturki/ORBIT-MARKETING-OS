@@ -1249,6 +1249,7 @@ async fn telegram_execute_task(
                 .map_err(|error| error.to_string())?;
             telegram_task_audit(
                 &connection,
+                &workspace_id,
                 &task_id,
                 "delivery_status_unknown",
                 "blocked",
