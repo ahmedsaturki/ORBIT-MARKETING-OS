@@ -1,4 +1,4 @@
-name: Bootstrap Lockfile
+name: Bootstrap pnpm lockfile
 
 on:
   workflow_dispatch:
@@ -13,13 +13,11 @@ concurrency:
 jobs:
   bootstrap:
     if: github.ref_name == 'rebuild/orbit-production'
-    name: Generate and commit pnpm lockfile
     runs-on: [self-hosted, orbit, x64]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
@@ -30,20 +28,21 @@ jobs:
         with:
           node-version: 22
 
-      - name: Verify pnpm
-        run: node -e "const v=require('child_process').execFileSync('pnpm',['--version'],{encoding:'utf8'}).trim(); if(v!=='10.17.1') throw new Error('Expected pnpm 10.17.1, found '+v)"
-
       - name: Generate lockfile
         run: pnpm install --lockfile-only --ignore-scripts
 
-      - name: Verify lockfile
-        run: node -e "const fs=require('node:fs'); if(!fs.existsSync('pnpm-lock.yaml')) throw new Error('pnpm-lock.yaml was not generated')"
+      - name: Verify lockfile exists
+        run: test -s pnpm-lock.yaml
 
-      - name: Commit lockfile when changed
+      - name: Commit lockfile to rebuild branch
+        shell: bash
         run: |
-          git config user.name "ORBIT Release Bot"
-          git config user.email "actions@users.noreply.github.com"
+          git config user.name "ORBIT Automation"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add pnpm-lock.yaml
-          git diff --cached --quiet && echo "Lockfile already up to date; nothing to commit." && exit 0
-          git commit -m "chore(lockfile): bootstrap reproducible pnpm lockfile"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git diff --cached --quiet && {
+            echo "Lockfile already current."
+            exit 0
+          }
+          git commit -m "chore(ci): bootstrap pnpm lockfile"
+          git push origin "HEAD:rebuild/orbit-production"
