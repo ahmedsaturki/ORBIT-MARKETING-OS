@@ -127,7 +127,8 @@ export class TaskQueue {
     }
 
     const nextAttempt = task.attempts + 1;
-    if (!shouldRetry(nextAttempt, this.options.retryPolicy) || nextAttempt >= task.maxAttempts) {
+    const effectiveMaxAttempts = Math.min(task.maxAttempts, this.options.retryPolicy.maxAttempts);
+    if (nextAttempt >= effectiveMaxAttempts) {
       return { ...this.setTask({ ...task, attempts: nextAttempt, status: "failed" }) };
     }
 
