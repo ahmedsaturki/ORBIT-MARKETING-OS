@@ -945,6 +945,10 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
 }
 
 
+pub(crate) fn open_db_for_module(app: &tauri::AppHandle) -> Result<Connection, String> {
+    open_db(app).map_err(|error| error.to_string())
+}
+
 fn derive_key(password: &str, salt: &[u8]) -> Result<Zeroizing<[u8; 32]>, AppError> {
     if password.is_empty() || salt.len() < 16 {
         return Err(AppError::InvalidPassword);
