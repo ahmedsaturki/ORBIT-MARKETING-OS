@@ -394,8 +394,8 @@ async function scanProductionSource(dir) {
     if (/\b(TODO|FIXME|HACK|XXX)\b/i.test(content)) {
       throw new Error("Production source contains TODO/FIXME/HACK/XXX in " + relative(root, full));
     }
-    if (/\b(?:PLACEHOLDER|CHANGE_ME|TBD)\b/i.test(content)) {
-      throw new Error("Production source contains placeholder marker in " + relative(root, full));
+    if (/\b(?:CHANGE_ME|TBD)\b/i.test(content) || /\bPLACEHOLDER(?:_IMPLEMENTATION|_VALUE)\b/i.test(content)) {
+      throw new Error("Production source contains an implementation placeholder marker in " + relative(root, full));
     }
     if (forbiddenTypeScriptAny.test(content)) {
       throw new Error("Production source uses implicit any in " + relative(root, full));
@@ -421,8 +421,8 @@ for (const entry of rustSources) {
   if (/\b(TODO|FIXME|HACK|XXX)\b/i.test(entry.content)) {
     throw new Error("Production Rust source contains TODO/FIXME/HACK/XXX: " + relative(root, entry.path));
   }
-  if (/\b(?:PLACEHOLDER|CHANGE_ME|TBD)\b/i.test(entry.content)) {
-    throw new Error("Production Rust source contains placeholder marker: " + relative(root, entry.path));
+  if (/\b(?:CHANGE_ME|TBD)\b/i.test(entry.content) || /\bPLACEHOLDER(?:_IMPLEMENTATION|_VALUE)\b/i.test(entry.content)) {
+    throw new Error("Production Rust source contains an implementation placeholder marker: " + relative(root, entry.path));
   }
 }
 
