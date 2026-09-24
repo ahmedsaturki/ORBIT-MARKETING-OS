@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{fs, path::PathBuf};
 use tauri::Manager;
+use time::{format_description::well_known::Rfc3339, Duration, OffsetDateTime};
 use thiserror::Error;
 use zeroize::Zeroizing;
 
@@ -949,15 +950,14 @@ fn task_fail(
     now: String,
 ) -> Result<TaskView, String> {
     let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
-    if now.trim().is_empty() {
-        return Err("invalid failure timestamp".to_string());
-    }
+    let failed_at = OffsetDateTime::parse(now.trim(), &Rfc3339)
+        .map_err(|_| "failure timestamp must be an RFC3339 ISO timestamp".to_string())?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    let current: Option<(i64, i64, String, String, String, i64, i64, String, String, String)> = connection
+    let current: Option<(i64, i64, String, String, String, String, i64, String, String, String, String)> = connection
         .query_row(
-            "SELECT attempts, max_attempts, campaign_id, account_id, platform, priority, status,
-                    idempotency_key, available_at, created_at
+            "SELECT attempts, max_attempts, campaign_id, account_id, platform, kind, priority,
+                    status, idempotency_key, available_at, created_at
              FROM tasks
              WHERE id=?1 AND workspace_id=?2",
             params![&entity_id, DEFAULT_WORKSPACE_ID],
@@ -973,13 +973,14 @@ fn task_fail(
                     row.get(7)?,
                     row.get(8)?,
                     row.get(9)?,
+                    row.get(10)?,
                 ))
             },
         )
         .optional()
         .map_err(|error| error.to_string())?;
 
-    let Some((attempts, max_attempts, campaign_id, account_id, platform, priority, status, idempotency_key, available_at, created_at)) = current else {
+    let Some((attempts, max_attempts, campaign_id, account_id, platform, kind, priority, status, idempotency_key, available_at, created_at)) = current else {
         return Err(AppError::NotFound.to_string());
     };
 
@@ -989,15 +990,16 @@ fn task_fail(
 
     let next_attempt = attempts + 1;
     let terminal = next_attempt >= max_attempts;
-    let (next_status, next_available) = if terminal {
-        ("failed".to_string(), available_at)
+    let next_available = if terminal {
+        available_at.clone()
     } else {
-        let delay = retry_delay_ms(next_attempt);
-        let base_ms = now.parse::<i64>().map_err(|_| "failure timestamp must be milliseconds".to_string())?;
-        (("pending").to_string(), (base_ms + delay).to_string())
+        (failed_at + Duration::milliseconds(retry_delay_ms(next_attempt)))
+            .format(&Rfc3339)
+            .map_err(|_| "failed to format retry timestamp".to_string())?
     };
+    let next_status = if terminal { "failed" } else { "pending" };
 
-    connection
+    let changed = connection
         .execute(
             "UPDATE tasks
              SET status=?1, attempts=?2, available_at=?3
@@ -1006,17 +1008,28 @@ fn task_fail(
         )
         .map_err(|error| error.to_string())?;
 
-    write_audit(&connection, "task", "failure", if terminal { "failure" } else { "success" }, "system", Some(&entity_id))
-        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("task failure transition was not applied".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "task",
+        "failure",
+        if terminal { "failure" } else { "success" },
+        "system",
+        Some(&entity_id),
+    )
+    .map_err(|error| error.to_string())?;
 
     Ok(TaskView {
         id: entity_id,
         campaign_id,
         account_id,
         platform,
-        kind: "unknown".to_string(),
+        kind,
         priority,
-        status: next_status,
+        status: next_status.to_string(),
         attempts: next_attempt,
         max_attempts,
         idempotency_key,
@@ -1024,6 +1037,7 @@ fn task_fail(
         created_at,
     })
 }
+
 
 #[tauri::command]
 fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<TaskView>, String> {
