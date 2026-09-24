@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
-import type { FormEvent, ReactElement } from "react";
+import type { ChangeEvent, FormEvent, ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { CheckCircle2, KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Bot, CheckCircle2, Image as ImageIcon, KeyRound, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  analyzeLocalImage,
+  DEFAULT_RUNTIME_URL,
+  fetchLocalRuntimeHealth,
+  generateLocalContent,
+  sendLocalChat,
+  type RuntimeChatMessage,
+  type RuntimeHealth,
+} from "./lib/runtimeClient";
 
 interface Health {
   readonly status: string;
@@ -265,6 +274,26 @@ export function App(): ReactElement {
   const [license, setLicense] = useState<LicenseStatus | null>(null);
   const [licenseToken, setLicenseToken] = useState("");
   const [licenseMessage, setLicenseMessage] = useState("");
+
+  const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
+  const [aiRuntimeBusy, setAiRuntimeBusy] = useState(false);
+  const [aiChatInput, setAiChatInput] = useState("");
+  const [aiChatMessages, setAiChatMessages] = useState<readonly RuntimeChatMessage[]>([]);
+  const [aiChatRole, setAiChatRole] = useState("marketing_strategist");
+  const [aiChatProfile, setAiChatProfile] = useState("balanced");
+
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiDialect, setAiDialect] = useState("فصحى مبسطة");
+  const [aiTone, setAiTone] = useState("احترافي");
+  const [aiAudience, setAiAudience] = useState("الجمهور العام");
+  const [aiGeneratedContent, setAiGeneratedContent] = useState("");
+
+  const [aiImageData, setAiImageData] = useState("");
+  const [aiImageName, setAiImageName] = useState("");
+  const [aiImageType, setAiImageType] = useState<"ad_critique" | "ocr_copy" | "platform_fit" | "comprehensive">("comprehensive");
+  const [aiImagePrompt, setAiImagePrompt] = useState("");
+  const [aiImageAnalysis, setAiImageAnalysis] = useState("");
+
 
   const loadWorkspaces = async (): Promise<void> => {
     const items = await callNative<WorkspaceView[]>("workspace_list");
@@ -1043,6 +1072,129 @@ export function App(): ReactElement {
     }
   };
 
+  const checkLocalAiRuntime = async (): Promise<void> => {
+    try {
+      setAiRuntimeBusy(true);
+      const result = await fetchLocalRuntimeHealth(DEFAULT_RUNTIME_URL);
+      setRuntimeHealth(result);
+    } catch (caught: unknown) {
+      setRuntimeHealth(null);
+      setError(caught instanceof Error ? caught.message : "تعذر الاتصال بـAI Runtime المحلي");
+    } finally {
+      setAiRuntimeBusy(false);
+    }
+  };
+
+  const sendAiChatMessage = async (): Promise<void> => {
+    const clean = aiChatInput.trim();
+    if (!clean || aiRuntimeBusy) return;
+
+    const nextMessages = [
+      ...aiChatMessages,
+      { role: "user" as const, text: clean },
+    ];
+    setAiChatMessages(nextMessages);
+    setAiChatInput("");
+
+    try {
+      setAiRuntimeBusy(true);
+      setError("");
+      const result = await sendLocalChat(
+        nextMessages,
+        aiChatRole,
+        aiChatProfile,
+        DEFAULT_RUNTIME_URL,
+      );
+      setAiChatMessages([
+        ...nextMessages,
+        { role: "assistant", text: result.text },
+      ]);
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل إرسال الرسالة إلى AI المحلي");
+      setAiChatMessages(nextMessages);
+    } finally {
+      setAiRuntimeBusy(false);
+    }
+  };
+
+  const generateAiContent = async (): Promise<void> => {
+    if (!aiTopic.trim() || aiRuntimeBusy) {
+      setError("اكتب موضوعًا لتوليد المحتوى.");
+      return;
+    }
+
+    try {
+      setAiRuntimeBusy(true);
+      setError("");
+      const result = await generateLocalContent({
+        topic: aiTopic,
+        dialect: aiDialect,
+        tone: aiTone,
+        targetAudience: aiAudience,
+      });
+      setAiGeneratedContent(result.content);
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل توليد المحتوى محليًا");
+    } finally {
+      setAiRuntimeBusy(false);
+    }
+  };
+
+  const chooseAiImage = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10_000_000) {
+      setError("حجم الصورة يجب ألا يتجاوز 10MB.");
+      event.currentTarget.value = "";
+      return;
+    }
+
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("تعذر قراءة الصورة"));
+        reader.onload = () => {
+          const result = reader.result;
+          if (typeof result !== "string") {
+            reject(new Error("تعذر تحويل الصورة"));
+            return;
+          }
+          resolve(result);
+        };
+        reader.readAsDataURL(file);
+      });
+      setAiImageData(dataUrl);
+      setAiImageName(file.name);
+      setAiImageAnalysis("");
+      setError("");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل الصورة");
+    }
+  };
+
+  const analyzeAiImage = async (): Promise<void> => {
+    if (!aiImageData || aiRuntimeBusy) {
+      setError("اختر صورة أولًا.");
+      return;
+    }
+
+    try {
+      setAiRuntimeBusy(true);
+      setError("");
+      const result = await analyzeLocalImage({
+        imageBase64: aiImageData,
+        analysisType: aiImageType,
+        prompt: aiImagePrompt,
+      });
+      setAiImageAnalysis(result.analysis);
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحليل الصورة عبر AI المحلي");
+    } finally {
+      setAiRuntimeBusy(false);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -1104,6 +1256,126 @@ export function App(): ReactElement {
         )}
       </section>
 
+
+      <section className="card">
+        <div className="eyebrow">LOCAL AI STUDIO</div>
+        <div className="section-heading">
+          <div>
+            <h2><Bot size={20} /> مساعد ORBIT المحلي</h2>
+            <p>Chat وتوليد محتوى وتحليل صور عبر Ollama على الجهاز. لا يتم إرسال محتوى AI إلى السحابة من هذا السطح.</p>
+          </div>
+          <button className="button secondary" type="button" onClick={() => void checkLocalAiRuntime()} disabled={aiRuntimeBusy}>
+            {aiRuntimeBusy ? "جاري الفحص..." : "فحص AI"}
+          </button>
+        </div>
+
+        {runtimeHealth ? (
+          <div className="result">
+            AI: <strong>{runtimeHealth.status}</strong> • النموذج: {runtimeHealth.model ?? "غير معروف"} • رؤية: {runtimeHealth.visionConfigured ? "مفعلة" : "غير مفعلة"}
+          </div>
+        ) : (
+          <div className="account-meta">Runtime المحلي الافتراضي: {DEFAULT_RUNTIME_URL}</div>
+        )}
+
+        <div className="grid">
+          <section className="card">
+            <div className="icon"><Sparkles size={20} /></div>
+            <h3>محادثة محلية</h3>
+            <div className="actions">
+              <label>
+                الدور
+                <select value={aiChatRole} onChange={(event) => setAiChatRole(event.target.value)}>
+                  <option value="marketing_strategist">Marketing Strategist</option>
+                  <option value="copywriter">Copywriter</option>
+                  <option value="crm_closer">CRM & Sales</option>
+                  <option value="safety_specialist">Safety Specialist</option>
+                </select>
+              </label>
+              <label>
+                النمط
+                <select value={aiChatProfile} onChange={(event) => setAiChatProfile(event.target.value)}>
+                  <option value="balanced">Balanced</option>
+                  <option value="fast">Fast</option>
+                  <option value="reasoning">Reasoning</option>
+                </select>
+              </label>
+            </div>
+            <div className="result-list">
+              {aiChatMessages.length === 0 ? (
+                <div className="account-meta">ابدأ بسؤال عن حملة أو محتوى أو متابعة عميل.</div>
+              ) : (
+                aiChatMessages.map((message, index) => (
+                  <article className="card" key={String(index) + message.role}>
+                    <strong>{message.role === "user" ? "أنت" : "ORBIT AI"}</strong>
+                    <p style={{ whiteSpace: "pre-wrap" }}>{message.text}</p>
+                  </article>
+                ))
+              )}
+            </div>
+            <label>
+              رسالتك
+              <textarea
+                value={aiChatInput}
+                onChange={(event) => setAiChatInput(event.target.value)}
+                placeholder="مثال: اقترح لي 5 زوايا لحملة عقارية محلية..."
+                rows={4}
+                disabled={aiRuntimeBusy}
+              />
+            </label>
+            <button className="button primary" type="button" onClick={() => void sendAiChatMessage()} disabled={!aiChatInput.trim() || aiRuntimeBusy}>
+              إرسال إلى AI المحلي
+            </button>
+          </section>
+
+          <section className="card">
+            <div className="icon"><Sparkles size={20} /></div>
+            <h3>توليد حزمة محتوى</h3>
+            <label>الموضوع<input value={aiTopic} onChange={(event) => setAiTopic(event.target.value)} placeholder="موضوع الحملة" /></label>
+            <div className="actions">
+              <label>اللهجة<input value={aiDialect} onChange={(event) => setAiDialect(event.target.value)} /></label>
+              <label>النبرة<input value={aiTone} onChange={(event) => setAiTone(event.target.value)} /></label>
+            </div>
+            <label>الجمهور<input value={aiAudience} onChange={(event) => setAiAudience(event.target.value)} /></label>
+            <button className="button primary" type="button" onClick={() => void generateAiContent()} disabled={aiRuntimeBusy || !aiTopic.trim()}>
+              توليد المحتوى
+            </button>
+            {aiGeneratedContent ? (
+              <pre className="result" style={{ whiteSpace: "pre-wrap" }}>{aiGeneratedContent}</pre>
+            ) : (
+              <div className="account-meta">الناتج يظهر هنا ويمكن نسخه إلى Content Studio يدويًا.</div>
+            )}
+          </section>
+
+          <section className="card">
+            <div className="icon"><ImageIcon size={20} /></div>
+            <h3>تحليل صورة محلي</h3>
+            <label>
+              الصورة
+              <input type="file" accept="image/*" onChange={(event) => void chooseAiImage(event)} disabled={aiRuntimeBusy} />
+            </label>
+            {aiImageName ? <div className="account-meta">المحدد: {aiImageName}</div> : null}
+            {aiImageData ? <img src={aiImageData} alt={aiImageName || "صورة للتحليل"} style={{ maxHeight: 240, width: "100%", objectFit: "contain", borderRadius: 12 }} /> : null}
+            <label>
+              نوع التحليل
+              <select value={aiImageType} onChange={(event) => setAiImageType(event.target.value as typeof aiImageType)}>
+                <option value="comprehensive">مراجعة شاملة</option>
+                <option value="ad_critique">نقد الإعلان</option>
+                <option value="ocr_copy">استخراج النص</option>
+                <option value="platform_fit">ملاءمة المنصات</option>
+              </select>
+            </label>
+            <label>
+              طلب إضافي
+              <textarea value={aiImagePrompt} onChange={(event) => setAiImagePrompt(event.target.value)} rows={3} placeholder="ملاحظة اختيارية" />
+            </label>
+            <button className="button secondary" type="button" onClick={() => void analyzeAiImage()} disabled={!aiImageData || aiRuntimeBusy}>
+              تحليل الصورة
+            </button>
+            {aiImageAnalysis ? <pre className="result" style={{ whiteSpace: "pre-wrap" }}>{aiImageAnalysis}</pre> : null}
+            {!runtimeHealth?.visionConfigured ? <div className="account-meta">تحليل الصور يحتاج ضبط OLLAMA_VISION_MODEL في runtime.</div> : null}
+          </section>
+        </div>
+      </section>
 
       <section className="grid">
       <section className="card workspace-switcher">
