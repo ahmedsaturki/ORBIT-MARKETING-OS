@@ -406,6 +406,7 @@ struct AutomationRulePackView {
     updated_at: String,
 }
 
+#[derive(Debug, Serialize)]
 struct ContentVariantView {
     content_id: String,
     platform: String,
@@ -487,6 +488,7 @@ struct AnalyticsSummaryView {
     failure_rate: f64,
 }
 
+#[derive(Debug, Serialize)]
 struct AuditView {
     id: String,
     timestamp: String,
