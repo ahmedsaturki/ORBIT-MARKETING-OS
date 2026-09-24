@@ -4,7 +4,7 @@ test.describe("ORBIT public web surface", () => {
   test("home page exposes the product navigation", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/ORBIT/i);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("ORBIT");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("مركز تشغيل تسويقك");
     await expect(page.getByRole("link", { name: "الأسعار" })).toBeVisible();
     await expect(page.getByRole("link", { name: "الخصوصية" })).toBeVisible();
     await expect(page.getByRole("link", { name: "الشروط" })).toBeVisible();
