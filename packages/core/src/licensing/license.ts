@@ -119,7 +119,11 @@ export function parseLicenseToken(token: string): LicenseToken {
   const [payloadPart, signaturePart] = parts;
   if (!payloadPart || !signaturePart) throw new Error("Invalid license token");
 
-  const payload = decodeJson<LicensePayload>(payloadPart);
+  const decoded = decodeJson<LicensePayload & { expiresAt?: string | null }>(payloadPart);
+  const payload: LicensePayload = {
+    ...decoded,
+    ...(decoded.expiresAt === null ? { expiresAt: undefined } : {}),
+  };
   validatePayload(payload);
 
   return {
