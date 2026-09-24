@@ -123,15 +123,14 @@ export class LinkedInConnector implements PlatformConnector {
           lifecycleState: "PUBLISHED",
           isReshareDisabledByAuthor: false,
         }),
-        signal: context.signal,
+        ...(context.signal ? { signal: context.signal } : {}),
       });
 
       if (response.status === 201) {
-        return {
-          status: "succeeded",
-          externalId: response.headers.get("x-restli-id") ?? undefined,
-          message: "LinkedIn post published.",
-        };
+        const externalId = response.headers.get("x-restli-id");
+        return externalId
+          ? { status: "succeeded", externalId, message: "LinkedIn post published." }
+          : { status: "succeeded", message: "LinkedIn post published." };
       }
 
       return mapHttpFailure(response.status);
