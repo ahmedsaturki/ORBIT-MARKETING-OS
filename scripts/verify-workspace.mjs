@@ -296,6 +296,15 @@ for (const sourceRoot of productionRoots) {
   await scanProductionSource(sourceRoot);
 }
 
+for (const entry of rustSources) {
+  if (/\b(TODO|FIXME|HACK|XXX)\b/i.test(entry.content)) {
+    throw new Error("Production Rust source contains TODO/FIXME/HACK/XXX: " + relative(root, entry.path));
+  }
+  if (/\b(?:PLACEHOLDER|CHANGE_ME|TBD)\b/i.test(entry.content)) {
+    throw new Error("Production Rust source contains placeholder marker: " + relative(root, entry.path));
+  }
+}
+
 const tauriCommandDefinitions = [];
 for (const entry of rustSources) {
   tauriCommandDefinitions.push(
