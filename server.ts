@@ -13,12 +13,18 @@ const app = express();
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
 const RUNTIME_HOST = process.env.RUNTIME_HOST ?? "127.0.0.1";
 const RUNTIME_AUTH_TOKEN = (process.env.RUNTIME_AUTH_TOKEN ?? "").trim();
-const RUNTIME_ALLOWED_ORIGINS = new Set(
-  (process.env.RUNTIME_ALLOWED_ORIGINS ?? "")
+const DEFAULT_RUNTIME_ALLOWED_ORIGINS = [
+  "http://tauri.localhost",
+  "https://tauri.localhost",
+] as const;
+
+const RUNTIME_ALLOWED_ORIGINS = new Set([
+  ...DEFAULT_RUNTIME_ALLOWED_ORIGINS,
+  ...(process.env.RUNTIME_ALLOWED_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean),
-);
+]);
 const RUNTIME_RATE_WINDOW_MS = 60_000;
 const parsedRuntimeRateLimit = Number.parseInt(process.env.RUNTIME_RATE_LIMIT ?? "120", 10);
 const RUNTIME_RATE_LIMIT =
