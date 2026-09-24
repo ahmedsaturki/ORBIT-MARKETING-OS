@@ -1,6 +1,7 @@
+import type { ReactElement } from "react";
 import Link from "next/link";
 
-export default function RefundsPage(): JSX.Element {
+export default function RefundsPage(): ReactElement {
   return (
     <main className="container page prose">
       <Link href="/">← الرئيسية</Link>
