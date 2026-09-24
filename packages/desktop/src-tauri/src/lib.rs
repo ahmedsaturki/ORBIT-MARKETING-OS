@@ -1844,20 +1844,28 @@ fn workspace_create(
     require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let created_at = chrono_like_timestamp();
 
-    connection
+    let user_id = local_user_id(&connection).map_err(|error| error.to_string())?;
+    let transaction = connection
+        .unchecked_transaction()
+        .map_err(|error| error.to_string())?;
+
+    transaction
         .execute(
             "INSERT INTO workspaces(id, name, created_at) VALUES (?1, ?2, ?3)",
             params![workspace_id, name, created_at],
         )
         .map_err(|error| error.to_string())?;
 
-    let user_id = local_user_id(&connection).map_err(|error| error.to_string())?;
-    connection
+    transaction
         .execute(
             "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
              VALUES (?1, ?2, 'owner', 1, ?3)",
             params![workspace_id, user_id, created_at],
         )
+        .map_err(|error| error.to_string())?;
+
+    transaction
+        .commit()
         .map_err(|error| error.to_string())?;
 
     write_audit(
