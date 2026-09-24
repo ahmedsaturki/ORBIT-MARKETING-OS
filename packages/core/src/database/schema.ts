@@ -1,4 +1,4 @@
-export const DATABASE_SCHEMA_VERSION = 3;
+export const DATABASE_SCHEMA_VERSION = 4;
 
 export const DATABASE_SCHEMA_SQL = `
 PRAGMA foreign_keys = ON;
