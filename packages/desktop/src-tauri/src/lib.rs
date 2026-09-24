@@ -1070,7 +1070,7 @@ async fn telegram_execute_task(
     vault_password: String,
     user_confirmed: bool,
 ) -> Result<TelegramExecutionView, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let task_id = validate_label(&task_id).map_err(|error| error.to_string())?;
     let auth_connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role(
@@ -1765,7 +1765,7 @@ fn campaign_create(
     name: String,
     account_ids: Vec<String>,
 ) -> Result<CampaignView, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let name = validate_label(&name).map_err(|error| error.to_string())?;
     if account_ids.is_empty() {
         return Err("at least one account is required".to_string());
@@ -1963,7 +1963,7 @@ fn campaign_attach_content(
     campaign_id: String,
     content_id: String,
 ) -> Result<bool, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
     let content_id = validate_label(&content_id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
@@ -2006,7 +2006,7 @@ fn approval_request(
     reviewer_ids_json: Option<String>,
     note: Option<String>,
 ) -> Result<ApprovalView, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let content_id = validate_label(&content_id).map_err(|error| error.to_string())?;
     let requested_by = validate_label(&requested_by).map_err(|error| error.to_string())?;
@@ -2073,7 +2073,7 @@ fn approval_decide(
     decided_by: String,
     note: Option<String>,
 ) -> Result<ApprovalView, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let decided_by = validate_label(&decided_by).map_err(|error| error.to_string())?;
     let status = validate_content_status(&status).map_err(|error| error.to_string())?;
@@ -2185,7 +2185,7 @@ fn task_enqueue(
     content_id: Option<String>,
     destination_id: Option<String>,
 ) -> Result<TaskView, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
@@ -2314,7 +2314,7 @@ fn task_enqueue(
 
 #[tauri::command]
 fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView>, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let mut connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
     let transaction = connection
@@ -2387,7 +2387,7 @@ fn task_set_status(
     id: String,
     status: String,
 ) -> Result<bool, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let allowed = ["pending", "awaiting_approval", "awaiting_user_action", "running", "succeeded", "failed", "blocked", "cancelled"];
     if !allowed.contains(&status.as_str()) {
         return Err("unsupported task status".to_string());
@@ -2453,7 +2453,7 @@ fn task_fail(
     id: String,
     now: String,
 ) -> Result<TaskView, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
     let failed_at = OffsetDateTime::parse(now.trim(), &Rfc3339)
         .map_err(|_| "failure timestamp must be an RFC3339 ISO timestamp".to_string())?;
@@ -2989,7 +2989,7 @@ fn conversation_upsert(
     external_thread_id: Option<String>,
     status: String,
 ) -> Result<ConversationView, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
@@ -3080,7 +3080,7 @@ fn message_add(
     direction: String,
     body: String,
 ) -> Result<MessageView, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let conversation_id = validate_label(&conversation_id).map_err(|error| error.to_string())?;
     let body = body.trim().to_string();
@@ -3233,7 +3233,7 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
 
 #[tauri::command]
 fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
-    let workspace_id = workspace_id;
+    let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
     let mut statement = connection
