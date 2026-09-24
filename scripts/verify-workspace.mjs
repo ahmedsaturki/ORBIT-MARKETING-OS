@@ -87,7 +87,8 @@ for (const [name, count] of duplicateFunctions) {
   if (count > 1) throw new Error("Duplicate Rust function definition: " + name);
 }
 
-const productionRust = rust.split("\n").filter((line) => !line.includes("#[cfg(test)]")).join("\n");
+const testModuleMarker = rust.indexOf("#[cfg(test)]");
+const productionRust = testModuleMarker >= 0 ? rust.slice(0, testModuleMarker) : rust;
 if (/\.unwrap\s*\(|\.expect\s*\(|\bpanic!\s*\(/.test(productionRust)) {
   throw new Error("Unchecked Rust unwrap/expect/panic detected outside tests");
 }
