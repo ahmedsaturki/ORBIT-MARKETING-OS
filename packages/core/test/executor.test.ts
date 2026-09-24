@@ -249,7 +249,7 @@ describe("task execution orchestrator", () => {
 
     expect(result).toMatchObject({
       status: "blocked",
-      reason: "confirmation_required",
+      reason: "user_confirmation_required",
     });
     expect(taskQueue.get(task.id)?.status).toBe("awaiting_user_action");
   });
