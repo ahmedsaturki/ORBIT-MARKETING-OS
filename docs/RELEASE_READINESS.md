@@ -56,7 +56,7 @@ The rebuild branch currently contains the intended CI, Rust, release-desktop, an
 
 The current source environment cannot reach GitHub/npm through its shell network, so a real pnpm-lock.yaml was not fabricated. CI now creates the lockfile before workspace sanity checks, while release workflows continue to require a committed lockfile. CI is configured to generate and validate a lockfile on a clean runner; that evidence remains blocked by the GitHub Actions runner failure.
 
-A Vercel project `orbit-marketing-os` exists. Recent deployments from the rebuild line have failed, with a concrete earlier diagnostic of `NEXT_NO_VERSION` while the project metadata reported `vite`. Repository-side configuration now targets the Next.js app under `packages/web`; the remaining project-level Root Directory/Framework configuration is external and must be verified before claiming a production deployment.
+A Vercel project `orbit-marketing-os` exists. Repository-side deployment configuration is now canonical at the repository root: Next.js, `pnpm install --frozen-lockfile`, `pnpm --dir packages/web build`, and `packages/web/out`. The project-level Root Directory/Framework settings remain external and must be verified before claiming a production deployment. Earlier Vercel failures are not treated as current source-build evidence.
 
 
 
@@ -68,4 +68,4 @@ Global multi-device seat counting remains intentionally unclaimed because the cu
 
 ## Vercel deployment diagnosis
 
-The connected `orbit-marketing-os` project exists, but recent Git deployments are failing before a usable production deployment is established. The latest concrete Vercel diagnostic observed was `NEXT_NO_VERSION`, while deployment metadata reported framework `vite`. The repository now exposes Next.js at the monorepo root as a compatibility fallback, while the canonical Vercel configuration remains Root Directory `packages/web` with the Next.js framework.
+The connected `orbit-marketing-os` project exists, but recent Git deployments are failing before a usable production deployment is established. The latest concrete Vercel diagnostic observed was `NEXT_NO_VERSION`, while deployment metadata reported framework `vite`. The repository now uses the root `vercel.json` as the single deployment source of truth, targeting the `packages/web` Next.js static export.
