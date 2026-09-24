@@ -4348,6 +4348,87 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
 }
 
 #[cfg(test)]
+mod content_variant_tests {
+    use super::*;
+
+    #[test]
+    fn telegram_variant_overrides_base_content() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection.execute_batch(
+            "CREATE TABLE content_items(
+               id TEXT PRIMARY KEY,
+               workspace_id TEXT NOT NULL,
+               body TEXT NOT NULL,
+               approval_status TEXT NOT NULL
+             );
+             CREATE TABLE content_variants(
+               content_id TEXT NOT NULL,
+               platform TEXT NOT NULL,
+               body TEXT,
+               PRIMARY KEY(content_id, platform)
+             );
+             INSERT INTO content_items(id, workspace_id, body, approval_status)
+             VALUES ('content-1', 'workspace-1', 'base text', 'approved');
+             INSERT INTO content_variants(content_id, platform, body)
+             VALUES ('content-1', 'telegram', 'Telegram text');",
+        ).expect("schema");
+
+        let body: String = connection
+            .query_row(
+                "SELECT COALESCE(
+                   (SELECT v.body FROM content_variants v
+                    WHERE v.content_id=ci.id AND v.platform='telegram'),
+                   ci.body
+                 )
+                 FROM content_items ci
+                 WHERE ci.id='content-1' AND ci.workspace_id='workspace-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("variant query");
+
+        assert_eq!(body, "Telegram text");
+    }
+
+    #[test]
+    fn missing_variant_falls_back_to_base_content() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection.execute_batch(
+            "CREATE TABLE content_items(
+               id TEXT PRIMARY KEY,
+               workspace_id TEXT NOT NULL,
+               body TEXT NOT NULL,
+               approval_status TEXT NOT NULL
+             );
+             CREATE TABLE content_variants(
+               content_id TEXT NOT NULL,
+               platform TEXT NOT NULL,
+               body TEXT,
+               PRIMARY KEY(content_id, platform)
+             );
+             INSERT INTO content_items(id, workspace_id, body, approval_status)
+             VALUES ('content-1', 'workspace-1', 'base text', 'approved');",
+        ).expect("schema");
+
+        let body: String = connection
+            .query_row(
+                "SELECT COALESCE(
+                   (SELECT v.body FROM content_variants v
+                    WHERE v.content_id=ci.id AND v.platform='instagram'),
+                   ci.body
+                 )
+                 FROM content_items ci
+                 WHERE ci.id='content-1' AND ci.workspace_id='workspace-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("fallback query");
+
+        assert_eq!(body, "base text");
+    }
+}
+
+#[cfg(test)]
 mod execution_counter_tests {
     use super::*;
 
