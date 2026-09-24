@@ -16,12 +16,18 @@ export function createAuditEvent(input: Omit<AuditEvent, "id"> & { id?: string }
 
 export class AuditLog {
   private readonly entries: AuditEvent[] = [];
+  private readonly ids = new Set<string>();
 
   /**
    * Append a redacted, immutable-in-place audit event.
    */
   public append(event: AuditEvent): void {
-    this.entries.push(createAuditEvent(event));
+    const stored = createAuditEvent(event);
+    if (this.ids.has(stored.id)) {
+      throw new Error("Audit event id already exists: " + stored.id);
+    }
+    this.entries.push(stored);
+    this.ids.add(stored.id);
   }
 
   /**
