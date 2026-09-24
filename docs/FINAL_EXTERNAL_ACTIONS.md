@@ -28,9 +28,11 @@ The repository now uses a reproducible web deployment contract:
 
 Before final production deployment, verify the Vercel project settings manually:
 
-- Root Directory: `packages/web` when using the package-local Vercel configuration, or repository root when using the root `vercel.json` contract.
+- Root Directory: repository root (the single deployment source is the root `vercel.json`).
 - Framework: Next.js.
 - Production build must use the committed lockfile.
+- Output directory: `packages/web/out`.
+- Build command: `pnpm --dir packages/web build`.
 
 Do not treat an older Vercel ERROR caused by dependency metadata fetching as proof that the current source build fails.
 
