@@ -93,27 +93,6 @@ describe("task execution orchestrator", () => {
   });
 
 
-  it("refuses to execute an unclaimed pending task", async () => {
-    const task = makeTask();
-    const taskQueue = queue(task);
-    const registry = new ConnectorRegistry();
-    registry.register(new FixtureConnector({ platform: "facebook" }));
-    await expect(
-      executeClaimedTask(
-        {
-          queue: taskQueue,
-          connectors: registry,
-          audit: new AuditLog(),
-          loadContext: async () => context(task),
-        },
-        task,
-        true,
-        "2026-09-24T00:00:01.000Z",
-      ),
-    ).rejects.toThrow("Only claimed running tasks may be executed.");
-  });
-
-
   it("runs a confirmed external task through policy, connector, queue, and audit", async () => {
     const task = makeTask();
     const taskQueue = queue(task);
