@@ -87,7 +87,7 @@ describe("ExecutionRunner", () => {
     const result = await runner().run({
       account,
       campaign,
-      task,
+      task: { ...task, status: "running" },
       approval: {
         id: "approval-1",
         workspaceId: "workspace-1",
@@ -109,7 +109,7 @@ describe("ExecutionRunner", () => {
     const result = await runner(true).run({
       account,
       campaign,
-      task,
+      task: { ...task, status: "running" },
       approval: {
         id: "approval-1",
         workspaceId: "workspace-1",
