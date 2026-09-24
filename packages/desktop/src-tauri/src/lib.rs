@@ -1059,9 +1059,11 @@ fn require_workspace_role(
 
 pub(crate) fn require_workspace_role_for_module(
     connection: &Connection,
+    workspace_id: &str,
     required_roles: &[&str],
 ) -> Result<(), String> {
-    require_workspace_role(connection, required_roles).map_err(|error| error.to_string())
+    require_workspace_role_for(connection, workspace_id, required_roles)
+        .map_err(|error| error.to_string())
 }
 
 fn validate_label(label: &str) -> Result<String, AppError> {
