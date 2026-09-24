@@ -43,9 +43,9 @@ jobs:
         run: |
           git config user.name "ORBIT Automation"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml packages/desktop/src-tauri/Cargo.lock
+          git add pnpm-lock.yaml packages/desktop/src-tauri/Cargo.lock packages/desktop/src-tauri/Cargo.lock
           git diff --cached --quiet && {
-            echo "Lockfile already current."
+            echo "Workspace lockfiles already current."
             exit 0
           }
           git commit -m "chore(ci): bootstrap pnpm lockfile"
