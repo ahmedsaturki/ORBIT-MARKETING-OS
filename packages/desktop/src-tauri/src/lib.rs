@@ -1319,7 +1319,10 @@ fn require_active_workspace_reviewers(
             "SELECT EXISTS(
                SELECT 1
                FROM workspace_memberships
-               WHERE workspace_id=?1 AND user_id=?2 AND active=1
+               WHERE workspace_id=?1
+                 AND user_id=?2
+                 AND active=1
+                 AND role IN ('owner', 'admin', 'reviewer')
              )",
             params![workspace_id, reviewer_id],
             |row| row.get(0),
@@ -4878,6 +4881,46 @@ mod tests {
                 &connection,
                 "workspace-1",
                 &["external-user".to_string()],
+            ),
+            Err(AppError::Unauthorized)
+        ));
+    }
+
+    #[test]
+    fn approval_reviewer_role_gate_rejects_non_reviewer_members() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(
+                "CREATE TABLE workspace_memberships(
+                   workspace_id TEXT NOT NULL,
+                   user_id TEXT NOT NULL,
+                   role TEXT NOT NULL,
+                   active INTEGER NOT NULL
+                 );
+                 CREATE TABLE runtime_state(
+                   key TEXT PRIMARY KEY,
+                   value TEXT NOT NULL
+                 );
+                 INSERT INTO runtime_state(key, value)
+                 VALUES ('local_user_id', 'local-user');
+                 INSERT INTO workspace_memberships(workspace_id, user_id, role, active)
+                 VALUES ('workspace-1', 'editor-1', 'editor', 1),
+                        ('workspace-1', 'reviewer-1', 'reviewer', 1);",
+            )
+            .expect("reviewer fixture should be created");
+
+        assert!(require_active_workspace_reviewers(
+            &connection,
+            "workspace-1",
+            &[String::from("reviewer-1")]
+        )
+        .is_ok());
+        assert!(matches!(
+            require_active_workspace_reviewers(
+                &connection,
+                "workspace-1",
+                &[String::from("editor-1")]
             ),
             Err(AppError::Unauthorized)
         ));
