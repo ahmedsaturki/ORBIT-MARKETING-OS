@@ -567,8 +567,18 @@ if (!bootstrapWorkflow.includes("workflow_dispatch:")) {
 if (!bootstrapWorkflow.includes("contents: write")) {
   throw new Error("Lockfile bootstrap requires explicit contents: write permission");
 }
-if (!bootstrapWorkflow.includes("git push origin \"HEAD:${GITHUB_REF_NAME}\"")) {
-  throw new Error("Lockfile bootstrap must push only the selected branch");
+if (!bootstrapWorkflow.includes("node scripts/commit-lockfiles.mjs")) {
+  throw new Error("Lockfile bootstrap must use the canonical commit script");
+}
+const commitLockfiles = await readFile(join(root, "scripts/commit-lockfiles.mjs"), "utf8");
+if (!commitLockfiles.includes("GITHUB_REF_NAME")) {
+  throw new Error("Lockfile commit script must validate the target branch");
+}
+if (!commitLockfiles.includes('execFileSync("git", ["add"')) {
+  throw new Error("Lockfile commit script must stage lockfiles through git");
+}
+if (!commitLockfiles.includes('execFileSync("git", ["push"')) {
+  throw new Error("Lockfile commit script must push only through git");
 }
 if (!bootstrapWorkflow.includes("github.actor == 'ahmedsaturki'")) {
   throw new Error("Lockfile bootstrap must be owner-restricted");
