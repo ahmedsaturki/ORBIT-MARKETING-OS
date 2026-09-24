@@ -3,7 +3,6 @@ name = "orbit-marketing-os"
 version = "0.2.0"
 description = "ORBIT Marketing OS desktop runtime"
 authors = ["ORBIT Marketing OS"]
-license = "Apache-2.0"
 edition = "2021"
 
 [lib]
