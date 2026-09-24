@@ -11,6 +11,7 @@ describe("campaign validation", () => {
       name: "Launch",
       status: "draft",
       accountIds: ["acc-1"],
+      contentIds: ["content-1"],
       taskCount: 4,
       createdAt: new Date(0).toISOString(),
     });
@@ -26,6 +27,7 @@ describe("campaign validation", () => {
       name: "Launch",
       status: "draft",
       accountIds: [],
+      contentIds: ["content-1"],
       taskCount: 4,
       createdAt: new Date(0).toISOString(),
     });
