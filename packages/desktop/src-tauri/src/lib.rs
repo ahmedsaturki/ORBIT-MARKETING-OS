@@ -3612,6 +3612,69 @@ mod tests {
     }
 
     #[test]
+    fn audit_migration_rebuilds_each_workspace_chain_independently() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1')",
+                [],
+            )
+            .expect("workspaces should insert");
+        connection
+            .execute_batch(
+                "INSERT INTO audit_events(
+                   id, workspace_id, timestamp, category, action, outcome, actor,
+                   entity_id, metadata_json, previous_hash, hash
+                 )
+                 VALUES
+                   ('a-1', 'workspace-a', '2026-01-01T00:00:00Z', 'security', 'one', 'success', 'system', NULL, NULL, 'GENESIS', ''),
+                   ('a-2', 'workspace-a', '2026-01-01T00:00:01Z', 'security', 'two', 'success', 'system', NULL, NULL, 'GENESIS', ''),
+                   ('b-1', 'workspace-b', '2026-01-01T00:00:00Z', 'security', 'one', 'success', 'system', NULL, NULL, 'GENESIS', '')",
+            )
+            .expect("audit fixtures should insert");
+        connection
+            .execute_batch("PRAGMA user_version = 2;")
+            .expect("legacy version should be set");
+
+        migrate_schema(&connection).expect("migration should rebuild audit hashes");
+
+        let mut statement = connection
+            .prepare(
+                "SELECT workspace_id, previous_hash, hash
+                 FROM audit_events
+                 ORDER BY workspace_id, rowid",
+            )
+            .expect("audit verification query should prepare");
+        let rows = statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            })
+            .expect("audit verification query should execute");
+        let collected: Vec<_> = rows
+            .collect::<Result<Vec<_>, _>>()
+            .expect("audit rows should decode");
+
+        assert_eq!(collected.len(), 3);
+        assert_eq!(collected[0].0, "workspace-a");
+        assert_eq!(collected[0].1, "GENESIS");
+        assert_ne!(collected[0].2, "");
+        assert_eq!(collected[1].0, "workspace-a");
+        assert_eq!(collected[1].1, collected[0].2);
+        assert_eq!(collected[2].0, "workspace-b");
+        assert_eq!(collected[2].1, "GENESIS");
+        assert_ne!(collected[2].2, "");
+    }
+
+    #[test]
     fn sqlite_integrity_triggers_reject_cross_workspace_relationships() {
         let connection = Connection::open_in_memory()
             .expect("in-memory SQLite should be available");
