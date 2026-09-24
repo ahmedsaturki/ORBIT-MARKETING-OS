@@ -74,6 +74,9 @@ jobs:
       - name: Runtime smoke
         run: pnpm test:runtime
 
+      - name: Performance smoke
+        run: pnpm test:performance
+
       - name: Build
         run: pnpm build
 
