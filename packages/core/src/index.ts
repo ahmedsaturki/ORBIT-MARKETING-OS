@@ -7,3 +7,6 @@ export * from "./connectors/index.js";
 export * from "./audit/index.js";
 export * from "./data/index.js";
 export * from "./security/index.js";
+export * from "./content/variants.js";
+export * from "./media/index.js";
+export * from "./inbox/index.js";
