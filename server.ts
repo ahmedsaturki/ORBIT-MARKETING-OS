@@ -136,8 +136,8 @@ function normalizeOllamaBaseUrl(value: string): string {
   if (url.username || url.password) {
     throw new Error("OLLAMA_BASE_URL must not contain embedded credentials");
   }
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback.has(url.hostname))) {
-    throw new Error("OLLAMA_BASE_URL must use HTTPS or loopback HTTP");
+  if (url.protocol !== "http:" || !loopback.has(url.hostname)) {
+    throw new Error("OLLAMA_BASE_URL must use loopback HTTP only");
   }
   return url.toString().replace(/\/$/, "");
 }
