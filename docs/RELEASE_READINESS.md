@@ -23,7 +23,7 @@ The following remain `UNVERIFIED` until executed in a clean environment:
 - Rust fmt, check, test, and clippy against the Tauri runtime;
 - native SQLite migration/restart/crash-recovery integration;
 - persistent queue recovery and idempotency tests through the actual desktop runtime;
-- controlled connector fixtures plus real user-authorized integrations;
+- controlled connector fixtures plus real user-authorized integrations; see `docs/CONNECTOR_MATRIX.md` for the evidence boundary.
 - challenge/authentication stop and human-intervention flows;
 - encrypted CRDT transport and multi-device convergence;
 - content/media indexing and local AI/Ollama failure/resource handling;
