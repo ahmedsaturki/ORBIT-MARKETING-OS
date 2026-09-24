@@ -2,15 +2,9 @@ name: Bootstrap pnpm lockfile
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["rebuild/orbit-production"]
 
 permissions:
   contents: write
-
-concurrency:
-  group: orbit-bootstrap-lockfile
-  cancel-in-progress: true
 
 jobs:
   bootstrap:
