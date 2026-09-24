@@ -1476,6 +1476,19 @@ pub(crate) fn require_workspace_role_for_module(
         .map_err(|error| error.to_string())
 }
 
+pub(crate) fn append_audit_event_for_module(
+    connection: &Connection,
+    workspace_id: &str,
+    category: &str,
+    action: &str,
+    outcome: &str,
+    actor: &str,
+    entity_id: Option<&str>,
+) -> Result<(), String> {
+    append_audit_event(connection, workspace_id, category, action, outcome, actor, entity_id)
+        .map_err(|error| error.to_string())
+}
+
 pub(crate) fn active_workspace_id_for_module() -> String {
     active_workspace_id()
 }
