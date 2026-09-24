@@ -6,7 +6,7 @@ Local-first social operations system: campaigns, inbox, CRM, content studio, aut
 
 ## Architecture
 
-See [docs/PRODUCT_ARCHITECTURE_V2.md](docs/PRODUCT_ARCHITECTURE_V2.md) for planes, invariants and domain modules.
+See [docs/PRODUCT_ARCHITECTURE_V2.md](docs/PRODUCT_ARCHITECTURE_V2.md) for planes, invariants and domain modules. For the end-user walkthrough of the console, see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
 Key invariants:
 
