@@ -249,7 +249,6 @@ struct EncryptedPayload {
 }
 
 #[derive(Debug, Serialize)]
-#[derive(Debug, Serialize)]
 struct WorkspaceView {
     id: String,
     name: String,
