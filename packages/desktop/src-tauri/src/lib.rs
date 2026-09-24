@@ -1145,12 +1145,15 @@ fn recover_interrupted_tasks(connection: &Connection) -> Result<usize, AppError>
 
         connection.execute_batch("BEGIN IMMEDIATE")?;
         let result = (|| -> Result<(), rusqlite::Error> {
-            connection.execute(
+            let changed = connection.execute(
                 "UPDATE tasks
                  SET status=?1
                  WHERE id=?2 AND workspace_id=?3 AND status='running'",
                 params![next_status, task_id, workspace_id],
             )?;
+            if changed != 1 {
+                return Ok(());
+            }
 
             append_audit_event(
                 connection,
@@ -5606,6 +5609,10 @@ mod tests {
         let recovered = recover_interrupted_tasks(&connection)
             .expect("interrupted tasks should recover");
         assert_eq!(recovered, 2);
+
+        let recovered_again = recover_interrupted_tasks(&connection)
+            .expect("second recovery should be idempotent");
+        assert_eq!(recovered_again, 0);
 
         let statuses: Vec<(String, String)> = connection
             .prepare(
