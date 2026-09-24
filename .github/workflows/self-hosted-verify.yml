@@ -41,8 +41,8 @@ jobs:
           rustc --version
           cargo --version
 
-      - name: Require committed lockfile
-        run: node -e "const fs=require('node:fs'); const s=fs.statSync('pnpm-lock.yaml'); if(!s.isFile() || s.size===0) process.exit(1);"
+      - name: Require committed lockfiles
+        run: node -e "const fs=require('node:fs'); for (const p of ['pnpm-lock.yaml','packages/desktop/src-tauri/Cargo.lock']) { const s=fs.statSync(p); if(!s.isFile() || s.size===0) process.exit(1); }"
 
       - name: Install dependencies reproducibly
         run: pnpm install --frozen-lockfile
