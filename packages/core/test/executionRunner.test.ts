@@ -109,6 +109,20 @@ describe("ExecutionRunner", () => {
     });
   });
 
+  it("runs sync tasks without content approval or user confirmation", async () => {
+    const result = await runner().run({
+      account,
+      campaign,
+      task: { ...task, kind: "sync" },
+      actionsToday: 0,
+      dailyLimit: 10,
+      consecutiveFailures: 0,
+      circuitBreakerThreshold: 3,
+      userConfirmed: false,
+    });
+    expect(result.status).toBe("succeeded");
+  });
+
   it("executes a supported approved task through the registered connector", async () => {
     const result = await runner().run({
       account,
