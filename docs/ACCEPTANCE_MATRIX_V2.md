@@ -9,20 +9,20 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | SEC-01 | Secrets encrypted at rest | cryptographic tests + restore test | PASS | `src/security/vault.ts` AES-256-GCM + scrypt (N=16384) atomic file vault; `test/security-vault.test.ts` 13 tests: plaintext never on disk, wrong passphrase/tampered-ciphertext/tampered-salt/foreign-file/truncated rejected, restore-from-copy, rollback on failed persist |
 | SEC-02 | Secrets excluded from logs/analytics | redaction tests + log scan | PASS | `src/security/redaction.ts` pattern+deep-key redaction wired into `server.ts` error/warn logs; `test/security-redaction.test.ts` 6 tests incl. sentinel log scan (JWT/AWS/Google/vendor tokens/passwords/URL creds never appear in logger output) |
 | SEC-03 | Renderer capability isolation | Tauri capability review + E2E | UNVERIFIED | Tauri shell not configured |
-| SEC-04 | License tamper detection | mutation/forgery tests | UNVERIFIED | License validator tests pending |
+| SEC-04 | License tamper detection | mutation/forgery tests | PASS | `src/security/license.ts` HMAC-SHA256 (timing-safe) signed licenses; `test/security-license.test.ts` 10 tests: tier/seat upgrade forgery, bit-flipped payload, wrong secret, spliced tokens, expired/not-yet-valid, malformed, correctly-signed invalid claims rejected |
 | DATA-01 | Local SQLite persistence | clean runtime test | PASS | `packages/core/src/data/sqlite.ts` + `test/data-sqlite.test.ts` (WAL db opens, applies migrations, persists across close/reopen, upsert, workspace isolation) |
 | DATA-02 | Migration safety | forward migration + backup restore | PASS | `test/data-backup.test.ts` (v1→v2 forward migration without data loss; pre-migration backup restored and migrated forward; failing migration rolls back atomically) + `test/data-sqlite.test.ts` (idempotent reopen) |
 | DATA-03 | 1,000 contacts searchable | performance benchmark | PASS | `test/data-sqlite.test.ts` (1,000 contacts bulk-inserted in one transaction, searched by name/email/tag with pagination; full suite runs in ~5s) |
 | QUE-01 | Persistent queue | restart/recovery test | PASS | `packages/core/src/queue/persistence.ts` + `test/queue-persistence.test.ts` (file store restart restore, running→retrying/failed recovery, corrupt snapshot rejected, atomic save) |
 | QUE-02 | Bounded retries | deterministic retry tests | PASS | `packages/core/test/queue.test.ts` (shouldRetry, scheduleRetry, backoff bounds) |
 | QUE-03 | Circuit breaker | fault-injection test | PASS | `packages/core/test/policy.test.ts` (failure injection opens breaker; half-open after pause) |
-| CAMP-01 | Campaign creates tasks | integration test | UNVERIFIED | Campaign→task integration pending |
-| CAMP-02 | Account membership enforced | negative integration test | UNVERIFIED | Membership checks pending |
+| CAMP-01 | Campaign creates tasks | integration test | PASS | `src/workflows/campaigns.ts` + `test/campaigns.test.ts` (create→activate→membership→enqueue into real `PersistentQueue`; task carries campaignId/workspace/account/payload; multi-member enqueue) |
+| CAMP-02 | Account membership enforced | negative integration test | PASS | `test/campaigns.test.ts` (non-member account rejected and queue unchanged; cross-workspace membership rejected; draft/paused/completed campaigns fail closed; malformed fields rejected) |
 | CAMP-03 | Approval gates block execution | workflow test | PASS | `packages/core/test/approval.test.ts` (fail-closed without approval evidence) + queue gate blocks when `approvalAllowed=false` |
 | CONT-01 | Content variants | local AI fixture/provider test | UNVERIFIED | Provider fixture tests pending |
 | CONT-02 | Media metadata/search | indexing test | UNVERIFIED | Media index pending |
 | INBOX-01 | Unified conversation model | connector fixture integration | UNVERIFIED | Fixture integration pending |
-| CRM-01 | Conversation-contact linking | relational integration test | UNVERIFIED | Relational layer pending |
+| CRM-01 | Conversation-contact linking | relational integration test | PASS | `test/data-sqlite.test.ts` (conversation links to contact under `PRAGMA foreign_keys = ON`; inserting a conversation for a non-existent contact is rejected; workspace-scoped counts) |
 | SYNC-01 | Offline edits survive restart | device simulation test | UNVERIFIED | Sync transport pending |
 | SYNC-02 | Concurrent edits converge | Yjs convergence test | UNVERIFIED | Yjs wiring pending |
 | BACK-01 | Encrypted backup | backup/restore test | PASS | `packages/core/src/data/backup.ts` + `test/data-backup.test.ts` (AES-256-GCM passphrase roundtrip, plaintext roundtrip, restore over existing destination clears stale WAL sidecars, passphrase required to verify) |
@@ -39,7 +39,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | OPS-02 | 24h stability | soak-test evidence | UNVERIFIED | Soak run pending |
 | PERF-01 | Startup target | measured benchmark | UNVERIFIED | Benchmark pending |
 | PERF-02 | Memory target | measured benchmark | UNVERIFIED | Benchmark pending |
-| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); 78 tests, clean run 95.15% lines / 85.66% branches / 96.8% funcs |
+| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); 95 tests, clean run 95.48% lines / 86.93% branches / 97.24% funcs |
 | QA-02 | Critical E2E paths | Playwright report | UNVERIFIED | Playwright suite pending |
 | DOC-01 | User guide matches product | documentation review | PARTIAL | `README.md` covers install/run/scripts; full user guide pending product freeze |
 | DOC-02 | Security model documented | security review | PASS | `docs/SECURITY_MODEL.md` documents trust boundaries, gates, audit chain, release integrity |
@@ -55,4 +55,4 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 
 - No `FAIL` entries.
 - Multiple `UNVERIFIED` runtime requirements remain → **not production-ready** claim is blocked per gate rules.
-- Core domain gates (approval, retries, persistent queue recovery, circuit breaker, connector handshake, audit chain, SQLite persistence, migrations, encrypted backup, corruption rejection) are covered by deterministic unit tests (58 tests).
+- Core domain gates (approval, retries, persistent queue recovery, circuit breaker, connector handshake, audit chain, SQLite persistence, migrations, encrypted backup, corruption rejection, campaign membership, secret vault/redaction, license tampering) are covered by deterministic unit tests (95 tests).
