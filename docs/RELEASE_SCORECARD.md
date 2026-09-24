@@ -47,7 +47,8 @@ Status meanings:
 | CONN-02 Unsupported action rejection | IMPLEMENTED / UNVERIFIED | Negative tests exist |
 | CONN-03 Challenge → human intervention | IMPLEMENTED / UNVERIFIED | Fixture challenge + native Telegram challenge handling; browser E2E pending |
 | Telegram native path | IMPLEMENTED / UNVERIFIED | Native API path exists; controlled real-account verification pending |
-| Facebook / Instagram / WhatsApp / TikTok | NOT_IMPLEMENTED | No real connector; contract/fixture surfaces only |\n| LinkedIn | IMPLEMENTED / UNVERIFIED | Text publishing Posts API connector exists; controlled authorization/runtime evidence pending |
+| Facebook / Instagram / WhatsApp / TikTok | NOT_IMPLEMENTED | No real connector; contract/fixture surfaces only |
+| LinkedIn | IMPLEMENTED / UNVERIFIED | Text publishing Posts API connector exists; controlled authorization/runtime evidence pending |
 
 ## Web / Mobile
 
