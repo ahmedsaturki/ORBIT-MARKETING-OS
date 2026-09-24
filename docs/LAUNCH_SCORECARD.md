@@ -1,0 +1,48 @@
+# ORBIT Launch Scorecard
+
+Updated: 2026-09-24
+
+Legend:
+
+- **IMPLEMENTED** = source capability exists and is covered by code/tests where applicable.
+- **VERIFIED** = executed in a clean runtime environment with current evidence.
+- **UNVERIFIED** = implementation exists but execution evidence is missing.
+- **BLOCKED** = external/infrastructure prerequisite prevents execution.
+
+| Gate | Current state | Evidence / blocker |
+|---|---|---|
+| Core domain/security | IMPLEMENTED | Typed domain, queue, policy, RBAC, encryption/redaction, audit integrity |
+| Queue invariants | IMPLEMENTED | Idempotency, state validation, defensive copies, retry tests |
+| Execution orchestrator | IMPLEMENTED | Policy → confirmation → connector → audit → queue |
+| Connector contract | IMPLEMENTED | Capability checks, registry, authorization, fixture |
+| Telegram native path | IMPLEMENTED | Token validation, approval, rate-limit handling, ambiguous-delivery stop |
+| Workspace isolation | IMPLEMENTED | Persisted active workspace, memberships, scoped vault |
+| SQLite integrity | IMPLEMENTED | FK enforcement, busy timeout, workspace integrity triggers |
+| Migration path | IMPLEMENTED | Migration chain through schema v8 with legacy backfill |
+| Desktop UI | IMPLEMENTED | Workspace switching, content, approvals, tasks, CRM, inbox, backup, license, audit |
+| Web product surface | IMPLEMENTED | Next.js static app, pricing, legal, PWA |
+| Mobile control surface | IMPLEMENTED | Expo Router monitor + secure runtime token storage |
+| Runtime perimeter | IMPLEMENTED | Loopback/local auth model, bearer token, origin allowlist, rate limit |
+| Local AI defaults | IMPLEMENTED | llama3.2:3b default, bounded OLLAMA_NUM_CTX=4096 |
+| Runtime AI smoke | IMPLEMENTED | Fake-Ollama contract added to runtime smoke |
+| Clean install | UNVERIFIED | Requires clean checkout execution and lockfile evidence |
+| Typecheck/lint/tests/build | BLOCKED | GitHub hosted runner currently fails before steps |
+| Rust fmt/test/clippy | BLOCKED | Same runner-allocation failure |
+| Native SQLite integration | UNVERIFIED | Tests exist; no clean runtime execution evidence yet |
+| Connector real-platform E2E | UNVERIFIED | Telegram path exists; controlled live integration evidence still required |
+| Browser E2E/accessibility | UNVERIFIED | No successful clean browser run recorded |
+| Security/dependency audit | UNVERIFIED | Automated dependency analysis is not yet a completed release gate |
+| Performance/soak | UNVERIFIED | Benchmarks and 24h soak not executed |
+| Desktop signing | BLOCKED | Signing credentials are intentionally absent; validation builds only |
+| Mobile production signing | BLOCKED | Current workflow produces debug validation APK |
+| Vercel production deployment | BLOCKED | Connected project has not produced a verified current production deployment; previous concrete failure was framework/build detection |
+| Billing/payment | BLOCKED | No commercial payment provider configuration is verified |
+| Production launch | BLOCKED | Any applicable UNVERIFIED/BLOCKED runtime or distribution gate prevents release claim |
+
+## Current infrastructure blocker
+
+GitHub Actions jobs for the rebuild branch are being created but can fail before the first step is registered, with no runner allocation metadata. A minimal runner probe reproduced the same behavior and was removed after diagnosis.
+
+## Release rule
+
+The product must remain in development/validation state until all release-critical gates have current execution evidence. A source change, green-looking YAML, or an artifact that was not produced by a verified gate is not proof of production readiness.
