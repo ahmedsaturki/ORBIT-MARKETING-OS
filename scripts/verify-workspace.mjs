@@ -245,6 +245,33 @@ for (const sourceRoot of productionRoots) {
   await scanProductionSource(sourceRoot);
 }
 
+const tauriCommandDefinitions = [];
+for (const entry of rustSources) {
+  tauriCommandDefinitions.push(
+    ...[...entry.content.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map((match) => ({
+      name: match[1],
+      path: relative(root, entry.path),
+    })),
+  );
+}
+
+const registeredHandler = rustSources
+  .map((entry) => entry.content)
+  .filter((content) => content.includes(".invoke_handler(tauri::generate_handler!["))
+  .join("\n");
+
+for (const command of tauriCommandDefinitions) {
+  if (!registeredHandler.includes(command.name)) {
+    throw new Error(
+      "Tauri command definition is not registered in invoke handler: " +
+        command.name +
+        " (" +
+        command.path +
+        ")",
+    );
+  }
+}
+
 const sensitiveDesktopCommands = {
   backup_create: ["owner", "admin"],
   backup_list: ["owner", "admin"],
