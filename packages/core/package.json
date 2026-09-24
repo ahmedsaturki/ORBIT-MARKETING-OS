@@ -13,7 +13,8 @@
     "./connectors": "./src/connectors/index.ts",
     "./audit": "./src/audit/index.ts",
     "./types": "./src/types/index.ts",
-    "./data": "./src/data/index.ts"
+    "./data": "./src/data/index.ts",
+    "./security": "./src/security/index.ts"
   },
   "scripts": {
     "test": "vitest run",

@@ -15,8 +15,8 @@ Status: living document. Maps directly to `docs/ACCEPTANCE_MATRIX_V2.md` SEC-* a
 ## Secret handling
 
 - Local `.env` files are gitignored (`.env.example` documents required keys without values).
-- Encryption at rest for stored secrets is required by SEC-01 (cryptographic tests + restore test) — currently UNVERIFIED pending runtime evidence.
-- Redaction of secrets from logs/analytics is required by SEC-02 — currently UNVERIFIED pending redaction tests + log scan.
+- Encryption at rest for stored secrets (SEC-01) is implemented by `packages/core/src/security/vault.ts` (AES-256-GCM, scrypt-derived key, atomic writes, fail-closed on wrong passphrase/tamper) and verified by `test/security-vault.test.ts` (cryptographic tests + restore test).
+- Redaction of secrets from logs/analytics (SEC-02) is implemented by `packages/core/src/security/redaction.ts`, wired into `server.ts` error/warning logs, and verified by `test/security-redaction.test.ts` (redaction tests + sentinel log scan).
 
 ## Approval and policy gates
 

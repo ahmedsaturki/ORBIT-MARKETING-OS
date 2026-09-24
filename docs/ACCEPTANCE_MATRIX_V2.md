@@ -6,8 +6,8 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 
 | ID | Requirement | Evidence required | Status | Evidence |
 |---|---|---|---|---|
-| SEC-01 | Secrets encrypted at rest | cryptographic tests + restore test | UNVERIFIED | Vault runtime not yet wired |
-| SEC-02 | Secrets excluded from logs/analytics | redaction tests + log scan | UNVERIFIED | Redaction tests pending |
+| SEC-01 | Secrets encrypted at rest | cryptographic tests + restore test | PASS | `src/security/vault.ts` AES-256-GCM + scrypt (N=16384) atomic file vault; `test/security-vault.test.ts` 13 tests: plaintext never on disk, wrong passphrase/tampered-ciphertext/tampered-salt/foreign-file/truncated rejected, restore-from-copy, rollback on failed persist |
+| SEC-02 | Secrets excluded from logs/analytics | redaction tests + log scan | PASS | `src/security/redaction.ts` pattern+deep-key redaction wired into `server.ts` error/warn logs; `test/security-redaction.test.ts` 6 tests incl. sentinel log scan (JWT/AWS/Google/vendor tokens/passwords/URL creds never appear in logger output) |
 | SEC-03 | Renderer capability isolation | Tauri capability review + E2E | UNVERIFIED | Tauri shell not configured |
 | SEC-04 | License tamper detection | mutation/forgery tests | UNVERIFIED | License validator tests pending |
 | DATA-01 | Local SQLite persistence | clean runtime test | PASS | `packages/core/src/data/sqlite.ts` + `test/data-sqlite.test.ts` (WAL db opens, applies migrations, persists across close/reopen, upsert, workspace isolation) |
@@ -39,7 +39,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | OPS-02 | 24h stability | soak-test evidence | UNVERIFIED | Soak run pending |
 | PERF-01 | Startup target | measured benchmark | UNVERIFIED | Benchmark pending |
 | PERF-02 | Memory target | measured benchmark | UNVERIFIED | Benchmark pending |
-| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); 59 tests, clean run ~94% lines / ~84% branches |
+| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); 78 tests, clean run 95.15% lines / 85.66% branches / 96.8% funcs |
 | QA-02 | Critical E2E paths | Playwright report | UNVERIFIED | Playwright suite pending |
 | DOC-01 | User guide matches product | documentation review | PARTIAL | `README.md` covers install/run/scripts; full user guide pending product freeze |
 | DOC-02 | Security model documented | security review | PASS | `docs/SECURITY_MODEL.md` documents trust boundaries, gates, audit chain, release integrity |

@@ -3,6 +3,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import { redactText } from './packages/core/src/security/redaction.js';
+
+// Redact secrets (API keys, tokens, passwords) before anything reaches the logs.
+function describeError(error: unknown): string {
+  if (error instanceof Error) {
+    return redactText(error.stack ?? `${error.name}: ${error.message}`);
+  }
+  return redactText(String(error));
+}
 
 dotenv.config();
 
@@ -108,7 +117,7 @@ app.post('/api/chat', async (req, res) => {
     } catch (modelErr: any) {
       // If gemini-3.1-pro-preview fails due to key tier/quota, fall back to gemini-3.5-flash
       if (chosenModel === 'gemini-3.1-pro-preview') {
-        console.warn('Fallback from gemini-3.1-pro-preview to gemini-3.5-flash:', modelErr?.message);
+        console.warn('Fallback from gemini-3.1-pro-preview to gemini-3.5-flash:', redactText(String(modelErr?.message ?? modelErr)));
         const fallbackResponse = await ai.models.generateContent({
           model: 'gemini-3.5-flash',
           contents,
@@ -126,7 +135,7 @@ app.post('/api/chat', async (req, res) => {
       throw modelErr;
     }
   } catch (error: any) {
-    console.error('Chat API Error:', error);
+    console.error('Chat API Error:', describeError(error));
     return res.status(500).json({
       error: error?.message || 'حدث خطأ أثناء معالجة المحادثة مع الذكاء الاصطناعي',
     });
@@ -207,7 +216,7 @@ app.post('/api/analyze-image', async (req, res) => {
         modelUsed: primaryModel,
       });
     } catch (proErr: any) {
-      console.warn('gemini-3.1-pro-preview vision error, falling back to gemini-3.5-flash:', proErr?.message);
+      console.warn('gemini-3.1-pro-preview vision error, falling back to gemini-3.5-flash:', redactText(String(proErr?.message ?? proErr)));
       // Fallback to gemini-3.5-flash if pro preview requires billing activation
       const fallbackResponse = await ai.models.generateContent({
         model: 'gemini-3.5-flash',
@@ -223,7 +232,7 @@ app.post('/api/analyze-image', async (req, res) => {
       });
     }
   } catch (error: any) {
-    console.error('Image Analysis API Error:', error);
+    console.error('Image Analysis API Error:', describeError(error));
     return res.status(500).json({
       error: error?.message || 'فشل في تحليل الصورة بالذكاء الاصطناعي',
     });
@@ -273,7 +282,7 @@ app.post('/api/generate-content', async (req, res) => {
       modelUsed: 'gemini-3.5-flash',
     });
   } catch (error: any) {
-    console.error('Generate Content API Error:', error);
+    console.error('Generate Content API Error:', describeError(error));
     return res.status(500).json({
       error: error?.message || 'فشل في توليد المحتوى التسويقي',
     });
@@ -314,5 +323,5 @@ async function startServer() {
 }
 
 startServer().catch((err) => {
-  console.error('Failed to start server:', err);
+  console.error('Failed to start server:', describeError(err));
 });
