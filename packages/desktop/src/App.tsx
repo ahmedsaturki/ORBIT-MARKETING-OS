@@ -41,6 +41,16 @@ interface ContactView {
   readonly updated_at: string;
 }
 
+interface ConversationView {
+  readonly id: string;
+  readonly contact_id?: string;
+  readonly platform: string;
+  readonly external_thread_id?: string;
+  readonly status: string;
+  readonly message_count: number;
+  readonly updated_at: string;
+}
+
 interface TaskView {
   readonly id: string;
   readonly campaign_id: string;
@@ -64,6 +74,14 @@ interface AuditView {
   readonly outcome: string;
   readonly actor: string;
   readonly entity_id?: string;
+}
+
+interface MessageView {
+  readonly id: string;
+  readonly conversation_id: string;
+  readonly direction: string;
+  readonly body: string;
+  readonly sent_at: string;
 }
 
 async function callNative<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -97,6 +115,15 @@ export function App(): ReactElement {
   const [taskId, setTaskId] = useState("");
   const [taskIdempotencyKey, setTaskIdempotencyKey] = useState("");
   const [contacts, setContacts] = useState<readonly ContactView[]>([]);
+  const [conversations, setConversations] = useState<readonly ConversationView[]>([]);
+  const [conversationId, setConversationId] = useState("");
+  const [conversationPlatform, setConversationPlatform] = useState("facebook");
+  const [conversationStatus, setConversationStatus] = useState("new");
+  const [externalThreadId, setExternalThreadId] = useState("");
+  const [messageConversationId, setMessageConversationId] = useState("");
+  const [messageDirection, setMessageDirection] = useState("inbound");
+  const [messageBody, setMessageBody] = useState("");
+  const [messages, setMessages] = useState<readonly MessageView[]>([]);
   const [contactId, setContactId] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -169,6 +196,68 @@ export function App(): ReactElement {
       setAuditEntries(await callNative<AuditView[]>("audit_list", { limit: 25 }));
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تحميل سجل التدقيق");
+    }
+  };
+
+  const loadInbox = async (): Promise<void> => {
+    try {
+      const items = await callNative<ConversationView[]>("inbox_list");
+      setConversations(items);
+      setMessageConversationId((current) => current || items[0]?.id || "");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل صندوق المحادثات");
+    }
+  };
+
+  const saveConversation = async (): Promise<void> => {
+    if (!conversationId.trim()) {
+      setError("أدخل معرف المحادثة");
+      return;
+    }
+    try {
+      setError("");
+      await callNative<ConversationView>("conversation_upsert", {
+        id: conversationId.trim(),
+        contact_id: contactId.trim() || null,
+        platform: conversationPlatform,
+        external_thread_id: externalThreadId.trim() || null,
+        status: conversationStatus,
+      });
+      setConversationId("");
+      setExternalThreadId("");
+      await loadInbox();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل حفظ المحادثة");
+    }
+  };
+
+  const saveMessage = async (): Promise<void> => {
+    if (!messageConversationId || !messageBody.trim()) {
+      setError("اختر محادثة واكتب الرسالة");
+      return;
+    }
+    try {
+      setError("");
+      await callNative<MessageView>("message_add", {
+        id: "msg-" + Date.now(),
+        conversation_id: messageConversationId,
+        direction: messageDirection,
+        body: messageBody.trim(),
+      });
+      setMessageBody("");
+      await loadInbox();
+      await loadMessages(messageConversationId);
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل إضافة الرسالة");
+    }
+  };
+
+  const loadMessages = async (id: string): Promise<void> => {
+    try {
+      setMessageConversationId(id);
+      setMessages(await callNative<MessageView[]>("message_list", { conversation_id: id }));
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل الرسائل");
     }
   };
 
@@ -284,6 +373,7 @@ export function App(): ReactElement {
       await loadCampaigns();
       await loadTasks();
       await loadContacts();
+      await loadInbox();
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل فحص التطبيق المحلي");
     }
@@ -542,6 +632,96 @@ export function App(): ReactElement {
             ))}
             {!contacts.length ? <div className="result">لا توجد جهات اتصال.</div> : null}
           </div>
+        </div>
+      </section>
+
+      <section className="card">
+        <h2>Inbox محلي</h2>
+        <p>المحادثات والرسائل تُحفظ محلياً، ويُرفض أي ربط خارج مساحة العمل الحالية.</p>
+        <div className="vault-form">
+          <label>
+            معرف المحادثة
+            <input value={conversationId} onChange={(event) => setConversationId(event.target.value)} placeholder="thread-001" />
+          </label>
+          <label>
+            العميل المرتبط (اختياري)
+            <select value={contactId} onChange={(event) => setContactId(event.target.value)}>
+              <option value="">بدون ربط</option>
+              {contacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.display_name}</option>)}
+            </select>
+          </label>
+          <label>
+            المنصة
+            <select value={conversationPlatform} onChange={(event) => setConversationPlatform(event.target.value)}>
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+              <option value="telegram">Telegram</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="tiktok">TikTok</option>
+            </select>
+          </label>
+          <label>
+            External Thread ID (اختياري)
+            <input value={externalThreadId} onChange={(event) => setExternalThreadId(event.target.value)} />
+          </label>
+          <label>
+            الحالة
+            <select value={conversationStatus} onChange={(event) => setConversationStatus(event.target.value)}>
+              <option value="new">جديدة</option>
+              <option value="interested">مهتم</option>
+              <option value="potential_customer">عميل محتمل</option>
+              <option value="complaint">شكوى</option>
+              <option value="closed">مغلقة</option>
+            </select>
+          </label>
+          <button className="button primary" type="button" onClick={() => void saveConversation()}>حفظ المحادثة</button>
+        </div>
+
+        <div className="account-list">
+          {conversations.slice(0, 10).map((conversation) => (
+            <button className="account-row" type="button" key={conversation.id} onClick={() => void loadMessages(conversation.id)}>
+              <div>
+                <strong>{conversation.platform} • {conversation.id}</strong>
+                <div className="account-meta">{conversation.status} • {conversation.message_count} رسائل</div>
+              </div>
+            </button>
+          ))}
+          {!conversations.length ? <div className="result">لا توجد محادثات محلية.</div> : null}
+        </div>
+
+        <div className="vault-form">
+          <label>
+            المحادثة المحددة
+            <select value={messageConversationId} onChange={(event) => void loadMessages(event.target.value)}>
+              <option value="">اختر محادثة</option>
+              {conversations.map((conversation) => <option key={conversation.id} value={conversation.id}>{conversation.id}</option>)}
+            </select>
+          </label>
+          <label>
+            اتجاه الرسالة
+            <select value={messageDirection} onChange={(event) => setMessageDirection(event.target.value)}>
+              <option value="inbound">واردة</option>
+              <option value="outbound">صادرة</option>
+            </select>
+          </label>
+          <label>
+            الرسالة
+            <textarea value={messageBody} onChange={(event) => setMessageBody(event.target.value)} rows={3} />
+          </label>
+          <button className="button primary" type="button" onClick={() => void saveMessage()}>إضافة رسالة</button>
+        </div>
+
+        <div className="account-list">
+          {messages.slice(-10).map((message) => (
+            <div className="account-row" key={message.id}>
+              <div>
+                <strong>{message.direction === "inbound" ? "واردة" : "صادرة"}</strong>
+                <div className="account-meta">{message.sent_at}</div>
+                <div className="result">{message.body}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
