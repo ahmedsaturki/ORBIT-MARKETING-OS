@@ -24,8 +24,16 @@ The runner should end in a connected/listening state before it can accept the wo
 
 Before the verification workflow can run, generate and commit the real lockfile once:
 
+Windows PowerShell:
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\\scripts\\bootstrap-lockfile.ps1
+```
+
+Linux / WSL / macOS:
+
+```bash
+bash ./scripts/bootstrap-lockfile.sh
 ```
 
 Review `pnpm-lock.yaml` and commit it to the rebuild branch. Do not hand-write or fabricate the lockfile.
