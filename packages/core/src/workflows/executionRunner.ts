@@ -87,7 +87,7 @@ export class ExecutionRunner {
     if (input.task.kind !== "sync" && !input.userConfirmed) {
       return {
         status: "blocked",
-        reason: "authorization_required",
+        reason: "user_confirmation_required",
         message: "Explicit user confirmation is required before any external action.",
       };
     }
