@@ -113,6 +113,15 @@ interface MessageView {
   readonly body: string;
   readonly sent_at: string;
 }
+
+interface TelegramExecutionView {
+  readonly task_id: string;
+  readonly status: string;
+  readonly external_message_id: number | null;
+  readonly message: string;
+  readonly retry_at: string | null;
+}
+
 interface LicenseStatus {
   readonly installed: boolean;
   readonly valid: boolean;
@@ -170,6 +179,8 @@ export function App(): ReactElement {
   const [taskKind, setTaskKind] = useState("publish");
   const [taskId, setTaskId] = useState("");
   const [taskIdempotencyKey, setTaskIdempotencyKey] = useState("");
+  const [taskDestinationId, setTaskDestinationId] = useState("");
+  const [executionMessage, setExecutionMessage] = useState("");
   const [contacts, setContacts] = useState<readonly ContactView[]>([]);
   const [conversations, setConversations] = useState<readonly ConversationView[]>([]);
   const [conversationId, setConversationId] = useState("");
@@ -380,6 +391,11 @@ export function App(): ReactElement {
         setError("اختر محتوى للمهمة الخارجية");
         return;
       }
+      const destination = taskDestinationId.trim() || null;
+      if (taskKind !== "sync" && !destination) {
+        setError("أدخل معرّف وجهة المهمة الخارجية");
+        return;
+      }
       await callNative<TaskView>("task_enqueue", {
         id: taskId.trim() || "task-" + Date.now(),
         campaign_id: taskCampaignId,
@@ -391,9 +407,11 @@ export function App(): ReactElement {
         max_attempts: 3,
         idempotency_key: taskIdempotencyKey.trim() || null,
         content_id: content,
+        destination_id: destination,
       });
       setTaskId("");
       setTaskIdempotencyKey("");
+      setTaskDestinationId("");
       await loadTasks();
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل إضافة المهمة");
@@ -417,6 +435,35 @@ export function App(): ReactElement {
       await loadTasks();
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تسجيل فشل المهمة");
+    }
+  };
+
+  const executeTelegramTask = async (taskId: string): Promise<void> => {
+    if (!password) {
+      setError("أدخل كلمة مرور الخزنة قبل تنفيذ Telegram");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "سيتم إرسال المهمة إلى Telegram الآن. تأكد أن المحتوى والوجهة صحيحان. هل تريد المتابعة؟",
+    );
+    if (!confirmed) return;
+
+    try {
+      setError("");
+      setExecutionMessage("جاري تنفيذ مهمة Telegram...");
+      const result = await callNative<TelegramExecutionView>("telegram_execute_task", {
+        task_id: taskId,
+        vault_password: password,
+        user_confirmed: true,
+      });
+      setExecutionMessage(result.message);
+      await loadTasks();
+      await loadAccounts();
+    } catch (caught: unknown) {
+      setExecutionMessage("");
+      setError(caught instanceof Error ? caught.message : "فشل تنفيذ Telegram");
+      await loadTasks();
     }
   };
 
@@ -989,6 +1036,16 @@ export function App(): ReactElement {
                 </select>
               </label>
             ) : null}
+            {taskKind !== "sync" ? (
+              <label>
+                معرّف وجهة المهمة
+                <input
+                  value={taskDestinationId}
+                  onChange={(event) => setTaskDestinationId(event.target.value)}
+                  placeholder="مثال Telegram chat_id"
+                />
+              </label>
+            ) : null}
             <label>
               معرف المهمة (اختياري)
               <input value={taskId} onChange={(event) => setTaskId(event.target.value)} placeholder="task-001" />
@@ -1003,6 +1060,7 @@ export function App(): ReactElement {
               <button className="button secondary" type="button" onClick={() => void loadTasks()}>تحديث</button>
             </div>
           </div>
+          {executionMessage ? <div className="notice success">{executionMessage}</div> : null}
           <div className="account-list">
             {tasks.slice(0, 10).map((task) => (
               <div className="account-row" key={task.id}>
@@ -1010,15 +1068,26 @@ export function App(): ReactElement {
                   <strong>{task.kind} • {task.platform}</strong>
                   <div className="account-meta">{task.status} • {task.attempts}/{task.max_attempts} • أولوية {task.priority} • {task.idempotency_key}</div>
                 </div>
-                {task.status === "running" ? (
-                  <button
-                    className="button danger"
-                    type="button"
-                    onClick={() => void failTask(task.id)}
-                  >
-                    تسجيل فشل / إعادة المحاولة
-                  </button>
-                ) : null}
+                <div className="actions">
+                  {task.status === "running" && task.platform === "telegram" ? (
+                    <button
+                      className="button primary"
+                      type="button"
+                      onClick={() => void executeTelegramTask(task.id)}
+                    >
+                      تنفيذ Telegram
+                    </button>
+                  ) : null}
+                  {task.status === "running" ? (
+                    <button
+                      className="button danger"
+                      type="button"
+                      onClick={() => void failTask(task.id)}
+                    >
+                      تسجيل فشل / إعادة المحاولة
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ))}
             {!tasks.length ? <div className="result">لا توجد مهام محفوظة.</div> : null}
