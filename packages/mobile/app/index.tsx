@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { fetchRuntimeHealth } from "../src/services/runtimeClient";
@@ -25,7 +26,13 @@ export default function HomeScreen(): JSX.Element {
       return;
     }
     await AsyncStorage.setItem(ENDPOINT_KEY, clean);
-    await AsyncStorage.setItem("orbit.runtime.auth", authToken.trim());
+    const token = authToken.trim();
+    if (token) {
+      await SecureStore.setItemAsync("orbit.runtime.auth", token);
+    } else {
+      await SecureStore.deleteItemAsync("orbit.runtime.auth");
+    }
+    await AsyncStorage.removeItem("orbit.runtime.auth");
     setStatus("جاري فحص runtime...");
     try {
       const result = await fetchRuntimeHealth(clean, authToken);
