@@ -6,6 +6,7 @@ export interface CampaignTaskTemplate {
   readonly maxAttempts?: number;
   readonly availableAt?: string;
   readonly contentId?: string;
+  readonly destinationId?: string;
 }
 
 /**
@@ -72,6 +73,7 @@ export function buildCampaignTasks(
       platform,
       kind: template.taskKind,
       ...(contentId ? { contentId } : {}),
+      ...(template.destinationId ? { destinationId: template.destinationId } : {}),
       priority,
       status: "pending",
       attempts: 0,
