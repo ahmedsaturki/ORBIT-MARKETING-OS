@@ -1,4 +1,4 @@
-export const DATABASE_SCHEMA_VERSION = 2;
+export const DATABASE_SCHEMA_VERSION = 3;
 
 export const DATABASE_SCHEMA_SQL = `
 PRAGMA foreign_keys = ON;
@@ -133,7 +133,9 @@ CREATE TABLE IF NOT EXISTS audit_events (
   outcome TEXT NOT NULL,
   actor TEXT NOT NULL,
   entity_id TEXT,
-  metadata_json TEXT
+  metadata_json TEXT,
+  previous_hash TEXT NOT NULL DEFAULT 'GENESIS',
+  hash TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_accounts_workspace ON accounts(workspace_id);
