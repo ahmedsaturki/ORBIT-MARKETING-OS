@@ -38,6 +38,7 @@ jobs:
 
   build:
     name: Build ${{ matrix.os }}
+    needs: quality
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -138,4 +139,4 @@ jobs:
         run: |
           mapfile -d '' ASSETS < <(find release-assets -type f ! -name 'SHA256SUMS.txt' -print0)
           test "${#ASSETS[@]}" -gt 0
-          gh release create "${GITHUB_REF_NAME}"             --title "ORBIT Marketing OS ${GITHUB_REF_NAME}"             --generate-notes             release-assets/SHA256SUMS.txt             "${ASSETS[@]}"
+          gh release create "${GITHUB_REF_NAME}"             --title "ORBIT Marketing OS ${{ github.ref_name }} — validation build"             --prerelease --generate-notes             release-assets/SHA256SUMS.txt             "${ASSETS[@]}"
