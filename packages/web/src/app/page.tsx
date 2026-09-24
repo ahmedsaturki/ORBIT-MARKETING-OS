@@ -20,6 +20,7 @@ export default function HomePage(): JSX.Element {
             <Link href="/legal/privacy/">الخصوصية</Link>
             <Link href="/legal/terms/">الشروط</Link>
             <Link href="/legal/refunds/">الاسترداد</Link>
+            <Link href="/legal/eula/">EULA</Link>
           </nav>
         </div>
       </header>
