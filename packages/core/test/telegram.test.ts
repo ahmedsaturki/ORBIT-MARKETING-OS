@@ -70,7 +70,8 @@ describe("TelegramConnector", () => {
       apiBaseUrl: "https://telegram.test",
     });
 
-    const result = await connector.execute((() => { const { destinationId: _destinationId, ...withoutDestination } = task; return withoutDestination; })(), {
+    const { destinationId: _destinationId, ...taskWithoutDestination } = task;
+    const result = await connector.execute(taskWithoutDestination, {
       accountId: "account-1",
       userConfirmed: true,
     });
