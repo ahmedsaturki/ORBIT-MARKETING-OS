@@ -58,6 +58,7 @@ if (webPackage.scripts?.["lint"]?.includes("next lint")) {
 }
 
 await assertFile("packages/web/eslint.config.mjs");
+await assertFile("packages/mobile/test/runtimeClient.test.ts");
 const webEslint = await readJson("packages/web/package.json");
 if (!webEslint.devDependencies?.eslint || !webEslint.devDependencies?.["eslint-config-next"]) {
   throw new Error("Web ESLint dependencies are incomplete");
