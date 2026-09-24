@@ -17,7 +17,8 @@
     "verify:workspace": "node scripts/verify-workspace.mjs",
     "runtime:dev": "tsx server.ts",
     "runtime:start": "tsx server.ts",
-    "test:runtime": "node scripts/runtime-smoke.mjs"
+    "test:runtime": "node scripts/runtime-smoke.mjs",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
@@ -33,7 +34,8 @@
     "@types/react-dom": "19.2.0",
     "next": "16.3.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "@playwright/test": "1.63.0"
   },
   "dependencies": {
     "express": "5.2.1",
