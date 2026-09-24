@@ -299,8 +299,8 @@ async function startServer(): Promise<void> {
     });
   }
 
-  app.listen(PORT, () => {
-    process.stdout.write(`Orbit Marketing OS local runtime listening on ${PORT}\n`);
+  app.listen(PORT, RUNTIME_HOST, () => {
+    process.stdout.write(`Orbit Marketing OS local runtime listening on ${RUNTIME_HOST}:${PORT}\n`);
   });
 }
 
