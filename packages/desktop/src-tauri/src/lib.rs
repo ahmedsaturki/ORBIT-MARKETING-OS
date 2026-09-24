@@ -1066,6 +1066,10 @@ pub(crate) fn require_workspace_role_for_module(
         .map_err(|error| error.to_string())
 }
 
+pub(crate) fn active_workspace_id_for_module() -> String {
+    active_workspace_id()
+}
+
 fn validate_label(label: &str) -> Result<String, AppError> {
     let value = label.trim();
     if value.is_empty() || value.len() > 200 {
