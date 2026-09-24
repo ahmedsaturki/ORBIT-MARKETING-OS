@@ -1,4 +1,5 @@
 import express from "express";
+import { timingSafeEqual } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
@@ -12,6 +13,51 @@ const app = express();
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
 const RUNTIME_HOST = process.env.RUNTIME_HOST ?? "127.0.0.1";
 const RUNTIME_AUTH_TOKEN = (process.env.RUNTIME_AUTH_TOKEN ?? "").trim();
+const RUNTIME_ALLOWED_ORIGINS = new Set(
+  (process.env.RUNTIME_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+);
+const RUNTIME_RATE_WINDOW_MS = 60_000;
+const RUNTIME_RATE_LIMIT = Number.parseInt(process.env.RUNTIME_RATE_LIMIT ?? "60", 10);
+const runtimeRate = new Map<string, { windowStart: number; count: number }>();
+
+function clientAddress(req: express.Request): string {
+  return req.socket.remoteAddress ?? "unknown";
+}
+
+function isRateLimited(req: express.Request): boolean {
+  const now = Date.now();
+  const key = clientAddress(req);
+  const current = runtimeRate.get(key);
+  if (!current || now - current.windowStart >= RUNTIME_RATE_WINDOW_MS) {
+    runtimeRate.set(key, { windowStart: now, count: 1 });
+    if (runtimeRate.size > 1024) {
+      for (const [entryKey, entry] of runtimeRate) {
+        if (now - entry.windowStart >= RUNTIME_RATE_WINDOW_MS) runtimeRate.delete(entryKey);
+      }
+    }
+    return false;
+  }
+  current.count += 1;
+  return current.count > RUNTIME_RATE_LIMIT;
+}
+
+function tokensEqual(expected: string, supplied: string): boolean {
+  const expectedBytes = Buffer.from(expected);
+  const suppliedBytes = Buffer.from(supplied);
+  return (
+    expectedBytes.length === suppliedBytes.length &&
+    timingSafeEqual(expectedBytes, suppliedBytes)
+  );
+}
+
+function originAllowed(req: express.Request): boolean {
+  const origin = req.header("origin");
+  if (!origin || RUNTIME_ALLOWED_ORIGINS.size === 0) return true;
+  return RUNTIME_ALLOWED_ORIGINS.has(origin);
+}
 
 function isLoopbackHost(host: string): boolean {
   return host === "127.0.0.1" || host === "::1" || host === "localhost";
@@ -22,13 +68,27 @@ function runtimeAuthRequired(): boolean {
 }
 
 function authorizeRuntime(req: express.Request, res: express.Response): boolean {
+  if (!originAllowed(req)) {
+    res.status(403).json({ error: "Origin is not allowed for this runtime." });
+    return false;
+  }
+
+  if (isRateLimited(req)) {
+    res.status(429).json({
+      error: "Runtime request limit reached. Try again later.",
+      retryAfterSeconds: 60,
+    });
+    return false;
+  }
+
   if (!runtimeAuthRequired()) return true;
   if (!RUNTIME_AUTH_TOKEN) {
     res.status(503).json({ error: "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback." });
     return false;
   }
-  const supplied = req.header("authorization");
-  if (supplied !== `Bearer ${RUNTIME_AUTH_TOKEN}`) {
+  const supplied = req.header("authorization") ?? "";
+  const prefix = "Bearer ";
+  if (!supplied.startsWith(prefix) || !tokensEqual(RUNTIME_AUTH_TOKEN, supplied.slice(prefix.length))) {
     res.status(401).json({ error: "Unauthorized runtime request" });
     return false;
   }
@@ -39,6 +99,7 @@ app.use("/api", (req, res, next) => {
   if (authorizeRuntime(req, res)) next();
 });
 const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").replace(/\/$/, "");
+
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.1:8b";
 const OLLAMA_FAST_MODEL = process.env.OLLAMA_FAST_MODEL ?? OLLAMA_MODEL;
 const OLLAMA_REASONING_MODEL = process.env.OLLAMA_REASONING_MODEL ?? OLLAMA_MODEL;
