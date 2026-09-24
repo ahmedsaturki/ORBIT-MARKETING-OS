@@ -2,5 +2,6 @@
   "framework": "nextjs",
   "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm build",
-  "outputDirectory": "out"
+  "outputDirectory": "out",
+  "ignoreCommand": "if [ ! -f pnpm-lock.yaml ]; then echo 'Skipping Vercel build: committed pnpm-lock.yaml is required.'; exit 0; fi; "
 }
