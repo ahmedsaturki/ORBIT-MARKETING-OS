@@ -2151,6 +2151,7 @@ fn workspace_select(app: tauri::AppHandle, id: String) -> Result<WorkspaceView, 
     Ok(workspace)
 }
 
+#[tauri::command]
 fn app_health(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     open_db(&app)
         .map(|_| serde_json::json!({"status":"ok","database":"ready"}))
