@@ -109,13 +109,11 @@ for (const command of ["workspace_list", "workspace_current", "workspace_create"
   }
 }
 
-const workspaceDefaultUses = (rust.match(/DEFAULT_WORKSPACE_ID/g) ?? []).length;
-if (workspaceDefaultUses !== 1) {
-  throw new Error("DEFAULT_WORKSPACE_ID must remain a fallback declaration only");
+const defaultWorkspaceDeclarationCount = (rust.match(/const DEFAULT_WORKSPACE_ID:\s*&str\s*=\s*"default";/g) ?? []).length;
+if (defaultWorkspaceDeclarationCount !== 1) {
+  throw new Error("DEFAULT_WORKSPACE_ID must have exactly one declaration");
 }
 
-const desktopPackageText = await readFile(join(root, "packages/desktop/package.json"), "utf8");
-const desktopPackage = JSON.parse(desktopPackageText);
 if (!desktopPackage.dependencies?.["@orbit/core"]) {
   throw new Error("Desktop must consume @orbit/core through the workspace dependency");
 }
