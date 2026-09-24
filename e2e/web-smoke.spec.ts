@@ -29,7 +29,7 @@ test("legal pages are reachable from navigation", async ({ page }) => {
 });
 
 test("static server rejects traversal attempts", async ({ request }) => {
-  const response = await request.get("/../package.json");
+  const response = await request.get("/%2e%2e/package.json");
   expect([400, 404]).toContain(response.status());
   const body = await response.text();
   expect(body).not.toContain('"scripts"');
