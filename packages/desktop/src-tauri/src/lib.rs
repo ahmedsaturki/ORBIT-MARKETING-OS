@@ -1,3 +1,5 @@
+mod license;
+
 use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Key, Nonce,
@@ -1795,7 +1797,10 @@ pub fn run() {
             inbox_list,
             message_list,
             audit_list,
-            audit_verify
+            audit_verify,
+            license::license_install,
+            license::license_status,
+            license::license_delete
         ])
         .run(tauri::generate_context!());
 
