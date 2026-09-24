@@ -1,0 +1,91 @@
+name: Self-Hosted Verification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orbit-self-hosted-verification
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Full verification on owned runner
+    runs-on: [self-hosted, orbit, x64]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify host toolchain
+        shell: bash
+        run: |
+          node --version
+          pnpm --version
+          test "$(pnpm --version)" = "10.17.1"
+          rustc --version
+          cargo --version
+
+      - name: Install dependencies reproducibly
+        shell: bash
+        run: |
+          test -f pnpm-lock.yaml
+          pnpm install --frozen-lockfile
+
+      - name: Workspace sanity
+        shell: bash
+        run: pnpm verify:workspace
+
+      - name: Typecheck
+        shell: bash
+        run: pnpm typecheck
+
+      - name: Lint
+        shell: bash
+        run: pnpm lint
+
+      - name: Unit and integration tests
+        shell: bash
+        run: pnpm test
+
+      - name: Core coverage
+        shell: bash
+        run: pnpm --filter @orbit/core test:coverage
+
+      - name: Runtime smoke
+        shell: bash
+        run: pnpm test:runtime
+
+      - name: Build
+        shell: bash
+        run: pnpm build
+
+      - name: Browser E2E
+        shell: bash
+        run: |
+          pnpm exec playwright install chromium
+          pnpm test:e2e
+
+      - name: Format check
+        shell: bash
+        run: pnpm format:check
+
+      - name: Rust format/check/test/clippy
+        shell: bash
+        working-directory: packages/desktop/src-tauri
+        run: |
+          cargo fmt --all -- --check
+          cargo check --workspace --all-targets
+          cargo test --workspace --all-targets
+          cargo clippy --workspace --all-targets -- -D warnings
