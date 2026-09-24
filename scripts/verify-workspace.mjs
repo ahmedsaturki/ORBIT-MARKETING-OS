@@ -550,8 +550,11 @@ const workflowFiles = [
   ".github/workflows/bootstrap-lockfile.yml",
 ];
 const selfHostedWorkflow = await readFile(join(root, ".github/workflows/self-hosted-verify.yml"), "utf8");
-if (!selfHostedWorkflow.includes("github.ref_name == 'rebuild/orbit-production'")) {
-  throw new Error("Self-hosted verification must be restricted to rebuild/orbit-production");
+if (
+  !selfHostedWorkflow.includes("github.ref_name == 'rebuild/orbit-production'") ||
+  !selfHostedWorkflow.includes("rebuild/orbit-production-consolidated")
+) {
+  throw new Error("Self-hosted verification must be restricted to approved production rebuild refs");
 }
 if (!selfHostedWorkflow.includes("github.actor == 'ahmedsaturki'")) {
   throw new Error("Self-hosted verification must be owner-restricted");
