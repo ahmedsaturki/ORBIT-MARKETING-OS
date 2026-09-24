@@ -210,6 +210,16 @@ export function App(): ReactElement {
     }
   };
 
+  const failTask = async (id: string): Promise<void> => {
+    try {
+      setError("");
+      await callNative<TaskView>("task_fail", { id, now: new Date().toISOString() });
+      await loadTasks();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تسجيل فشل المهمة");
+    }
+  };
+
   const loadAudit = async (): Promise<void> => {
     try {
       setAuditEntries(await callNative<AuditView[]>("audit_list", { limit: 25 }));
@@ -654,6 +664,15 @@ export function App(): ReactElement {
                   <strong>{task.kind} • {task.platform}</strong>
                   <div className="account-meta">{task.status} • {task.attempts}/{task.max_attempts} • أولوية {task.priority} • {task.idempotency_key}</div>
                 </div>
+                {task.status === "running" ? (
+                  <button
+                    className="button danger"
+                    type="button"
+                    onClick={() => void failTask(task.id)}
+                  >
+                    تسجيل فشل / إعادة المحاولة
+                  </button>
+                ) : null}
               </div>
             ))}
             {!tasks.length ? <div className="result">لا توجد مهام محفوظة.</div> : null}
