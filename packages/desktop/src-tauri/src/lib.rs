@@ -1081,11 +1081,23 @@ async fn telegram_execute_task(
 #[tauri::command]
 fn workspace_list(app: tauri::AppHandle) -> Result<Vec<WorkspaceView>, String> {
     let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role(
+        &connection,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+    let user_id = local_user_id(&connection).map_err(|error| error.to_string())?;
     let mut statement = connection
-        .prepare("SELECT id, name, created_at FROM workspaces ORDER BY created_at ASC, id ASC")
+        .prepare(
+            "SELECT w.id, w.name, w.created_at
+             FROM workspaces w
+             JOIN workspace_memberships m ON m.workspace_id=w.id
+             WHERE m.user_id=?1 AND m.active=1
+             ORDER BY w.created_at ASC, w.id ASC",
+        )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map([], |row| {
+        .query_map(params![user_id], |row| {
             Ok(WorkspaceView {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -1139,6 +1151,15 @@ fn workspace_create(
         )
         .map_err(|error| error.to_string())?;
 
+    let user_id = local_user_id(&connection).map_err(|error| error.to_string())?;
+    connection
+        .execute(
+            "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+             VALUES (?1, ?2, 'owner', 1, ?3)",
+            params![workspace_id, user_id, created_at],
+        )
+        .map_err(|error| error.to_string())?;
+
     Ok(WorkspaceView {
         id: workspace_id,
         name,
@@ -1151,10 +1172,14 @@ fn workspace_select(app: tauri::AppHandle, id: String) -> Result<WorkspaceView, 
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role(&connection, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    let user_id = local_user_id(&connection).map_err(|error| error.to_string())?;
     let workspace = connection
         .query_row(
-            "SELECT id, name, created_at FROM workspaces WHERE id=?1",
-            params![id],
+            "SELECT w.id, w.name, w.created_at
+             FROM workspaces w
+             JOIN workspace_memberships m ON m.workspace_id=w.id
+             WHERE w.id=?1 AND m.user_id=?2 AND m.active=1",
+            params![id, user_id],
             |row| {
                 Ok(WorkspaceView {
                     id: row.get(0)?,
@@ -1167,7 +1192,7 @@ fn workspace_select(app: tauri::AppHandle, id: String) -> Result<WorkspaceView, 
         .map_err(|error| error.to_string())?;
 
     let Some(workspace) = workspace else {
-        return Err("workspace not found".to_string());
+        return Err("workspace not found or not accessible".to_string());
     };
 
     connection
