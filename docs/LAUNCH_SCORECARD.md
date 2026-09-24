@@ -26,7 +26,7 @@ Legend:
 | Local AI defaults | IMPLEMENTED | llama3.2:3b default, bounded OLLAMA_NUM_CTX=4096 |
 | Runtime AI smoke | IMPLEMENTED | Fake-Ollama contract added to runtime smoke |
 | Clean install | UNVERIFIED | Requires clean checkout execution and lockfile evidence |
-| Typecheck/lint/tests/build | BLOCKED | GitHub hosted runner currently fails before steps |
+| Typecheck/lint/tests/build | BLOCKED | GitHub hosted runner currently fails before steps; zero-cost self-hosted verification workflow is available |
 | Rust fmt/test/clippy | BLOCKED | Same runner-allocation failure |
 | Native SQLite integration | UNVERIFIED | Tests exist; no clean runtime execution evidence yet |
 | Connector real-platform E2E | UNVERIFIED | Telegram path exists; controlled live integration evidence still required |
@@ -42,6 +42,10 @@ Legend:
 ## Current infrastructure blocker
 
 GitHub Actions jobs for the rebuild branch are being created but can fail before the first step is registered, with no runner allocation metadata. A minimal runner probe reproduced the same behavior and was removed after diagnosis.
+
+## Zero-cost verification fallback
+
+A manual self-hosted verification workflow is available at `.github/workflows/self-hosted-verify.yml`. It requires a real committed lockfile before execution.
 
 ## Release rule
 
