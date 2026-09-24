@@ -1,6 +1,7 @@
 name: Rebuild Rust
 
 on:
+  workflow_dispatch:
   push:
     branches: ["main", "rebuild/**"]
   pull_request:
