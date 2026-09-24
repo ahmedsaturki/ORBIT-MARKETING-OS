@@ -10,7 +10,7 @@ Updated: 2026-09-24
 | Facebook | yes | yes | yes | no | UNVERIFIED |
 | Instagram | yes | yes | yes | no | UNVERIFIED |
 | WhatsApp | yes | yes | yes | no | UNVERIFIED |
-| LinkedIn | yes | yes | yes | no | UNVERIFIED |
+| LinkedIn | yes | yes | yes | yes | UNVERIFIED |
 | TikTok | yes | yes | yes | no | UNVERIFIED |
 
 ## Connector rules
