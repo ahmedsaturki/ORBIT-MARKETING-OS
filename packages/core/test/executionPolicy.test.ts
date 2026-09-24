@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { evaluateExecutionPolicy } from "../src/workflows/executionPolicy.js";
-import type { Campaign, SocialAccount, Task } from "../src/types/index.js";
+import type { Campaign, ContentItem, SocialAccount, Task } from "../src/types/index.js";
 
 const account: SocialAccount = {
   id: "account-1",
@@ -96,7 +96,10 @@ describe("execution policy", () => {
   });
 
   it("requires content linkage for publish tasks", () => {
-    const { contentId: _contentId, ...taskWithoutContent } = task;
+    const { contentId: _contentId, ...taskWithoutContent } = {
+      ...context.task,
+      destinationId: "destination-1",
+    };
     const decision = evaluateExecutionPolicy({
       ...context,
       approval: {
