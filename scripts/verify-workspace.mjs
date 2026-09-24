@@ -539,6 +539,12 @@ if (!bootstrapWorkflow.includes("contents: write")) {
 if (!bootstrapWorkflow.includes("git push origin \"HEAD:${GITHUB_REF_NAME}\"")) {
   throw new Error("Lockfile bootstrap must push only the selected branch");
 }
+if (!bootstrapWorkflow.includes("github.actor == 'ahmedsaturki'")) {
+  throw new Error("Lockfile bootstrap must be owner-restricted");
+}
+if (!selfHostedWorkflow.includes("github.actor == 'ahmedsaturki'")) {
+  throw new Error("Self-hosted verification must be owner-restricted");
+}
 
 const selfHostedWorkflow = await readFile(join(root, ".github/workflows/self-hosted-verify.yml"), "utf8");
 if (!selfHostedWorkflow.includes("github.ref_name == 'rebuild/orbit-production'")) {
@@ -555,6 +561,12 @@ for (const workflow of workflowFiles) {
   }
   if (/uses:\s*[^\s@]+\/[^\s@]+@v\d+(?:\.\d+)*(?:\s|$)/m.test(content)) {
     throw new Error("Floating GitHub Action reference detected in " + workflow);
+  }
+  for (const line of content.split("\n")) {
+    const match = line.match(/^\s*-?\s*uses:\s*([^@\s]+)@([^\s#]+)/);
+    if (match && !/^[0-9a-f]{40}$/.test(match[2])) {
+      throw new Error("GitHub Action must be pinned to a full commit SHA: " + workflow + ": " + match[1]);
+    }
   }
 }
 await assertFile("rust-toolchain.toml");
