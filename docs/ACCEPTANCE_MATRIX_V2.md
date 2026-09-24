@@ -16,6 +16,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | QUE-01 | Persistent queue | restart/recovery test |
 | QUE-02 | Bounded retries | deterministic retry tests |
 | QUE-03 | Circuit breaker | fault-injection test |
+| QUE-04 | Human-intervention wait state | task parks and resumes without consuming an attempt |
 | CAMP-01 | Campaign creates tasks | integration test |
 | CAMP-02 | Account membership enforced | negative integration test |
 | CAMP-03 | Approval gates block execution | workflow test |
@@ -27,6 +28,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | SYNC-02 | Concurrent edits converge | Yjs convergence test |
 | BACK-01 | Encrypted backup | backup/restore test |
 | BACK-02 | Corrupt backup rejected | integrity test |
+| BACK-03 | Restore rejects newer/incompatible schema | restore integration test |
 | CONN-01 | Capability handshake | connector contract test |
 | CONN-02 | Unsupported action rejected | negative connector test |
 | CONN-03 | Challenge causes safe stop | browser fixture test |
