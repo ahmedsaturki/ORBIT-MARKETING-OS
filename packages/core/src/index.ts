@@ -1,3 +1,4 @@
+export * from "./access/control.js";
 export * from "./accounts/index.js";
 export * from "./audit/index.js";
 export * from "./backup/index.js";
