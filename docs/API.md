@@ -1,5 +1,14 @@
 # ORBIT API
 
+## Workspace context
+
+- `workspace_list`
+- `workspace_current`
+- `workspace_create`
+- `workspace_select`
+
+The active workspace is persisted locally and is applied to workspace-scoped desktop commands. Sensitive records remain local to the selected workspace context.
+
 ## Local runtime
 
 ### GET /api/health
