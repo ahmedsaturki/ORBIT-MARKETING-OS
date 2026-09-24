@@ -42,6 +42,21 @@ for (const command of registeredCommands) {
   }
 }
 
+const approvalRequestSignature = rust.match(/fn\\s+approval_request\\([\\s\\S]*?\\)\\s*->/);
+if (!approvalRequestSignature || /requested_by\\s*:\s*String/.test(approvalRequestSignature[0])) {
+  throw new Error("approval_request must derive actor identity inside the runtime");
+}
+const approvalDecisionSignature = rust.match(/fn\\s+approval_decide\\([\\s\\S]*?\\)\\s*->/);
+if (!approvalDecisionSignature || /decided_by\\s*:\s*String/.test(approvalDecisionSignature[0])) {
+  throw new Error("approval_decide must derive actor identity inside the runtime");
+}
+if (/approval_request[\\s\\S]{0,800}requested_by:\s*"local-user"/.test(app)) {
+  throw new Error("Desktop UI must not supply requested_by for approval requests");
+}
+if (/approval_decide[\\s\\S]{0,800}decided_by:\s*"local-user"/.test(app)) {
+  throw new Error("Desktop UI must not supply decided_by for approval decisions");
+}
+
 const uiCommands = new Set(
   [...app.matchAll(/(?:callNative|invoke)(?:<[^>]+>)?\(\s*["']([A-Za-z_][A-Za-z0-9_]*)["']/g)].map(
     (match) => match[1],
