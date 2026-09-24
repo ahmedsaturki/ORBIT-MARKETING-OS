@@ -879,7 +879,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         }
     }
 
-    connection.execute_batch("PRAGMA user_version = 8;")?;
+    connection.execute_batch("PRAGMA user_version = 9;")?;
 }
 
 const INTEGRITY_TRIGGERS: &str = r#"
