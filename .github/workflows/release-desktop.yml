@@ -71,6 +71,18 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Build release manifest
+        shell: bash
+        run: |
+          cat > release-assets/RELEASE-MANIFEST.txt <<EOF
+          product=ORBIT Marketing OS
+          version=${GITHUB_REF_NAME}
+          commit=${GITHUB_SHA}
+          source=rebuild/orbit-production
+          build_date=${{ github.event.repository.updated_at }}
+          signing=unsigned
+          EOF
+
       - name: Build checksums
         shell: bash
         run: |
