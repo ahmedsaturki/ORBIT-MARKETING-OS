@@ -45,11 +45,11 @@ Legend:
 
 ## Current infrastructure blocker
 
-The latest rebuild CI run `36050298475` created jobs `107801904537` and `107801904994`; both failed before any workflow step executed with `runner_id=0`, an empty runner name, and `steps=[]`. This is execution-infrastructure evidence, not source-build evidence.
+The latest consolidation CI run `36053293828` created jobs `107813972668` and `107813973170`; both failed before any workflow step executed with no usable step records. Earlier runs in the same series also show the runner allocation pattern. This is execution-infrastructure evidence, not source-build evidence.
 
 ## Zero-cost verification fallback
 
-A manual self-hosted verification workflow is available at `.github/workflows/self-hosted-verify.yml`. A separate branch-restricted lockfile bootstrap workflow is available at `.github/workflows/bootstrap-lockfile.yml`. Both require an actual `self-hosted, x64, linux` runner and the bootstrap flow generates the lockfiles reproducibly.
+A manual self-hosted verification workflow is available at `.github/workflows/self-hosted-verify.yml`. A separate branch-restricted lockfile bootstrap workflow is available at `.github/workflows/bootstrap-lockfile.yml`; both accept the consolidated production rebuild ref. Both require an actual `self-hosted, x64, linux` runner and the bootstrap flow generates the lockfiles reproducibly.
 
 ## Release rule
 
