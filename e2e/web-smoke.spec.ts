@@ -26,6 +26,8 @@ test("legal pages are reachable from navigation", async ({ page }) => {
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/legal/terms/");
   await expect(page.getByRole("heading", { name: "شروط الاستخدام" })).toBeVisible();
+  await page.goto("/legal/refunds/");
+  await expect(page.getByRole("heading", { name: "سياسة الاسترداد" })).toBeVisible();
 });
 
 test("static server rejects traversal attempts", async ({ request }) => {
