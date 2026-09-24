@@ -362,6 +362,9 @@ for (const workflow of workflowFiles) {
   if (content.includes("dtolnay/rust-toolchain@master") || content.includes("dtolnay/rust-toolchain@stable")) {
     throw new Error("Moving Rust toolchain action reference detected: " + workflow);
   }
+  if (/uses:\s*[^\s@]+\/[^\s@]+@v\d+(?:\.\d+)*(?:\s|$)/m.test(content)) {
+    throw new Error("Floating GitHub Action reference detected in " + workflow);
+  }
 }
 await assertFile("rust-toolchain.toml");
 const rustToolchain = await readFile(join(root, "rust-toolchain.toml"), "utf8");
