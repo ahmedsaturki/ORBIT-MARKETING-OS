@@ -13,7 +13,7 @@ The codebase is intentionally not marked production-ready yet. The remaining act
    - `x64`
 4. Confirm the runner is **Idle/Online**.
 5. Run **Actions → Bootstrap Lockfile → Run workflow** on `rebuild/orbit-production`.
-6. Verify that `pnpm-lock.yaml` was committed to the branch.
+6. Verify that both `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` were committed to the branch.
 7. Run **Actions → Self-Hosted Verification → Run workflow**.
 8. Do not promote or merge unless the verification job is green and the release matrix has current evidence.
 
