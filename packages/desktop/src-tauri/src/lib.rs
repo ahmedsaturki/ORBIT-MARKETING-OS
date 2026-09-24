@@ -3968,7 +3968,10 @@ fn backup_restore(
     }
 
     if target.exists() {
-        fs::rename(&target, &previous).map_err(|error| error.to_string())?;
+        if let Err(error) = fs::rename(&target, &previous) {
+            let _ = fs::remove_file(&temporary);
+            return Err(error.to_string());
+        }
     }
 
     if let Err(error) = fs::rename(&temporary, &target) {
@@ -3979,13 +3982,9 @@ fn backup_restore(
         return Err(error.to_string());
     }
 
-    if previous.exists() {
-        fs::remove_file(&previous).map_err(|error| error.to_string())?;
-    }
-
-    restrict_private_file(&target).map_err(|error| error.to_string())?;
-
     let restored_connection_result = (|| -> Result<(), String> {
+        restrict_private_file(&target).map_err(|error| error.to_string())?;
+
         let restored_connection = Connection::open(&target).map_err(|error| error.to_string())?;
         restored_connection
             .execute_batch("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;")
@@ -3996,6 +3995,8 @@ fn backup_restore(
         migrate_schema(&restored_connection).map_err(|error| error.to_string())?;
         create_integrity_triggers(&restored_connection).map_err(|error| error.to_string())?;
         ensure_workspace_context(&restored_connection).map_err(|error| error.to_string())?;
+
+        let runtime_audit = restored_connection.transaction().map_err(|error| error.to_string())?;
         write_audit(
             &restored_connection,
             "backup",
@@ -4005,6 +4006,7 @@ fn backup_restore(
             Some(&filename),
         )
         .map_err(|error| error.to_string())?;
+        runtime_audit.commit().map_err(|error| error.to_string())?;
         Ok(())
     })();
 
