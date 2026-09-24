@@ -3396,14 +3396,12 @@ fn approval_request(
     app: tauri::AppHandle,
     id: String,
     content_id: String,
-    requested_by: String,
     reviewer_ids_json: Option<String>,
     note: Option<String>,
 ) -> Result<ApprovalView, String> {
     let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let content_id = validate_label(&content_id).map_err(|error| error.to_string())?;
-    let requested_by = validate_label(&requested_by).map_err(|error| error.to_string())?;
     let reviewer_ids_json = reviewer_ids_json.unwrap_or_else(|| "[]".to_string());
     let reviewer_ids: Vec<String> = serde_json::from_str(&reviewer_ids_json)
         .map_err(|_| "reviewer_ids_json must be a JSON array".to_string())?;
@@ -3415,7 +3413,7 @@ fn approval_request(
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
-    require_local_user_actor(&connection, &requested_by).map_err(|error| error.to_string())?;
+    let requested_by = local_user_id(&connection).map_err(|error| error.to_string())?;
     require_active_workspace_reviewers(&connection, &workspace_id, &reviewer_ids)
         .map_err(|error| error.to_string())?;
     let exists: bool = connection
@@ -3482,12 +3480,10 @@ fn approval_decide(
     app: tauri::AppHandle,
     id: String,
     status: String,
-    decided_by: String,
     note: Option<String>,
 ) -> Result<ApprovalView, String> {
     let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
-    let decided_by = validate_label(&decided_by).map_err(|error| error.to_string())?;
     let status = validate_content_status(&status).map_err(|error| error.to_string())?;
     if status == "draft" || status == "pending" {
         return Err("approval decision must be approved, rejected, or changes_requested".to_string());
@@ -3495,7 +3491,7 @@ fn approval_decide(
 
     let mut connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
-    require_local_user_actor(&connection, &decided_by).map_err(|error| error.to_string())?;
+    let decided_by = local_user_id(&connection).map_err(|error| error.to_string())?;
     let current: Option<(String, String, String, String, Option<String>)> = connection
         .query_row(
             "SELECT content_id, requested_by, status, reviewer_ids_json, note
