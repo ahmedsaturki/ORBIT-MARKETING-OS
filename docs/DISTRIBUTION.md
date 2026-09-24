@@ -2,7 +2,7 @@
 
 ## Desktop
 
-`release-desktop.yml` builds Windows, Linux, and macOS bundles when a `v*` tag is pushed, but first verifies that the tagged commit belongs to the `rebuild/orbit-production` lineage.
+`release-desktop.yml` builds Windows, Linux, and macOS bundles when a `v*` tag is pushed, but first verifies that the tagged commit belongs to the `main` release lineage.
 
 The current pipeline deliberately produces **unsigned** desktop artifacts. It also verifies the generated checksum manifest before publication. It also generates `SHA256SUMS.txt` so users can verify downloaded files.
 
