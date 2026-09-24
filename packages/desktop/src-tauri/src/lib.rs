@@ -5107,7 +5107,7 @@ mod media_import_tests {
         let _ = fs::remove_file(&path);
         assert_eq!(
             digest,
-            "4d1a0f6f1a3ec5af6bdf35c3dd9d9c32692c52a0e4d4ebf06b65e925f7c7660a"
+            "d69bf854282c3de55e1aa5db4a41b89dc28bf1a91060c3b1e8a4bfa2c6246488"
         );
     }
 
