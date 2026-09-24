@@ -11,7 +11,15 @@ export function calculateRetryDelay(
   if (!Number.isInteger(attempt) || attempt < 1) {
     throw new RangeError("attempt must be a positive integer");
   }
-  if (policy.maxAttempts < 1 || policy.baseDelayMs < 0 || policy.maxDelayMs < policy.baseDelayMs) {
+  if (
+    !Number.isInteger(policy.maxAttempts) ||
+    policy.maxAttempts < 1 ||
+    policy.maxAttempts > 10 ||
+    !Number.isFinite(policy.baseDelayMs) ||
+    policy.baseDelayMs < 0 ||
+    !Number.isFinite(policy.maxDelayMs) ||
+    policy.maxDelayMs < policy.baseDelayMs
+  ) {
     throw new RangeError("invalid retry policy");
   }
 
