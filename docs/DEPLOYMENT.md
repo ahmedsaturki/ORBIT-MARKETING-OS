@@ -30,7 +30,7 @@ A web deployment alone does not make desktop/mobile/product release-ready. Use `
 
 ## Monorepo build filtering
 
-The root `vercel.json` contains an `ignoreCommand` that skips a Web deployment when the commit does not change `packages/web` or the workspace/deployment manifests. This prevents Core/Desktop-only commits from consuming Vercel build concurrency. Vercel project settings should still use `packages/web` as the Root Directory for the dedicated Web project, with Next.js as the framework preset.
+The root `vercel.json` contains an `ignoreCommand` that skips a Web deployment when the commit does not change `packages/web` or the workspace/deployment manifests. This prevents Core/Desktop-only commits from consuming Vercel build concurrency. Vercel project settings should use the repository root as the Root Directory, with Next.js as the framework preset, matching the canonical root `vercel.json`.
 
 ### Dependency resolution policy
 
@@ -40,10 +40,10 @@ The repository does not use an npm-install fallback for release evidence. The ca
 
 For the connected Vercel project orbit-marketing-os, the intended production Web project should use:
 
-- Root Directory: packages/web
+- Root Directory: repository root
 - Framework preset: Next.js
 - Node.js: 22.x
-- Build Command: pnpm build when the Root Directory is packages/web, or the repository-level command defined in vercel.json when the Root Directory remains the repository root.
-- Output Directory: out when the Root Directory is packages/web; packages/web/out when building from the repository root.
+- Build Command: `pnpm --dir packages/web build`
+- Output Directory: `packages/web/out`.
 
 The connected project currently reports a vite framework in its metadata. Until the project-level Root Directory/framework configuration is confirmed as repository root with Next.js, a successful production Web deployment is not considered proven.
