@@ -30,6 +30,10 @@ const requiredFiles = [
   "scripts/vercel-ignore.sh",
   "scripts/vercel-install.sh",
   "scripts/commit-lockfiles.mjs",
+  "scripts/release-sanity.mjs",
+  "scripts/performance-smoke.mjs",
+  "scripts/verify-live-web.mjs",
+  "scripts/self-hosted-preflight.sh",
   "packages/core/test/linkedin.test.ts",
   "packages/core/test/executor.test.ts",
   "e2e/web-smoke.spec.ts",
@@ -104,8 +108,21 @@ if (tauriReleaseConfig.version !== rootPackage.version) {
       ")",
   );
 }
-if (!rootPackage.scripts?.lint || !rootPackage.scripts?.typecheck || !rootPackage.scripts?.test || !rootPackage.scripts?.build) {
-  throw new Error("Root quality scripts are incomplete");
+const requiredRootScripts = {
+  lint: "turbo run lint",
+  typecheck: "turbo run typecheck",
+  test: "turbo run test",
+  build: "turbo run build",
+  "verify:release": "node scripts/release-sanity.mjs",
+  "test:performance": "pnpm exec tsx scripts/performance-smoke.mjs",
+  "test:runtime": "node scripts/runtime-smoke.mjs",
+  "test:e2e": "playwright test",
+  "preflight:runner": "bash scripts/self-hosted-preflight.sh",
+};
+for (const [name, expected] of Object.entries(requiredRootScripts)) {
+  if (rootPackage.scripts?.[name] !== expected) {
+    throw new Error("Root script contract drift detected for " + name);
+  }
 }
 
 const corePackage = await readJson("packages/core/package.json");
