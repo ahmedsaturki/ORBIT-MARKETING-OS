@@ -1,5 +1,9 @@
 name: Mobile Validation Artifact
 
+
+concurrency:
+  group: orbit-.github-workflows-release-mobile.yml-${{ github.ref }}
+  cancel-in-progress: true
 on:
   push:
     tags: ["v*"]
