@@ -76,6 +76,14 @@ export class ExecutionRunner {
       };
     }
 
+    if (!input.userConfirmed) {
+      return {
+        status: "blocked",
+        reason: "authorization_required",
+        message: "Explicit user confirmation is required before any external action.",
+      };
+    }
+
     const connector = this.registry.get(input.task.platform);
     if (!connector) {
       return {
