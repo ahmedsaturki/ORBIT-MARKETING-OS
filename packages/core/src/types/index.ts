@@ -51,6 +51,7 @@ export interface Task {
   readonly accountId: string;
   readonly platform: Platform;
   readonly kind: TaskKind;
+  readonly contentId?: string;
   readonly priority: number;
   readonly status: TaskStatus;
   readonly attempts: number;
