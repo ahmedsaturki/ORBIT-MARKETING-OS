@@ -4389,51 +4389,8 @@ fn backup_restore(
 
     let integrity_connection = Connection::open(&temporary)
         .map_err(|error| error.to_string())?;
-    let integrity = integrity_connection
-        .query_row("PRAGMA integrity_check", [], |row| row.get::<_, String>(0))
-        .map_err(|error| error.to_string())?;
-    if integrity != "ok" {
-        let _ = fs::remove_file(&temporary);
-        return Err("backup integrity check failed".to_string());
-    }
+    prepare_backup_database_for_restore(&integrity_connection)?;
 
-    let foreign_key_error: Option<String> = integrity_connection
-        .query_row(
-            "SELECT message FROM pragma_foreign_key_check LIMIT 1",
-            [],
-            |row| row.get(0),
-        )
-        .optional()
-        .map_err(|error| error.to_string())?;
-    if foreign_key_error.is_some() {
-        let _ = fs::remove_file(&temporary);
-        return Err("backup foreign-key integrity check failed".to_string());
-    }
-
-    let audit_workspaces: Vec<String> = {
-        let mut statement = integrity_connection
-            .prepare("SELECT DISTINCT workspace_id FROM audit_events ORDER BY workspace_id")
-            .map_err(|error| error.to_string())?;
-        let rows = statement
-            .query_map([], |row| row.get::<_, String>(0))
-            .map_err(|error| error.to_string())?;
-        rows.collect::<Result<Vec<_>, _>>()
-            .map_err(|error| error.to_string())?
-    };
-    for audit_workspace_id in audit_workspaces {
-        if !verify_audit_chain(&integrity_connection, &audit_workspace_id)? {
-            let _ = fs::remove_file(&temporary);
-            return Err("backup audit integrity check failed".to_string());
-        }
-    }
-
-    let restored_schema_version: i64 = integrity_connection
-        .query_row("PRAGMA user_version", [], |row| row.get(0))
-        .map_err(|error| error.to_string())?;
-    if restored_schema_version > SCHEMA_VERSION {
-        let _ = fs::remove_file(&temporary);
-        return Err("backup schema version is newer than this application".to_string());
-    }
 
     drop(integrity_connection);
 
@@ -4492,6 +4449,62 @@ fn backup_restore(
 
     fs::remove_file(&previous).map_err(|error| error.to_string())?;
     Ok(true)
+}
+
+fn prepare_backup_database_for_restore(connection: &Connection) -> Result<(), String> {
+    connection
+        .execute_batch("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;")
+        .map_err(|error| error.to_string())?;
+
+    let integrity = connection
+        .query_row("PRAGMA integrity_check", [], |row| row.get::<_, String>(0))
+        .map_err(|error| error.to_string())?;
+    if integrity != "ok" {
+        return Err("backup integrity check failed".to_string());
+    }
+
+    let foreign_key_error: Option<String> = connection
+        .query_row(
+            "SELECT message FROM pragma_foreign_key_check LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    if foreign_key_error.is_some() {
+        return Err("backup foreign-key integrity check failed".to_string());
+    }
+
+    let restored_schema_version: i64 = connection
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .map_err(|error| error.to_string())?;
+    if restored_schema_version > SCHEMA_VERSION {
+        return Err("backup schema version is newer than this application".to_string());
+    }
+
+    connection
+        .execute_batch(SCHEMA)
+        .map_err(|error| error.to_string())?;
+    migrate_schema(connection).map_err(|error| error.to_string())?;
+
+    let audit_workspaces: Vec<String> = {
+        let mut statement = connection
+            .prepare("SELECT DISTINCT workspace_id FROM audit_events ORDER BY workspace_id")
+            .map_err(|error| error.to_string())?;
+        let rows = statement
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|error| error.to_string())?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|error| error.to_string())?
+    };
+
+    for audit_workspace_id in audit_workspaces {
+        if !verify_audit_chain(connection, &audit_workspace_id)? {
+            return Err("backup audit integrity check failed".to_string());
+        }
+    }
+
+    Ok(())
 }
 
 fn audit_hash(
@@ -5514,6 +5527,55 @@ mod tests {
             .expect("migrated task should exist");
         assert_eq!(timestamps.0, "2026-09-24T15:00:00Z");
         assert_eq!(timestamps.1, "2026-09-24T15:00:00Z");
+    }
+
+    #[test]
+    fn backup_validation_migrates_legacy_audit_chain_before_verification() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-legacy', 'Legacy', '2026-09-24T00:00:00Z')",
+                [],
+            )
+            .expect("workspace should be created");
+
+        connection
+            .execute(
+                "INSERT INTO audit_events(
+                   id, workspace_id, timestamp, category, action, outcome, actor,
+                   entity_id, metadata_json, previous_hash, hash
+                 ) VALUES (
+                   'legacy-audit-1', 'workspace-legacy', '2026-09-24T00:00:00Z',
+                   'test', 'legacy', 'success', 'user', NULL, NULL,
+                   'GENESIS', ''
+                 )",
+                [],
+            )
+            .expect("legacy audit event should be created");
+
+        connection
+            .execute_batch("PRAGMA user_version = 2;")
+            .expect("legacy version should be set");
+
+        prepare_backup_database_for_restore(&connection)
+            .expect("legacy backup should migrate before audit verification");
+
+        assert!(verify_audit_chain(&connection, "workspace-legacy")
+            .expect("migrated legacy audit chain should verify"));
+        let hash: String = connection
+            .query_row(
+                "SELECT hash FROM audit_events WHERE id='legacy-audit-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("migrated audit hash should exist");
+        assert_ne!(hash, "");
+        assert_eq!(connection.query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0)).unwrap(), SCHEMA_VERSION);
     }
 
     #[test]
