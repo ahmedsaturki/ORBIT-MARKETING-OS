@@ -266,12 +266,18 @@ if (!rust.includes("UNIQUE(workspace_id, idempotency_key)")) {
 if (!rust.includes("PRAGMA user_version = 10;")) {
   throw new Error("Schema migration must finalize at v10");
 }
-if (!rust.includes("recover_interrupted_tasks(&connection)?;")) {
+if (
+  !rust.includes("recover_interrupted_tasks(&connection)") ||
+  !rust.includes("recover_interrupted_tasks(&connection).map_err")
+) {
   throw new Error("Startup recovery must be wired into application startup");
 }
 const openDbMatch = rust.match(/fn open_db\([\s\S]*?\n\}\n/);
 if (!openDbMatch || openDbMatch[0].includes("recover_interrupted_tasks")) {
-  throw new Error("Startup recovery must not run from every open_db call");
+  throw new Error("Task startup recovery must not run from every open_db call");
+}
+if (!rust.includes("recover_database_before_open(&app_data, &db_path)?;")) {
+  throw new Error("Interrupted backup replacement recovery must run before opening the database");
 }
 
 if (!rust.includes("CREATE TABLE IF NOT EXISTS automation_rule_packs")) {
