@@ -2521,7 +2521,7 @@ fn automation_rule_pack_upsert(
     if schema_version != 1 {
         return Err("unsupported automation rule pack schema".to_string());
     }
-    let parsed = validate_rule_pack_json(&platform, &rules_json)?;
+    validate_rule_pack_json(&platform, &rules_json)?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(
@@ -4878,6 +4878,87 @@ mod content_variant_tests {
             .expect("fallback query");
 
         assert_eq!(body, "base text");
+    }
+}
+
+#[cfg(test)]
+mod media_rule_pack_tests {
+    use super::*;
+
+    #[test]
+    fn media_mime_must_match_kind() {
+        assert!(validate_media_mime("image", "image/png").is_ok());
+        assert!(validate_media_mime("image", "text/plain").is_err());
+        assert!(validate_media_mime("document", "application/pdf").is_ok());
+        assert!(validate_media_mime("document", "video/mp4").is_err());
+    }
+
+    #[test]
+    fn media_sha256_requires_64_hex_characters() {
+        assert_eq!(
+            validate_media_sha256(Some(&"a".repeat(64))).expect("valid digest"),
+            Some("a".repeat(64))
+        );
+        assert!(validate_media_sha256(Some("abcd")).is_err());
+        assert!(validate_media_sha256(Some(&"g".repeat(64))).is_err());
+    }
+
+    #[test]
+    fn rule_pack_validation_enforces_external_confirmation() {
+        let valid = r#"[
+          {
+            "id": "publish",
+            "platform": "telegram",
+            "taskKinds": ["publish"],
+            "enabled": true,
+            "requiresConfirmation": true,
+            "maxAttempts": 3,
+            "timeoutMs": 30000
+          },
+          {
+            "id": "sync",
+            "platform": "telegram",
+            "taskKinds": ["sync"],
+            "enabled": true,
+            "requiresConfirmation": false,
+            "maxAttempts": 1,
+            "timeoutMs": 30000
+          }
+        ]"#;
+        assert!(validate_rule_pack_json("telegram", valid).is_ok());
+
+        let unsafe_rules = valid.replace(
+            ""requiresConfirmation": true",
+            ""requiresConfirmation": false",
+        );
+        assert!(validate_rule_pack_json("telegram", &unsafe_rules).is_err());
+    }
+
+    #[test]
+    fn rule_pack_validation_rejects_platform_mismatch_and_duplicates() {
+        let invalid = r#"[
+          {
+            "id": "publish",
+            "platform": "instagram",
+            "taskKinds": ["publish"],
+            "enabled": true,
+            "requiresConfirmation": true,
+            "maxAttempts": 3,
+            "timeoutMs": 30000
+          },
+          {
+            "id": "publish",
+            "platform": "telegram",
+            "taskKinds": ["publish"],
+            "enabled": true,
+            "requiresConfirmation": true,
+            "maxAttempts": 3,
+            "timeoutMs": 30000
+          }
+        ]"#;
+        let error = validate_rule_pack_json("telegram", invalid)
+            .expect_err("invalid rules should be rejected");
+        assert!(error.contains("rule platform must match"));
     }
 }
 
