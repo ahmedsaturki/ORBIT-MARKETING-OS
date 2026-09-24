@@ -1,0 +1,35 @@
+{
+  "name": "@orbit/mobile",
+  "version": "0.2.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build": "expo export --platform web",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "expo": "^57.0.24",
+    "expo-router": "^57.0.22",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-web": "~0.21.0",
+    "expo-secure-store": "57.0.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "^7.0.2",
+    "tsx": "4.23.15"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  }
+}

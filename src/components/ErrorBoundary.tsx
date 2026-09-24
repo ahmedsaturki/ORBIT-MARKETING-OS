@@ -1,5 +1,6 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import React, { Component } from "react";
+import type { ErrorInfo, ReactNode } from "react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -20,21 +21,21 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error in component:', error, errorInfo);
+  public componentDidCatch(_error: Error, _errorInfo: ErrorInfo): void {
+    // Error details stay in the UI state and are not written to console logs.
   }
 
-  private handleReset = () => {
+  private handleReset = (): void => {
     try {
       localStorage.clear();
-    } catch (e) {
+    } catch {
       // ignore
     }
     this.setState({ hasError: false, error: null });
     window.location.reload();
   };
 
-  public render() {
+  public render(): React.ReactNode {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">

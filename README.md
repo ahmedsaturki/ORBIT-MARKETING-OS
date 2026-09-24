@@ -1,84 +1,69 @@
-# ORBIT Marketing OS
+# ORBIT MARKETING OS
 
-Local-first social operations system: campaigns, inbox, CRM, content studio, automation and approvals in one console.
+Local-first social operations platform for content, campaigns, CRM, inbox workflows, analytics, and user-authorized platform integrations.
 
-> Status: v2 architecture in progress. Core domain logic is under `packages/core` with unit tests. The web console lives in `src/`.
+Current real connector coverage: Telegram has a native API path and LinkedIn has a text-publishing Posts API connector. Both remain release-gated until controlled authorization/runtime evidence exists. Facebook, Instagram, WhatsApp, and TikTok remain contract/fixture surfaces.
 
-## Architecture
+## Repository status
 
-See [docs/PRODUCT_ARCHITECTURE_V2.md](docs/PRODUCT_ARCHITECTURE_V2.md) for planes, invariants and domain modules.
+This repository is under active incremental migration from an initial React/Vite/Express prototype to a production monorepo architecture.
 
-Key invariants:
+The production rebuild branch is:
 
-1. Credentials never enter analytics events.
-2. Renderer never receives unrestricted filesystem/database capabilities.
-3. No automation task executes before policy evaluation.
-4. Every task has a deterministic lifecycle and terminal state.
-5. Connectors expose only capabilities they implement.
-6. Unknown/changing UI states fail closed.
-7. Sync transports carry encrypted application updates, not raw credentials.
-8. Local AI optional; content model provider-independent.
-9. Backup restore verifies integrity before replacing active state.
-10. Releases are immutable, versioned and checksummed.
+`rebuild/orbit-production`
 
-## Prerequisites
+The rebuild is acceptance-driven: implementation is not considered complete until it has automated tests, integration evidence, security checks, performance evidence, documentation, and a releasable artifact where applicable.
 
-- Node.js 20+ (22 recommended)
-- npm 10+
-- `GEMINI_API_KEY` for AI features (see `.env.example`)
+## Product boundary
 
-## Quick start
+The product is designed around local ownership of sensitive data. The desktop/local runtime is the source of truth for private account state, campaigns, task queues, CRM records, and audit records. Native SQLite schema is versioned through v10, including workspace-scoped task idempotency and conservative startup crash recovery.
 
-```bash
-npm install
-npm install --prefix packages/core
-cp .env.example .env   # then set GEMINI_API_KEY
-npm run dev            # http://localhost:3000
-```
+Platform integrations must remain user-authorized and platform-compliant. The product does not implement fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion, or concealed automation.
 
-## Scripts
+## Development
 
-| Command | Purpose |
-|---|---|
-| `npm run dev` | Start dev server with Vite middleware |
-| `npm run build` | Production build to `dist/` |
-| `npm run preview` | Preview production build |
-| `npm run lint` | TypeScript typecheck (no emit) |
-| `npm test --prefix packages/core` | Core unit tests (vitest) |
-| `npm run typecheck --prefix packages/core` | Core typecheck |
-| `npm run checksums` | Write `dist/SHA256SUMS.txt` release evidence |
+Requirements:
 
-## Packages
+- Node.js 22+
+- pnpm 10.17.1
+- Rust stable for the desktop backend
 
-### `packages/core`
-
-Pure TypeScript domain logic (no framework dependencies):
-
-- `workflows` — fail-closed content approval gate
-- `queue` — bounded retries, backoff, execution gate
-- `policy` — policy evaluation + circuit breaker
-- `connectors` — capability handshake, challenge safe-stop
-- `audit` — hash-chained audit log with tamper detection
+Bootstrap:
 
 ```bash
-npm test --prefix packages/core
+bash ./scripts/bootstrap-lockfile.sh
+pnpm install --frozen-lockfile
 ```
 
-## PWA
+Core checks:
 
-Production builds register a service worker (`public/sw.js`) and ship a web app manifest (`public/manifest.webmanifest`) for installability and offline shell caching.
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm format:check
+```
 
-## Security model
+## Quality gates
 
-- Secrets are expected to be handled by the host environment (AI Studio secrets / local `.env`).
-- `.env` is gitignored; only `.env.example` is committed.
-- Automation safety controls (rate budgets, circuit breaker, challenge detection) exist for reliability and policy compliance — not for evading platform enforcement.
-- Audit entries form a SHA-256 hash chain; tampering is detectable.
+A feature is not release-complete merely because its source code exists. Release evidence must cover:
 
-## Acceptance
+- type safety
+- unit/integration/E2E tests
+- security and data-isolation invariants
+- error and recovery paths
+- performance budgets
+- accessibility and RTL behavior
+- packaging and installation
+- release and rollback behavior
+- documentation
 
-Runtime requirements and evidence rules are tracked in [docs/ACCEPTANCE_MATRIX_V2.md](docs/ACCEPTANCE_MATRIX_V2.md). Features are not marked PASS from source inspection alone.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md](docs/ACCEPTANCE_MATRIX_V2.md), and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
 
-## License
 
-Private / unlicensed unless otherwise stated.
+Launch control: `docs/LAUNCH_SCORECARD.md`
+
+Zero-cost technical verification fallback: `docs/SELF_HOSTED_VERIFICATION.md`
+
+Runner setup and the exact verification order: `docs/SELF_HOSTED_RUNNER.md`

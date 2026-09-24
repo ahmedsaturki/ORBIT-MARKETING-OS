@@ -2,10 +2,10 @@ node_modules/
 build/
 dist/
 coverage/
-test-results/
-playwright-report/
-.playwright/
 .DS_Store
 *.log
 .env*
 !.env.example
+*.pem
+*.key
+.orbit-secrets/

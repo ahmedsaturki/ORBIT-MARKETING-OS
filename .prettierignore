@@ -1,0 +1,9 @@
+node_modules
+.next
+.turbo
+dist
+out
+build
+.expo
+coverage
+packages/desktop/src-tauri/target
