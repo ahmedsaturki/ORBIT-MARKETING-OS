@@ -316,6 +316,16 @@ export function App(): ReactElement {
     }
   };
 
+  const deleteMediaAsset = async (id: string): Promise<void> => {
+    try {
+      setError("");
+      await callNative<boolean>("media_asset_delete", { id });
+      await loadMediaAssets();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل حذف بيانات الوسيط");
+    }
+  };
+
   const importMediaAsset = async (): Promise<void> => {
     if (!mediaId.trim() || !mediaLocalPath.trim()) {
       setError("أدخل معرف الوسيط والمسار المحلي قبل الاستيراد");
@@ -400,6 +410,16 @@ export function App(): ReactElement {
       setRulePacks(await callNative<AutomationRulePackView[]>("automation_rule_pack_list", {}));
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تحميل قواعد الأتمتة");
+    }
+  };
+
+  const toggleRulePack = async (id: string, enabled: boolean): Promise<void> => {
+    try {
+      setError("");
+      await callNative<boolean>("automation_rule_pack_set_enabled", { id, enabled });
+      await loadRulePacks();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تغيير حالة Rule Pack");
     }
   };
 
@@ -1182,6 +1202,9 @@ export function App(): ReactElement {
                   <strong>{asset.filename}</strong>
                   <div className="account-meta">{asset.kind} • {asset.size_bytes} bytes • {asset.local_path}</div>
                 </div>
+                <button className="button danger" type="button" onClick={() => void deleteMediaAsset(asset.id)}>
+                  حذف Metadata
+                </button>
               </div>
             ))}
             {!mediaAssets.length ? <div className="result">لا توجد وسائط محفوظة.</div> : null}
@@ -1228,6 +1251,9 @@ export function App(): ReactElement {
                     v{pack.version} • schema {pack.schema_version} • {pack.enabled ? "مفعلة" : "متوقفة"}
                   </div>
                 </div>
+                <button className="button secondary" type="button" onClick={() => void toggleRulePack(pack.id, !pack.enabled)}>
+                  {pack.enabled ? "تعطيل" : "تفعيل"}
+                </button>
               </div>
             ))}
             {!rulePacks.length ? <div className="result">لا توجد Rule Packs محفوظة.</div> : null}
