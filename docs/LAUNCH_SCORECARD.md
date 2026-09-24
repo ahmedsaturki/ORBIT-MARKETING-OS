@@ -1,6 +1,6 @@
 # ORBIT Launch Scorecard
 
-Updated: 2026-09-24 (latest evidence refresh)
+Updated: 2026-09-25 (evidence refresh)
 
 Legend:
 
@@ -18,7 +18,7 @@ Legend:
 | Telegram native path | IMPLEMENTED | Token validation, approval, daily/circuit safety budgets, rate-limit handling, ambiguous/invalid-delivery stop |
 | Workspace isolation | IMPLEMENTED | Persisted active workspace, memberships, scoped vault |
 | SQLite integrity | IMPLEMENTED | FK enforcement, busy timeout, workspace integrity triggers |
-| Migration path | IMPLEMENTED | Migration chain through schema v10 with legacy backfill and transactional v8/v10 destructive changes |
+| Migration path | IMPLEMENTED | Migration chain through schema v9 with legacy backfill and transactional v8/v10 destructive changes |
 | Desktop UI | IMPLEMENTED | Workspace switching, content, approvals, tasks, CRM, inbox, backup, license, audit |
 | Web product surface | IMPLEMENTED | Next.js static app, pricing, legal, PWA |
 | Local AI Studio | IMPLEMENTED | Typed local runtime client, chat/content/image UI, loopback-only boundary; execution evidence pending |
@@ -39,13 +39,13 @@ Legend:
 | Performance/soak | UNVERIFIED | Benchmarks and 24h soak not executed |
 | Desktop signing | BLOCKED | Signing credentials are intentionally absent; validation builds only |
 | Mobile production signing | BLOCKED | Current workflow produces debug validation APK |
-| Vercel production deployment | BLOCKED | A READY production deployment exists for legacy `main`; rebuild deployment is still unverified. Repository-side rebuild config uses guarded prebuilt deployment |
+| Vercel production deployment | BLOCKED | Recent connected deployments are ERROR; no successful rebuild production deployment is verified. Repository-side rebuild config uses guarded prebuilt deployment |
 | Billing/payment | BLOCKED | No commercial payment provider configuration is verified |
 | Production launch | BLOCKED | Any applicable UNVERIFIED/BLOCKED runtime or distribution gate prevents release claim |
 
 ## Current infrastructure blocker
 
-The latest rebuild CI run `36050298475` created jobs `107801904537` and `107801904994`; both failed before any workflow step executed with `runner_id=0`, an empty runner name, and `steps=[]`. This is execution-infrastructure evidence, not source-build evidence.
+The latest rebuild CI runs continue to fail before any workflow step executes; the most recent observed job for commit `86752a2c63f7cb8f2c0a3a147de8ee5ea03b878f` had `runner_id=0`, an empty runner name, and `steps=[]`. This is execution-infrastructure evidence, not source-build evidence.
 
 ## Zero-cost verification fallback
 
