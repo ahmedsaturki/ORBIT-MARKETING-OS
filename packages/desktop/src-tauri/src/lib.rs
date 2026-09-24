@@ -5141,7 +5141,11 @@ mod tests {
             .expect("role update should work");
 
         assert!(matches!(
-            require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]),
+            require_workspace_role_for(
+                &connection,
+                DEFAULT_WORKSPACE_ID,
+                &["owner", "admin"]
+            ),
             Err(AppError::Unauthorized)
         ));
         assert!(require_workspace_role(
