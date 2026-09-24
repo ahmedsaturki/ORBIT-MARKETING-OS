@@ -135,7 +135,7 @@ const authChild = spawn("pnpm", ["runtime:start"], {
     RUNTIME_HOST: "0.0.0.0",
     RUNTIME_AUTH_TOKEN: authToken,
     RUNTIME_ALLOWED_ORIGINS: "https://allowed.example",
-    RUNTIME_RATE_LIMIT: "2",
+    RUNTIME_RATE_LIMIT: "6",
     OLLAMA_BASE_URL: "http://127.0.0.1:9",
   },
   stdio: ["ignore", "pipe", "pipe"],
@@ -190,15 +190,16 @@ try {
   });
   if (allowedOrigin.status !== 200) throw new Error("expected 200 for allowed browser origin");
 
-  const rateOne = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
-    headers: { Authorization: `Bearer ${authToken}` },
-  });
-  if (![200, 429].includes(rateOne.status)) throw new Error("unexpected first rate-limit response");
-
-  const rateTwo = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
-    headers: { Authorization: `Bearer ${authToken}` },
-  });
-  if (rateTwo.status !== 429) throw new Error("expected 429 after exceeding runtime rate limit");
+  const rateResponses: number[] = [];
+  for (let index = 0; index < 3; index += 1) {
+    const response = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    rateResponses.push(response.status);
+  }
+  if (rateResponses.at(-1) !== 429) {
+    throw new Error("expected 429 after exceeding runtime rate limit");
+  }
 
   console.log("runtime LAN perimeter smoke passed");
 } finally {
@@ -207,6 +208,60 @@ try {
   if (authChild.exitCode !== null && authChild.exitCode !== 0) {
     console.error(authLogs);
     throw new Error(`LAN runtime exited with code ${authChild.exitCode}`);
+  }
+}
+
+const bruteForcePort = "3103";
+const bruteForceChild = spawn("pnpm", ["runtime:start"], {
+  env: {
+    ...process.env,
+    PORT: bruteForcePort,
+    RUNTIME_HOST: "0.0.0.0",
+    RUNTIME_AUTH_TOKEN: "orbit-test-token",
+    RUNTIME_RATE_LIMIT: "2",
+    RUNTIME_ALLOWED_ORIGINS: "",
+    OLLAMA_BASE_URL: "http://127.0.0.1:9",
+  },
+  stdio: ["ignore", "pipe", "pipe"],
+  shell: process.platform === "win32",
+});
+let bruteForceLogs = "";
+bruteForceChild.stdout.on("data", (chunk) => { bruteForceLogs += String(chunk); });
+bruteForceChild.stderr.on("data", (chunk) => { bruteForceLogs += String(chunk); });
+
+try {
+  let ready = false;
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${bruteForcePort}/api/health`, {
+        headers: { Authorization: "Bearer wrong-token" },
+      });
+      if (response.status === 401) {
+        ready = true;
+        break;
+      }
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  if (!ready) throw new Error("brute-force perimeter runtime did not start");
+
+  const firstInvalid = await fetch(`http://127.0.0.1:${bruteForcePort}/api/health`, {
+    headers: { Authorization: "Bearer wrong-token" },
+  });
+  if (firstInvalid.status !== 401) throw new Error("first invalid token should return 401");
+
+  const secondInvalid = await fetch(`http://127.0.0.1:${bruteForcePort}/api/health`, {
+    headers: { Authorization: "Bearer wrong-token" },
+  });
+  if (secondInvalid.status !== 429) throw new Error("repeated invalid tokens must be rate-limited");
+  console.log("runtime invalid-token rate-limit smoke passed");
+} finally {
+  bruteForceChild.kill("SIGTERM");
+  await waitForChildExit(bruteForceChild);
+  if (bruteForceChild.exitCode !== null && bruteForceChild.exitCode !== 0) {
+    console.error(bruteForceLogs);
+    throw new Error(`brute-force runtime exited with code ${bruteForceChild.exitCode}`);
   }
 }
 
