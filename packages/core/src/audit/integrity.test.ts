@@ -20,12 +20,21 @@ describe("AuditIntegrityChain", () => {
     expect(await chain.verify()).toBe(true);
   });
 
-  it("detects tampering", async () => {
+  it("isolates stored events from caller mutation", async () => {
+    const chain = new AuditIntegrityChain();
+    const original = event("1");
+    await chain.append(original);
+    original.action = "tampered";
+    expect(await chain.verify()).toBe(true);
+    expect(chain.snapshot()[0]?.event.action).toBe("test");
+  });
+
+  it("returns an isolated snapshot", async () => {
     const chain = new AuditIntegrityChain();
     await chain.append(event("1"));
-    await chain.append(event("2"));
-    const records = (chain as unknown as { records: Array<{ event: AuditEvent; previousHash: string; hash: string }> }).records;
-    records[0].event.action = "tampered";
-    expect(await chain.verify()).toBe(false);
+    const snapshot = chain.snapshot();
+    (snapshot[0]!.event as AuditEvent).action = "tampered";
+    expect(await chain.verify()).toBe(true);
+    expect(chain.snapshot()[0]?.event.action).toBe("test");
   });
 });
