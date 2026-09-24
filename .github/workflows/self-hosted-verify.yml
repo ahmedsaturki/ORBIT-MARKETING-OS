@@ -2,6 +2,8 @@ name: Self-Hosted Verification
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["rebuild/orbit-production-consolidated"]
 
 permissions:
   contents: read
