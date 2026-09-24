@@ -257,6 +257,21 @@ if (!openDbMatch || openDbMatch[0].includes("recover_interrupted_tasks")) {
 if (!rust.includes("CREATE TABLE IF NOT EXISTS automation_rule_packs")) {
   throw new Error("Automation rule-pack persistence table is missing");
 }
+const mediaImportStart = rust.indexOf("fn media_asset_import(");
+const mediaImportBody = rust.slice(mediaImportStart, mediaImportStart + 6000);
+const mediaAuthIndex = mediaImportBody.indexOf('require_workspace_role_for(');
+const mediaFileAccessIndex = mediaImportBody.indexOf("path.is_file()");
+const mediaHashIndex = mediaImportBody.indexOf("sha256_file(&path)");
+if (
+  mediaAuthIndex < 0 ||
+  mediaFileAccessIndex < 0 ||
+  mediaHashIndex < 0 ||
+  mediaAuthIndex > mediaFileAccessIndex ||
+  mediaAuthIndex > mediaHashIndex
+) {
+  throw new Error("Media import must authorize before local file access or hashing");
+}
+
 if (!rust.includes("fn media_asset_import(")) {
   throw new Error("Media import command is missing");
 }
