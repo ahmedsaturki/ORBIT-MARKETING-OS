@@ -62,7 +62,7 @@ describe("ExecutionRunner", () => {
     });
     expect(result).toMatchObject({
       status: "blocked",
-      reason: "campaign_not_runnable",
+      reason: "task_not_running",
     });
   });
 
@@ -79,7 +79,7 @@ describe("ExecutionRunner", () => {
     });
     expect(result).toMatchObject({
       status: "blocked",
-      reason: "policy",
+      reason: "approval_required",
     });
   });
 
@@ -102,7 +102,7 @@ describe("ExecutionRunner", () => {
       circuitBreakerThreshold: 3,
       userConfirmed: false,
     });
-    expect(result).toMatchObject({ status: "blocked", reason: "authorization_required" });
+    expect(result).toMatchObject({ status: "blocked", reason: "user_confirmation_required" });
   });
 
   it("returns a safe blocked state for connector challenges", async () => {
@@ -134,7 +134,7 @@ describe("ExecutionRunner", () => {
     const result = await runner().run({
       account,
       campaign,
-      task: { ...task, kind: "sync" },
+      task: { ...task, kind: "sync", status: "running" },
       actionsToday: 0,
       dailyLimit: 10,
       consecutiveFailures: 0,
