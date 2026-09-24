@@ -176,6 +176,15 @@ export async function verifyLicenseToken(
     return { valid: false, reason: "bad_signature" };
   }
 
+  if (
+    !Number.isSafeInteger(context.deviceCount) ||
+    context.deviceCount < 0 ||
+    !Number.isSafeInteger(context.accountCount) ||
+    context.accountCount < 0
+  ) {
+    return { valid: false, reason: "malformed", payload: parsed.payload };
+  }
+
   const now = context.now ?? new Date();
   const issuedAt = new Date(parsed.payload.issuedAt);
   if (issuedAt.getTime() > now.getTime()) {
