@@ -24,7 +24,7 @@ describe("buildCampaignTasks", () => {
     );
 
     expect(tasks).toHaveLength(2);
-    expect(tasks.map((task) => task.id)).toEqual(["camp-1:task:facebook:publish:acc-1", "camp-1:task:facebook:publish:acc-2"]);
+    expect(tasks.map((task) => task.id)).toEqual(["camp-1:task:facebook:publish:acc-1:content-1", "camp-1:task:facebook:publish:acc-2:content-1"]);
     expect(tasks.every((task) => task.maxAttempts === 4)).toBe(true);
     expect(tasks.every((task) => task.priority === 5)).toBe(true);
   });
@@ -65,6 +65,41 @@ describe("buildCampaignTasks", () => {
         { taskKind: "publish" },
       ),
     ).toThrow("contentId is required when a campaign targets multiple content items");
+  });
+
+  it("keeps task identities distinct when content differs", () => {
+    const first = buildCampaignTasks(
+      {
+        id: "camp-multi",
+        workspaceId: "workspace-1",
+        name: "Multi content launch",
+        status: "scheduled",
+        accountIds: ["acc-1"],
+        contentIds: ["content-1", "content-2"],
+        taskCount: 2,
+        createdAt: "2026-09-24T00:00:00.000Z",
+      },
+      "facebook",
+      { taskKind: "publish", contentId: "content-1" },
+    )[0];
+    const second = buildCampaignTasks(
+      {
+        id: "camp-multi",
+        workspaceId: "workspace-1",
+        name: "Multi content launch",
+        status: "scheduled",
+        accountIds: ["acc-1"],
+        contentIds: ["content-1", "content-2"],
+        taskCount: 2,
+        createdAt: "2026-09-24T00:00:00.000Z",
+      },
+      "facebook",
+      { taskKind: "publish", contentId: "content-2" },
+    )[0];
+
+    expect(first?.contentId).toBe("content-1");
+    expect(second?.contentId).toBe("content-2");
+    expect(first?.idempotencyKey).not.toBe(second?.idempotencyKey);
   });
 
   it("rejects duplicate campaign account ids", () => {
