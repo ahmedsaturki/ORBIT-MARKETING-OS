@@ -1319,28 +1319,30 @@ export function App(): ReactElement {
         </div>
       </section>
 
-      {import.meta.env.DEV ? <form className="card vault-form" onSubmit={storeSecret}>
-                <h2>اختبار خزنة محلية حقيقية</h2>
-                <p>هذا الاختبار يكتب السجل المشفر في قاعدة SQLite المحلية الخاصة بالتطبيق.</p>
-                <label>
-                  اسم السجل
-                  <input value={label} onChange={(event) => setLabel(event.target.value)} />
-                </label>
-                <label>
-                  القيمة الحساسة
-                  <input type="password" value={secret} onChange={(event) => setSecret(event.target.value)} />
-                </label>
-                <label>
-                  كلمة مرور الخزنة
-                  <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-                </label>
-                <div className="actions">
-                  <button className="button primary" type="submit">تشفير وحفظ</button>
-                  <button className="button secondary" type="button" onClick={() => void loadSecret()}>فك وقراءة</button>
-                </div>
-                {stored ? <div className="result">تم حفظ السجل المشفر محلياً.</div> : null}
-                {recovered ? <div className="result">القيمة المستعادة: {recovered}</div> : null}
-              </form> : null}
+      {import.meta.env.DEV ? (
+        <form className="card vault-form" onSubmit={storeSecret}>
+          <h2>اختبار خزنة محلية حقيقية</h2>
+          <p>هذا الاختبار يكتب السجل المشفر في قاعدة SQLite المحلية الخاصة بالتطبيق.</p>
+          <label>
+            اسم السجل
+            <input value={label} onChange={(event) => setLabel(event.target.value)} />
+          </label>
+          <label>
+            القيمة الحساسة
+            <input type="password" value={secret} onChange={(event) => setSecret(event.target.value)} />
+          </label>
+          <label>
+            كلمة مرور الخزنة
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          </label>
+          <div className="actions">
+            <button className="button primary" type="submit">تشفير وحفظ</button>
+            <button className="button secondary" type="button" onClick={() => void loadSecret()}>فك وقراءة</button>
+          </div>
+          {stored ? <div className="result">تم حفظ السجل المشفر محلياً.</div> : null}
+          {recovered ? <div className="result">القيمة المستعادة: {recovered}</div> : null}
+        </form>
+      ) : null}
 
     </main>
   );
