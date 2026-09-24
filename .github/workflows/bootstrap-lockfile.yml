@@ -2,6 +2,8 @@ name: Bootstrap pnpm lockfile
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["rebuild/orbit-production"]
 
 permissions:
   contents: write
