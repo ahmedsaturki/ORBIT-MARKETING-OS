@@ -61,19 +61,8 @@ pub struct LicenseStatus {
     pub account_count: u64,
 }
 
-fn app_db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    app.path()
-        .app_data_dir()
-        .map_err(|_| "application path error".to_string())
-        .map(|path| path.join("orbit.sqlite3"))
-}
-
 fn open_connection(app: &tauri::AppHandle) -> Result<Connection, String> {
-    let path = app_db_path(app)?;
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-    }
-    Connection::open(path).map_err(|error| error.to_string())
+    crate::open_db_for_module(app)
 }
 
 fn ensure_license_table(connection: &Connection) -> Result<(), String> {
