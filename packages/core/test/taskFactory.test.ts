@@ -29,6 +29,25 @@ describe("buildCampaignTasks", () => {
     expect(tasks.every((task) => task.priority === 5)).toBe(true);
   });
 
+  it("rejects duplicate campaign account ids", () => {
+    expect(() =>
+      buildCampaignTasks(
+        {
+          id: "camp-1",
+          workspaceId: "workspace-1",
+          name: "Launch",
+          status: "draft",
+          accountIds: ["acc-1", "acc-1"],
+          contentIds: ["content-1"],
+          taskCount: 2,
+          createdAt: "2026-09-24T00:00:00.000Z",
+        },
+        "facebook",
+        { taskKind: "publish" },
+      ),
+    ).toThrow("Campaign account ids must be unique");
+  });
+
   it("rejects an invalid retry budget", () => {
     expect(() =>
       buildCampaignTasks(
