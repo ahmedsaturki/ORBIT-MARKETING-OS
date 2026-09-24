@@ -180,7 +180,7 @@ export async function verifyLicenseToken(
       { name: "Ed25519" },
       key,
       base64UrlToBytes(parsed.signature).slice().buffer as ArrayBuffer,
-      serializePayload(parsed.payload),
+      serializePayload(parsed.payload).slice().buffer as ArrayBuffer,
     );
     if (!signatureValid) return { valid: false, reason: "bad_signature" };
   } catch {
