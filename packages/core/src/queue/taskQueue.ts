@@ -34,8 +34,12 @@ export class TaskQueue {
   }
 
   public constructor(private readonly options: TaskQueueOptions) {
-    if (options.retryPolicy.maxAttempts < 1) {
-      throw new RangeError("retryPolicy.maxAttempts must be at least 1");
+    if (
+      !Number.isInteger(options.retryPolicy.maxAttempts) ||
+      options.retryPolicy.maxAttempts < 1 ||
+      options.retryPolicy.maxAttempts > 10
+    ) {
+      throw new RangeError("retryPolicy.maxAttempts must be an integer between 1 and 10");
     }
   }
 
@@ -228,8 +232,8 @@ export class TaskQueue {
     if (task.attempts < 0 || !Number.isInteger(task.attempts) || task.attempts > task.maxAttempts) {
       throw new RangeError("attempts must be a non-negative integer within maxAttempts");
     }
-    if (!Number.isInteger(task.maxAttempts) || task.maxAttempts < 1) {
-      throw new RangeError("maxAttempts must be a positive integer");
+    if (!Number.isInteger(task.maxAttempts) || task.maxAttempts < 1 || task.maxAttempts > 10) {
+      throw new RangeError("maxAttempts must be an integer between 1 and 10");
     }
     this.normalizeTimestamp(task.availableAt, "availableAt");
     this.normalizeTimestamp(task.createdAt, "createdAt");
