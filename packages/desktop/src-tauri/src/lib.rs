@@ -1187,6 +1187,27 @@ fn audit_hash(
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
+fn audit_hash(
+    previous_hash: &str,
+    id: &str,
+    workspace_id: &str,
+    timestamp: &str,
+    category: &str,
+    action: &str,
+    outcome: &str,
+    actor: &str,
+    entity_id: Option<&str>,
+    metadata_json: Option<&str>,
+) -> String {
+    let canonical = format!(
+        "{previous_hash}\n{id}\n{workspace_id}\n{timestamp}\n{category}\n{action}\n{outcome}\n{actor}\n{}\n{}",
+        entity_id.unwrap_or(""),
+        metadata_json.unwrap_or(""),
+    );
+    let digest = Sha256::digest(canonical.as_bytes());
+    digest.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
 fn write_audit(
     connection: &Connection,
     category: &str,
@@ -1195,9 +1216,10 @@ fn write_audit(
     actor: &str,
     entity_id: Option<&str>,
 ) -> Result<(), rusqlite::Error> {
+    let transaction = connection.unchecked_transaction()?;
     let id = uuid_like();
     let timestamp = chrono_like_timestamp();
-    let previous_hash: String = connection
+    let previous_hash: String = transaction
         .query_row(
             "SELECT hash FROM audit_events WHERE workspace_id=?1 ORDER BY rowid DESC LIMIT 1",
             params![DEFAULT_WORKSPACE_ID],
@@ -1220,7 +1242,7 @@ fn write_audit(
         None,
     );
 
-    connection.execute(
+    transaction.execute(
         "INSERT INTO audit_events(
            id, workspace_id, timestamp, category, action, outcome, actor,
            entity_id, metadata_json, previous_hash, hash
@@ -1239,6 +1261,7 @@ fn write_audit(
             hash
         ],
     )?;
+    transaction.commit()?;
     Ok(())
 }
 
