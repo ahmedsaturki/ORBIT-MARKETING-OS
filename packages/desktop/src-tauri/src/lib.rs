@@ -75,7 +75,7 @@ CREATE INDEX IF NOT EXISTS idx_workspace_memberships_user
   ON workspace_memberships(user_id, workspace_id, active);
 
 CREATE TABLE IF NOT EXISTS vault_records (
-  workspace_id TEXT NOT NULL DEFAULT 'default',
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
   label TEXT NOT NULL,
   payload_json TEXT NOT NULL,
   updated_at TEXT NOT NULL,
@@ -674,7 +674,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
                    updated_at TEXT NOT NULL
                  );
                  CREATE TABLE vault_records_v8 (
-                   workspace_id TEXT NOT NULL DEFAULT 'default',
+                   workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
                    label TEXT NOT NULL,
                    payload_json TEXT NOT NULL,
                    updated_at TEXT NOT NULL,
@@ -690,6 +690,149 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
     }
 
     connection.execute_batch("PRAGMA user_version = 8;")?;
+}
+
+const INTEGRITY_TRIGGERS: &str = r#"
+CREATE TRIGGER IF NOT EXISTS orbit_campaign_accounts_insert_workspace
+BEFORE INSERT ON campaign_accounts
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM campaigns c
+  JOIN accounts a ON a.id = NEW.account_id
+  WHERE c.id = NEW.campaign_id
+    AND c.workspace_id = NEW.workspace_id
+    AND a.workspace_id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'campaign account workspace mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_campaign_accounts_update_workspace
+BEFORE UPDATE OF workspace_id, campaign_id, account_id ON campaign_accounts
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM campaigns c
+  JOIN accounts a ON a.id = NEW.account_id
+  WHERE c.id = NEW.campaign_id
+    AND c.workspace_id = NEW.workspace_id
+    AND a.workspace_id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'campaign account workspace mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_campaign_content_insert_workspace
+BEFORE INSERT ON campaign_content
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM campaigns c
+  JOIN content_items i ON i.id = NEW.content_id
+  WHERE c.id = NEW.campaign_id
+    AND c.workspace_id = NEW.workspace_id
+    AND i.workspace_id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'campaign content workspace mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_campaign_content_update_workspace
+BEFORE UPDATE OF workspace_id, campaign_id, content_id ON campaign_content
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM campaigns c
+  JOIN content_items i ON i.id = NEW.content_id
+  WHERE c.id = NEW.campaign_id
+    AND c.workspace_id = NEW.workspace_id
+    AND i.workspace_id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'campaign content workspace mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_tasks_insert_workspace
+BEFORE INSERT ON tasks
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM campaigns c
+  JOIN accounts a ON a.id = NEW.account_id
+  WHERE c.id = NEW.campaign_id
+    AND c.workspace_id = NEW.workspace_id
+    AND a.workspace_id = NEW.workspace_id
+    AND a.platform = NEW.platform
+)
+BEGIN
+  SELECT RAISE(ABORT, 'task workspace/account/platform mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_tasks_update_workspace
+BEFORE UPDATE OF workspace_id, campaign_id, account_id, platform, content_id ON tasks
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM campaigns c
+  JOIN accounts a ON a.id = NEW.account_id
+  WHERE c.id = NEW.campaign_id
+    AND c.workspace_id = NEW.workspace_id
+    AND a.workspace_id = NEW.workspace_id
+    AND a.platform = NEW.platform
+)
+BEGIN
+  SELECT RAISE(ABORT, 'task workspace/account/platform mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_conversations_insert_workspace
+BEFORE INSERT ON conversations
+WHEN NEW.account_id IS NOT NULL
+ AND NOT EXISTS (
+   SELECT 1 FROM accounts a
+   WHERE a.id = NEW.account_id
+     AND a.workspace_id = NEW.workspace_id
+     AND a.platform = NEW.platform
+ )
+BEGIN
+  SELECT RAISE(ABORT, 'conversation workspace/account/platform mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_conversations_update_workspace
+BEFORE UPDATE OF workspace_id, account_id, platform ON conversations
+WHEN NEW.account_id IS NOT NULL
+ AND NOT EXISTS (
+   SELECT 1 FROM accounts a
+   WHERE a.id = NEW.account_id
+     AND a.workspace_id = NEW.workspace_id
+     AND a.platform = NEW.platform
+ )
+BEGIN
+  SELECT RAISE(ABORT, 'conversation workspace/account/platform mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_approvals_insert_workspace
+BEFORE INSERT ON approvals
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM content_items i
+  WHERE i.id = NEW.content_id
+    AND i.workspace_id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'approval workspace/content mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_approvals_update_workspace
+BEFORE UPDATE OF workspace_id, content_id ON approvals
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM content_items i
+  WHERE i.id = NEW.content_id
+    AND i.workspace_id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'approval workspace/content mismatch');
+END;
+"#;
+
+fn create_integrity_triggers(connection: &Connection) -> Result<(), AppError> {
+    connection.execute_batch(INTEGRITY_TRIGGERS)?;
+    Ok(())
 }
 
 fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> {
@@ -773,6 +916,7 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     let connection = Connection::open(db_path)?;
     connection.execute_batch(SCHEMA)?;
     migrate_schema(&connection)?;
+    create_integrity_triggers(&connection)?;
     ensure_workspace_context(&connection)?;
     Ok(connection)
 }
@@ -3266,6 +3410,47 @@ mod tests {
     fn telegram_retry_timestamp_uses_rfc3339_utc() {
         let value = parse_retry_timestamp(60);
         assert!(OffsetDateTime::parse(&value, &Rfc3339).is_ok());
+    }
+
+    #[test]
+    fn sqlite_integrity_triggers_reject_cross_workspace_relationships() {
+        let connection = Connection::open_in_memory()
+            .expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        create_integrity_triggers(&connection).expect("integrity triggers should be creatable");
+
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1')",
+                [],
+            )
+            .expect("workspaces should insert");
+        connection
+            .execute(
+                "INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+                 VALUES ('account-a', 'workspace-a', 'facebook', 'A', 'connected', '1', '1'),
+                        ('account-b', 'workspace-b', 'facebook', 'B', 'connected', '1', '1')",
+                [],
+            )
+            .expect("accounts should insert");
+        connection
+            .execute(
+                "INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                 VALUES ('campaign-a', 'workspace-a', 'A', 'scheduled', '1')",
+                [],
+            )
+            .expect("campaign should insert");
+
+        let result = connection.execute(
+            "INSERT INTO campaign_accounts(workspace_id, campaign_id, account_id)
+             VALUES ('workspace-a', 'campaign-a', 'account-b')",
+            [],
+        );
+        assert!(result.is_err());
     }
 
     #[test]
