@@ -1943,12 +1943,9 @@ fn workspace_create(
         )
         .map_err(|error| error.to_string())?;
 
-    transaction
-        .commit()
-        .map_err(|error| error.to_string())?;
-
-    write_audit(
-        &connection,
+    append_audit_event(
+        &transaction,
+        &workspace_id,
         "security",
         "workspace.create",
         "success",
@@ -1956,6 +1953,10 @@ fn workspace_create(
         Some(&workspace_id),
     )
     .map_err(|error| error.to_string())?;
+
+    transaction
+        .commit()
+        .map_err(|error| error.to_string())?;
 
     Ok(WorkspaceView {
         id: workspace_id,
@@ -1967,7 +1968,7 @@ fn workspace_create(
 #[tauri::command]
 fn workspace_select(app: tauri::AppHandle, id: String) -> Result<WorkspaceView, String> {
     let id = validate_label(&id).map_err(|error| error.to_string())?;
-    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut connection = open_db(&app).map_err(|error| error.to_string())?;
     let user_id = local_user_id(&connection).map_err(|error| error.to_string())?;
     let workspace = connection
         .query_row(
@@ -1975,7 +1976,7 @@ fn workspace_select(app: tauri::AppHandle, id: String) -> Result<WorkspaceView, 
              FROM workspaces w
              JOIN workspace_memberships m ON m.workspace_id=w.id
              WHERE w.id=?1 AND m.user_id=?2 AND m.active=1",
-            params![id, user_id],
+            params![&id, &user_id],
             |row| {
                 Ok(WorkspaceView {
                     id: row.get(0)?,
@@ -1991,21 +1992,37 @@ fn workspace_select(app: tauri::AppHandle, id: String) -> Result<WorkspaceView, 
         return Err("workspace not found or not accessible".to_string());
     };
 
-    connection
+    let transaction = connection
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(|error| error.to_string())?;
+
+    transaction
         .execute(
             "INSERT INTO runtime_state(key, value) VALUES ('active_workspace_id', ?1)
              ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-            params![workspace.id],
+            params![&workspace.id],
         )
         .map_err(|error| error.to_string())?;
-    set_active_workspace_id(&workspace.id).map_err(|error| error.to_string())?;
-    write_audit(&connection, "security", "workspace.select", "success", "user", Some(&workspace.id))
+
+    append_audit_event(
+        &transaction,
+        &workspace.id,
+        "security",
+        "workspace.select",
+        "success",
+        "user",
+        Some(&workspace.id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    transaction
+        .commit()
         .map_err(|error| error.to_string())?;
 
+    set_active_workspace_id(&workspace.id).map_err(|error| error.to_string())?;
     Ok(workspace)
 }
 
-#[tauri::command]
 fn app_health(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     open_db(&app)
         .map(|_| serde_json::json!({"status":"ok","database":"ready"}))
