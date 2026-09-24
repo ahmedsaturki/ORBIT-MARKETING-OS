@@ -73,6 +73,22 @@ function runtimeAuthRequired(): boolean {
 }
 
 function authorizeRuntime(req: express.Request, res: express.Response): boolean {
+  if (!runtimeAuthRequired()) {
+    return true;
+  }
+
+  if (!RUNTIME_AUTH_TOKEN) {
+    res.status(503).json({ error: "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback." });
+    return false;
+  }
+
+  const supplied = req.header("authorization") ?? "";
+  const prefix = "Bearer ";
+  if (!supplied.startsWith(prefix) || !tokensEqual(RUNTIME_AUTH_TOKEN, supplied.slice(prefix.length))) {
+    res.status(401).json({ error: "Unauthorized runtime request" });
+    return false;
+  }
+
   if (!originAllowed(req)) {
     res.status(403).json({ error: "Origin is not allowed for this runtime." });
     return false;
@@ -86,17 +102,6 @@ function authorizeRuntime(req: express.Request, res: express.Response): boolean 
     return false;
   }
 
-  if (!runtimeAuthRequired()) return true;
-  if (!RUNTIME_AUTH_TOKEN) {
-    res.status(503).json({ error: "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback." });
-    return false;
-  }
-  const supplied = req.header("authorization") ?? "";
-  const prefix = "Bearer ";
-  if (!supplied.startsWith(prefix) || !tokensEqual(RUNTIME_AUTH_TOKEN, supplied.slice(prefix.length))) {
-    res.status(401).json({ error: "Unauthorized runtime request" });
-    return false;
-  }
   return true;
 }
 
