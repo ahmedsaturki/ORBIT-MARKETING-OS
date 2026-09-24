@@ -461,6 +461,7 @@ if (rootVercel.framework !== "nextjs") throw new Error("Root Vercel framework mu
 if (rootVercel.outputDirectory !== "packages/web/out") throw new Error("Root Vercel output directory must be packages/web/out");
 if (rootVercel.installCommand !== "bash scripts/vercel-install.sh") throw new Error("Root Vercel must use the lockfile-aware install script");
 if (rootVercel.ignoreCommand !== "bash scripts/vercel-ignore.sh") throw new Error("Root Vercel must use the versioned ignore script");
+if (rootVercel.git?.deploymentEnabled !== false) throw new Error("Vercel Git deployments must be disabled; use the guarded prebuilt release workflow");
 
 
 
