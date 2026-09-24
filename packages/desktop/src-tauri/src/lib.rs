@@ -1194,6 +1194,16 @@ fn workspace_create(
         )
         .map_err(|error| error.to_string())?;
 
+    write_audit(
+        &connection,
+        "security",
+        "workspace.create",
+        "success",
+        "user",
+        Some(&workspace_id),
+    )
+    .map_err(|error| error.to_string())?;
+
     Ok(WorkspaceView {
         id: workspace_id,
         name,
@@ -1317,6 +1327,17 @@ fn vault_delete(app: tauri::AppHandle, label: String) -> Result<bool, String> {
             params![active_workspace_id(), label],
         )
         .map_err(|error| error.to_string())?;
+    if changed > 0 {
+        write_audit(
+            &connection,
+            "security",
+            "vault.delete",
+            "success",
+            "user",
+            Some(&label),
+        )
+        .map_err(|error| error.to_string())?;
+    }
     Ok(changed > 0)
 }
 
@@ -2557,6 +2578,17 @@ fn backup_restore(
     if previous.exists() {
         fs::remove_file(&previous).map_err(|error| error.to_string())?;
     }
+
+    let audit_connection = open_db(&app).map_err(|error| error.to_string())?;
+    write_audit(
+        &audit_connection,
+        "backup",
+        "restore",
+        "success",
+        "user",
+        Some(&filename),
+    )
+    .map_err(|error| error.to_string())?;
 
     Ok(true)
 }
