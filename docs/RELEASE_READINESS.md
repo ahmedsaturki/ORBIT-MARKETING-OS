@@ -76,10 +76,10 @@ The connected Vercel project is `orbit-marketing-os`. The repository configurati
 
 ## Latest execution snapshot
 
-- Branch HEAD: `e43bff0114f93bc0f123afdce49413cb6b6f026e`.
+- Branch HEAD: `a5c163df9adca5b6e2591b274a64e0a9f44cebf3`.
 - PR #2 remains open, draft, and unmerged.
 - The latest hosted `CI` run for the branch completed with `failure` before workflow steps were registered.
 - The latest lockfile bootstrap run for the branch remains `queued`; previous bootstrap runs were cancelled by its concurrency policy.
 - No production deployment is being claimed from these states.
 
-The implementation branch now includes local content variants, media metadata/import/delete lifecycle, versioned automation rule packs with confirmation invariants and runtime limits, campaign-scoped analytics, a compliant LinkedIn Posts API connector, and expanded acceptance/verification coverage.
+The implementation branch now includes local content variants, media metadata/import/delete lifecycle, versioned automation rule packs with confirmation invariants and runtime limits, campaign-scoped analytics, current LinkedIn Posts API version defaults, normalized task scheduling timestamps with bounded retries, synchronized account authorization state, and expanded acceptance/verification coverage.
