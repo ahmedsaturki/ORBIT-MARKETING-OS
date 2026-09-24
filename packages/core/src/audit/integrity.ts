@@ -32,24 +32,26 @@ export class AuditIntegrityChain {
   private readonly records: AuditRecord[] = [];
 
   public async append(event: AuditEvent): Promise<AuditRecord> {
+    const storedEvent = structuredClone(event);
     const previousHash = this.records.at(-1)?.hash ?? "GENESIS";
-    const hash = await sha256(previousHash + "\\n" + canonicalize(event));
-    const record = { event, previousHash, hash } satisfies AuditRecord;
+    const hash = await sha256(previousHash + "\n" + canonicalize(storedEvent));
+    const record = { event: storedEvent, previousHash, hash } satisfies AuditRecord;
     this.records.push(record);
-    return record;
+    return structuredClone(record);
   }
 
   public async verify(): Promise<boolean> {
     let previousHash = "GENESIS";
     for (const record of this.records) {
-      const expected = await sha256(previousHash + "\\n" + canonicalize(record.event));
+      const expected = await sha256(previousHash + "\n" + canonicalize(record.event));
       if (record.previousHash !== previousHash || record.hash !== expected) return false;
       previousHash = record.hash;
     }
     return true;
   }
 
+  /** Returns an isolated copy so callers cannot mutate internal audit state. */
   public snapshot(): readonly AuditRecord[] {
-    return this.records.map((record) => ({ ...record, event: { ...record.event } }));
+    return structuredClone(this.records);
   }
 }
