@@ -1221,8 +1221,29 @@ fn recover_interrupted_tasks(connection: &Connection) -> Result<usize, AppError>
     Ok(interrupted.len())
 }
 
+fn recover_database_before_open(app_data: &PathBuf, db_path: &PathBuf) -> Result<(), AppError> {
+    let previous = app_data.join("orbit.previous.sqlite3");
+    let temporary = app_data.join("orbit.restore.sqlite3");
+    let backup_source = app_data.join("backups/orbit-backup-source.sqlite3");
+
+    if !db_path.exists() && previous.exists() {
+        fs::rename(&previous, db_path)?;
+    }
+
+    for path in [temporary, backup_source] {
+        if path.exists() {
+            fs::remove_file(path)?;
+        }
+    }
+    Ok(())
+}
+
 fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> {
-    for name in ["orbit.restore.sqlite3", "backups/orbit-backup-source.sqlite3"] {
+    for name in [
+        "orbit.restore.sqlite3",
+        "orbit.previous.sqlite3",
+        "backups/orbit-backup-source.sqlite3",
+    ] {
         let path = app_data.join(name);
         if path.exists() {
             fs::remove_file(path)?;
@@ -1328,13 +1349,14 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     let app_data = app.path().app_data_dir().map_err(|_| AppError::Path)?;
     fs::create_dir_all(&app_data)?;
     let db_path: PathBuf = app_data.join("orbit.sqlite3");
-    let connection = Connection::open(db_path)?;
+    recover_database_before_open(&app_data, &db_path)?;
+    let connection = Connection::open(&db_path)?;
     connection.execute_batch("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;")?;
     connection.execute_batch(SCHEMA)?;
     migrate_schema(&connection)?;
     create_integrity_triggers(&connection)?;
     ensure_workspace_context(&connection)?;
-    cleanup_stale_temporary_artifacts(&app_data)?;
+    cleanup_stale_database_artifacts(&app_data)?;
     Ok(connection)
 }
 
@@ -7104,5 +7126,52 @@ pub fn run() {
 
     if let Err(error) = result {
         eprintln!("failed to run ORBIT Marketing OS: {error}");
+    }
+}
+
+
+#[cfg(test)]
+mod interrupted_restore_recovery_tests {
+    use super::*;
+
+    #[test]
+    fn restores_previous_database_when_target_is_missing() {
+        let root = std::env::temp_dir().join(format!("orbit-recovery-{}", uuid_like()));
+        fs::create_dir_all(&root).expect("recovery fixture directory should be created");
+        let db = root.join("orbit.sqlite3");
+        let previous = root.join("orbit.previous.sqlite3");
+        let temporary = root.join("orbit.restore.sqlite3");
+
+        fs::write(&previous, b"known-good").expect("previous database should be written");
+        fs::write(&temporary, b"stale-temp").expect("temporary database should be written");
+
+        recover_database_before_open(&root, &db).expect("recovery should succeed");
+
+        assert_eq!(fs::read(&db).expect("database should be restored"), b"known-good");
+        assert!(!previous.exists());
+        assert!(!temporary.exists());
+
+        fs::remove_dir_all(&root).expect("recovery fixture directory should be removed");
+    }
+
+    #[test]
+    fn preserves_previous_until_active_database_is_opened() {
+        let root = std::env::temp_dir().join(format!("orbit-recovery-{}", uuid_like()));
+        fs::create_dir_all(&root).expect("recovery fixture directory should be created");
+        let db = root.join("orbit.sqlite3");
+        let previous = root.join("orbit.previous.sqlite3");
+
+        fs::write(&db, b"active").expect("active database should be written");
+        fs::write(&previous, b"known-good").expect("previous database should be written");
+
+        recover_database_before_open(&root, &db).expect("pre-open recovery should succeed");
+
+        assert_eq!(fs::read(&db).expect("active database should remain"), b"active");
+        assert!(previous.exists());
+
+        cleanup_stale_database_artifacts(&root).expect("post-open cleanup should succeed");
+        assert!(!previous.exists());
+
+        fs::remove_dir_all(&root).expect("recovery fixture directory should be removed");
     }
 }
