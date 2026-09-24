@@ -38,5 +38,8 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "lucide-react": "0.546.0"
+  },
+  "engines": {
+    "node": ">=22 <25"
   }
 }
