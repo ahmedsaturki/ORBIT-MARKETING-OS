@@ -1,16 +1,11 @@
-import type { Approval, Campaign, SocialAccount, Task } from "../types/index.js";
+import type { Task } from "../types/index.js";
 import { createAuditEvent, AuditLog } from "../audit/auditLog.js";
 import { ConnectorRegistry } from "../connectors/index.js";
 import { TaskQueue } from "../queue/index.js";
 import type { ExecutionPolicyContext } from "./executionPolicy.js";
 import { ExecutionRunner } from "./executionRunner.js";
 
-export interface ExecutionRunContext extends Omit<
-  ExecutionPolicyContext,
-  "task"
-> {
-  readonly approval?: Approval;
-}
+export type ExecutionRunContext = Omit<ExecutionPolicyContext, "task">;
 
 export type TaskExecutionResult =
   | {
