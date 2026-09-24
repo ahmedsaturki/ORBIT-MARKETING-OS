@@ -837,6 +837,264 @@ fn campaign_list(app: tauri::AppHandle) -> Result<Vec<CampaignView>, String> {
     rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
 }
 
+fn validate_content_status(status: &str) -> Result<String, AppError> {
+    let value = status.trim().to_lowercase();
+    let allowed = ["draft", "pending", "approved", "rejected", "changes_requested"];
+    if allowed.contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err(AppError::InvalidLabel)
+    }
+}
+
+#[tauri::command]
+fn content_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    title: String,
+    body: String,
+    approval_status: String,
+    tags_json: Option<String>,
+) -> Result<ContentView, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let title = validate_label(&title).map_err(|error| error.to_string())?;
+    let body = body.trim().to_string();
+    if body.is_empty() || body.len() > 100_000 {
+        return Err("invalid content body".to_string());
+    }
+    let approval_status = validate_content_status(&approval_status).map_err(|error| error.to_string())?;
+    let tags_json = tags_json.unwrap_or_else(|| "[]".to_string());
+    let tags: Vec<String> = serde_json::from_str(&tags_json)
+        .map_err(|_| "tags_json must be a JSON array of strings".to_string())?;
+    if tags.len() > 100 {
+        return Err("too many content tags".to_string());
+    }
+    let tags_json = serde_json::to_string(
+        &tags.into_iter().map(|tag| tag.trim().to_string()).collect::<Vec<_>>(),
+    )
+    .map_err(|error| error.to_string())?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let timestamp = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO content_items(id, workspace_id, title, body, approval_status, tags_json, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+             ON CONFLICT(id) DO UPDATE SET
+               title=excluded.title,
+               body=excluded.body,
+               approval_status=excluded.approval_status,
+               tags_json=excluded.tags_json,
+               updated_at=excluded.updated_at",
+            params![id, DEFAULT_WORKSPACE_ID, title, body, approval_status, tags_json, timestamp],
+        )
+        .map_err(|error| error.to_string())?;
+    write_audit(&connection, "content", "upsert", "success", "user", Some(&id))
+        .map_err(|error| error.to_string())?;
+    Ok(ContentView {
+        id,
+        title,
+        body,
+        approval_status,
+        tags_json,
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn content_list(app: tauri::AppHandle) -> Result<Vec<ContentView>, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT id, title, body, approval_status, tags_json, updated_at
+             FROM content_items
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+            Ok(ContentView {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                body: row.get(2)?,
+                approval_status: row.get(3)?,
+                tags_json: row.get(4)?,
+                updated_at: row.get(5)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn campaign_attach_content(
+    app: tauri::AppHandle,
+    campaign_id: String,
+    content_id: String,
+) -> Result<bool, String> {
+    let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
+    let content_id = validate_label(&content_id).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+
+    let compatible: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM campaigns c
+               JOIN content_items ci ON ci.workspace_id=c.workspace_id
+               WHERE c.id=?1 AND c.workspace_id=?3
+                 AND ci.id=?2 AND ci.workspace_id=?3
+             )",
+            params![campaign_id, content_id, DEFAULT_WORKSPACE_ID],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !compatible {
+        return Err("campaign and content must belong to workspace".to_string());
+    }
+
+    connection
+        .execute(
+            "INSERT OR IGNORE INTO campaign_content(workspace_id, campaign_id, content_id)
+             VALUES (?1, ?2, ?3)",
+            params![DEFAULT_WORKSPACE_ID, campaign_id, content_id],
+        )
+        .map_err(|error| error.to_string())?;
+    write_audit(&connection, "campaign", "attach_content", "success", "user", Some(&campaign_id))
+        .map_err(|error| error.to_string())?;
+    Ok(true)
+}
+
+#[tauri::command]
+fn approval_request(
+    app: tauri::AppHandle,
+    id: String,
+    content_id: String,
+    requested_by: String,
+    reviewer_ids_json: Option<String>,
+    note: Option<String>,
+) -> Result<ApprovalView, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let content_id = validate_label(&content_id).map_err(|error| error.to_string())?;
+    let requested_by = validate_label(&requested_by).map_err(|error| error.to_string())?;
+    let reviewer_ids_json = reviewer_ids_json.unwrap_or_else(|| "[]".to_string());
+    let _: Vec<String> = serde_json::from_str(&reviewer_ids_json)
+        .map_err(|_| "reviewer_ids_json must be a JSON array".to_string())?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let exists: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM content_items
+               WHERE id=?1 AND workspace_id=?2
+             )",
+            params![content_id, DEFAULT_WORKSPACE_ID],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !exists {
+        return Err(AppError::NotFound.to_string());
+    }
+
+    let timestamp = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO approvals(
+               id, workspace_id, content_id, requested_by, reviewer_ids_json, status, note
+             ) VALUES (?1, ?2, ?3, ?4, ?5, 'pending', ?6)",
+            params![id, DEFAULT_WORKSPACE_ID, content_id, requested_by, reviewer_ids_json, note],
+        )
+        .map_err(|error| error.to_string())?;
+    connection
+        .execute(
+            "UPDATE content_items SET approval_status='pending', updated_at=?1
+             WHERE id=?2 AND workspace_id=?3",
+            params![timestamp, content_id, DEFAULT_WORKSPACE_ID],
+        )
+        .map_err(|error| error.to_string())?;
+    write_audit(&connection, "content", "approval_request", "success", "user", Some(&content_id))
+        .map_err(|error| error.to_string())?;
+
+    Ok(ApprovalView {
+        id,
+        content_id,
+        requested_by,
+        status: "pending".to_string(),
+        decided_by: None,
+        decided_at: None,
+        note,
+    })
+}
+
+#[tauri::command]
+fn approval_decide(
+    app: tauri::AppHandle,
+    id: String,
+    status: String,
+    decided_by: String,
+    note: Option<String>,
+) -> Result<ApprovalView, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let decided_by = validate_label(&decided_by).map_err(|error| error.to_string())?;
+    let status = validate_content_status(&status).map_err(|error| error.to_string())?;
+    if status == "draft" || status == "pending" {
+        return Err("approval decision must be approved, rejected, or changes_requested".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let current: Option<(String, String, String, String, Option<String>)> = connection
+        .query_row(
+            "SELECT content_id, requested_by, status, reviewer_ids_json, note
+             FROM approvals WHERE id=?1 AND workspace_id=?2",
+            params![id, DEFAULT_WORKSPACE_ID],
+            |row| Ok((
+                row.get(0)?,
+                row.get(1)?,
+                row.get(2)?,
+                row.get(3)?,
+                row.get(4)?,
+            )),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    let Some((content_id, requested_by, old_status, reviewer_ids_json, old_note)) = current else {
+        return Err(AppError::NotFound.to_string());
+    };
+    if old_status != "pending" {
+        return Err("only pending approvals can be decided".to_string());
+    }
+
+    let timestamp = chrono_like_timestamp();
+    connection
+        .execute(
+            "UPDATE approvals
+             SET status=?1, decided_by=?2, decided_at=?3, note=?4
+             WHERE id=?5 AND workspace_id=?6 AND status='pending'",
+            params![status, decided_by, timestamp, note, &id, DEFAULT_WORKSPACE_ID],
+        )
+        .map_err(|error| error.to_string())?;
+    connection
+        .execute(
+            "UPDATE content_items SET approval_status=?1, updated_at=?2
+             WHERE id=?3 AND workspace_id=?4",
+            params![status, timestamp, content_id, DEFAULT_WORKSPACE_ID],
+        )
+        .map_err(|error| error.to_string())?;
+    write_audit(&connection, "content", "approval_decide", "success", "user", Some(&content_id))
+        .map_err(|error| error.to_string())?;
+
+    Ok(ApprovalView {
+        id,
+        content_id,
+        requested_by,
+        status,
+        decided_by: Some(decided_by),
+        decided_at: Some(timestamp),
+        note: note.or(old_note),
+    })
+}
+
 #[tauri::command]
 fn task_enqueue(
     app: tauri::AppHandle,
@@ -849,12 +1107,18 @@ fn task_enqueue(
     available_at: String,
     max_attempts: i64,
     idempotency_key: Option<String>,
+    content_id: Option<String>,
 ) -> Result<TaskView, String> {
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
     let kind = validate_task_kind(&kind).map_err(|error| error.to_string())?;
+    let content_id = content_id
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
     let idempotency_key = idempotency_key
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
@@ -888,19 +1152,41 @@ fn task_enqueue(
         return Err("account is not part of campaign".to_string());
     }
 
+    if let Some(ref content_id) = content_id {
+        let content_attached: bool = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1
+                   FROM campaign_content cc
+                   JOIN content_items ci ON ci.id=cc.content_id
+                   WHERE cc.workspace_id=?3
+                     AND cc.campaign_id=?1
+                     AND cc.content_id=?2
+                     AND ci.workspace_id=?3
+                 )",
+                params![campaign_id, content_id, DEFAULT_WORKSPACE_ID],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if !content_attached {
+            return Err("content is not part of campaign".to_string());
+        }
+    }
+
     let created_at = chrono_like_timestamp();
     connection
         .execute(
             "INSERT INTO tasks(
-               id, workspace_id, campaign_id, account_id, platform, kind,
+               id, workspace_id, campaign_id, content_id, account_id, platform, kind,
                priority, status, attempts, max_attempts, available_at,
                idempotency_key, created_at
              )
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'pending', 0, ?8, ?9, ?10, ?11)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'pending', 0, ?9, ?10, ?11, ?12)",
             params![
                 id,
                 DEFAULT_WORKSPACE_ID,
                 campaign_id,
+                content_id,
                 account_id,
                 platform,
                 kind,
@@ -919,6 +1205,7 @@ fn task_enqueue(
     Ok(TaskView {
         id,
         campaign_id,
+        content_id,
         account_id,
         platform,
         kind,
@@ -941,7 +1228,7 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
 
     let candidate = transaction
         .query_row(
-            "SELECT id, campaign_id, account_id, platform, kind, priority,
+            "SELECT id, campaign_id, content_id, account_id, platform, kind, priority,
                     attempts, max_attempts, idempotency_key, available_at, created_at
              FROM tasks
              WHERE workspace_id=?2
@@ -954,16 +1241,17 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
                 Ok(TaskView {
                     id: row.get(0)?,
                     campaign_id: row.get(1)?,
-                    account_id: row.get(2)?,
-                    platform: row.get(3)?,
-                    kind: row.get(4)?,
-                    priority: row.get(5)?,
+                    content_id: row.get(2)?,
+                    account_id: row.get(3)?,
+                    platform: row.get(4)?,
+                    kind: row.get(5)?,
+                    priority: row.get(6)?,
                     status: "running".to_string(),
-                    attempts: row.get(6)?,
-                    max_attempts: row.get(7)?,
-                    idempotency_key: row.get(8)?,
-                    available_at: row.get(9)?,
-                    created_at: row.get(10)?,
+                    attempts: row.get(7)?,
+                    max_attempts: row.get(8)?,
+                    idempotency_key: row.get(9)?,
+                    available_at: row.get(10)?,
+                    created_at: row.get(11)?,
                 })
             },
         )
@@ -1073,8 +1361,8 @@ fn task_fail(
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let current: Option<(i64, i64, String, String, String, String, i64, String, String, String, String)> = connection
         .query_row(
-            "SELECT attempts, max_attempts, campaign_id, account_id, platform, kind, priority,
-                    status, idempotency_key, available_at, created_at
+            "SELECT attempts, max_attempts, campaign_id, content_id, account_id, platform, kind, priority,
+                    status, idempotency_key, available_at, created_at"
              FROM tasks
              WHERE id=?1 AND workspace_id=?2",
             params![&entity_id, DEFAULT_WORKSPACE_ID],
@@ -1097,7 +1385,7 @@ fn task_fail(
         .optional()
         .map_err(|error| error.to_string())?;
 
-    let Some((attempts, max_attempts, campaign_id, account_id, platform, kind, priority, status, idempotency_key, available_at, created_at)) = current else {
+    let Some((attempts, max_attempts, campaign_id, content_id, account_id, platform, kind, priority, status, idempotency_key, available_at, created_at)) = current else {
         return Err(AppError::NotFound.to_string());
     };
 
@@ -1142,6 +1430,7 @@ fn task_fail(
     Ok(TaskView {
         id: entity_id,
         campaign_id,
+        content_id,
         account_id,
         platform,
         kind,
@@ -1161,8 +1450,8 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
-            "SELECT id, campaign_id, account_id, platform, kind, priority,
-                    status, attempts, max_attempts, idempotency_key, available_at, created_at
+            "SELECT id, campaign_id, content_id, account_id, platform, kind, priority,
+                    status, attempts, max_attempts, idempotency_key, available_at, created_at"
              FROM tasks
              WHERE workspace_id=?1
                AND (?2 IS NULL OR campaign_id=?2)
@@ -1175,16 +1464,17 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
             Ok(TaskView {
                 id: row.get(0)?,
                 campaign_id: row.get(1)?,
-                account_id: row.get(2)?,
-                platform: row.get(3)?,
-                kind: row.get(4)?,
-                priority: row.get(5)?,
-                status: row.get(6)?,
-                attempts: row.get(7)?,
-                max_attempts: row.get(8)?,
-                idempotency_key: row.get(9)?,
-                available_at: row.get(10)?,
-                created_at: row.get(11)?,
+                content_id: row.get(2)?,
+                account_id: row.get(3)?,
+                platform: row.get(4)?,
+                kind: row.get(5)?,
+                priority: row.get(6)?,
+                status: row.get(7)?,
+                attempts: row.get(8)?,
+                max_attempts: row.get(9)?,
+                idempotency_key: row.get(10)?,
+                available_at: row.get(11)?,
+                created_at: row.get(12)?,
             })
         })
         .map_err(|error| error.to_string())?;
@@ -2065,6 +2355,11 @@ pub fn run() {
             account_delete,
             campaign_create,
             campaign_list,
+            content_upsert,
+            content_list,
+            campaign_attach_content,
+            approval_request,
+            approval_decide,
             task_enqueue,
             task_claim_next,
             task_fail,
