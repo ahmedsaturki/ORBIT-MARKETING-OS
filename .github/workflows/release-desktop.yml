@@ -44,6 +44,9 @@ jobs:
       - name: Verify workspace
         run: pnpm verify:workspace
 
+      - name: Generate app icons
+        run: pnpm --dir packages/desktop tauri icon src-tauri/icon-source.svg
+
       - name: Build desktop
         run: pnpm --dir packages/desktop tauri build
 
