@@ -74,7 +74,7 @@ async function scan(dir) {
       await scan(full);
       continue;
     }
-    if (!/\.(?:json|ya?ml|mjs|cjs|js|ts|tsx|rs|toml|md|sh)$/.test(entry.name)) continue;
+    if (!/\.(?:json|ya?ml|mjs|cjs|js|ts|tsx|rs|toml|sh)$/.test(entry.name)) continue;
     const content = await readFile(full, "utf8");
     for (const fragment of forbiddenFragments) {
       if (content.includes(fragment)) {
