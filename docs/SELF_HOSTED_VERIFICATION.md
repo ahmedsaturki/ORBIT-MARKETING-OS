@@ -2,7 +2,7 @@
 
 This is the fallback verification path when GitHub-hosted runners cannot start jobs or when a fully owned execution path is preferred.
 
-GitHub documents repository-level self-hosted runners and custom labels for routing jobs. They are free to use with GitHub Actions; the machine is your responsibility. citeturn961641search1turn961641search3
+GitHub documents repository-level self-hosted runners and custom labels for routing jobs. GitHub Actions does not charge an additional runner fee; the runner machine and its maintenance remain the operator's responsibility. See https://docs.github.com/en/actions/hosting-your-own-runners/adding-self-hosted-runners.
 
 ## 1. Add the runner
 
@@ -14,7 +14,7 @@ Choose the operating system and architecture of the machine, then use the regist
 
 Use an x64 self-hosted runner. The workflows route to `self-hosted, orbit, x64`; add the custom `orbit` label during registration so an unrelated self-hosted runner cannot consume release verification jobs.
 
-The runner should end in a connected/listening state before it can accept the workflow. citeturn961641search1
+The runner should end in a connected/listening state before it can accept the workflow. See https://docs.github.com/en/actions/hosting-your-own-runners/adding-self-hosted-runners.
 
 ## 2. Prepare the machine
 
