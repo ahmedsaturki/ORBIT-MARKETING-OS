@@ -75,8 +75,10 @@ The connected `orbit-marketing-os` project exists, but no successful deployment 
 The connected Vercel project is `orbit-marketing-os`. The repository configuration is now explicitly Next.js static export with `packages/web/out` and a versioned first-deployment-safe ignore script. A fresh successful deployment is still required before release.
 
 ## Latest execution snapshot
+The default branch now also exposes branch-restricted `Bootstrap pnpm lockfile` and `Self-Hosted Verification` workflow definitions so their manual `workflow_dispatch` controls are available from GitHub's Actions UI. Both workflows refuse refs other than `rebuild/orbit-production`.
 
-- Branch HEAD: `a5c163df9adca5b6e2591b274a64e0a9f44cebf3`.
+
+- Branch HEAD: `c054125d43c0f215a34c71f08f09b1acbf34b2f6`.
 - PR #2 remains open, draft, and unmerged.
 - The latest hosted `CI` run for the branch completed with `failure` before workflow steps were registered.
 - The latest lockfile bootstrap run for the branch remains `queued`; previous bootstrap runs were cancelled by its concurrency policy.
