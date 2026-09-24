@@ -2348,13 +2348,42 @@ fn account_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
-    let changed = connection
-        .execute("DELETE FROM accounts WHERE id = ?1 AND workspace_id = ?2", params![id, workspace_id])
+    let transaction = connection
+        .unchecked_transaction()
         .map_err(|error| error.to_string())?;
+
+    transaction
+        .execute(
+            "UPDATE conversations
+             SET account_id=NULL, updated_at=?1
+             WHERE account_id=?2 AND workspace_id=?3",
+            params![chrono_like_timestamp(), &id, &workspace_id],
+        )
+        .map_err(|error| error.to_string())?;
+
+    let changed = transaction
+        .execute(
+            "DELETE FROM accounts WHERE id = ?1 AND workspace_id = ?2",
+            params![&id, &workspace_id],
+        )
+        .map_err(|error| error.to_string())?;
+
     if changed > 0 {
-        write_audit(&connection, "account", "delete", "success", "user", Some(&id))
-            .map_err(|error| error.to_string())?;
+        append_audit_event(
+            &transaction,
+            &workspace_id,
+            "account",
+            "delete",
+            "success",
+            "user",
+            Some(&id),
+        )
+        .map_err(|error| error.to_string())?;
     }
+
+    transaction
+        .commit()
+        .map_err(|error| error.to_string())?;
     Ok(changed > 0)
 }
 
