@@ -167,6 +167,20 @@ describe("offline license verification", () => {
     })).resolves.toMatchObject({ valid: false, reason: "malformed" });
   });
 
+  it("rejects negative or non-integer verification counters", async () => {
+    const result = await verifyLicenseToken("a.b", new Uint8Array(32), {
+      deviceCount: -1,
+      accountCount: 1,
+    });
+    expect(result).toMatchObject({ valid: false, reason: "malformed" });
+
+    const other = await verifyLicenseToken("a.b", new Uint8Array(32), {
+      deviceCount: 1.5,
+      accountCount: 1,
+    });
+    expect(other).toMatchObject({ valid: false, reason: "malformed" });
+  });
+
   it("rejects tokens with extra segments", async () => {
     const result = await verifyLicenseToken("a.b.c", new Uint8Array(32), {
       deviceCount: 0,
