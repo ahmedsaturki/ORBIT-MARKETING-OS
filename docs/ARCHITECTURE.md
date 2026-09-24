@@ -58,3 +58,10 @@ Logs contain event IDs, timestamps, component names, and non-sensitive outcomes.
 ## Definition of done
 
 A feature is complete only after implementation, automated tests, build/typecheck/lint, security review, documentation, and acceptance evidence all agree.
+
+
+## Current desktop workspace model
+
+The core domain is workspace-aware, but the current Tauri desktop runtime uses a single local workspace identifier (`default`) while the workspace-management UI and multi-workspace persistence layer are still pending. This is intentional: no multi-tenant capability is claimed until it is implemented and tested end-to-end.
+
+External platform actions are gated by account/campaign/task integrity, approval, local safety limits, explicit user authorization, connector capabilities, and challenge handling.
