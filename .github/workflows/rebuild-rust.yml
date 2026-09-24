@@ -54,17 +54,17 @@ jobs:
 
       - name: Rust check
         if: steps.detect.outputs.present == 'true'
-        run: cargo check --workspace --all-targets
+        run: cargo check --locked --workspace --all-targets
         working-directory: packages/desktop/src-tauri
 
       - name: Rust tests
         if: steps.detect.outputs.present == 'true'
-        run: cargo test --workspace --all-targets
+        run: cargo test --locked --workspace --all-targets
         working-directory: packages/desktop/src-tauri
 
       - name: Clippy
         if: steps.detect.outputs.present == 'true'
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
         working-directory: packages/desktop/src-tauri
 
       - name: Report missing desktop backend
