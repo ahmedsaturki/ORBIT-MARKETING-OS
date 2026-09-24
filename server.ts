@@ -64,7 +64,6 @@ function requestOrigin(req: express.Request): string | undefined {
 function originAllowed(req: express.Request): boolean {
   const origin = requestOrigin(req);
   if (!origin) return true;
-  if (!runtimeAuthRequired()) return true;
   return RUNTIME_ALLOWED_ORIGINS.has(origin);
 }
 
@@ -86,6 +85,12 @@ function runtimeAuthRequired(): boolean {
 }
 
 function authorizeRuntime(req: express.Request, res: express.Response): boolean {
+  const origin = requestOrigin(req);
+  if (origin && !originAllowed(req)) {
+    res.status(403).json({ error: "Origin is not allowed for this runtime." });
+    return false;
+  }
+
   if (!runtimeAuthRequired()) {
     return true;
   }
@@ -122,7 +127,7 @@ app.use("/api", (req, res, next) => {
   applyCors(req, res);
 
   if (req.method === "OPTIONS") {
-    if (runtimeAuthRequired() && !originAllowed(req)) {
+    if (!originAllowed(req)) {
       return res.status(403).json({ error: "Origin is not allowed for this runtime." });
     }
     return res.sendStatus(204);
