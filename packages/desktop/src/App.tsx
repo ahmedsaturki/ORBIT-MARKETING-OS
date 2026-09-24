@@ -16,14 +16,14 @@ interface WorkspaceView {
 
 interface VaultResult {
   readonly label: string;
-  readonly payloadVersion: number;
+  readonly payload_version: number;
 }
 
 interface AccountView {
   readonly id: string;
   readonly platform: string;
   readonly display_name: string;
-  readonly username?: string;
+  readonly username: string | null;
   readonly status: string;
   readonly has_encrypted_session: boolean;
 }
@@ -50,28 +50,29 @@ interface ApprovalView {
   readonly content_id: string;
   readonly requested_by: string;
   readonly status: string;
-  readonly decided_by?: string;
-  readonly decided_at?: string;
-  readonly note?: string;
+  readonly decided_by: string | null;
+  readonly decided_at: string | null;
+  readonly note: string | null;
 }
 
 interface ContactView {
   readonly id: string;
   readonly display_name: string;
-  readonly phone?: string;
-  readonly email?: string;
-  readonly source_platform?: string;
+  readonly phone: string | null;
+  readonly email: string | null;
+  readonly source_platform: string | null;
   readonly status: string;
-  readonly notes?: string;
+  readonly notes: string | null;
   readonly updated_at: string;
 }
 
 interface ConversationView {
   readonly id: string;
   readonly account_id?: string;
-  readonly contact_id?: string;
+  readonly account_id: string | null;
+  readonly contact_id: string | null;
   readonly platform: string;
-  readonly external_thread_id?: string;
+  readonly external_thread_id: string | null;
   readonly status: string;
   readonly message_count: number;
   readonly updated_at: string;
@@ -81,6 +82,8 @@ interface TaskView {
   readonly id: string;
   readonly campaign_id: string;
   readonly content_id?: string;
+  readonly content_id: string | null;
+  readonly destination_id: string | null;
   readonly account_id: string;
   readonly platform: string;
   readonly kind: string;
@@ -100,7 +103,7 @@ interface AuditView {
   readonly action: string;
   readonly outcome: string;
   readonly actor: string;
-  readonly entity_id?: string;
+  readonly entity_id: string | null;
   readonly previous_hash: string;
   readonly hash: string;
 }
