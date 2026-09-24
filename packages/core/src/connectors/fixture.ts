@@ -1,4 +1,4 @@
-import type { Platform, Task } from "../types/index.js";
+import type { ConnectorCapabilities, Platform, Task } from "../types/index.js";
 import {
   assertSupportedTask,
   assertUserConfirmed,
@@ -10,17 +10,11 @@ import {
 export interface FixtureConnectorOptions {
   readonly platform: Platform;
   readonly challengeOnExecute?: boolean;
+  readonly capabilities?: Partial<ConnectorCapabilities>;
 }
 
 export class FixtureConnector implements PlatformConnector {
-  public readonly capabilities = {
-    publish: true,
-    messaging: true,
-    comments: true,
-    inbox: true,
-    analytics: true,
-    media: true,
-  } as const;
+  public readonly capabilities: ConnectorCapabilities;
 
   public readonly platform: Platform;
   private readonly challengeOnExecute: boolean;
@@ -28,6 +22,15 @@ export class FixtureConnector implements PlatformConnector {
   public constructor(options: FixtureConnectorOptions) {
     this.platform = options.platform;
     this.challengeOnExecute = options.challengeOnExecute ?? false;
+    this.capabilities = {
+      publish: true,
+      messaging: true,
+      comments: true,
+      inbox: true,
+      analytics: true,
+      media: true,
+      ...options.capabilities,
+    };
   }
 
   public async connect(context: ConnectorContext): Promise<ConnectorOutcome> {
