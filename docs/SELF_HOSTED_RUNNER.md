@@ -70,7 +70,7 @@ and pushes only the selected branch.
 ## Run order
 
 1. Register and bring the runner Online.
-2. Dispatch **Bootstrap workspace lockfiles** on `rebuild/orbit-production`.
+2. Dispatch **Bootstrap reproducible lockfiles** on `rebuild/orbit-production`.
 3. Confirm the two lockfiles appear in that branch.
 4. Dispatch **Self-Hosted Verification** on the same branch.
 5. Require all quality, runtime, browser, performance, and Rust stages to pass before treating the branch as release-ready.
