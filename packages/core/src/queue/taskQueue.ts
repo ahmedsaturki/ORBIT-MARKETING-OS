@@ -4,6 +4,7 @@ import { calculateRetryDelay, shouldRetry, type RetryPolicy } from "./retry.js";
 export interface QueueStats {
   readonly pending: number;
   readonly awaiting_approval: number;
+  readonly awaiting_user_action: number;
   readonly running: number;
   readonly succeeded: number;
   readonly failed: number;
@@ -82,10 +83,15 @@ export class TaskQueue {
   /** Resumes an approval-gated task once approval is present. */
   public resume(id: string): Task {
     const task = this.requireTask(id);
-    if (task.status !== "awaiting_approval") {
-      throw new Error("Only approval-waiting tasks can resume: " + id);
+    if (task.status !== "awaiting_approval" && task.status !== "awaiting_user_action") {
+      throw new Error("Only waiting tasks can resume: " + id);
     }
     return this.setTask({ ...task, status: "pending" });
+  }
+
+  /** Parks a running task until a user/challenge intervention is completed. */
+  public awaitUserAction(id: string): Task {
+    return this.transition(id, "awaiting_user_action");
   }
 
   /** Defers a claimed task without consuming an attempt. */
@@ -127,6 +133,7 @@ export class TaskQueue {
     const result: Record<keyof QueueStats, number> = {
       pending: 0,
       awaiting_approval: 0,
+      awaiting_user_action: 0,
       running: 0,
       succeeded: 0,
       failed: 0,
