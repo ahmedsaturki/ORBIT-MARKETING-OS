@@ -312,6 +312,7 @@ struct ContentView {
     tags_json: String,
     updated_at: String,
 }
+#[derive(Debug, Serialize)]
 struct ContentVariantView {
     content_id: String,
     platform: String,
