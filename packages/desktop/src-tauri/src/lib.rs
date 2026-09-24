@@ -310,6 +310,33 @@ struct AuditView {
 }
 
 #[derive(Debug, Serialize)]
+struct TelegramExecutionView {
+    task_id: String,
+    status: String,
+    external_message_id: Option<i64>,
+    message: String,
+    retry_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TelegramApiResponse<T> {
+    ok: bool,
+    description: Option<String>,
+    result: Option<T>,
+    parameters: Option<TelegramParameters>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TelegramParameters {
+    retry_after: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TelegramSentMessage {
+    message_id: i64,
+}
+
+#[derive(Debug, Serialize)]
 struct AccountView {
     id: String,
     platform: String,
@@ -317,6 +344,44 @@ struct AccountView {
     username: Option<String>,
     status: String,
     has_encrypted_session: bool,
+}
+
+fn validate_telegram_token(token: &str) -> Result<String, AppError> {
+    let value = token.trim();
+    let Some((bot_id, secret)) = value.split_once(':') else {
+        return Err(AppError::InvalidPayload);
+    };
+    if bot_id.is_empty()
+        || secret.len() < 10
+        || bot_id.len() > 32
+        || secret.len() > 256
+        || !bot_id.chars().all(|character| character.is_ascii_digit())
+        || !secret
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '_' || character == '-')
+    {
+        return Err(AppError::InvalidPayload);
+    }
+    Ok(value.to_string())
+}
+
+fn parse_retry_timestamp(retry_after_seconds: u64) -> String {
+    let seconds = retry_after_seconds.clamp(1, 86_400);
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    (now + seconds).to_string()
+}
+
+fn telegram_task_audit(
+    connection: &Connection,
+    task_id: &str,
+    action: &str,
+    outcome: &str,
+) -> Result<(), String> {
+    write_audit(connection, "telegram", action, outcome, "user", Some(task_id))
+        .map_err(|error| error.to_string())
 }
 
 fn has_column(connection: &Connection, table: &str, column: &str) -> Result<bool, rusqlite::Error> {
@@ -612,6 +677,253 @@ fn validate_label(label: &str) -> Result<String, AppError> {
         return Err(AppError::InvalidLabel);
     }
     Ok(value.to_string())
+}
+
+#[tauri::command]
+async fn telegram_execute_task(
+    app: tauri::AppHandle,
+    task_id: String,
+    vault_password: String,
+    user_confirmed: bool,
+) -> Result<TelegramExecutionView, String> {
+    let task_id = validate_label(&task_id).map_err(|error| error.to_string())?;
+    if !user_confirmed {
+        let connection = open_db(&app).map_err(|error| error.to_string())?;
+        let current: Option<String> = connection
+            .query_row(
+                "SELECT status FROM tasks WHERE id=?1 AND workspace_id=?2",
+                params![&task_id, DEFAULT_WORKSPACE_ID],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|error| error.to_string())?;
+        if current.as_deref() == Some("running") {
+            if let Err(error) = connection.execute(
+                "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                params![&task_id, DEFAULT_WORKSPACE_ID],
+            ) {
+                return Err(error.to_string());
+            }
+            telegram_task_audit(&connection, &task_id, "confirmation_required", "blocked")?;
+        }
+        return Ok(TelegramExecutionView {
+            task_id,
+            status: "awaiting_user_action".to_string(),
+            external_message_id: None,
+            message: "Explicit confirmation is required before sending to Telegram.".to_string(),
+            retry_at: None,
+        });
+    }
+
+    if vault_password.is_empty() {
+        return Err(AppError::InvalidPassword.to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let task = connection
+        .query_row(
+            "SELECT account_id, platform, kind, content_id, destination_id, status, attempts, max_attempts
+             FROM tasks WHERE id=?1 AND workspace_id=?2",
+            params![&task_id, DEFAULT_WORKSPACE_ID],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, i64>(6)?,
+                    row.get::<_, i64>(7)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+
+    let Some((account_id, platform, kind, content_id, destination_id, status, attempts, max_attempts)) = task else {
+        return Err(AppError::NotFound.to_string());
+    };
+
+    if status != "running" {
+        return Err("only running tasks can execute".to_string());
+    }
+    if platform != "telegram" {
+        return Err("telegram executor requires a telegram task".to_string());
+    }
+    if kind != "publish" && kind != "message" {
+        return Err("telegram native executor supports publish/message text tasks only".to_string());
+    }
+    let content_id = content_id.ok_or_else(|| "task has no linked content".to_string())?;
+    let destination_id = destination_id.ok_or_else(|| "task has no Telegram destination".to_string())?;
+
+    let (session_payload_json, account_status) = connection
+        .query_row(
+            "SELECT session_payload_json, status FROM accounts WHERE id=?1 AND workspace_id=?2 AND platform='telegram'",
+            params![&account_id, DEFAULT_WORKSPACE_ID],
+            |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, String>(1)?)),
+        )
+        .map_err(|error| error.to_string())?;
+
+    if account_status != "connected" {
+        connection
+            .execute(
+                "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                params![&task_id, DEFAULT_WORKSPACE_ID],
+            )
+            .map_err(|error| error.to_string())?;
+        telegram_task_audit(&connection, &task_id, "account_not_connected", "blocked")?;
+        return Ok(TelegramExecutionView {
+            task_id,
+            status: "awaiting_user_action".to_string(),
+            external_message_id: None,
+            message: "Telegram account requires authorization before execution.".to_string(),
+            retry_at: None,
+        });
+    }
+
+    let session_payload_json = session_payload_json.ok_or_else(|| AppError::NotFound.to_string())?;
+    let payload: EncryptedPayload =
+        serde_json::from_str(&session_payload_json).map_err(|error| error.to_string())?;
+    let token = validate_telegram_token(
+        &open_payload(&vault_password, &payload).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| error.to_string())?;
+
+    let (body, approval_status) = connection
+        .query_row(
+            "SELECT body, approval_status FROM content_items WHERE id=?1 AND workspace_id=?2",
+            params![&content_id, DEFAULT_WORKSPACE_ID],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        )
+        .map_err(|error| error.to_string())?;
+
+    if approval_status != "approved" || body.trim().is_empty() {
+        connection
+            .execute(
+                "UPDATE tasks SET status='awaiting_approval' WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                params![&task_id, DEFAULT_WORKSPACE_ID],
+            )
+            .map_err(|error| error.to_string())?;
+        telegram_task_audit(&connection, &task_id, "approval_required", "blocked")?;
+        return Ok(TelegramExecutionView {
+            task_id,
+            status: "awaiting_approval".to_string(),
+            external_message_id: None,
+            message: "Linked content is not approved for external delivery.".to_string(),
+            retry_at: None,
+        });
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|_| "failed to initialize Telegram HTTP client".to_string())?;
+    let url = format!("https://api.telegram.org/bot{token}/sendMessage");
+    let response = client
+        .post(url)
+        .json(&serde_json::json!({
+            "chat_id": destination_id,
+            "text": body.trim(),
+        }))
+        .send()
+        .await
+        .map_err(|_| "Telegram request failed".to_string())?;
+
+    let status_code = response.status();
+    let parsed = response
+        .json::<TelegramApiResponse<TelegramSentMessage>>()
+        .await
+        .map_err(|_| "Telegram returned an invalid response".to_string())?;
+
+    if parsed.ok {
+        let external_id = parsed.result.map(|value| value.message_id);
+        connection
+            .execute(
+                "UPDATE tasks SET status='succeeded' WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                params![&task_id, DEFAULT_WORKSPACE_ID],
+            )
+            .map_err(|error| error.to_string())?;
+        telegram_task_audit(&connection, &task_id, "send_message", "success")?;
+        return Ok(TelegramExecutionView {
+            task_id,
+            status: "succeeded".to_string(),
+            external_message_id: external_id,
+            message: "Telegram message sent successfully.".to_string(),
+            retry_at: None,
+        });
+    }
+
+    if status_code.as_u16() == 401 {
+        connection
+            .execute(
+                "UPDATE accounts SET status='needs_refresh', updated_at=?1 WHERE id=?2 AND workspace_id=?3",
+                params![chrono_like_timestamp(), &account_id, DEFAULT_WORKSPACE_ID],
+            )
+            .map_err(|error| error.to_string())?;
+        connection
+            .execute(
+                "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                params![&task_id, DEFAULT_WORKSPACE_ID],
+            )
+            .map_err(|error| error.to_string())?;
+        telegram_task_audit(&connection, &task_id, "authorization_failed", "blocked")?;
+        return Ok(TelegramExecutionView {
+            task_id,
+            status: "awaiting_user_action".to_string(),
+            external_message_id: None,
+            message: "Telegram authorization failed; re-authorize the account.".to_string(),
+            retry_at: None,
+        });
+    }
+
+    if status_code.as_u16() == 429 {
+        let retry_after = parsed
+            .parameters
+            .and_then(|parameters| parameters.retry_after)
+            .unwrap_or(60)
+            .clamp(1, 86_400);
+        let retry_at = parse_retry_timestamp(retry_after);
+        connection
+            .execute(
+                "UPDATE tasks SET status='pending', available_at=?1 WHERE id=?2 AND workspace_id=?3 AND status='running'",
+                params![retry_at, &task_id, DEFAULT_WORKSPACE_ID],
+            )
+            .map_err(|error| error.to_string())?;
+        telegram_task_audit(&connection, &task_id, "rate_limited", "blocked")?;
+        return Ok(TelegramExecutionView {
+            task_id,
+            status: "pending".to_string(),
+            external_message_id: None,
+            message: parsed.description.unwrap_or_else(|| "Telegram rate limit reached.".to_string()),
+            retry_at: Some(retry_at),
+        });
+    }
+
+    let next_attempt = attempts + 1;
+    let terminal = next_attempt >= max_attempts;
+    let next_status = if terminal { "failed" } else { "pending" };
+    let next_available = if terminal {
+        chrono_like_timestamp()
+    } else {
+        let delay = retry_delay_ms(next_attempt);
+        parse_retry_timestamp((delay / 1000).max(1) as u64)
+    };
+    connection
+        .execute(
+            "UPDATE tasks SET status=?1, attempts=?2, available_at=?3 WHERE id=?4 AND workspace_id=?5 AND status='running'",
+            params![next_status, next_attempt, next_available, &task_id, DEFAULT_WORKSPACE_ID],
+        )
+        .map_err(|error| error.to_string())?;
+    telegram_task_audit(&connection, &task_id, "send_failed", "failure")?;
+
+    Ok(TelegramExecutionView {
+        task_id,
+        status: next_status.to_string(),
+        external_message_id: None,
+        message: parsed.description.unwrap_or_else(|| "Telegram delivery failed.".to_string()),
+        retry_at: if terminal { None } else { Some(next_available) },
+    })
 }
 
 #[tauri::command]
@@ -2567,6 +2879,7 @@ pub fn run() {
     let result = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             app_health,
+            telegram_execute_task,
             vault_put,
             vault_get,
             vault_delete,
