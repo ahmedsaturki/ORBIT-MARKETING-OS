@@ -46,6 +46,7 @@ const requiredFiles = [
   ".github/workflows/self-hosted-verify.yml",
   ".github/workflows/bootstrap-lockfile.yml",
   ".github/workflows/vercel-web.yml",
+  ".github/workflows/web-release-selfhosted.yml",
   "scripts/self-hosted-preflight.sh",
   "scripts/security-scan.mjs",
 ];
@@ -70,6 +71,19 @@ if (!ci.includes("pnpm audit --audit-level=high")) throw new Error("CI dependenc
 if (!ci.includes("pnpm security:scan")) throw new Error("CI secret scan gate missing");
 if (!ci.includes("pnpm test:performance")) throw new Error("CI performance smoke gate missing");
 if (!ci.includes("pnpm test:e2e")) throw new Error("CI browser E2E gate missing");
+
+const selfHostedWeb = await text(".github/workflows/web-release-selfhosted.yml");
+for (const fragment of [
+  "runs-on: [self-hosted, x64, linux]",
+  "github.ref_name == 'main' && github.actor == 'ahmedsaturki'",
+  "pnpm install --frozen-lockfile",
+  "pnpm security:scan",
+  "vercel@59.23.1 build --prod",
+  "vercel@59.23.1 deploy --prebuilt --prod",
+  "node scripts/verify-live-web.mjs",
+]) {
+  if (!selfHostedWeb.includes(fragment)) throw new Error("Self-hosted web release gate missing: " + fragment);
+}
 
 const vercelWorkflow = await text(".github/workflows/vercel-web.yml");
 for (const fragment of [
