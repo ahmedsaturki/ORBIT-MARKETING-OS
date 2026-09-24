@@ -35,8 +35,8 @@ The active implementation branch is `rebuild/orbit-production`. PR #2 remains in
 ## Current execution evidence
 
 Latest observed hosted GitHub Actions CI on the rebuild line:
-- run `36049164892`
-- jobs `107800093660 (Rust) / 107800093968 (quality)`
+- run `36049705206`
+- jobs `107801904537` (quality) / `107801904994` (Rust quality)
 - conclusion: `failure`
 - runner_id: `0`
 - runner name: empty
