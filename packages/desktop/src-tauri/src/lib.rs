@@ -5556,6 +5556,71 @@ mod tests {
     }
 
     #[test]
+    fn v10_task_idempotency_is_workspace_scoped() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES
+                   ('workspace-1', 'One', '2026-09-24T00:00:00Z'),
+                   ('workspace-2', 'Two', '2026-09-24T00:00:00Z');
+                 INSERT INTO accounts(
+                   id, workspace_id, platform, display_name, status, created_at, updated_at
+                 ) VALUES
+                   ('account-1', 'workspace-1', 'telegram', 'Telegram 1', 'connected', '2026-09-24T00:00:00Z', '2026-09-24T00:00:00Z'),
+                   ('account-2', 'workspace-2', 'telegram', 'Telegram 2', 'connected', '2026-09-24T00:00:00Z', '2026-09-24T00:00:00Z');
+                 INSERT INTO campaigns(
+                   id, workspace_id, name, status, created_at
+                 ) VALUES
+                   ('campaign-1', 'workspace-1', 'Campaign 1', 'scheduled', '2026-09-24T00:00:00Z'),
+                   ('campaign-2', 'workspace-2', 'Campaign 2', 'scheduled', '2026-09-24T00:00:00Z');
+                 PRAGMA user_version = 10;",
+            )
+            .expect("workspace fixtures should be created");
+
+        connection
+            .execute(
+                "INSERT INTO tasks(
+                   id, workspace_id, campaign_id, account_id, platform, kind, priority,
+                   status, attempts, max_attempts, available_at, idempotency_key, created_at
+                 ) VALUES (
+                   'task-1', 'workspace-1', 'campaign-1', 'account-1', 'telegram', 'sync', 0,
+                   'pending', 0, 3, '2026-09-24T15:00:00Z', 'same-key', '2026-09-24T15:00:00Z'
+                 )",
+                [],
+            )
+            .expect("first idempotent task should insert");
+
+        connection
+            .execute(
+                "INSERT INTO tasks(
+                   id, workspace_id, campaign_id, account_id, platform, kind, priority,
+                   status, attempts, max_attempts, available_at, idempotency_key, created_at
+                 ) VALUES (
+                   'task-2', 'workspace-2', 'campaign-2', 'account-2', 'telegram', 'sync', 0,
+                   'pending', 0, 3, '2026-09-24T15:00:00Z', 'same-key', '2026-09-24T15:00:00Z'
+                 )",
+                [],
+            )
+            .expect("same idempotency key should be allowed in another workspace");
+
+        let duplicate_same_workspace = connection.execute(
+            "INSERT INTO tasks(
+               id, workspace_id, campaign_id, account_id, platform, kind, priority,
+               status, attempts, max_attempts, available_at, idempotency_key, created_at
+             ) VALUES (
+               'task-3', 'workspace-1', 'campaign-1', 'account-1', 'telegram', 'sync', 0,
+               'pending', 0, 3, '2026-09-24T15:00:00Z', 'same-key', '2026-09-24T15:00:00Z'
+             )",
+            [],
+        );
+        assert!(duplicate_same_workspace.is_err());
+    }
+
+    #[test]
     fn backup_validation_migrates_legacy_audit_chain_before_verification() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
         connection
