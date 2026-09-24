@@ -41,5 +41,5 @@ jobs:
       - name: Verify reproducible lockfiles
         run: node -e "const fs=require('node:fs'); for (const p of ['pnpm-lock.yaml','packages/desktop/src-tauri/Cargo.lock']) { const s=fs.statSync(p); if(!s.isFile() || s.size===0) process.exit(1); }"
 
-      - name: Commit lockfiles to rebuild branch
+      - name: Commit lockfiles to selected production rebuild branch
         run: node scripts/commit-lockfiles.mjs
