@@ -1,5 +1,5 @@
 import type { Task } from "../types/index.js";
-import { calculateRetryDelay, type RetryPolicy } from "./retry.js";
+import { calculateRetryDelay, shouldRetry, type RetryPolicy } from "./retry.js";
 
 export interface QueueStats {
   readonly pending: number;
@@ -37,9 +37,13 @@ export class TaskQueue {
     if (
       !Number.isInteger(options.retryPolicy.maxAttempts) ||
       options.retryPolicy.maxAttempts < 1 ||
-      options.retryPolicy.maxAttempts > 10
+      options.retryPolicy.maxAttempts > 10 ||
+      !Number.isFinite(options.retryPolicy.baseDelayMs) ||
+      options.retryPolicy.baseDelayMs < 0 ||
+      !Number.isFinite(options.retryPolicy.maxDelayMs) ||
+      options.retryPolicy.maxDelayMs < options.retryPolicy.baseDelayMs
     ) {
-      throw new RangeError("retryPolicy.maxAttempts must be an integer between 1 and 10");
+      throw new RangeError("invalid retry policy");
     }
   }
 
@@ -71,7 +75,13 @@ export class TaskQueue {
     const normalizedNow = this.normalizeTimestamp(now, "now");
     const candidates = [...this.tasks.values()]
       .filter((task) => task.status === "pending" && task.availableAt <= normalizedNow)
-      .sort((a, b) => b.priority - a.priority || a.availableAt.localeCompare(b.availableAt));
+      .sort(
+        (a, b) =>
+          b.priority - a.priority ||
+          a.availableAt.localeCompare(b.availableAt) ||
+          a.createdAt.localeCompare(b.createdAt) ||
+          a.id.localeCompare(b.id),
+      );
 
     const task = candidates[0];
     if (!task) return undefined;
@@ -140,7 +150,7 @@ export class TaskQueue {
 
     const nextAttempt = task.attempts + 1;
     const effectiveMaxAttempts = Math.min(task.maxAttempts, this.options.retryPolicy.maxAttempts);
-    if (nextAttempt >= effectiveMaxAttempts) {
+    if (!shouldRetry(nextAttempt, { ...this.options.retryPolicy, maxAttempts: effectiveMaxAttempts })) {
       return { ...this.setTask({ ...task, attempts: nextAttempt, status: "failed" }) };
     }
 
