@@ -1468,7 +1468,9 @@ async fn telegram_execute_task(
 
     let rule_config = load_rule_config(&connection, &workspace_id, "telegram", &kind)?;
     let effective_timeout_ms = rule_config.map(|value| value.0).unwrap_or(15_000);
-    let effective_max_attempts = rule_config.map(|value| value.1).unwrap_or(max_attempts);
+    let effective_max_attempts = rule_config
+        .map(|value| effective_max_attempts(max_attempts, value.1))
+        .unwrap_or(max_attempts);
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_millis(effective_timeout_ms))
         .build()
@@ -3510,6 +3512,10 @@ fn task_set_status(
 
     Ok(changed > 0)
 }
+fn effective_max_attempts(task_max_attempts: i64, rule_max_attempts: i64) -> i64 {
+    task_max_attempts.min(rule_max_attempts).clamp(1, 10)
+}
+
 fn retry_delay_ms(next_attempt: i64) -> i64 {
     if next_attempt < 1 {
         return 1_000;
@@ -4614,6 +4620,14 @@ mod tests {
         assert!((1i64..=10i64).contains(&1));
         assert!((1i64..=10i64).contains(&10));
         assert!(!(1i64..=10i64).contains(&11));
+    }
+
+    #[test]
+    fn effective_attempt_limit_never_exceeds_task_or_rule_limit() {
+        assert_eq!(effective_max_attempts(3, 10), 3);
+        assert_eq!(effective_max_attempts(10, 3), 3);
+        assert_eq!(effective_max_attempts(100, 100), 10);
+        assert_eq!(effective_max_attempts(0, 3), 1);
     }
 
     #[test]
