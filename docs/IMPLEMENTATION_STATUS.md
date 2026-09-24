@@ -4,7 +4,7 @@ Updated: 2026-09-24
 
 ## Implemented in the rebuild branch
 
-- Production work is isolated on `rebuild/orbit-production`; PR #2 remains open, draft, and unmerged pending release evidence.
+- Production work is consolidated on `rebuild/orbit-production-consolidated`; PR #9 remains open, draft, and unmerged pending release evidence.
 - pnpm workspace + Turborepo with a strict TypeScript baseline.
 - `@orbit/core` domain model, queue contracts, approval/execution policy, connector contract/registry, sync primitives, audit/redaction, encryption, licensing and backup foundations.
 - Tauri v2 desktop backend with native SQLite, Argon2id + AES-256-GCM, encrypted sessions/vault, campaigns/tasks, CRM/inbox, analytics, media metadata, automation rule packs, backup/restore, audit commands and persisted workspaces.
