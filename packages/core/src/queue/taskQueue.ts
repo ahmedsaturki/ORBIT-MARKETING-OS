@@ -231,9 +231,8 @@ export class TaskQueue {
     if (!Number.isInteger(task.maxAttempts) || task.maxAttempts < 1) {
       throw new RangeError("maxAttempts must be a positive integer");
     }
-    if (Number.isNaN(Date.parse(task.availableAt)) || Number.isNaN(Date.parse(task.createdAt))) {
-      throw new RangeError("task timestamps must be valid ISO timestamps");
-    }
+    this.normalizeTimestamp(task.availableAt, "availableAt");
+    this.normalizeTimestamp(task.createdAt, "createdAt");
     if (task.status !== "pending") {
       throw new Error("New queue tasks must start in pending state");
     }
