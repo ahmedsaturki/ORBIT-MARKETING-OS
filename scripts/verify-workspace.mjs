@@ -166,17 +166,19 @@ const sensitiveDesktopCommands = {
   approval_decide: ["owner", "admin", "reviewer"],
 };
 
+const rustCommandPositions = [...rust.matchAll(/#\[tauri::command\]\s*(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)]
+  .map((match) => ({ name: match[1], index: match.index ?? -1 }))
+  .filter((value) => value.index >= 0);
+
 for (const command of Object.keys(sensitiveDesktopCommands)) {
-  const match = rust.match(
-    new RegExp("#\\[tauri::command\\][\\s\\S]*?fn\\s+" + command + "\\s*\\(", "g"),
-  );
-  if (!match) throw new Error("Missing sensitive Tauri command: " + command);
-  const start = rust.indexOf("fn " + command + "(");
-  const next = [...rust.matchAll(/#\\[tauri::command\\][\\s\\S]*?fn\\s+[A-Za-z_][A-Za-z0-9_]*\\s*\\(/g)]
-    .map((value) => value.index)
-    .filter((index) => index !== undefined && index > start)
-    .sort((a, b) => a - b)[0] ?? rust.length;
-  const segment = rust.slice(start, next);
+  const current = rustCommandPositions.find((value) => value.name === command);
+  if (!current) throw new Error("Missing sensitive Tauri command: " + command);
+
+  const next = rustCommandPositions
+    .filter((value) => value.index > current.index)
+    .sort((a, b) => a.index - b.index)[0]?.index ?? rust.length;
+
+  const segment = rust.slice(current.index, next);
   if (!segment.includes("require_workspace_role(")) {
     throw new Error("Sensitive Tauri command is not role-gated: " + command);
   }
