@@ -77,7 +77,7 @@ export class ExecutionRunner {
     if (input.task.status !== "running") {
       return {
         status: "blocked",
-        reason: "campaign_not_runnable",
+        reason: "task_not_running",
         message: "Only claimed running tasks may be executed.",
       };
     }
