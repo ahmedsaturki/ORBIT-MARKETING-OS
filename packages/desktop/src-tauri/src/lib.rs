@@ -7,7 +7,7 @@ use aes_gcm::{
 use argon2::Argon2;
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use rand::RngCore;
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{fs, path::PathBuf};
@@ -304,7 +304,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
             )?;
         }
 
-        let transaction = connection.unchecked_transaction()?;
+        let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let mut statement = transaction.prepare(
             "SELECT rowid, id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json
              FROM audit_events
@@ -499,6 +499,16 @@ fn vault_delete(app: tauri::AppHandle, label: String) -> Result<bool, String> {
 }
 
 
+
+fn validate_task_kind(kind: &str) -> Result<String, AppError> {
+    let value = kind.trim().to_lowercase();
+    let allowed = ["publish", "message", "comment", "sync", "engage"];
+    if allowed.contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err(AppError::InvalidLabel)
+    }
+}
 
 fn validate_platform(platform: &str) -> Result<String, AppError> {
     let value = platform.trim().to_lowercase();
@@ -726,6 +736,7 @@ fn task_enqueue(
     let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
+    let kind = validate_task_kind(&kind).map_err(|error| error.to_string())?;
     let kind = validate_label(&kind).map_err(|error| error.to_string())?;
     let idempotency_key = idempotency_key
         .map(|value| value.trim().to_string())
@@ -881,19 +892,44 @@ fn task_set_status(
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
+    let current: Option<String> = connection
+        .query_row(
+            "SELECT status FROM tasks WHERE id=?1 AND workspace_id=?2",
+            params![&entity_id, DEFAULT_WORKSPACE_ID],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+
+    let Some(current) = current else {
+        return Ok(false);
+    };
+
+    let valid_transition = match current.as_str() {
+        "pending" => matches!(status.as_str(), "running" | "blocked" | "cancelled"),
+        "running" => matches!(status.as_str(), "succeeded" | "failed" | "blocked" | "cancelled"),
+        "succeeded" | "failed" | "blocked" | "cancelled" => false,
+        _ => false,
+    };
+
+    if !valid_transition {
+        return Err(format!("invalid task transition: {current} -> {status}"));
+    }
+
     let changed = connection
         .execute(
-            "UPDATE tasks SET status=?1 WHERE id=?2 AND workspace_id=?3",
-            params![status, &entity_id, DEFAULT_WORKSPACE_ID],
+            "UPDATE tasks SET status=?1 WHERE id=?2 AND workspace_id=?3 AND status=?4",
+            params![status, &entity_id, DEFAULT_WORKSPACE_ID, current],
         )
         .map_err(|error| error.to_string())?;
+
     if changed > 0 {
         write_audit(&connection, "task", "status", "success", "user", Some(&entity_id))
             .map_err(|error| error.to_string())?;
     }
+
     Ok(changed > 0)
 }
-
 #[tauri::command]
 fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<TaskView>, String> {
     let connection = open_db(&app).map_err(|error| error.to_string())?;
@@ -1197,7 +1233,7 @@ fn write_audit(
     actor: &str,
     entity_id: Option<&str>,
 ) -> Result<(), rusqlite::Error> {
-    let transaction = connection.unchecked_transaction()?;
+    let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
     let id = uuid_like();
     let timestamp = chrono_like_timestamp();
     let previous_hash: String = transaction
