@@ -2553,54 +2553,69 @@ fn write_audit(
     actor: &str,
     entity_id: Option<&str>,
 ) -> Result<(), rusqlite::Error> {
-    let transaction = connection.unchecked_transaction()?;
-    let id = uuid_like();
-    let timestamp = chrono_like_timestamp();
-    let previous_hash: String = transaction
-        .query_row(
-            "SELECT hash FROM audit_events WHERE workspace_id=?1 ORDER BY rowid DESC LIMIT 1",
-            params![active_workspace_id()],
-            |row| row.get(0),
-        )
-        .optional()?
-        .filter(|value: &String| !value.is_empty())
-        .unwrap_or_else(|| "GENESIS".to_string());
+    connection.execute_batch("BEGIN IMMEDIATE")?;
 
-    let hash = audit_hash(
-        &previous_hash,
-        &id,
-        active_workspace_id(),
-        &timestamp,
-        category,
-        action,
-        outcome,
-        actor,
-        entity_id,
-        None,
-    );
+    let result = (|| {
+        let id = uuid_like();
+        let timestamp = chrono_like_timestamp();
+        let previous_hash: String = connection
+            .query_row(
+                "SELECT hash FROM audit_events
+                 WHERE workspace_id=?1
+                 ORDER BY rowid DESC
+                 LIMIT 1",
+                params![active_workspace_id()],
+                |row| row.get(0),
+            )
+            .optional()?
+            .filter(|value: &String| !value.is_empty())
+            .unwrap_or_else(|| "GENESIS".to_string());
 
-    transaction.execute(
-        "INSERT INTO audit_events(
-           id, workspace_id, timestamp, category, action, outcome, actor,
-           entity_id, metadata_json, previous_hash, hash
-         )
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, ?10)",
-        params![
-            id,
-            active_workspace_id(),
-            timestamp,
+        let hash = audit_hash(
+            &previous_hash,
+            &id,
+            &active_workspace_id(),
+            &timestamp,
             category,
             action,
             outcome,
             actor,
             entity_id,
-            previous_hash,
-            hash
-        ],
-    )?;
-    transaction.commit()?;
-    Ok(())
+            None,
+        );
+
+        connection.execute(
+            "INSERT INTO audit_events(
+               id, workspace_id, timestamp, category, action, outcome, actor,
+               entity_id, metadata_json, previous_hash, hash
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, ?10)",
+            params![
+                id,
+                active_workspace_id(),
+                timestamp,
+                category,
+                action,
+                outcome,
+                actor,
+                entity_id,
+                previous_hash,
+                hash
+            ],
+        )?;
+
+        Ok::<(), rusqlite::Error>(())
+    })();
+
+    match result {
+        Ok(()) => connection.execute_batch("COMMIT"),
+        Err(error) => {
+            let _ = connection.execute_batch("ROLLBACK");
+            Err(error)
+        }
+    }
 }
+
 
 #[tauri::command]
 fn conversation_upsert(
