@@ -1554,7 +1554,17 @@ fn vault_get(app: tauri::AppHandle, label: String, password: String) -> Result<S
 
     let payload: EncryptedPayload =
         serde_json::from_str(&payload_json).map_err(|error| error.to_string())?;
-    open_payload(&password, &payload).map_err(|error| error.to_string())
+    let plaintext = open_payload(&password, &payload).map_err(|error| error.to_string())?;
+    write_audit(
+        &connection,
+        "security",
+        "vault.read",
+        "success",
+        "user",
+        Some(&label),
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(plaintext)
 }
 
 #[tauri::command]
@@ -1711,7 +1721,17 @@ fn account_get_session(
     let payload_json = payload_json.ok_or_else(|| AppError::NotFound.to_string())?;
     let payload: EncryptedPayload =
         serde_json::from_str(&payload_json).map_err(|error| error.to_string())?;
-    open_payload(&password, &payload).map_err(|error| error.to_string())
+    let plaintext = open_payload(&password, &payload).map_err(|error| error.to_string())?;
+    write_audit(
+        &connection,
+        "security",
+        "account.session_read",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(plaintext)
 }
 
 #[tauri::command]
