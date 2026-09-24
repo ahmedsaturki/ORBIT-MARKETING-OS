@@ -163,6 +163,57 @@ describe("TaskQueue", () => {
     expect(instance.get(baseTask.id)?.status).toBe("running");
   });
 
+  it("parks and resumes approval-gated tasks", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+
+    const waiting = instance.awaitApproval("task-1");
+    expect(waiting.status).toBe("awaiting_approval");
+    expect(instance.claimNext("2026-09-24T00:00:02.000Z")).toBeUndefined();
+
+    const resumed = instance.resume("task-1");
+    expect(resumed.status).toBe("pending");
+    expect(instance.claimNext("2026-09-24T00:00:02.000Z")?.status).toBe("running");
+  });
+
+  it("parks user-action tasks and defers without consuming attempts", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+
+    const waiting = instance.awaitUserAction("task-1");
+    expect(waiting.status).toBe("awaiting_user_action");
+    expect(waiting.attempts).toBe(0);
+
+    const resumed = instance.resume("task-1");
+    expect(resumed.status).toBe("pending");
+    const claimed = instance.claimNext("2026-09-24T00:00:02.000Z");
+    expect(claimed?.status).toBe("running");
+
+    const deferred = instance.defer("task-1", "2026-09-24T00:00:05.000Z");
+    expect(deferred.status).toBe("pending");
+    expect(deferred.availableAt).toBe("2026-09-24T00:00:05.000Z");
+    expect(deferred.attempts).toBe(0);
+  });
+
+  it("reports waiting states in queue statistics", () => {
+    const instance = queue();
+    instance.enqueue({ ...baseTask, id: "approval", idempotencyKey: "approval" });
+    instance.enqueue({ ...baseTask, id: "action", idempotencyKey: "action" });
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+    instance.awaitApproval("approval");
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+    instance.awaitUserAction("action");
+
+    expect(instance.stats()).toMatchObject({
+      pending: 0,
+      awaiting_approval: 1,
+      awaiting_user_action: 1,
+      running: 0,
+    });
+  });
+
   it("rejects malformed queue timestamps", () => {
     const instance = queue();
     instance.enqueue(baseTask);
