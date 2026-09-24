@@ -20,7 +20,7 @@ Workspace switching is now implemented in the desktop runtime and UI. Typed RBAC
 
 ## Evidence still required before release
 
-- A real checkout must complete dependency installation and generate/validate the lockfile.
+- A real checkout must complete dependency installation against a committed, validated lockfile.
 - TypeScript typecheck, unit tests, formatting, and full monorepo build must execute successfully in CI or an equivalent clean environment.
 - Rust fmt/check/clippy must execute successfully against the Tauri backend.
 - SQLite migrations/persistence need integration tests against the native runtime, including crash/recovery and workspace isolation.
