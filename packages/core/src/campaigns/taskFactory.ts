@@ -51,19 +51,34 @@ export function buildCampaignTasks(
     throw new RangeError("maxAttempts must be a positive integer");
   }
 
-  return campaign.accountIds.map((accountId) => ({
-    id: campaign.id + ":task:" + platform + ":" + template.taskKind + ":" + accountId,
-    workspaceId: campaign.workspaceId,
-    campaignId: campaign.id,
-    accountId,
-    platform,
-    kind: template.taskKind,
-    priority,
-    status: "pending",
-    attempts: 0,
-    maxAttempts,
-    availableAt,
-    idempotencyKey: campaign.id + ":task:" + platform + ":" + template.taskKind + ":" + accountId,
-    createdAt,
-  }));
+  return campaign.accountIds.map((accountId) => {
+    const contentPart = contentId ?? "none";
+    const taskKey =
+      campaign.id +
+      ":task:" +
+      platform +
+      ":" +
+      template.taskKind +
+      ":" +
+      accountId +
+      ":" +
+      contentPart;
+
+    return {
+      id: taskKey,
+      workspaceId: campaign.workspaceId,
+      campaignId: campaign.id,
+      accountId,
+      platform,
+      kind: template.taskKind,
+      contentId,
+      priority,
+      status: "pending",
+      attempts: 0,
+      maxAttempts,
+      availableAt,
+      idempotencyKey: taskKey,
+      createdAt,
+    };
+  });
 }
