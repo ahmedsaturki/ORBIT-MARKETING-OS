@@ -1096,6 +1096,35 @@ fn approval_decide(
 }
 
 #[tauri::command]
+fn approval_list(app: tauri::AppHandle) -> Result<Vec<ApprovalView>, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT id, content_id, requested_by, status, decided_by, decided_at, note
+             FROM approvals
+             WHERE workspace_id=?1
+             ORDER BY COALESCE(decided_at, '9999') DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+            Ok(ApprovalView {
+                id: row.get(0)?,
+                content_id: row.get(1)?,
+                requested_by: row.get(2)?,
+                status: row.get(3)?,
+                decided_by: row.get(4)?,
+                decided_at: row.get(5)?,
+                note: row.get(6)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn task_enqueue(
     app: tauri::AppHandle,
     id: String,
@@ -2360,6 +2389,7 @@ pub fn run() {
             campaign_attach_content,
             approval_request,
             approval_decide,
+            approval_list,
             task_enqueue,
             task_claim_next,
             task_fail,
