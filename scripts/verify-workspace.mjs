@@ -34,6 +34,7 @@ const requiredFiles = [
   "scripts/performance-smoke.mjs",
   "scripts/verify-live-web.mjs",
   "scripts/self-hosted-preflight.sh",
+  "scripts/security-scan.mjs",
   "packages/core/test/linkedin.test.ts",
   "packages/core/test/executor.test.ts",
   "e2e/web-smoke.spec.ts",
@@ -118,6 +119,7 @@ const requiredRootScripts = {
   "test:runtime": "node scripts/runtime-smoke.mjs",
   "test:e2e": "playwright test",
   "preflight:runner": "bash scripts/self-hosted-preflight.sh",
+  "security:scan": "node scripts/security-scan.mjs",
 };
 for (const [name, expected] of Object.entries(requiredRootScripts)) {
   if (rootPackage.scripts?.[name] !== expected) {
