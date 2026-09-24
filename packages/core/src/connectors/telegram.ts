@@ -21,6 +21,11 @@ interface TelegramApiResponse<T> {
   readonly error_code?: number;
 }
 
+interface TelegramRequestResult<T> {
+  readonly payload: TelegramApiResponse<T>;
+  readonly statusCode: number;
+}
+
 interface TelegramUser {
   readonly id: number;
   readonly is_bot: boolean;
@@ -82,13 +87,13 @@ export class TelegramConnector implements PlatformConnector {
 
     try {
       const response = await this.request<TelegramUser>(token, "getMe", undefined, context.signal);
-      if (!response.ok || !response.result) {
-        return this.mapApiFailure(response);
+      if (!response.payload.ok || !response.payload.result) {
+        return this.mapApiFailure(response.payload, response.statusCode);
       }
       return {
         status: "succeeded",
-        externalId: String(response.result.id),
-        message: `Telegram bot authenticated: @${response.result.username ?? response.result.first_name}`,
+        externalId: String(response.payload.result.id),
+        message: `Telegram bot authenticated: @${response.payload.result.username ?? response.payload.result.first_name}`,
       };
     } catch (error: unknown) {
       return {
@@ -157,19 +162,20 @@ export class TelegramConnector implements PlatformConnector {
         context.signal,
       );
 
-      if (!response.ok || !response.result) {
-        return this.mapApiFailure(response);
+      if (!response.payload.ok || !response.payload.result) {
+        return this.mapApiFailure(response.payload, response.statusCode);
       }
 
       return {
         status: "succeeded",
-        externalId: String(response.result.message_id),
+        externalId: String(response.payload.result.message_id),
         message: "Telegram message sent successfully.",
       };
-    } catch (error: unknown) {
+    } catch {
       return {
-        status: "failed",
-        message: error instanceof Error ? error.message : "Telegram request failed.",
+        status: "blocked",
+        reason: "delivery_status_unknown",
+        message: "Telegram delivery status is unknown. Verify delivery before retrying to avoid duplicate messages.",
       };
     }
   }
@@ -183,7 +189,7 @@ export class TelegramConnector implements PlatformConnector {
     method: string,
     body: Readonly<Record<string, string>> | undefined,
     signal?: AbortSignal,
-  ): Promise<TelegramApiResponse<T>> {
+  ): Promise<TelegramRequestResult<T>> {
     const response = await this.fetchImpl(
       `${this.apiBaseUrl}/bot${encodeURIComponent(token)}/${method}`,
       {
@@ -201,10 +207,16 @@ export class TelegramConnector implements PlatformConnector {
       throw new Error(`Telegram returned HTTP ${response.status} with an invalid JSON body.`);
     }
 
-    return payload;
+    return {
+      payload,
+      statusCode: response.status,
+    };
   }
 
-  private mapApiFailure<T>(response: TelegramApiResponse<T>): ConnectorOutcome {
+  private mapApiFailure<T>(
+    response: TelegramApiResponse<T>,
+    statusCode: number,
+  ): ConnectorOutcome {
     if (response.error_code === 401 || response.error_code === 403) {
       return {
         status: "blocked",
@@ -218,6 +230,14 @@ export class TelegramConnector implements PlatformConnector {
         status: "blocked",
         reason: "platform_limit",
         message: "Telegram rate-limited the bot request; execution must back off.",
+      };
+    }
+
+    if (statusCode === 408 || (statusCode >= 500 && statusCode <= 599)) {
+      return {
+        status: "blocked",
+        reason: "delivery_status_unknown",
+        message: "Telegram delivery status is ambiguous. Verify delivery before retrying.",
       };
     }
 
