@@ -60,16 +60,23 @@ Requires `OLLAMA_VISION_MODEL`. Accepts `imageBase64` plus an `analysisType`.
 
 Optional session material is encrypted locally before persistence.
 
-### Campaigns and tasks
+### Content, approvals, campaigns and tasks
 
+- `content_upsert`
+- `content_list`
+- `campaign_attach_content`
 - `campaign_create`
 - `campaign_list`
+- `approval_request`
+- `approval_decide`
+- `approval_list`
 - `task_enqueue`
 - `task_claim_next`
+- `task_fail`
 - `task_set_status`
 - `task_list`
 
-`task_enqueue` accepts an optional `idempotency_key`; task persistence is workspace-scoped. Non-sync external tasks require `content_id` and `destination_id`.
+`task_enqueue` accepts an optional `idempotency_key`; task persistence is workspace-scoped. Non-sync external tasks require `content_id` and `destination_id`. Approval changes are workspace-scoped and must remain bound to the referenced content.
 
 ### CRM and inbox
 
@@ -96,8 +103,11 @@ The command is workspace- and role-gated, requires a connected Telegram account 
 - `backup_restore`
 - `audit_list`
 - `audit_verify`
+- `license_install`
+- `license_status`
+- `license_delete`
 
-Backups are encrypted locally and restore performs SQLite integrity validation before replacement. Audit records are workspace-scoped.
+Backups are encrypted locally and restore performs SQLite integrity validation before replacement. Audit records are workspace-scoped. License installation and removal are role-gated and verified offline using the embedded Ed25519 public key.
 
 ## Compatibility rule
 
