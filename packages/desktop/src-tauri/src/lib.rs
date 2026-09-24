@@ -4270,6 +4270,65 @@ fn audit_hash(
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
+fn append_audit_event(
+    connection: &Connection,
+    workspace_id: &str,
+    category: &str,
+    action: &str,
+    outcome: &str,
+    actor: &str,
+    entity_id: Option<&str>,
+) -> Result<(), rusqlite::Error> {
+    let id = uuid_like();
+    let timestamp = chrono_like_timestamp();
+    let previous_hash: String = connection
+        .query_row(
+            "SELECT hash FROM audit_events
+             WHERE workspace_id=?1
+             ORDER BY rowid DESC
+             LIMIT 1",
+            params![workspace_id],
+            |row| row.get(0),
+        )
+        .optional()?
+        .filter(|value: &String| !value.is_empty())
+        .unwrap_or_else(|| "GENESIS".to_string());
+
+    let hash = audit_hash(
+        &previous_hash,
+        &id,
+        workspace_id,
+        &timestamp,
+        category,
+        action,
+        outcome,
+        actor,
+        entity_id,
+        None,
+    );
+
+    connection.execute(
+        "INSERT INTO audit_events(
+           id, workspace_id, timestamp, category, action, outcome, actor,
+           entity_id, metadata_json, previous_hash, hash
+         )
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, ?10)",
+        params![
+            id,
+            workspace_id,
+            timestamp,
+            category,
+            action,
+            outcome,
+            actor,
+            entity_id,
+            previous_hash,
+            hash
+        ],
+    )?;
+    Ok(())
+}
+
 fn write_audit_for_workspace(
     connection: &Connection,
     workspace_id: &str,
@@ -4280,58 +4339,15 @@ fn write_audit_for_workspace(
     entity_id: Option<&str>,
 ) -> Result<(), rusqlite::Error> {
     connection.execute_batch("BEGIN IMMEDIATE")?;
-
-    let result = (|| {
-        let id = uuid_like();
-        let timestamp = chrono_like_timestamp();
-        let previous_hash: String = connection
-            .query_row(
-                "SELECT hash FROM audit_events
-                 WHERE workspace_id=?1
-                 ORDER BY rowid DESC
-                 LIMIT 1",
-                params![&workspace_id],
-                |row| row.get(0),
-            )
-            .optional()?
-            .filter(|value: &String| !value.is_empty())
-            .unwrap_or_else(|| "GENESIS".to_string());
-
-        let hash = audit_hash(
-            &previous_hash,
-            &id,
-            &workspace_id,
-            &timestamp,
-            category,
-            action,
-            outcome,
-            actor,
-            entity_id,
-            None,
-        );
-
-        connection.execute(
-            "INSERT INTO audit_events(
-               id, workspace_id, timestamp, category, action, outcome, actor,
-               entity_id, metadata_json, previous_hash, hash
-             )
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, ?10)",
-            params![
-                id,
-                &workspace_id,
-                timestamp,
-                category,
-                action,
-                outcome,
-                actor,
-                entity_id,
-                previous_hash,
-                hash
-            ],
-        )?;
-
-        Ok::<(), rusqlite::Error>(())
-    })();
+    let result = append_audit_event(
+        connection,
+        workspace_id,
+        category,
+        action,
+        outcome,
+        actor,
+        entity_id,
+    );
 
     match result {
         Ok(()) => connection.execute_batch("COMMIT"),
