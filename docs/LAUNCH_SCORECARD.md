@@ -18,7 +18,7 @@ Legend:
 | Telegram native path | IMPLEMENTED | Token validation, approval, rate-limit handling, ambiguous-delivery stop |
 | Workspace isolation | IMPLEMENTED | Persisted active workspace, memberships, scoped vault |
 | SQLite integrity | IMPLEMENTED | FK enforcement, busy timeout, workspace integrity triggers |
-| Migration path | IMPLEMENTED | Migration chain through schema v8 with legacy backfill |
+| Migration path | IMPLEMENTED | Migration chain through schema v10 with legacy backfill, including workspace-scoped vault and task-idempotency migration |
 | Desktop UI | IMPLEMENTED | Workspace switching, content, approvals, tasks, CRM, inbox, backup, license, audit |
 | Web product surface | IMPLEMENTED | Next.js static app, pricing, legal, PWA |
 | Local AI Studio | IMPLEMENTED | Typed local runtime client, chat/content/image UI, loopback-only boundary; execution evidence pending |
@@ -45,7 +45,7 @@ Legend:
 
 ## Current infrastructure blocker
 
-GitHub Actions jobs for the rebuild branch are being created but can fail before the first step is registered, with no runner allocation metadata. The latest observed CI job (`107760393992`, run `36037276816`) ended `failure` before workflow steps were registered. The same behavior was reproduced previously with a minimal runner probe. This is treated as execution-infrastructure evidence, not source-build evidence.
+GitHub Actions jobs for the rebuild branch are being created but can fail before the first step is registered, with no runner allocation metadata. The latest observed CI job (`107761450300`, run `36037594361`) ended `failure` before workflow steps were registered. The same behavior was reproduced previously with a minimal runner probe. This is treated as execution-infrastructure evidence, not source-build evidence.
 
 ## Zero-cost verification fallback
 
