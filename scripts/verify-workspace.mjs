@@ -63,7 +63,7 @@ if (!mobilePackage.scripts?.build || !mobilePackage.scripts?.test) {
 }
 
 const ignored = new Set([".git", "node_modules", ".next", "out", "dist", "build", ".turbo", ".expo"]);
-const forbiddenFragments = ["next lint", "typecheck:all", "test:all", "build:all"];
+const forbiddenFragments = ["next lint", "typecheck:all", "test:all", "build:all", "app.get(\"*\")", "app.get(\'/*\')"];
 
 async function scan(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
