@@ -5517,6 +5517,75 @@ mod tests {
     }
 
     #[test]
+    fn task_migration_rolls_back_on_invalid_legacy_row() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-1', 'Workspace', '2026-09-24T00:00:00Z')",
+                [],
+            )
+            .expect("workspace should exist");
+        connection
+            .execute(
+                "INSERT INTO accounts(
+                   id, workspace_id, platform, display_name, status, created_at, updated_at
+                 ) VALUES (
+                   'account-1', 'workspace-1', 'telegram', 'Telegram', 'connected',
+                   '2026-09-24T00:00:00Z', '2026-09-24T00:00:00Z'
+                 )",
+                [],
+            )
+            .expect("account should exist");
+        connection
+            .execute(
+                "INSERT INTO campaigns(
+                   id, workspace_id, name, status, created_at
+                 ) VALUES (
+                   'campaign-1', 'workspace-1', 'Campaign', 'scheduled',
+                   '2026-09-24T00:00:00Z'
+                 )",
+                [],
+            )
+            .expect("campaign should exist");
+        connection
+            .execute(
+                "INSERT INTO tasks(
+                   id, workspace_id, campaign_id, account_id, platform, kind, priority,
+                   status, attempts, max_attempts, available_at, idempotency_key, created_at
+                 ) VALUES (
+                   'task-invalid', 'workspace-1', 'campaign-1', 'account-1', 'telegram', 'sync', 0,
+                   'pending', 7, 11, '2026-09-24T18:00:00+03:00', 'task-invalid',
+                   '2026-09-24T18:00:00+03:00'
+                 )",
+                [],
+            )
+            .expect("legacy invalid task should exist");
+        connection
+            .execute_batch("PRAGMA user_version = 9;")
+            .expect("legacy version should be set");
+
+        assert!(migrate_schema(&connection).is_err());
+
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("schema version should remain readable");
+        assert_eq!(version, 9);
+
+        let attempts: (i64, i64) = connection
+            .query_row(
+                "SELECT attempts, max_attempts FROM tasks WHERE id='task-invalid'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("legacy table should remain after rollback");
+        assert_eq!(attempts, (7, 11));
+    }
+
+    #[test]
     fn future_schema_versions_fail_closed() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
         connection
