@@ -1,5 +1,5 @@
 import type { Task } from "../types/index.js";
-import { calculateRetryDelay, shouldRetry, type RetryPolicy } from "./retry.js";
+import { calculateRetryDelay, type RetryPolicy } from "./retry.js";
 
 export interface QueueStats {
   readonly pending: number;

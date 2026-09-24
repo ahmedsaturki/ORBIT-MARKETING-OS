@@ -133,6 +133,30 @@ describe("task execution orchestrator", () => {
     expect(audit.list()[0]?.action).toBe("execution.succeeded");
   });
 
+  it("passes loaded content into the execution policy", async () => {
+    const task = makeTask();
+    const taskQueue = queue(task);
+    const claimed = taskQueue.claimNext("2026-09-24T00:00:01.000Z");
+    expect(claimed).toBeDefined();
+    const registry = new ConnectorRegistry();
+    registry.register(new FixtureConnector({ platform: "facebook" }));
+
+    const result = await executeClaimedTask(
+      {
+        queue: taskQueue,
+        connectors: registry,
+        audit: new AuditLog(),
+        loadContext: async () => context(task),
+      },
+      claimed!,
+      true,
+      "2026-09-24T00:00:01.000Z",
+    );
+
+    expect(result.status).toBe("succeeded");
+    expect(taskQueue.get(task.id)?.status).toBe("succeeded");
+  });
+
   it("retries when execution context loading fails", async () => {
     const task = makeTask();
     const taskQueue = queue(task);
