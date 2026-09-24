@@ -432,11 +432,10 @@ fn validate_telegram_token(token: &str) -> Result<String, AppError> {
 
 fn parse_retry_timestamp(retry_after_seconds: u64) -> String {
     let seconds = retry_after_seconds.clamp(1, 86_400);
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    (now + seconds).to_string()
+    let retry_at = OffsetDateTime::now_utc() + Duration::seconds(seconds as i64);
+    retry_at
+        .format(&Rfc3339)
+        .unwrap_or_else(|_| OffsetDateTime::UNIX_EPOCH.format(&Rfc3339).unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string()))
 }
 
 fn telegram_task_audit(
@@ -3253,6 +3252,12 @@ mod tests {
                 second.8.as_deref(),
             )
         );
+    }
+
+    #[test]
+    fn telegram_retry_timestamp_uses_rfc3339_utc() {
+        let value = parse_retry_timestamp(60);
+        assert!(OffsetDateTime::parse(&value, &Rfc3339).is_ok());
     }
 
     #[test]
