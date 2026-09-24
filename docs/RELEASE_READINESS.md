@@ -8,7 +8,7 @@ The active implementation branch is `rebuild/orbit-production`. PR #2 remains in
 
 - strict TypeScript monorepo baseline with pnpm 10.17.1 + Turborepo;
 - `@orbit/core` typed domain contracts, validation, retry policy, queue logic, approval/execution policy, content/media/analytics/automation rules, encryption, redaction, audit integrity, Yjs sync primitives, licensing and backup foundations;
-- Tauri v2 desktop runtime with native SQLite, schema migration/versioning, workspace-scoped persistence, encrypted vault/session storage, campaign/task/CRM/inbox/audit commands;
+- Tauri v2 desktop runtime with native SQLite, schema migration/versioning through v10, workspace-scoped persistence, encrypted vault/session storage, campaign/task/CRM/inbox/audit commands;
 - native Argon2id-derived AES-256-GCM encryption and encrypted local backup/restore;
 - Next.js 16 static web/PWA/legal/pricing surface with flat-config ESLint;
 - Expo SDK 57 / React Native 0.86 mobile monitoring surface with configuration smoke tests;
@@ -29,7 +29,7 @@ The following remain `UNVERIFIED` until executed in a clean environment:
 - reproducible clean checkout install and lockfile generation/validation;
 - full TypeScript typecheck, lint, tests, build, and format check;
 - Rust fmt, check, test, and clippy against the Tauri runtime;
-- native SQLite migration/restart/crash-recovery integration, including v8 workspace-scoped vault migration;
+- native SQLite migration/restart/crash-recovery integration, including v8 workspace-scoped vault migration followed by v10 workspace-scoped task-idempotency migration;
 - persistent queue recovery and idempotency tests through the actual desktop runtime;
 - controlled connector fixtures plus real user-authorized integrations; see `docs/CONNECTOR_MATRIX.md` for the evidence boundary.
 - challenge/authentication stop and human-intervention flows;
@@ -78,7 +78,7 @@ The connected Vercel project is `orbit-marketing-os`. The repository configurati
 The default branch now also exposes branch-restricted `Bootstrap pnpm lockfile` and `Self-Hosted Verification` workflow definitions so their manual `workflow_dispatch` controls are available from GitHub's Actions UI. Both workflows refuse refs other than `rebuild/orbit-production`.
 
 
-- Branch HEAD: `e60a1c83aa8d2997af06fa8ce5f1a7fd387574e5`.
+- Branch HEAD: `1b811014fe76c4d2c994411cc15f4849cdafd6b3`.
 - PR #2 remains open, draft, and unmerged.
 - The latest hosted `CI` run (`36032108431`, job `107743139525`) failed before workflow steps were registered.
 - The latest lockfile bootstrap run for the branch remains `queued`; previous bootstrap runs were cancelled by its concurrency policy.
