@@ -103,16 +103,16 @@ function authorizeRuntime(req: express.Request, res: express.Response): boolean 
     return true;
   }
 
+  if (!RUNTIME_AUTH_TOKEN) {
+    res.status(503).json({ error: "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback." });
+    return false;
+  }
+
   if (isRateLimited(req)) {
     res.status(429).json({
       error: "Runtime request limit reached. Try again later.",
       retryAfterSeconds: 60,
     });
-    return false;
-  }
-
-  if (!RUNTIME_AUTH_TOKEN) {
-    res.status(503).json({ error: "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback." });
     return false;
   }
 
