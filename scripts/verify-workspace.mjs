@@ -21,6 +21,7 @@ const requiredFiles = [
   "packages/web/public/icon.svg",
   "vercel.json",
   "scripts/vercel-ignore.sh",
+  "scripts/vercel-install.sh",
 ];
 
 function resolveRoot() {
@@ -232,7 +233,7 @@ for (const command of Object.keys(sensitiveDesktopCommands)) {
 const rootVercel = JSON.parse(await readFile(join(root, "vercel.json"), "utf8"));
 if (rootVercel.framework !== "nextjs") throw new Error("Root Vercel framework must be nextjs");
 if (rootVercel.outputDirectory !== "packages/web/out") throw new Error("Root Vercel output directory must be packages/web/out");
-if (rootVercel.installCommand !== "pnpm install --frozen-lockfile") throw new Error("Root Vercel install must use frozen lockfile");
+if (rootVercel.installCommand !== "bash scripts/vercel-install.sh") throw new Error("Root Vercel must use the lockfile-aware install script");
 if (rootVercel.ignoreCommand !== "bash scripts/vercel-ignore.sh") throw new Error("Root Vercel must use the versioned ignore script");
 
 
