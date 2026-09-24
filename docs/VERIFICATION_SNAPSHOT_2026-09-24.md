@@ -2,7 +2,7 @@
 
 ## Source of truth
 - Branch: `rebuild/orbit-production`
-- HEAD: `1b811014fe76c4d2c994411cc15f4849cdafd6b3`
+- HEAD: `e729d9659ac2ac8576e1c270c7d2feecfe472e53`
 - PR #2: open, draft, unmerged
 
 ## Technical work completed in the current rebuild line
@@ -21,12 +21,10 @@
 - LinkedIn connector remains text-publishing scoped and release-gated by controlled authorization/runtime evidence.
 
 ## Current execution blockers
-- GitHub Actions latest CI run for the branch: failure before the first step, with `runner_id=0`, empty runner name, and `steps=[]`.
+- GitHub Actions latest CI run: `36037762382`, job `107762002999`, failed before workflow steps were registered; runner allocation metadata was unavailable.
 - No successful clean TypeScript/Rust/E2E/build evidence has been produced.
-- `pnpm-lock.yaml` is absent because no valid dependency-resolution environment was available.
-- `packages/desktop/src-tauri/Cargo.lock` is absent for the same reason.
-- Vercel project exists, but the most recent deployment remains ERROR at `bash scripts/vercel-install.sh`; the repository intentionally fails closed without the committed pnpm lockfile.
-- Vercel project metadata has reported `vite` while the canonical repository configuration targets Next.js at repository root; effective project settings still need external confirmation.
+- `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` are absent until real dependency resolution occurs on an executable environment.
+- Vercel project exists, but a successful deployment remains unverified.
 
 ## Distribution blockers
 - Desktop artifacts are currently unsigned validation artifacts.
