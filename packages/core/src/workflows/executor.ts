@@ -1,12 +1,9 @@
 import type { Approval, Campaign, SocialAccount, Task } from "../types/index.js";
 import { createAuditEvent, AuditLog } from "../audit/auditLog.js";
-import {
-  ConnectorRegistry,
-  assertSupportedTask,
-  type ConnectorOutcome,
-} from "../connectors/index.js";
+import { ConnectorRegistry } from "../connectors/index.js";
 import { TaskQueue } from "../queue/index.js";
-import { evaluateExecutionPolicy, type ExecutionPolicyContext } from "./executionPolicy.js";
+import type { ExecutionPolicyContext } from "./executionPolicy.js";
+import { ExecutionRunner } from "./executionRunner.js";
 
 export interface ExecutionRunContext extends Omit<
   ExecutionPolicyContext,
@@ -65,61 +62,70 @@ function audit(
   );
 }
 
-function mapOutcome(
+function mapRunnerResult(
   queue: TaskQueue,
   log: AuditLog,
   task: Task,
-  outcome: ConnectorOutcome,
+  result: Awaited<ReturnType<ExecutionRunner["run"]>>,
   now: string,
 ): TaskExecutionResult {
-  switch (outcome.status) {
-    case "succeeded": {
-      queue.succeed(task.id);
-      audit(log, task, "success", "execution.succeeded", {
-        message: outcome.message,
-      });
-      return {
-        status: "succeeded",
-        taskId: task.id,
-        externalId: outcome.externalId,
-        message: outcome.message,
-      };
-    }
-    case "blocked": {
-      if (
-        outcome.reason === "platform_challenge" ||
-        outcome.reason === "authorization_required" ||
-        outcome.reason === "user_confirmation_required"
-      ) {
-        queue.awaitUserAction(task.id);
-      } else {
-        queue.block(task.id);
-      }
-      audit(log, task, "blocked", "execution.blocked", {
-        reason: outcome.reason,
-        message: outcome.message,
-      });
-      return {
-        status: "blocked",
-        taskId: task.id,
-        reason: outcome.reason,
-        message: outcome.message,
-      };
-    }
-    case "failed": {
-      const next = queue.fail(task.id, now);
-      audit(log, task, "failure", "execution.failed", {
-        message: outcome.message,
-        retryScheduled: next.status === "pending",
-      });
-      return {
-        status: "failed",
-        taskId: task.id,
-        message: outcome.message,
-        retryScheduled: next.status === "pending",
-      };
-    }
+  if (result.status === "succeeded") {
+    queue.succeed(task.id);
+    audit(log, task, "success", "execution.succeeded", {
+      message: result.message,
+    });
+    return {
+      status: "succeeded",
+      taskId: task.id,
+      externalId: result.externalId,
+      message: result.message,
+    };
   }
+
+  if (result.status === "failed") {
+    const next = queue.fail(task.id, now);
+    audit(log, task, "failure", "execution.failed", {
+      message: result.message,
+      retryScheduled: next.status === "pending",
+    });
+    return {
+      status: "failed",
+      taskId: task.id,
+      message: result.message,
+      retryScheduled: next.status === "pending",
+    };
+  }
+
+  if (result.reason === "approval_required") {
+    queue.awaitApproval(task.id);
+  } else if (result.reason === "daily_limit_reached") {
+    const nextDay = new Date(now);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    nextDay.setUTCHours(0, 0, 0, 0);
+    queue.defer(task.id, nextDay.toISOString());
+  } else if (
+    result.reason === "account_not_connected" ||
+    result.reason === "authorization_required" ||
+    result.reason === "platform_challenge" ||
+    result.reason === "user_confirmation_required" ||
+    result.reason === "delivery_status_unknown"
+  ) {
+    queue.awaitUserAction(task.id);
+  } else {
+    queue.block(task.id);
+  }
+
+  audit(log, task, "blocked", "execution.blocked", {
+    reason: result.reason,
+    message: result.message,
+  });
+
+  return {
+    status: "blocked",
+    taskId: task.id,
+    reason: result.reason,
+    message: result.message,
+  };
 }
 
 /**
@@ -158,100 +164,19 @@ export async function executeClaimedTask(
     };
   }
 
-  const decision = evaluateExecutionPolicy({ ...context, task });
+  const runner = new ExecutionRunner(dependencies.connectors);
+  const result = await runner.run({
+    account: context.account,
+    campaign: context.campaign,
+    task,
+    approval: context.approval,
+    actionsToday: context.actionsToday,
+    dailyLimit: context.dailyLimit,
+    consecutiveFailures: context.consecutiveFailures,
+    circuitBreakerThreshold: context.circuitBreakerThreshold,
+    userConfirmed,
+  });
 
-  if (!decision.allowed) {
-    if (decision.reason === "approval_required") {
-      dependencies.queue.awaitApproval(task.id);
-    } else if (decision.reason === "daily_limit_reached") {
-      const nextDay = new Date(now);
-      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-      nextDay.setUTCHours(0, 0, 0, 0);
-      dependencies.queue.defer(task.id, nextDay.toISOString());
-    } else {
-      dependencies.queue.block(task.id);
-    }
-    audit(dependencies.audit, task, "blocked", "execution.policy_blocked", {
-      reason: decision.reason,
-      message: decision.message,
-      resumable:
-        decision.reason === "approval_required" || decision.reason === "daily_limit_reached",
-    });
-    return {
-      status: "blocked",
-      taskId: task.id,
-      reason: decision.reason,
-      message: decision.message,
-    };
-  }
-
-  if (task.kind !== "sync" && !userConfirmed) {
-    dependencies.queue.awaitUserAction(task.id);
-    audit(dependencies.audit, task, "blocked", "execution.confirmation_required", {
-      reason: "confirmation_required",
-      resumable: true,
-    });
-    return {
-      status: "blocked",
-      taskId: task.id,
-      reason: "confirmation_required",
-      message: "Explicit user confirmation is required before an external action.",
-    };
-  }
-
-  const connector = dependencies.connectors.get(task.platform);
-  if (!connector) {
-    dependencies.queue.block(task.id);
-    audit(dependencies.audit, task, "blocked", "execution.connector_missing", {
-      reason: "connector_missing",
-    });
-    return {
-      status: "blocked",
-      taskId: task.id,
-      reason: "connector_missing",
-      message: "No connector is registered for the task platform.",
-    };
-  }
-
-  try {
-    if (task.kind === "sync") {
-      const outcome = await connector.sync({
-        accountId: task.accountId,
-        userConfirmed,
-      });
-      return mapOutcome(
-        dependencies.queue,
-        dependencies.audit,
-        task,
-        outcome,
-        now,
-      );
-    }
-
-    assertSupportedTask(connector, task);
-    const outcome = await connector.execute(task, {
-      accountId: task.accountId,
-      userConfirmed,
-    });
-    return mapOutcome(
-      dependencies.queue,
-      dependencies.audit,
-      task,
-      outcome,
-      now,
-    );
-  } catch (error: unknown) {
-    dependencies.queue.block(task.id);
-    const message =
-      error instanceof Error ? error.message : "Connector execution failed.";
-    audit(dependencies.audit, task, "blocked", "execution.connector_rejected", {
-      message,
-    });
-    return {
-      status: "blocked",
-      taskId: task.id,
-      reason: "connector_rejected",
-      message,
-    };
-  }
+  return mapRunnerResult(dependencies.queue, dependencies.audit, task, result, now);
 }
+
