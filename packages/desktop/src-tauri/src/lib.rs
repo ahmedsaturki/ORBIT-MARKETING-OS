@@ -4549,6 +4549,7 @@ mod tests {
 
     #[test]
     fn audit_hash_chain_detects_mutation() {
+        let workspace_id = "workspace-1";
         let first_id = "audit-1";
         let first_timestamp = "1000";
         let first_hash = audit_hash(
