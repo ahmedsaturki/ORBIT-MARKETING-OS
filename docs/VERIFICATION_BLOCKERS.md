@@ -38,3 +38,7 @@ and the extra Corepack download step was removed. Vercel still reports `ERR_PNPM
 Therefore the current Vercel evidence does not prove a TypeScript/Next.js compile failure. It proves dependency metadata could not be fetched during the Vercel install stage.
 
 The Vercel project metadata also currently reports framework `vite`, while the intended deploy target is `packages/web` as a Next.js static export. Source `vercel.json` explicitly sets the Next.js build command and output directory, but a project-level Root Directory/Framework setting may still need to be corrected in Vercel before final production deployment.
+
+### Runner matrix confirmation
+
+A second diagnostic using the lightweight `ubuntu-slim` hosted runner reproduced the same failure signature: completed job, `steps=[]`, `runner_id=0`, empty runner name, and no workflow step execution. The standard `ubuntu-24.04` path reproduces it as well. This rules out the failure being specific to a single standard runner label.
