@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
+    io::{BufReader, Read},
     path::PathBuf,
     sync::{OnceLock, RwLock},
 };
@@ -2253,6 +2254,39 @@ fn validate_media_sha256(value: Option<&str>) -> Result<Option<String>, AppError
     }
     Ok(if value.is_empty() { None } else { Some(value) })
 }
+fn infer_media_mime(path: &std::path::Path) -> Option<&'static str> {
+    match path.extension().and_then(|value| value.to_str()).map(|value| value.to_lowercase()) {
+        Some(ext) if ["png", "jpg", "jpeg", "gif", "webp"].contains(&ext.as_str()) => Some("image/"),
+        Some(ext) if ["mp4", "mov", "webm", "mkv"].contains(&ext.as_str()) => Some("video/"),
+        Some(ext) if ["mp3", "wav", "ogg", "m4a"].contains(&ext.as_str()) => Some("audio/"),
+        Some(ext) if ext == "pdf" => Some("application/pdf"),
+        Some(ext) if ["txt", "md", "csv"].contains(&ext.as_str()) => Some("text/"),
+        Some(ext) if ext == "zip" => Some("application/zip"),
+        _ => None,
+    }
+}
+
+fn media_kind_from_mime(mime: &str) -> Option<&'static str> {
+    if mime.starts_with("image/") { Some("image") }
+    else if mime.starts_with("video/") { Some("video") }
+    else if mime.starts_with("audio/") { Some("audio") }
+    else if mime == "application/pdf" || mime.starts_with("text/") || mime == "application/zip" { Some("document") }
+    else { None }
+}
+
+fn sha256_file(path: &std::path::Path) -> Result<String, String> {
+    let file = fs::File::open(path).map_err(|_| "unable to open media file".to_string())?;
+    let mut reader = BufReader::new(file);
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 1024 * 1024];
+    loop {
+        let read = reader.read(&mut buffer).map_err(|_| "unable to read media file".to_string())?;
+        if read == 0 { break; }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect())
+}
+
 fn validate_media_mime(kind: &str, mime_type: &str) -> Result<(), AppError> {
     let valid = match kind {
         "image" => mime_type.starts_with("image/"),
@@ -2446,6 +2480,110 @@ fn media_asset_upsert(
         size_bytes,
         sha256,
         local_path,
+        tags_json,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn media_asset_import(
+    app: tauri::AppHandle,
+    id: String,
+    path: String,
+    tags_json: Option<String>,
+) -> Result<MediaAssetView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let path_string = validate_label(&path).map_err(|error| error.to_string())?;
+    let path = std::path::PathBuf::from(&path_string);
+    if !path.is_file() {
+        return Err("media path must point to a regular file".to_string());
+    }
+
+    let mime = infer_media_mime(&path)
+        .ok_or_else(|| "unsupported media file type".to_string())?;
+    let kind = media_kind_from_mime(mime).ok_or_else(|| "unsupported media file type".to_string())?;
+    let filename = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| "media filename is invalid".to_string())?;
+    let filename = validate_label(filename).map_err(|error| error.to_string())?;
+    let size_bytes = fs::metadata(&path)
+        .map_err(|_| "unable to read media metadata".to_string())?
+        .len();
+    if size_bytes == 0 || size_bytes > 2_000_000_000 {
+        return Err("media file size must be between 1 byte and 2 GB".to_string());
+    }
+    let digest = sha256_file(&path)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let tags_json = tags_json.unwrap_or_else(|| "[]".to_string());
+    let tags: Vec<String> = serde_json::from_str(&tags_json)
+        .map_err(|_| "tags_json must be a JSON array".to_string())?;
+    if tags.len() > 100 || tags.iter().any(|tag: &String| tag.trim().is_empty() || tag.len() > 100) {
+        return Err("invalid media tags".to_string());
+    }
+
+    let timestamp = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO media_assets(
+               id, workspace_id, kind, filename, mime_type, size_bytes,
+               sha256, local_path, tags_json, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)
+             ON CONFLICT(id) DO UPDATE SET
+               kind=excluded.kind,
+               filename=excluded.filename,
+               mime_type=excluded.mime_type,
+               size_bytes=excluded.size_bytes,
+               sha256=excluded.sha256,
+               local_path=excluded.local_path,
+               tags_json=excluded.tags_json,
+               updated_at=excluded.updated_at
+             WHERE media_assets.workspace_id=excluded.workspace_id",
+            params![
+                &id,
+                &workspace_id,
+                kind,
+                &filename,
+                mime,
+                size_bytes as i64,
+                &digest,
+                &path_string,
+                &tags_json,
+                &timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit_for_workspace(
+        &connection,
+        &workspace_id,
+        "media",
+        "asset_import",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(MediaAssetView {
+        id,
+        kind: kind.to_string(),
+        filename,
+        mime_type: mime.to_string(),
+        size_bytes: size_bytes as i64,
+        sha256: Some(digest),
+        local_path: path_string,
         tags_json,
         created_at: timestamp.clone(),
         updated_at: timestamp,
@@ -5046,6 +5184,7 @@ pub fn run() {
             content_list,
             content_variant_upsert,
             media_asset_upsert,
+            media_asset_import,
             media_asset_list,
             automation_rule_pack_upsert,
             automation_rule_pack_list,
