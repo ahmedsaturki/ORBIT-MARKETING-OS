@@ -77,4 +77,26 @@ describe("TaskQueue", () => {
 
     expect(() => instance.enqueue(baseTask)).toThrow("Task already exists");
   });
+
+  it("rejects duplicate idempotency keys even when task ids differ", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+
+    expect(() =>
+      instance.enqueue({
+        ...baseTask,
+        id: "task-2",
+      }),
+    ).toThrow("Task idempotency key already exists");
+  });
+
+  it("rejects malformed queue tasks", () => {
+    const instance = queue();
+    expect(() => instance.enqueue({ ...baseTask, idempotencyKey: " " })).toThrow(
+      "Task idempotency key is required",
+    );
+    expect(() => instance.enqueue({ ...baseTask, priority: -1 })).toThrow(
+      "priority must be a non-negative integer",
+    );
+  });
 });
