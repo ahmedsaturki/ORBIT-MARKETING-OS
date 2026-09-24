@@ -2,7 +2,7 @@
 
 ## Current rebuild
 
-The active implementation branch is `rebuild/orbit-production`. PR #2 remains intentionally open, draft, and unmerged while release evidence is collected.
+The active consolidation branch is `rebuild/orbit-production-consolidated`. PR #9 is open, draft, and unmerged while release evidence is collected.
 
 ## Implemented foundations
 
@@ -34,18 +34,18 @@ The active implementation branch is `rebuild/orbit-production`. PR #2 remains in
 
 ## Current execution evidence
 
-Latest observed hosted GitHub Actions CI on the rebuild line:
-- run `36050116431`
-- jobs `107803281867` (Rust quality) / `107803282229` (quality)
+Latest observed hosted GitHub Actions CI on the consolidation line:
+- run `36053293828`
+- jobs `107813972668` (quality) / `107813973170` (Rust quality)
 - conclusion: `failure`
 - runner_id: `0`
 - runner name: empty
 - steps: `[]`
 - no usable workflow step/log evidence was produced.
 
-The current execution environment cannot generate a reproducible lockfile because pnpm is not installed and the npm registry is unreachable. No fake lockfile is committed.
+The current execution environment cannot generate a reproducible lockfile because pnpm is not installed and the npm registry is unreachable. No fake lockfile is committed. The consolidation branch still requires both lockfiles before release execution.
 
-The connected Vercel project has a verified READY production deployment, but it is the legacy `main` Vite surface, not this rebuild. A fresh successful rebuild deployment remains unverified.
+The connected Vercel project has a verified READY production deployment, but it is the legacy `main` Vite surface, not PR #9. A fresh successful consolidation deployment remains unverified.
 
 ## Remaining release gates
 
