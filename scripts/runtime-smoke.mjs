@@ -72,6 +72,8 @@ const authChild = spawn("pnpm", ["runtime:start"], {
     PORT: authPort,
     RUNTIME_HOST: "0.0.0.0",
     RUNTIME_AUTH_TOKEN: authToken,
+    RUNTIME_ALLOWED_ORIGINS: "https://allowed.example",
+    RUNTIME_RATE_LIMIT: "2",
     OLLAMA_BASE_URL: "http://127.0.0.1:9",
   },
   stdio: ["ignore", "pipe", "pipe"],
@@ -108,7 +110,34 @@ try {
     headers: { Authorization: `Bearer ${authToken}` },
   });
   if (authorized.status !== 200) throw new Error("expected 200 with correct LAN token");
-  console.log("runtime LAN auth smoke passed");
+
+  const blockedOrigin = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Origin: "https://blocked.example",
+    },
+  });
+  if (blockedOrigin.status !== 403) throw new Error("expected 403 for disallowed browser origin");
+
+  const allowedOrigin = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Origin: "https://allowed.example",
+    },
+  });
+  if (allowedOrigin.status !== 200) throw new Error("expected 200 for allowed browser origin");
+
+  const rateOne = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
+  if (![200, 429].includes(rateOne.status)) throw new Error("unexpected first rate-limit response");
+
+  const rateTwo = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
+  if (rateTwo.status !== 429) throw new Error("expected 429 after exceeding runtime rate limit");
+
+  console.log("runtime LAN perimeter smoke passed");
 } finally {
   authChild.kill("SIGTERM");
   await new Promise((resolve) => setTimeout(resolve, 100));
