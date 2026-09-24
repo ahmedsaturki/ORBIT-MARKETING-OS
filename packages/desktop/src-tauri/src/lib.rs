@@ -1226,6 +1226,14 @@ fn require_workspace_role_for(
     }
 }
 
+fn require_local_user_actor(connection: &Connection, actor: &str) -> Result<(), AppError> {
+    let local_user = local_user_id(connection)?;
+    if actor != local_user {
+        return Err(AppError::Unauthorized);
+    }
+    Ok(())
+}
+
 fn require_workspace_role(
     connection: &Connection,
     required_roles: &[&str],
@@ -3103,6 +3111,7 @@ fn approval_request(
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_local_user_actor(&connection, &requested_by).map_err(|error| error.to_string())?;
     let exists: bool = connection
         .query_row(
             "SELECT EXISTS(
@@ -3165,6 +3174,7 @@ fn approval_decide(
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
+    require_local_user_actor(&connection, &decided_by).map_err(|error| error.to_string())?;
     let current: Option<(String, String, String, String, Option<String>)> = connection
         .query_row(
             "SELECT content_id, requested_by, status, reviewer_ids_json, note
@@ -4614,6 +4624,29 @@ mod tests {
         assert_eq!(retry_delay_ms(2), 2_000);
         assert_eq!(retry_delay_ms(7), 60_000);
         assert_eq!(retry_delay_ms(30), 60_000);
+    }
+
+    #[test]
+    fn approval_actor_must_match_local_user() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute(
+                "CREATE TABLE runtime_state(key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+                [],
+            )
+            .expect("runtime state should be created");
+        connection
+            .execute(
+                "INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user')",
+                [],
+            )
+            .expect("local user should be stored");
+
+        assert!(require_local_user_actor(&connection, "local-user").is_ok());
+        assert!(matches!(
+            require_local_user_actor(&connection, "spoofed-user"),
+            Err(AppError::Unauthorized)
+        ));
     }
 
     #[test]
