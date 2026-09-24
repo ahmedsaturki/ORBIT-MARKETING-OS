@@ -1,13 +1,13 @@
 # ORBIT Current Verification Snapshot — 2026-09-24
 
-Source implementation head at snapshot: "289c67620089a990dcd83572d1d4e1c61bd2e5e7"
+Source implementation head at snapshot: "41c586a6338e8d937f0722a6e6bf97598e7420f7"
 
 ## Live repository state
 
 - Active branch: `rebuild/orbit-production`
 - PR #2: open, draft, unmerged
-- Latest hosted CI run: `36047914345`
-- Latest CI job: `107795977054` (Rust) / `107795977291` (quality)
+- Latest hosted CI run: `36049164892`
+- Latest CI job: `107800093660 (Rust) / 107800093968 (quality)` (Rust) / `107795977291` (quality)
 - Latest CI conclusion: `failure`
 - Runner metadata: `runner_id=0`, runner name empty
 - Workflow steps registered: none
