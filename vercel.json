@@ -3,7 +3,7 @@
   "buildCommand": "pnpm --dir packages/web build",
   "outputDirectory": "packages/web/out",
   "framework": "nextjs",
-  "ignoreCommand": "git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" \"$VERCEL_GIT_COMMIT_SHA\" -- packages/web vercel.json package.json pnpm-workspace.yaml pnpm-lock.yaml",
+  "ignoreCommand": "test -n \"$VERCEL_GIT_PREVIOUS_SHA\" && test -n \"$VERCEL_GIT_COMMIT_SHA\" && git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" \"$VERCEL_GIT_COMMIT_SHA\" -- packages/web vercel.json package.json pnpm-workspace.yaml pnpm-lock.yaml; test $? -eq 0",
   "headers": [
     {
       "source": "/(.*)",
