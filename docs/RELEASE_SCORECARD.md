@@ -22,7 +22,7 @@ Status meanings:
 | Gate | Current status | Evidence |
 |---|---|---|
 | DATA-01 Local SQLite | IMPLEMENTED / UNVERIFIED | Native SQLite runtime exists; clean runtime test pending |
-| DATA-02 Migration safety | IMPLEMENTED / UNVERIFIED | v1→v8 migration path + migration tests exist |
+| DATA-02 Migration safety | IMPLEMENTED / UNVERIFIED | v1→v10 migration path + migration tests exist |
 | QUE-01 Persistent queue recovery | IMPLEMENTED / UNVERIFIED | Native queue + migration/claim logic exists; restart test pending |
 | QUE-02 Bounded retries | IMPLEMENTED / UNVERIFIED | Core + native retry tests exist |
 | QUE-03 Circuit breaker | IMPLEMENTED / UNVERIFIED | Core execution policy + runtime controls exist |
