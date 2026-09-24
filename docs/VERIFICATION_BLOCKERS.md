@@ -24,3 +24,17 @@ The current working environment cannot resolve GitHub's host through its shell n
 ## Release consequence
 
 Do not merge PR #2 or claim production readiness while clean install, TypeScript checks, Rust checks, runtime integration, E2E, security, performance, packaging, and distribution evidence remain unverified.
+
+## Vercel dependency-fetch blocker
+
+The connected Vercel project `orbit-marketing-os` is receiving deployments from `rebuild/orbit-production`.
+
+The deployment pipeline was narrowed from full-workspace install to:
+
+`pnpm install --filter @orbit/web --no-frozen-lockfile`
+
+and the extra Corepack download step was removed. Vercel still reports `ERR_PNPM_META_FETCH_FAIL` at `buildStep`, with the install command exiting 1.
+
+Therefore the current Vercel evidence does not prove a TypeScript/Next.js compile failure. It proves dependency metadata could not be fetched during the Vercel install stage.
+
+The Vercel project metadata also currently reports framework `vite`, while the intended deploy target is `packages/web` as a Next.js static export. Source `vercel.json` explicitly sets the Next.js build command and output directory, but a project-level Root Directory/Framework setting may still need to be corrected in Vercel before final production deployment.
