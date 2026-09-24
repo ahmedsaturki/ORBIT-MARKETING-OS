@@ -2255,16 +2255,32 @@ fn validate_media_sha256(value: Option<&str>) -> Result<Option<String>, AppError
     Ok(if value.is_empty() { None } else { Some(value) })
 }
 fn infer_media_mime(path: &std::path::Path) -> Option<&'static str> {
-    match path.extension().and_then(|value| value.to_str()).map(|value| value.to_lowercase()) {
-        Some(ext) if ["png", "jpg", "jpeg", "gif", "webp"].contains(&ext.as_str()) => Some("image/"),
-        Some(ext) if ["mp4", "mov", "webm", "mkv"].contains(&ext.as_str()) => Some("video/"),
-        Some(ext) if ["mp3", "wav", "ogg", "m4a"].contains(&ext.as_str()) => Some("audio/"),
+    match path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_lowercase())
+    {
+        Some(ext) if ext == "png" => Some("image/png"),
+        Some(ext) if ext == "jpg" || ext == "jpeg" => Some("image/jpeg"),
+        Some(ext) if ext == "gif" => Some("image/gif"),
+        Some(ext) if ext == "webp" => Some("image/webp"),
+        Some(ext) if ext == "mp4" => Some("video/mp4"),
+        Some(ext) if ext == "mov" => Some("video/quicktime"),
+        Some(ext) if ext == "webm" => Some("video/webm"),
+        Some(ext) if ext == "mkv" => Some("video/x-matroska"),
+        Some(ext) if ext == "mp3" => Some("audio/mpeg"),
+        Some(ext) if ext == "wav" => Some("audio/wav"),
+        Some(ext) if ext == "ogg" => Some("audio/ogg"),
+        Some(ext) if ext == "m4a" => Some("audio/mp4"),
         Some(ext) if ext == "pdf" => Some("application/pdf"),
-        Some(ext) if ["txt", "md", "csv"].contains(&ext.as_str()) => Some("text/"),
+        Some(ext) if ext == "txt" => Some("text/plain"),
+        Some(ext) if ext == "md" => Some("text/markdown"),
+        Some(ext) if ext == "csv" => Some("text/csv"),
         Some(ext) if ext == "zip" => Some("application/zip"),
         _ => None,
     }
 }
+
 
 fn media_kind_from_mime(mime: &str) -> Option<&'static str> {
     if mime.starts_with("image/") { Some("image") }
