@@ -1,0 +1,26 @@
+name: Runner Probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    if: (github.ref_name == 'rebuild/orbit-production' || github.ref_name == 'rebuild/orbit-production-consolidated') && github.actor == 'ahmedsaturki'
+    runs-on: [self-hosted, x64, linux]
+    timeout-minutes: 5
+    steps:
+      - name: Report runner identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Runner probe reached an owned self-hosted Linux runner."
+          echo "Kernel: $(uname -a)"
+          echo "Machine: $(hostname)"
+          node --version
+          pnpm --version
+          rustc --version
+          cargo --version
+          git --version
