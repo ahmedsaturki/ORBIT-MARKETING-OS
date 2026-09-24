@@ -837,6 +837,21 @@ fn campaign_list(app: tauri::AppHandle) -> Result<Vec<CampaignView>, String> {
     rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
 }
 
+fn parse_reviewer_ids(value: &str) -> Result<Vec<String>, String> {
+    let reviewers: Vec<String> =
+        serde_json::from_str(value).map_err(|_| "reviewer list must be a JSON array".to_string())?;
+    if reviewers.is_empty() || reviewers.len() > 100 {
+        return Err("approval requires at least one reviewer".to_string());
+    }
+    if reviewers.iter().any(|reviewer| {
+        let trimmed = reviewer.trim();
+        trimmed.is_empty() || trimmed.len() > 200
+    }) {
+        return Err("approval reviewer id is invalid".to_string());
+    }
+    Ok(reviewers)
+}
+
 fn validate_content_status(status: &str) -> Result<String, AppError> {
     let value = status.trim().to_lowercase();
     let allowed = ["draft", "pending", "approved", "rejected", "changes_requested"];
@@ -989,8 +1004,13 @@ fn approval_request(
     let content_id = validate_label(&content_id).map_err(|error| error.to_string())?;
     let requested_by = validate_label(&requested_by).map_err(|error| error.to_string())?;
     let reviewer_ids_json = reviewer_ids_json.unwrap_or_else(|| "[]".to_string());
-    let _: Vec<String> = serde_json::from_str(&reviewer_ids_json)
+    let reviewer_ids: Vec<String> = serde_json::from_str(&reviewer_ids_json)
         .map_err(|_| "reviewer_ids_json must be a JSON array".to_string())?;
+    if reviewer_ids.is_empty() || reviewer_ids.len() > 100 || reviewer_ids.iter().any(|value| value.trim().is_empty() || value.len() > 200) {
+        return Err("approval requires at least one valid reviewer".to_string());
+    }
+    let reviewer_ids_json = serde_json::to_string(&reviewer_ids)
+        .map_err(|error| error.to_string())?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let exists: bool = connection
@@ -1075,8 +1095,7 @@ fn approval_decide(
         return Err("only pending approvals can be decided".to_string());
     }
 
-    let reviewer_ids: Vec<String> = serde_json::from_str(&reviewer_ids_json)
-        .map_err(|_| "stored reviewer list is invalid".to_string())?;
+    let reviewer_ids = parse_reviewer_ids(&reviewer_ids_json)?;
     if !reviewer_ids.iter().any(|reviewer| reviewer == &decided_by) {
         return Err("decider is not an authorized reviewer".to_string());
     }
