@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import Link from "next/link";
 
 const features = [
@@ -9,7 +10,7 @@ const features = [
   "سطح مكتبي للعمليات الحساسة",
 ];
 
-export default function HomePage(): JSX.Element {
+export default function HomePage(): ReactElement {
   return (
     <main data-release="0.2.0">
       <header className="topbar">
