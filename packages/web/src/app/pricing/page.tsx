@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 const plans = [
-  { name: "Basic", price: "$19/mo", accounts: "5 حسابات", details: "أساسيات الأتمتة، CRM، وAI محلي" },
-  { name: "Pro", price: "$39/mo", accounts: "15 حساباً", details: "تحليلات وقواعد مخصصة" },
-  { name: "Agency", price: "$99/mo", accounts: "غير محدود", details: "فرق وواجهة white-label" },
-  { name: "Lifetime", price: "$399", accounts: "15 حساباً", details: "ميزات أساسية بشراء لمرة واحدة" },
+  { name: "Basic", price: "$19/mo", accounts: "5 حسابات", details: "تخطيط الحملات، CRM، صندوق محادثات محلي، وAI محلي" },
+  { name: "Pro", price: "$39/mo", accounts: "15 حساباً", details: "كل الأساسيات مع قواعد تشغيل وتحليلات موسعة" },
+  { name: "Agency", price: "$99/mo", accounts: "غير محدود", details: "خطة مخصصة للفرق؛ التفعيل التجاري الكامل قيد الإكمال" },
+  { name: "Lifetime", price: "$399", accounts: "15 حساباً", details: "وصول طويل الأمد إلى الميزات الأساسية الحالية" },
 ];
 
 function checkoutUrl(planName: string): string {
@@ -17,7 +17,7 @@ export default function PricingPage(): JSX.Element {
     <main className="container page">
       <Link href="/">← الرئيسية</Link>
       <h1>الخطط والأسعار</h1>
-      <p className="muted">الأسعار التالية إعدادات المنتج الحالية ويمكن تعديلها قبل الإطلاق.</p>
+      <p className="muted">الأسعار الحالية هي إعدادات إطلاق قابلة للمراجعة؛ الشراء الفعلي لا يتفعل قبل ربط مزود الدفع والتحقق من الخطة.</p>
 
       <section className="pricing-grid">
         {plans.map((plan) => {
