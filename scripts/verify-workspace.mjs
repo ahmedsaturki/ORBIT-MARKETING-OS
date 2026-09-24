@@ -133,6 +133,22 @@ for (const entry of rustSources) {
   }
 }
 
+if (!rust.includes("CREATE TABLE IF NOT EXISTS media_assets")) {
+  throw new Error("Media metadata persistence table is missing");
+}
+if (!rust.includes("CREATE TABLE IF NOT EXISTS automation_rule_packs")) {
+  throw new Error("Automation rule-pack persistence table is missing");
+}
+if (!rust.includes("fn media_asset_import(")) {
+  throw new Error("Media import command is missing");
+}
+if (!rust.includes("fn media_asset_delete(")) {
+  throw new Error("Media delete command is missing");
+}
+if (!rust.includes("fn automation_rule_pack_set_enabled(")) {
+  throw new Error("Rule-pack lifecycle command is missing");
+}
+
 if (!rust.includes("BEGIN IMMEDIATE")) {
   throw new Error("Audit writes must serialize through BEGIN IMMEDIATE");
 }
@@ -231,6 +247,8 @@ const sensitiveDesktopCommands = {
   telegram_execute_task: ["owner", "admin", "operator"],
   media_asset_upsert: ["owner", "admin", "editor"],
   media_asset_import: ["owner", "admin", "editor"],
+  media_asset_delete: ["owner", "admin", "editor"],
+  automation_rule_pack_set_enabled: ["owner", "admin", "editor"],
   automation_rule_pack_upsert: ["owner", "admin", "editor"],
 };
 
