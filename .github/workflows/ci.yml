@@ -29,6 +29,9 @@ jobs:
           pnpm --version
           test "$(pnpm --version)" = "10.17.1"
 
+      - name: Workspace sanity
+        run: pnpm verify:workspace
+
       - name: Install
         run: pnpm install --no-frozen-lockfile
 
