@@ -224,8 +224,9 @@ pub fn license_install(
     }
 
     let payload = decode_token(&token)?;
+    let workspace_id = crate::active_workspace_id_for_module();
     let connection = open_connection(&app)?;
-    crate::require_workspace_role_for_module(&connection, &["owner", "admin"])?;
+    crate::require_workspace_role_for_module(&connection, &workspace_id, &["owner", "admin"])?;
     ensure_license_table(&connection)?;
     let accounts = account_count(&connection)?;
     evaluate_payload(&payload, accounts)?;
@@ -328,8 +329,9 @@ pub fn license_status(app: tauri::AppHandle) -> Result<LicenseStatus, String> {
 
 #[tauri::command]
 pub fn license_delete(app: tauri::AppHandle) -> Result<bool, String> {
+    let workspace_id = crate::active_workspace_id_for_module();
     let connection = open_connection(&app)?;
-    crate::require_workspace_role_for_module(&connection, &["owner", "admin"])?;
+    crate::require_workspace_role_for_module(&connection, &workspace_id, &["owner", "admin"])?;
     ensure_license_table(&connection)?;
     let deleted = connection
         .execute("DELETE FROM license_records WHERE id=1", [])
