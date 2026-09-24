@@ -272,6 +272,20 @@ if (
   throw new Error("Media import must authorize before local file access or hashing");
 }
 
+const accountDeleteStart = rust.indexOf("fn account_delete(");
+const accountDeleteBody = rust.slice(accountDeleteStart, accountDeleteStart + 2600);
+const detachIndex = accountDeleteBody.indexOf("UPDATE conversations");
+const deleteIndex = accountDeleteBody.indexOf("DELETE FROM accounts");
+if (
+  accountDeleteStart < 0 ||
+  detachIndex < 0 ||
+  deleteIndex < 0 ||
+  detachIndex > deleteIndex ||
+  !accountDeleteBody.includes("transaction")
+) {
+  throw new Error("Account deletion must atomically detach inbox conversations");
+}
+
 if (!rust.includes("fn media_asset_import(")) {
   throw new Error("Media import command is missing");
 }
