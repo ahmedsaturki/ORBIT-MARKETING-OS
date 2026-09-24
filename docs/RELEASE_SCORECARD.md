@@ -77,7 +77,7 @@ Status meanings:
 
 ### Vercel current deployment evidence
 
-The latest observed Vercel deployment for this branch (`dpl_3n2HPvxjcSHqph9Von3As7e1ZDZG`) reached the build phase and then failed with `ERR_PNPM_META_FETCH_FAIL` during `pnpm install --no-frozen-lockfile`. The deployment metadata still reports the project framework as `vite`. The connected runtime does not expose working build-log retrieval, so no more specific registry/package cause is asserted.
+The latest observed Vercel deployment for this branch (`dpl_Fa6zfs1JiTLWGidxjdTaTgH7RZPd`) is in `ERROR` at the install step with `errorCode=ENOENT` and `errorMessage=Command "bash scripts/vercel-install.sh" exited with 1`. The repository-side script fails closed because `pnpm-lock.yaml` is absent. The deployment metadata reports the project framework as `vite`; project-level framework/root settings still require confirmation. No more specific build failure is asserted.
 
 
 ### GitHub Actions
