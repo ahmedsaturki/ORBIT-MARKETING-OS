@@ -71,6 +71,16 @@ describe("TaskQueue", () => {
     );
   });
 
+  it("releases a running task without consuming an attempt", () => {
+    const instance = queue();
+    instance.enqueue(baseTask);
+    instance.claimNext("2026-09-24T00:00:01.000Z");
+
+    const released = instance.release("task-1");
+    expect(released.status).toBe("pending");
+    expect(released.attempts).toBe(0);
+  });
+
   it("rejects duplicate task identifiers", () => {
     const instance = queue();
     instance.enqueue(baseTask);
