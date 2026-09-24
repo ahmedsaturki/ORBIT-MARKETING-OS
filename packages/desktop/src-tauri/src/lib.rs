@@ -1668,7 +1668,7 @@ mod tests {
 
         let rows = connection
             .prepare(
-                "SELECT workspace_id, timestamp, category, action, outcome, actor,
+                "SELECT id, workspace_id, timestamp, category, action, outcome, actor,
                         entity_id, metadata_json, previous_hash, hash
                  FROM audit_events
                  ORDER BY rowid ASC",
@@ -1682,10 +1682,11 @@ mod tests {
                     row.get::<_, String>(3)?,
                     row.get::<_, String>(4)?,
                     row.get::<_, String>(5)?,
-                    row.get::<_, Option<String>>(6)?,
+                    row.get::<_, String>(6)?,
                     row.get::<_, Option<String>>(7)?,
-                    row.get::<_, String>(8)?,
+                    row.get::<_, Option<String>>(8)?,
                     row.get::<_, String>(9)?,
+                    row.get::<_, String>(10)?,
                 ))
             })
             .expect("query should execute");
@@ -1698,22 +1699,38 @@ mod tests {
         let second = collected.get(1).expect("second row should exist");
 
         assert_eq!(first.8, "GENESIS");
+        assert_eq!(first.9, "GENESIS");
         assert_eq!(
-            first.9,
+            first.10,
             audit_hash(
-                &first.8,
-                "audit-placeholder",
-                DEFAULT_WORKSPACE_ID,
+                &first.9,
+                &first.0,
                 &first.1,
                 &first.2,
                 &first.3,
                 &first.4,
                 &first.5,
-                first.6.as_deref(),
+                &first.6,
                 first.7.as_deref(),
-            ).replace("audit-placeholder", &"".to_string())
+                first.8.as_deref(),
+            )
         );
-        assert_eq!(second.8, first.9);
+        assert_eq!(second.9, first.10);
+        assert_eq!(
+            second.10,
+            audit_hash(
+                &second.9,
+                &second.0,
+                &second.1,
+                &second.2,
+                &second.3,
+                &second.4,
+                &second.5,
+                &second.6,
+                second.7.as_deref(),
+                second.8.as_deref(),
+            )
+        );
     }
 
     #[test]
@@ -1734,6 +1751,7 @@ CREATE TABLE tasks (id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL, account_id T
 CREATE TABLE contacts (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, phone TEXT, email TEXT, source_platform TEXT, status TEXT NOT NULL, notes TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE conversations (id TEXT PRIMARY KEY, contact_id TEXT, platform TEXT NOT NULL, external_thread_id TEXT, status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE audit_events (id TEXT PRIMARY KEY, timestamp TEXT NOT NULL, category TEXT NOT NULL, action TEXT NOT NULL, outcome TEXT NOT NULL, actor TEXT NOT NULL, entity_id TEXT, metadata_json TEXT);
+INSERT INTO audit_events(id, timestamp, category, action, outcome, actor) VALUES ('legacy-audit', '900', 'security', 'legacy', 'success', 'system');
 INSERT INTO tasks(id, campaign_id, account_id, platform, kind, priority, status, attempts, max_attempts, available_at, created_at)
 VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish', 0, 'pending', 0, 3, '1000', '1000');
 "#;
