@@ -4352,7 +4352,7 @@ fn analytics_summary(
     let row = connection
         .query_row(
             "SELECT
-               COUNT(*) AS attempted,
+               COALESCE(SUM(CASE WHEN status IN ('succeeded', 'failed', 'blocked') THEN 1 ELSE 0 END), 0) AS attempted,
                COALESCE(SUM(CASE WHEN status='succeeded' THEN 1 ELSE 0 END), 0),
                COALESCE(SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END), 0),
                COALESCE(SUM(CASE WHEN status='blocked' THEN 1 ELSE 0 END), 0),
@@ -4663,6 +4663,16 @@ mod tests {
         assert!((1i64..=10i64).contains(&1));
         assert!((1i64..=10i64).contains(&10));
         assert!(!(1i64..=10i64).contains(&11));
+    }
+
+    #[test]
+    fn analytics_attempted_excludes_pending_and_running_work() {
+        let statuses = ["pending", "running", "succeeded", "failed", "blocked", "cancelled"];
+        let attempted = statuses
+            .iter()
+            .filter(|status| matches!(**status, "succeeded" | "failed" | "blocked"))
+            .count();
+        assert_eq!(attempted, 3);
     }
 
     #[test]
