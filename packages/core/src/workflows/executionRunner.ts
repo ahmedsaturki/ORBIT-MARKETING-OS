@@ -1,4 +1,4 @@
-import type { Approval, Campaign, SocialAccount, Task } from "../types/index.js";
+import type { Approval, Campaign, ContentItem, SocialAccount, Task } from "../types/index.js";
 import type { ExecutionBlockReason } from "./executionPolicy.js";
 import { ConnectorRegistry } from "../connectors/registry.js";
 import {
@@ -41,6 +41,7 @@ export interface ExecutionRunnerInput {
   readonly account: SocialAccount;
   readonly campaign: Campaign;
   readonly task: Task;
+  readonly content?: ContentItem;
   readonly approval?: Approval;
   readonly actionsToday: number;
   readonly dailyLimit: number;
