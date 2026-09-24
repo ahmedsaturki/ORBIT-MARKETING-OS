@@ -36,6 +36,16 @@ test("static server rejects traversal attempts", async ({ request }) => {
 });
 
 
+test("production security headers are present on the static delivery path", async ({ request }) => {
+  const response = await request.get("/");
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(response.headers()["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(response.headers()["permissions-policy"]).toBe("camera=(), microphone=(), geolocation=()");
+  expect(response.headers()["cross-origin-opener-policy"]).toBe("same-origin");
+  expect(response.headers()["cross-origin-resource-policy"]).toBe("same-origin");
+});
+
 test("PWA manifest and service worker assets are reachable", async ({ request }) => {
   const manifest = await request.get("/manifest.json");
   expect(manifest.ok()).toBe(true);
