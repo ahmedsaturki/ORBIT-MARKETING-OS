@@ -5096,6 +5096,33 @@ mod content_variant_tests {
 }
 
 #[cfg(test)]
+mod media_import_tests {
+    use super::*;
+
+    #[test]
+    fn sha256_file_matches_known_digest() {
+        let path = std::env::temp_dir().join(format!("orbit-media-{}.txt", uuid_like()));
+        fs::write(&path, b"ORBIT media test").expect("write test file");
+        let digest = sha256_file(&path).expect("hash test file");
+        let _ = fs::remove_file(&path);
+        assert_eq!(
+            digest,
+            "4d1a0f6f1a3ec5af6bdf35c3dd9d9c32692c52a0e4d4ebf06b65e925f7c7660a"
+        );
+    }
+
+    #[test]
+    fn imported_media_type_is_inferred_from_extension() {
+        let png = std::path::Path::new("launch.png");
+        let mp4 = std::path::Path::new("launch.mp4");
+        let pdf = std::path::Path::new("brief.pdf");
+        assert_eq!(infer_media_mime(png), Some("image/png"));
+        assert_eq!(infer_media_mime(mp4), Some("video/mp4"));
+        assert_eq!(infer_media_mime(pdf), Some("application/pdf"));
+    }
+}
+
+#[cfg(test)]
 mod media_rule_pack_tests {
     use super::*;
 
@@ -5173,6 +5200,48 @@ mod media_rule_pack_tests {
         let error = validate_rule_pack_json("telegram", invalid)
             .expect_err("invalid rules should be rejected");
         assert!(error.contains("rule platform must match"));
+    }
+}
+
+#[cfg(test)]
+mod rule_pack_runtime_limits_tests {
+    use super::*;
+
+    #[test]
+    fn latest_enabled_pack_provides_bounded_runtime_limits() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection.execute_batch(
+            "CREATE TABLE automation_rule_packs(
+               id TEXT PRIMARY KEY,
+               workspace_id TEXT NOT NULL,
+               platform TEXT NOT NULL,
+               version TEXT NOT NULL,
+               schema_version INTEGER NOT NULL,
+               rules_json TEXT NOT NULL,
+               enabled INTEGER NOT NULL,
+               created_at TEXT NOT NULL,
+               updated_at TEXT NOT NULL
+             );
+             INSERT INTO automation_rule_packs(
+               id, workspace_id, platform, version, schema_version, rules_json,
+               enabled, created_at, updated_at
+             ) VALUES (
+               'pack-1', 'workspace-1', 'telegram', '1.0.0', 1,
+               '[{"id":"publish","platform":"telegram","taskKinds":["publish"],
+                 "enabled":true,"requiresConfirmation":true,
+                 "maxAttempts":5,"timeoutMs":45000}]',
+               1, '1', '2'
+             );",
+        ).expect("schema");
+
+        let result = load_rule_config(
+            &connection,
+            "workspace-1",
+            "telegram",
+            "publish",
+        )
+        .expect("rule config");
+        assert_eq!(result, Some((45_000, 5)));
     }
 }
 
