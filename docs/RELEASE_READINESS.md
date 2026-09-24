@@ -68,3 +68,8 @@ The connected Vercel project has a verified READY production deployment, but it 
 ## Release rule
 
 No tag, merge, production deployment, or commercial launch claim should be made while required gates remain `UNVERIFIED` or `BLOCKED`.
+
+
+## Final consolidation checkpoint
+
+The active consolidation head is `db9ffe662b34dbea0d3f8ef1e52a02f6f3b7ca33`. It is synchronized with current `main` history and includes the Linux owner-restricted runner probe. Runtime/release gates remain unverified until an actual runner executes the verification workflow.
