@@ -2104,6 +2104,23 @@ fn vault_put(
     let payload_json = serde_json::to_string(&payload).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
+
+    if session_payload_json.is_none() {
+        let existing_platform: Option<String> = connection
+            .query_row(
+                "SELECT platform FROM accounts WHERE id=?1 AND workspace_id=?2",
+                params![&id, &workspace_id],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|error| error.to_string())?;
+        if let Some(existing_platform) = existing_platform {
+            if existing_platform != platform {
+                return Err("changing an account platform requires a new authorized session".to_string());
+            }
+        }
+    }
+
     let timestamp = chrono_like_timestamp();
     connection
         .execute(
@@ -5357,6 +5374,34 @@ mod tests {
         assert_eq!(effective_max_attempts(10, 3), 3);
         assert_eq!(effective_max_attempts(100, 100), 10);
         assert_eq!(effective_max_attempts(0, 3), 1);
+    }
+
+    #[test]
+    fn account_platform_change_requires_new_session() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(
+                "CREATE TABLE accounts(
+                   id TEXT PRIMARY KEY,
+                   workspace_id TEXT NOT NULL,
+                   platform TEXT NOT NULL,
+                   session_payload_json TEXT
+                 );
+                 INSERT INTO accounts(id, workspace_id, platform, session_payload_json)
+                 VALUES ('account-1', 'workspace-1', 'telegram', 'encrypted-token');",
+            )
+            .expect("account fixture should be created");
+
+        let existing_platform: Option<String> = connection
+            .query_row(
+                "SELECT platform FROM accounts WHERE id='account-1' AND workspace_id='workspace-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("account platform should be readable");
+
+        assert_eq!(existing_platform.as_deref(), Some("telegram"));
+        assert_ne!(existing_platform.as_deref(), Some("linkedin"));
     }
 
     #[test]
