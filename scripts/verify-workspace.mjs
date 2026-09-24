@@ -193,6 +193,8 @@ for (const command of Object.keys(sensitiveDesktopCommands)) {
 const webVercel = JSON.parse(await readFile(join(root, "packages/web/vercel.json"), "utf8"));
 if (webVercel.framework !== "nextjs") throw new Error("Web Vercel framework must be nextjs");
 if (webVercel.outputDirectory !== "out") throw new Error("Web Vercel output directory must be out");
+if (webVercel.installCommand !== "pnpm install --frozen-lockfile") throw new Error("Web Vercel install must use frozen lockfile");
+if (!webVercel.ignoreCommand.includes("exit 1")) throw new Error("Web Vercel must fail closed when lockfile is missing");
 
 
 const workflowFiles = [
@@ -201,11 +203,15 @@ const workflowFiles = [
   ".github/workflows/release-desktop.yml",
   ".github/workflows/release-mobile.yml",
   ".github/workflows/vercel-web.yml",
+  ".github/workflows/self-hosted-verify.yml",
 ];
 for (const workflow of workflowFiles) {
   const content = await readFile(join(root, workflow), "utf8");
   if (/runs-on:\s*ubuntu-latest/.test(content) && !content.includes("timeout-minutes:")) {
     throw new Error("Workflow is missing timeout-minutes: " + workflow);
+  }
+  if (content.includes("dtolnay/rust-toolchain@master") || content.includes("dtolnay/rust-toolchain@stable")) {
+    throw new Error("Moving Rust toolchain action reference detected: " + workflow);
   }
 }
 await assertFile("rust-toolchain.toml");
