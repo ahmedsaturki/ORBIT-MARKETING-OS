@@ -103,10 +103,20 @@ for (const fragment of [
   "run: bash scripts/self-hosted-preflight.sh",
   "pnpm install --lockfile-only --ignore-scripts",
   "cargo generate-lockfile",
-  "git add pnpm-lock.yaml packages/desktop/src-tauri/Cargo.lock",
-  "git push origin",
+  "node scripts/commit-lockfiles.mjs",
 ]) {
   if (!bootstrap.includes(fragment)) throw new Error("Lockfile bootstrap contract missing: " + fragment);
+}
+
+const commitLockfiles = await text("scripts/commit-lockfiles.mjs");
+for (const fragment of [
+  "GITHUB_REF_NAME",
+  "rebuild/orbit-production",
+  'execFileSync("git", ["add"',
+  'execFileSync("git", ["commit"',
+  'execFileSync("git", ["push"',
+]) {
+  if (!commitLockfiles.includes(fragment)) throw new Error("Canonical lockfile commit contract missing: " + fragment);
 }
 
 console.log("ORBIT release sanity passed for version " + expectedVersion);
