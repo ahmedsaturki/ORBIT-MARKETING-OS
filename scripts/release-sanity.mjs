@@ -49,6 +49,8 @@ const requiredFiles = [
   ".github/workflows/web-release-selfhosted.yml",
   "scripts/self-hosted-preflight.sh",
   "scripts/security-scan.mjs",
+  "scripts/performance-smoke.mjs",
+  "scripts/verify-live-web.mjs",
 ];
 
 for (const relative of requiredFiles) {
