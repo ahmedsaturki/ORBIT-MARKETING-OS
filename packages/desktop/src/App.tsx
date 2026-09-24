@@ -181,7 +181,6 @@ export function App(): ReactElement {
   const [taskIdempotencyKey, setTaskIdempotencyKey] = useState("");
   const [taskContentId, setTaskContentId] = useState("");
   const [taskDestinationId, setTaskDestinationId] = useState("");
-  const [taskDestinationId, setTaskDestinationId] = useState("");
   const [executionMessage, setExecutionMessage] = useState("");
   const [contacts, setContacts] = useState<readonly ContactView[]>([]);
   const [conversations, setConversations] = useState<readonly ConversationView[]>([]);
