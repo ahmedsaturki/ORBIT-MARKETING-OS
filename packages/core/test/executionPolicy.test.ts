@@ -76,6 +76,7 @@ describe("execution policy", () => {
   });
 
   it("requires content linkage for publish tasks", () => {
+    const { contentId: _contentId, ...taskWithoutContent } = task;
     const decision = evaluateExecutionPolicy({
       ...context,
       approval: {
@@ -86,7 +87,7 @@ describe("execution policy", () => {
         reviewerIds: ["user-2"],
         status: "approved",
       },
-      task: { ...task, contentId: undefined },
+      task: taskWithoutContent,
     });
     expect(decision.reason).toBe("content_required");
   });
