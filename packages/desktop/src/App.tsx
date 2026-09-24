@@ -55,6 +55,12 @@ interface ApprovalView {
   readonly note: string | null;
 }
 
+interface ContentVariantView {
+  readonly content_id: string;
+  readonly platform: string;
+  readonly body: string | null;
+}
+
 interface ContactView {
   readonly id: string;
   readonly display_name: string;
@@ -165,6 +171,9 @@ export function App(): ReactElement {
   const [campaignName, setCampaignName] = useState("");
   const [campaignAccountId, setCampaignAccountId] = useState("");
   const [contentItems, setContentItems] = useState<readonly ContentView[]>([]);
+  const [contentVariants, setContentVariants] = useState<readonly ContentVariantView[]>([]);
+  const [variantPlatform, setVariantPlatform] = useState("facebook");
+  const [variantBody, setVariantBody] = useState("");
   const [contentId, setContentId] = useState("");
   const [contentTitle, setContentTitle] = useState("");
   const [contentBody, setContentBody] = useState("");
@@ -265,6 +274,41 @@ export function App(): ReactElement {
     }
   };
 
+  const loadVariants = async (contentId = selectedContentId): Promise<void> => {
+    if (!contentId) {
+      setContentVariants([]);
+      return;
+    }
+    try {
+      const items = await callNative<ContentVariantView[]>("content_variant_list", {
+        content_id: contentId,
+      });
+      setContentVariants(items);
+      const current = items.find((item) => item.platform === variantPlatform);
+      setVariantBody(current?.body ?? "");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل تحميل نسخ المحتوى");
+    }
+  };
+
+  const saveVariant = async (): Promise<void> => {
+    if (!selectedContentId || !variantBody.trim()) {
+      setError("اختر محتوى واكتب النسخة الخاصة بالمنصة");
+      return;
+    }
+    try {
+      setError("");
+      await callNative<ContentVariantView>("content_variant_upsert", {
+        content_id: selectedContentId,
+        platform: variantPlatform,
+        body: variantBody.trim(),
+      });
+      await loadVariants(selectedContentId);
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل حفظ نسخة المحتوى");
+    }
+  };
+
   const loadApprovals = async (): Promise<void> => {
     try {
       const items = await callNative<ApprovalView[]>("approval_list");
@@ -300,6 +344,7 @@ export function App(): ReactElement {
       setContentBody("");
       setContentTags("");
       await loadContent();
+      await loadVariants(selectedContentId);
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل حفظ المحتوى");
     }
@@ -923,13 +968,81 @@ export function App(): ReactElement {
 
           <label>
             المحتوى المحدد
-            <select value={selectedContentId} onChange={(event) => setSelectedContentId(event.target.value)}>
+            <select
+              value={selectedContentId}
+              onChange={(event) => {
+                const id = event.target.value;
+                setSelectedContentId(id);
+                void loadVariants(id);
+              }}
+            >
               <option value="">اختر محتوى</option>
               {contentItems.map((item) => (
                 <option key={item.id} value={item.id}>{item.title} • {item.approval_status}</option>
               ))}
             </select>
           </label>
+
+          <div className="vault-form">
+            <label>
+              منصة النسخة
+              <select
+                value={variantPlatform}
+                onChange={(event) => {
+                  const platform = event.target.value;
+                  setVariantPlatform(platform);
+                  const current = contentVariants.find((item) => item.platform === platform);
+                  setVariantBody(current?.body ?? "");
+                }}
+              >
+                <option value="facebook">Facebook</option>
+                <option value="instagram">Instagram</option>
+                <option value="telegram">Telegram</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="tiktok">TikTok</option>
+              </select>
+            </label>
+            <label>
+              النص الخاص بالمنصة
+              <textarea
+                value={variantBody}
+                onChange={(event) => setVariantBody(event.target.value)}
+                rows={5}
+                placeholder="نسخة معدلة لهذه المنصة..."
+              />
+            </label>
+            <div className="actions">
+              <button className="button secondary" type="button" onClick={() => void loadVariants()}>
+                تحميل النسخ
+              </button>
+              <button className="button primary" type="button" onClick={() => void saveVariant()} disabled={!selectedContentId}>
+                حفظ نسخة المنصة
+              </button>
+            </div>
+          </div>
+
+          <div className="account-list">
+            {contentVariants.map((variant) => (
+              <button
+                className="account-row"
+                type="button"
+                key={variant.content_id + ":" + variant.platform}
+                onClick={() => {
+                  setVariantPlatform(variant.platform);
+                  setVariantBody(variant.body ?? "");
+                }}
+              >
+                <div>
+                  <strong>{variant.platform}</strong>
+                  <div className="account-meta">
+                    {variant.body ? variant.body.slice(0, 180) : "نسخة فارغة"}
+                  </div>
+                </div>
+              </button>
+            ))}
+            {!contentVariants.length ? <div className="result">لا توجد نسخ مخصصة لهذا المحتوى.</div> : null}
+          </div>
 
           <label>
             الحملة لربط المحتوى
