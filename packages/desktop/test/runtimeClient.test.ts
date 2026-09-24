@@ -139,6 +139,49 @@ test("image analysis sends the selected analysis type without leaving the local 
   }
 });
 
+test("local runtime health rejects malformed responses", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        status: "ok",
+        service: 42,
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+
+  try {
+    await assert.rejects(
+      () => fetchLocalRuntimeHealth(),
+      /Invalid local runtime health response/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("local chat rejects malformed model responses", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        text: "reply",
+        provider: "ollama-local",
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+
+  try {
+    await assert.rejects(
+      () =>
+        sendLocalChat([{ role: "user", text: "hello" }]),
+      /Invalid local runtime chat response/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("desktop runtime client rejects non-loopback endpoints", async () => {
   await assert.rejects(
     () => fetchLocalRuntimeHealth("https://remote.example"),
