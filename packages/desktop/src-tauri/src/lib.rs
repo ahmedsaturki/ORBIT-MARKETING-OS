@@ -17,7 +17,7 @@ use thiserror::Error;
 use zeroize::Zeroizing;
 
 const DEFAULT_WORKSPACE_ID: &str = "default";
-const SCHEMA_VERSION: i64 = 4;
+const SCHEMA_VERSION: i64 = 5;
 
 const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS vault_records (
@@ -126,13 +126,14 @@ CREATE INDEX IF NOT EXISTS idx_tasks_ready
 CREATE TABLE IF NOT EXISTS conversations (
   id TEXT PRIMARY KEY,
   workspace_id TEXT NOT NULL DEFAULT 'default',
+  account_id TEXT,
   contact_id TEXT REFERENCES contacts(id) ON DELETE SET NULL,
   platform TEXT NOT NULL,
   external_thread_id TEXT,
   status TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  UNIQUE(workspace_id, platform, external_thread_id)
+  UNIQUE(workspace_id, account_id, external_thread_id)
 );
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -274,6 +275,7 @@ struct ContactView {
 #[derive(Debug, Serialize)]
 struct ConversationView {
     id: String,
+    account_id: Option<String>,
     contact_id: Option<String>,
     platform: String,
     external_thread_id: Option<String>,
@@ -470,7 +472,19 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         )?;
     }
 
-    connection.execute_batch("PRAGMA user_version = 4;")?;
+    if version < 5 {
+        if !has_column(connection, "conversations", "account_id")? {
+            connection.execute_batch(
+                "ALTER TABLE conversations ADD COLUMN account_id TEXT",
+            )?;
+        }
+        connection.execute_batch(
+            "CREATE INDEX IF NOT EXISTS idx_conversations_account
+             ON conversations(workspace_id, account_id, updated_at);",
+        )?;
+    }
+
+    connection.execute_batch("PRAGMA user_version = 5;")?;
 }
 
 fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> {
@@ -1903,12 +1917,14 @@ fn write_audit(
 fn conversation_upsert(
     app: tauri::AppHandle,
     id: String,
+    account_id: String,
     contact_id: Option<String>,
     platform: String,
     external_thread_id: Option<String>,
     status: String,
 ) -> Result<ConversationView, String> {
     let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
     let allowed_status = ["new", "interested", "potential_customer", "complaint", "closed"];
     if !allowed_status.contains(&status.as_str()) {
@@ -1916,6 +1932,20 @@ fn conversation_upsert(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let account_platform: Option<String> = connection
+        .query_row(
+            "SELECT platform FROM accounts WHERE id=?1 AND workspace_id=?2",
+            params![account_id, DEFAULT_WORKSPACE_ID],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    match account_platform {
+        Some(value) if value == platform => {}
+        Some(_) => return Err("conversation account platform does not match".to_string()),
+        None => return Err(AppError::NotFound.to_string()),
+    }
+
     if let Some(contact_id) = &contact_id {
         let contact_exists: bool = connection
             .query_row(
@@ -1935,11 +1965,12 @@ fn conversation_upsert(
     connection
         .execute(
             "INSERT INTO conversations(
-               id, workspace_id, contact_id, platform, external_thread_id,
+               id, workspace_id, account_id, contact_id, platform, external_thread_id,
                status, created_at, updated_at
              )
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
              ON CONFLICT(id) DO UPDATE SET
+               account_id=excluded.account_id,
                contact_id=excluded.contact_id,
                platform=excluded.platform,
                external_thread_id=excluded.external_thread_id,
@@ -1948,6 +1979,7 @@ fn conversation_upsert(
             params![
                 id,
                 DEFAULT_WORKSPACE_ID,
+                account_id,
                 contact_id,
                 platform,
                 external_thread_id,
@@ -1962,6 +1994,7 @@ fn conversation_upsert(
 
     Ok(ConversationView {
         id,
+        account_id: Some(account_id),
         contact_id,
         platform,
         external_thread_id,
@@ -2035,7 +2068,7 @@ fn inbox_list(app: tauri::AppHandle) -> Result<Vec<ConversationView>, String> {
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
-            "SELECT c.id, c.contact_id, c.platform, c.external_thread_id, c.status, COUNT(m.id), c.updated_at
+            "SELECT c.id, c.account_id, c.contact_id, c.platform, c.external_thread_id, c.status, COUNT(m.id), c.updated_at
              FROM conversations c
              LEFT JOIN messages m ON m.conversation_id=c.id
              WHERE c.workspace_id=?1
@@ -2048,12 +2081,13 @@ fn inbox_list(app: tauri::AppHandle) -> Result<Vec<ConversationView>, String> {
         .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
             Ok(ConversationView {
                 id: row.get(0)?,
-                contact_id: row.get(1)?,
-                platform: row.get(2)?,
-                external_thread_id: row.get(3)?,
-                status: row.get(4)?,
-                message_count: row.get(5)?,
-                updated_at: row.get(6)?,
+                account_id: row.get(1)?,
+                contact_id: row.get(2)?,
+                platform: row.get(3)?,
+                external_thread_id: row.get(4)?,
+                status: row.get(5)?,
+                message_count: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         })
         .map_err(|error| error.to_string())?;
