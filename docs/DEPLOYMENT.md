@@ -2,7 +2,7 @@
 
 ## Web / Vercel
 
-The web package is a static Next.js export into `packages/web/out`.
+The web package is a static Next.js export into `packages/web/out`. For a local smoke preview, serve that directory with any static HTTP server (for example Python's built-in `http.server`); `next start` is intentionally not used with static export.
 
 The repository contains `vercel.json` plus a guarded GitHub Actions deployment workflow. The workflow only activates when `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` are available.
 
