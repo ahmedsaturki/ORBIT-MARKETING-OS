@@ -62,7 +62,7 @@ describe("ExecutionRunner", () => {
     });
     expect(result).toMatchObject({
       status: "blocked",
-      reason: "policy",
+      reason: "campaign_not_runnable",
     });
   });
 
