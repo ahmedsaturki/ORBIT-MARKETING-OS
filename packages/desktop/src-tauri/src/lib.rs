@@ -2624,6 +2624,41 @@ fn media_asset_import(
 }
 
 #[tauri::command]
+fn media_asset_delete(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<bool, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor"],
+    )
+    .map_err(|error| error.to_string())?;
+    let changed = connection
+        .execute(
+            "DELETE FROM media_assets WHERE id=?1 AND workspace_id=?2",
+            params![&id, &workspace_id],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed > 0 {
+        write_audit_for_workspace(
+            &connection,
+            &workspace_id,
+            "media",
+            "asset_delete",
+            "success",
+            "user",
+            Some(&id),
+        )
+        .map_err(|error| error.to_string())?;
+    }
+    Ok(changed > 0)
+}
+
+#[tauri::command]
 fn media_asset_list(
     app: tauri::AppHandle,
     search: Option<String>,
@@ -2808,6 +2843,46 @@ fn automation_rule_pack_upsert(
         created_at: timestamp.clone(),
         updated_at: timestamp,
     })
+}
+
+#[tauri::command]
+fn automation_rule_pack_set_enabled(
+    app: tauri::AppHandle,
+    id: String,
+    enabled: bool,
+) -> Result<bool, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let changed = connection
+        .execute(
+            "UPDATE automation_rule_packs
+             SET enabled=?1, updated_at=?2
+             WHERE id=?3 AND workspace_id=?4",
+            params![if enabled { 1 } else { 0 }, chrono_like_timestamp(), &id, &workspace_id],
+        )
+        .map_err(|error| error.to_string())?;
+
+    if changed > 0 {
+        write_audit_for_workspace(
+            &connection,
+            &workspace_id,
+            "automation",
+            "rule_pack_toggle",
+            "success",
+            "user",
+            Some(&id),
+        )
+        .map_err(|error| error.to_string())?;
+    }
+    Ok(changed > 0)
 }
 
 #[tauri::command]
@@ -5344,8 +5419,10 @@ pub fn run() {
             content_variant_upsert,
             media_asset_upsert,
             media_asset_import,
+            media_asset_delete,
             media_asset_list,
             automation_rule_pack_upsert,
+            automation_rule_pack_set_enabled,
             automation_rule_pack_list,
             content_variant_list,
             campaign_attach_content,
