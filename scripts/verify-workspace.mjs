@@ -11,6 +11,7 @@ const requiredFiles = [
   "docs/ACCEPTANCE_MATRIX_V2.md",
   "docs/RELEASE_GATES.md",
   "packages/core/package.json",
+  "packages/core/src/access/control.ts",
   "packages/desktop/package.json",
   "packages/mobile/package.json",
   "packages/web/package.json",
@@ -73,6 +74,49 @@ if (!desktopPackage.scripts?.build || !desktopPackage.scripts?.typecheck) {
 const mobilePackage = await readJson("packages/mobile/package.json");
 if (!mobilePackage.scripts?.build || !mobilePackage.scripts?.test) {
   throw new Error("Mobile build/test scripts are incomplete");
+}
+
+const rustPath = join(root, "packages/desktop/src-tauri/src/lib.rs");
+const rust = await readFile(rustPath, "utf8");
+const rustFunctions = [...rust.matchAll(/\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map((match) => match[1]);
+const duplicateFunctions = new Map();
+for (const name of rustFunctions) {
+  duplicateFunctions.set(name, (duplicateFunctions.get(name) ?? 0) + 1);
+}
+for (const [name, count] of duplicateFunctions) {
+  if (count > 1) throw new Error("Duplicate Rust function definition: " + name);
+}
+
+const productionRust = rust.split("\n").filter((line) => !line.includes("#[cfg(test)]")).join("\n");
+if (/\.unwrap\s*\(|\.expect\s*\(|\bpanic!\s*\(/.test(productionRust)) {
+  throw new Error("Unchecked Rust unwrap/expect/panic detected outside tests");
+}
+
+if (!rust.includes("BEGIN IMMEDIATE")) {
+  throw new Error("Audit writes must serialize through BEGIN IMMEDIATE");
+}
+
+for (const command of ["workspace_list", "workspace_current", "workspace_create", "workspace_select"]) {
+  if (!new RegExp("fn\\s+" + command + "\\s*\\(").test(rust)) {
+    throw new Error("Missing workspace command: " + command);
+  }
+}
+const invokeHandler = rust.slice(rust.lastIndexOf(".invoke_handler(tauri::generate_handler!["));
+for (const command of ["workspace_list", "workspace_current", "workspace_create", "workspace_select"]) {
+  if (!invokeHandler.includes(command)) {
+    throw new Error("Workspace command is not registered in Tauri invoke handler: " + command);
+  }
+}
+
+const workspaceDefaultUses = (rust.match(/DEFAULT_WORKSPACE_ID/g) ?? []).length;
+if (workspaceDefaultUses !== 1) {
+  throw new Error("DEFAULT_WORKSPACE_ID must remain a fallback declaration only");
+}
+
+const desktopPackageText = await readFile(join(root, "packages/desktop/package.json"), "utf8");
+const desktopPackage = JSON.parse(desktopPackageText);
+if (!desktopPackage.dependencies?.["@orbit/core"]) {
+  throw new Error("Desktop must consume @orbit/core through the workspace dependency");
 }
 
 const ignored = new Set([".git", "node_modules", ".next", "out", "dist", "build", ".turbo", ".expo"]);
