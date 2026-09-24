@@ -22,8 +22,12 @@ describe("retry policy", () => {
 
   it("rejects unsafe retry policies consistently", () => {
     const unsafe = { ...policy, maxAttempts: 11 };
-    expect(() => calculateRetryDelay(1, unsafe)).toThrow("invalid retry policy");
-    expect(() => shouldRetry(0, unsafe)).toThrow("invalid retry policy");
+    expect(() => calculateRetryDelay(1, unsafe)).toThrow(
+      "retryPolicy.maxAttempts must be an integer between 1 and 10",
+    );
+    expect(() => shouldRetry(0, unsafe)).toThrow(
+      "retryPolicy.maxAttempts must be an integer between 1 and 10",
+    );
   });
 
   it("rejects non-finite delay configuration", () => {
