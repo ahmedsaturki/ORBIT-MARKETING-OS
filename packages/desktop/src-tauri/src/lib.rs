@@ -4638,6 +4638,17 @@ fn write_audit(
 
 
 #[tauri::command]
+fn count_conversation_messages(
+    connection: &Connection,
+    conversation_id: &str,
+) -> Result<i64, rusqlite::Error> {
+    connection.query_row(
+        "SELECT COUNT(*) FROM messages WHERE conversation_id=?1",
+        params![conversation_id],
+        |row| row.get(0),
+    )
+}
+
 fn conversation_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -4719,6 +4730,9 @@ fn conversation_upsert(
         return Err("conversation id already belongs to another workspace".to_string());
     }
 
+    let message_count = count_conversation_messages(&connection, &id)
+        .map_err(|error| error.to_string())?;
+
     write_audit(&connection, "conversation", "upsert", "success", "user", Some(&id))
         .map_err(|error| error.to_string())?;
 
@@ -4729,7 +4743,7 @@ fn conversation_upsert(
         platform,
         external_thread_id,
         status,
-        message_count: 0,
+        message_count,
         updated_at: timestamp,
     })
 }
@@ -6578,6 +6592,30 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
             .expect("migrated task should exist");
         assert_eq!(values.0, DEFAULT_WORKSPACE_ID);
         assert_eq!(values.1, "legacy-task");
+    }
+}
+
+#[cfg(test)]
+mod conversation_count_tests {
+    use super::*;
+
+    #[test]
+    fn conversation_message_count_reflects_existing_messages() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection.execute_batch(
+            "CREATE TABLE messages(
+               id TEXT PRIMARY KEY,
+               conversation_id TEXT NOT NULL
+             );
+             INSERT INTO messages(id, conversation_id)
+             VALUES ('message-1', 'conversation-1'), ('message-2', 'conversation-1');",
+        ).expect("schema");
+
+        assert_eq!(
+            count_conversation_messages(&connection, "conversation-1")
+                .expect("message count"),
+            2
+        );
     }
 }
 
