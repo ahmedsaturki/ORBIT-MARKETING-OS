@@ -1204,6 +1204,19 @@ fn message_add(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let conversation_exists: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM conversations WHERE id=?1 AND workspace_id=?2
+             )",
+            params![conversation_id, DEFAULT_WORKSPACE_ID],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !conversation_exists {
+        return Err(AppError::NotFound.to_string());
+    }
+
     let sent_at = chrono_like_timestamp();
     connection
         .execute(
@@ -1214,8 +1227,8 @@ fn message_add(
         .map_err(|error| error.to_string())?;
     connection
         .execute(
-            "UPDATE conversations SET updated_at=?1 WHERE id=?2",
-            params![sent_at, conversation_id],
+            "UPDATE conversations SET updated_at=?1 WHERE id=?2 AND workspace_id=?3",
+            params![sent_at, conversation_id, DEFAULT_WORKSPACE_ID],
         )
         .map_err(|error| error.to_string())?;
 
