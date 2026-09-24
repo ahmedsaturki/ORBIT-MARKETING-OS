@@ -14,7 +14,7 @@ Updated: 2026-09-24
 | Facebook connector | contract + fixture | no real connector | NOT_IMPLEMENTED |
 | Instagram connector | contract + fixture | no real connector | NOT_IMPLEMENTED |
 | WhatsApp connector | contract + fixture | no real connector | NOT_IMPLEMENTED |
-| LinkedIn connector | contract + fixture | no real connector | NOT_IMPLEMENTED |
+| LinkedIn connector | yes | controlled live/API evidence pending | UNVERIFIED |
 | TikTok connector | contract + fixture | no real connector | NOT_IMPLEMENTED |
 | Local Ollama runtime | yes | runtime smoke blocked by runner | UNVERIFIED |
 | Offline licensing | yes | native/runtime evidence pending | UNVERIFIED |
