@@ -36,6 +36,7 @@ export function buildCampaignTasks(
 
   return campaign.accountIds.map((accountId, index) => ({
     id: campaign.id + ":task:" + String(index + 1),
+    workspaceId: campaign.workspaceId,
     campaignId: campaign.id,
     accountId,
     platform,
@@ -45,6 +46,7 @@ export function buildCampaignTasks(
     attempts: 0,
     maxAttempts,
     availableAt,
+    idempotencyKey: campaign.id + ":task:" + String(index + 1),
     createdAt,
   }));
 }
