@@ -2,7 +2,7 @@
 
 ## Source of truth
 - Branch: `rebuild/orbit-production`
-- HEAD: `dfd7f3c1a42eeffff74ac0fc2c22b82bea10826b`
+- HEAD: `4a93952ac8b57d20e6bf0f0b3f436b0e62564588`
 - PR #2: open, draft, unmerged
 
 ## Technical work completed in the current rebuild line
