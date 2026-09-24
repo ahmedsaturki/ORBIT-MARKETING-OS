@@ -153,10 +153,16 @@ export async function executeClaimedTask(
   const decision = evaluateExecutionPolicy({ ...context, task });
 
   if (!decision.allowed) {
-    dependencies.queue.block(task.id);
+    const resumable = decision.reason === "approval_required" || decision.reason === "daily_limit_reached";
+    if (resumable) {
+      dependencies.queue.release(task.id);
+    } else {
+      dependencies.queue.block(task.id);
+    }
     audit(dependencies.audit, task, "blocked", "execution.policy_blocked", {
       reason: decision.reason,
       message: decision.message,
+      resumable,
     });
     return {
       status: "blocked",
@@ -167,9 +173,10 @@ export async function executeClaimedTask(
   }
 
   if (task.kind !== "sync" && !userConfirmed) {
-    dependencies.queue.block(task.id);
+    dependencies.queue.release(task.id);
     audit(dependencies.audit, task, "blocked", "execution.confirmation_required", {
       reason: "confirmation_required",
+      resumable: true,
     });
     return {
       status: "blocked",
