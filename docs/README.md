@@ -9,3 +9,5 @@
 - [User guide](USER_GUIDE.md)
 - [EULA](EULA.md)
 - [Refund policy](REFUND_POLICY.md)
+
+- [Operations Runbook](./OPERATIONS_RUNBOOK.md)
