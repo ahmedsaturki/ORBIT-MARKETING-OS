@@ -77,7 +77,7 @@ function mapRunnerResult(
     return {
       status: "succeeded",
       taskId: task.id,
-      externalId: result.externalId,
+      ...(result.externalId ? { externalId: result.externalId } : {}),
       message: result.message,
     };
   }
@@ -169,7 +169,7 @@ export async function executeClaimedTask(
     account: context.account,
     campaign: context.campaign,
     task,
-    approval: context.approval,
+    ...(context.approval ? { approval: context.approval } : {}),
     actionsToday: context.actionsToday,
     dailyLimit: context.dailyLimit,
     consecutiveFailures: context.consecutiveFailures,
