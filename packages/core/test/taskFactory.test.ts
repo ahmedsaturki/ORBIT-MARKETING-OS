@@ -10,6 +10,7 @@ describe("buildCampaignTasks", () => {
         name: "Launch",
         status: "scheduled",
         accountIds: ["acc-1", "acc-2"],
+        contentIds: ["content-1"],
         taskCount: 2,
         createdAt: "2026-09-24T00:00:00.000Z",
       },
@@ -23,7 +24,7 @@ describe("buildCampaignTasks", () => {
     );
 
     expect(tasks).toHaveLength(2);
-    expect(tasks.map((task) => task.id)).toEqual(["camp-1:task:1", "camp-1:task:2"]);
+    expect(tasks.map((task) => task.id)).toEqual(["camp-1:task:facebook:publish:acc-1", "camp-1:task:facebook:publish:acc-2"]);
     expect(tasks.every((task) => task.maxAttempts === 4)).toBe(true);
     expect(tasks.every((task) => task.priority === 5)).toBe(true);
   });
@@ -37,6 +38,7 @@ describe("buildCampaignTasks", () => {
           name: "Launch",
           status: "draft",
           accountIds: ["acc-1"],
+          contentIds: ["content-1"],
           taskCount: 1,
           createdAt: "2026-09-24T00:00:00.000Z",
         },
