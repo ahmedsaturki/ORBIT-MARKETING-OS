@@ -45,6 +45,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | CONN-04 | Native direct execution enforces local daily/circuit safety budgets | Rust unit test + source gate |
 | CONN-05 | LinkedIn Posts API connector is capability/authorization scoped | connector unit fixtures + controlled API test |
 | WEB-01 | PWA manifest/service worker | production browser test |
+| AI-01 | Local AI Studio chat/content/image analysis stays on local runtime boundary | desktop client contract tests + runtime smoke |
 | MOB-01 | Mobile control surface | Expo typecheck/build test |
 | REL-01 | Reproducible workspace install | clean CI checkout |
 | REL-02 | Signed desktop artifact | release pipeline evidence |
