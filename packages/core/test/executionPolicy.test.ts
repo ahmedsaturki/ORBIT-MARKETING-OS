@@ -74,6 +74,38 @@ describe("execution policy", () => {
     expect(decision.reason).toBe("task_platform_mismatch");
   });
 
+  it("requires content linkage for publish tasks", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      approval: {
+        id: "approval-1",
+        workspaceId: "workspace-1",
+        contentId: "content-1",
+        requestedBy: "user-1",
+        reviewerIds: ["user-2"],
+        status: "approved",
+      },
+      task: { ...task, contentId: undefined },
+    });
+    expect(decision.reason).toBe("content_required");
+  });
+
+  it("blocks content outside the campaign", () => {
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      approval: {
+        id: "approval-1",
+        workspaceId: "workspace-1",
+        contentId: "content-2",
+        requestedBy: "user-1",
+        reviewerIds: ["user-2"],
+        status: "approved",
+      },
+      task: { ...task, contentId: "content-2" },
+    });
+    expect(decision.reason).toBe("content_scope_mismatch");
+  });
+
   it("fails closed without approval", () => {
     const decision = evaluateExecutionPolicy(context);
     expect(decision.allowed).toBe(false);
