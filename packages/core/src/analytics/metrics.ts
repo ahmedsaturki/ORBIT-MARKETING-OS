@@ -21,11 +21,15 @@ export interface AnalyticsEvent {
 
 export function aggregateCampaignMetrics(
   events: readonly AnalyticsEvent[],
+  campaignId?: string,
 ): CampaignMetrics {
-  const attempted = events.length;
-  const succeeded = events.filter((event) => event.status === "succeeded").length;
-  const failed = events.filter((event) => event.status === "failed").length;
-  const blocked = events.filter((event) => event.status === "blocked").length;
+  const scoped = campaignId === undefined
+    ? events
+    : events.filter((event) => event.campaignId === campaignId);
+  const attempted = scoped.length;
+  const succeeded = scoped.filter((event) => event.status === "succeeded").length;
+  const failed = scoped.filter((event) => event.status === "failed").length;
+  const blocked = scoped.filter((event) => event.status === "blocked").length;
   const completed = succeeded + failed + blocked;
   return {
     attempted,
