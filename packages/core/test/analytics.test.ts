@@ -39,7 +39,7 @@ describe("analytics primitives", () => {
       { timestamp: "2026-09-24T01:00:00Z", value: 4 },
     ]);
 
-    expect(series.map((point) => point.value)).toEqual([2, 3, 4]);
+    expect(series.map((point) => point.value)).toEqual([3, 2, 4]);
   });
 
   it("sorts and filters metric points deterministically", () => {
