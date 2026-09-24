@@ -19,6 +19,7 @@ const requiredFiles = [
   "packages/desktop/src-tauri/Cargo.toml",
   "packages/web/public/icon.svg",
   "vercel.json",
+  "scripts/vercel-ignore.sh",
 ];
 
 function resolveRoot() {
@@ -200,7 +201,7 @@ const rootVercel = JSON.parse(await readFile(join(root, "vercel.json"), "utf8"))
 if (rootVercel.framework !== "nextjs") throw new Error("Root Vercel framework must be nextjs");
 if (rootVercel.outputDirectory !== "packages/web/out") throw new Error("Root Vercel output directory must be packages/web/out");
 if (rootVercel.installCommand !== "pnpm install --frozen-lockfile") throw new Error("Root Vercel install must use frozen lockfile");
-if (!rootVercel.ignoreCommand.includes("exit 1")) throw new Error("Root Vercel must fail closed when lockfile is missing");
+if (rootVercel.ignoreCommand !== "bash scripts/vercel-ignore.sh") throw new Error("Root Vercel must use the versioned ignore script");
 
 
 
