@@ -10,14 +10,21 @@ import {
   type ExecutionPolicyContext,
 } from "./executionPolicy.js";
 
+export type ExecutionRunnerBlockReason =
+  | ExecutionBlockReason
+  | "task_not_running"
+  | "connector_unavailable"
+  | "unsupported_action"
+  | "user_confirmation_required"
+  | "platform_challenge"
+  | "authorization_required"
+  | "platform_limit"
+  | "delivery_status_unknown";
+
 export type ExecutionRunnerResult =
   | {
       readonly status: "blocked";
-      readonly reason:
-        | ExecutionBlockReason
-        | "task_not_running"
-        | "connector_unavailable"
-        | "unsupported_action";
+      readonly reason: ExecutionRunnerBlockReason;
       readonly message: string;
     }
   | {
