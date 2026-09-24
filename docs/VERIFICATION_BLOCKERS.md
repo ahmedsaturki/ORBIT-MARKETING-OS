@@ -12,9 +12,8 @@ The branch is generating GitHub Actions runs, but the hosted jobs currently fail
 
 Latest observed hosted-runner behavior:
 
-- The newest CI run for the moving rebuild branch (`36031898151`, job `107742429760`) fails before step registration; the observed job has no runner allocation metadata and no step records.
-- The previously isolated Runner Probe also failed before its first step and has been removed.
-- No fresh successful hosted-runner execution has been verified.
+- The newest CI run (`36032108431`, job `107743139525`) fails before step registration with no runner allocation metadata and no step records.
+- Multiple consecutive runs show the same pre-execution signature.
 
 A deliberately minimal runner probe was also tested earlier and failed before any workflow step executed. It was removed after diagnosis.
 
