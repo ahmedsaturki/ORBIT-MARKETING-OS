@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
+const RUNTIME_HOST = process.env.RUNTIME_HOST ?? "127.0.0.1";
 const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").replace(/\/$/, "");
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.1:8b";
 const OLLAMA_FAST_MODEL = process.env.OLLAMA_FAST_MODEL ?? OLLAMA_MODEL;
@@ -100,6 +101,10 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const rawMessages = Array.isArray(body.messages) ? body.messages : [];
+    if (rawMessages.length > 100) {
+      return res.status(400).json({ error: "عدد الرسائل يتجاوز الحد المحلي المسموح." });
+    }
+
     const messages: ChatMessageInput[] = rawMessages
       .filter(isRecord)
       .map((message) => ({
@@ -107,16 +112,16 @@ app.post("/api/chat", async (req, res) => {
           message.role === "model" || message.role === "assistant"
             ? message.role
             : "user",
-        text: getString(message.text),
+        text: getString(message.text).trim().slice(0, 20_000),
       }))
-      .filter((message) => message.text.trim().length > 0);
+      .filter((message) => message.text.length > 0);
 
     if (messages.length === 0) {
       return res.status(400).json({ error: "قائمة الرسائل فارغة أو غير صحيحة" });
     }
 
     const roleId = getString(body.roleId, "marketing_strategist");
-    const customInstruction = getString(body.customSystemInstruction).trim();
+    const customInstruction = getString(body.customSystemInstruction).trim().slice(0, 10_000);
     const profile = getString(body.profile, "balanced");
     const requestedModel = sanitizeModelName(body.model, OLLAMA_MODEL);
     const selectedModel =
@@ -154,12 +159,12 @@ app.post("/api/generate-content", async (req, res) => {
     const body: unknown = req.body;
     if (!isRecord(body)) return res.status(400).json({ error: "Invalid request body" });
 
-    const topic = getString(body.topic).trim();
+    const topic = getString(body.topic).trim().slice(0, 2_000);
     if (!topic) return res.status(400).json({ error: "يرجى كتابة فكرة أو موضوع المحتوى" });
 
-    const dialect = getString(body.dialect, "فصحى مبسطة");
-    const tone = getString(body.tone, "احترافي");
-    const audience = getString(body.targetAudience, "الجمهور العام");
+    const dialect = getString(body.dialect, "فصحى مبسطة").trim().slice(0, 200);
+    const tone = getString(body.tone, "احترافي").trim().slice(0, 200);
+    const audience = getString(body.targetAudience, "الجمهور العام").trim().slice(0, 500);
 
     const prompt = `أنشئ حزمة محتوى تسويقية عربية متعددة المنصات بناءً على:
 الموضوع: ${topic}
@@ -213,7 +218,7 @@ app.post("/api/analyze-image", async (req, res) => {
     }
 
     const analysisType = getString(body.analysisType, "comprehensive");
-    const extraPrompt = getString(body.prompt).trim();
+    const extraPrompt = getString(body.prompt).trim().slice(0, 4_000);
 
     const basePrompt: Readonly<Record<string, string>> = {
       ad_critique:
@@ -250,28 +255,23 @@ ${extraPrompt ? `\nطلبات إضافية:\n${extraPrompt}` : ""}`;
 });
 
 app.get("/api/health", async (_req, res) => {
+  let ollamaStatus: "ok" | "degraded" = "ok";
   try {
     const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
       signal: AbortSignal.timeout(5_000),
     });
-
-    return res.status(response.ok ? 200 : 503).json({
-      status: response.ok ? "ok" : "degraded",
-      service: "Orbit Marketing OS Local Runtime",
-      provider: "ollama-local",
-      model: OLLAMA_MODEL,
-      profiles: {
-        balanced: OLLAMA_MODEL,
-        fast: OLLAMA_FAST_MODEL,
-        reasoning: OLLAMA_REASONING_MODEL,
-      },
-      visionConfigured: Boolean(OLLAMA_VISION_MODEL),
-    });
+    ollamaStatus = response.ok ? "ok" : "degraded";
   } catch {
-    return res.status(503).json({
-      status: "offline",
-      service: "Orbit Marketing OS Local Runtime",
-      provider: "ollama-local",
+    ollamaStatus = "degraded";
+  }
+
+  return res.status(200).json({
+    status: ollamaStatus === "ok" ? "ok" : "degraded",
+    service: "Orbit Marketing OS Local Runtime",
+    host: RUNTIME_HOST,
+    provider: "ollama-local",
+    ai: {
+      status: ollamaStatus,
       model: OLLAMA_MODEL,
       profiles: {
         balanced: OLLAMA_MODEL,
@@ -279,8 +279,8 @@ app.get("/api/health", async (_req, res) => {
         reasoning: OLLAMA_REASONING_MODEL,
       },
       visionConfigured: Boolean(OLLAMA_VISION_MODEL),
-    });
-  }
+    },
+  });
 });
 
 async function startServer(): Promise<void> {
