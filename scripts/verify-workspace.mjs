@@ -69,6 +69,7 @@ async function scan(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (ignored.has(entry.name)) continue;
     const full = join(dir, entry.name);
+    if (relative(root, full) === "scripts/verify-workspace.mjs") continue;
     if (entry.isDirectory()) {
       await scan(full);
       continue;
