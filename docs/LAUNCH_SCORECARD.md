@@ -45,7 +45,7 @@ Legend:
 
 ## Current infrastructure blocker
 
-GitHub Actions jobs for the rebuild branch are being created but can fail before the first step is registered, with no runner allocation metadata. The latest observed CI job (`107742429760`, run `36031898151`) ended `failure` before workflow steps were registered. The same behavior was reproduced previously with a minimal runner probe. This is treated as execution-infrastructure evidence, not source-build evidence.
+GitHub Actions jobs for the rebuild branch are being created but can fail before the first step is registered, with no runner allocation metadata. The latest observed CI job (`107760393992`, run `36037276816`) ended `failure` before workflow steps were registered. The same behavior was reproduced previously with a minimal runner probe. This is treated as execution-infrastructure evidence, not source-build evidence.
 
 ## Zero-cost verification fallback
 
