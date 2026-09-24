@@ -20,7 +20,11 @@ const RUNTIME_ALLOWED_ORIGINS = new Set(
     .filter(Boolean),
 );
 const RUNTIME_RATE_WINDOW_MS = 60_000;
-const RUNTIME_RATE_LIMIT = Number.parseInt(process.env.RUNTIME_RATE_LIMIT ?? "60", 10);
+const parsedRuntimeRateLimit = Number.parseInt(process.env.RUNTIME_RATE_LIMIT ?? "120", 10);
+const RUNTIME_RATE_LIMIT =
+  Number.isFinite(parsedRuntimeRateLimit) && parsedRuntimeRateLimit >= 1
+    ? parsedRuntimeRateLimit
+    : 120;
 const runtimeRate = new Map<string, { windowStart: number; count: number }>();
 
 function clientAddress(req: express.Request): string {
@@ -55,7 +59,8 @@ function tokensEqual(expected: string, supplied: string): boolean {
 
 function originAllowed(req: express.Request): boolean {
   const origin = req.header("origin");
-  if (!origin || RUNTIME_ALLOWED_ORIGINS.size === 0) return true;
+  if (!origin) return true;
+  if (!runtimeAuthRequired()) return true;
   return RUNTIME_ALLOWED_ORIGINS.has(origin);
 }
 
