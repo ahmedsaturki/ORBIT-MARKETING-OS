@@ -14,7 +14,7 @@ use std::{
     fs,
     io::{BufReader, Read},
     path::PathBuf,
-    sync::{OnceLock, RwLock},
+    sync::{Mutex, OnceLock, RwLock},
 };
 use tauri::Manager;
 use time::{format_description::well_known::Rfc3339, Duration, OffsetDateTime};
@@ -28,6 +28,40 @@ const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
 const SCHEMA_VERSION: i64 = 9;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
+static TELEGRAM_EXECUTION_IDS: OnceLock<Mutex<std::collections::HashSet<String>>> = OnceLock::new();
+
+struct TelegramExecutionGuard {
+    task_id: String,
+}
+
+impl Drop for TelegramExecutionGuard {
+    fn drop(&mut self) {
+        if let Some(lock) = TELEGRAM_EXECUTION_IDS.get() {
+            match lock.lock() {
+                Ok(mut ids) => {
+                    ids.remove(&self.task_id);
+                }
+                Err(poisoned) => {
+                    poisoned.into_inner().remove(&self.task_id);
+                }
+            }
+        }
+    }
+}
+
+fn try_claim_telegram_execution(task_id: &str) -> Result<TelegramExecutionGuard, String> {
+    let lock = TELEGRAM_EXECUTION_IDS.get_or_init(|| Mutex::new(std::collections::HashSet::new()));
+    let mut ids = match lock.lock() {
+        Ok(ids) => ids,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    if !ids.insert(task_id.to_string()) {
+        return Err("task is already executing in this runtime".to_string());
+    }
+    Ok(TelegramExecutionGuard {
+        task_id: task_id.to_string(),
+    })
+}
 
 fn active_workspace_lock() -> &'static RwLock<String> {
     ACTIVE_WORKSPACE_ID.get_or_init(|| RwLock::new(DEFAULT_WORKSPACE_ID.to_string()))
@@ -1335,6 +1369,7 @@ async fn telegram_execute_task(
         return Err(AppError::InvalidPassword.to_string());
     }
 
+    let _execution_guard = try_claim_telegram_execution(&task_id)?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let task = connection
         .query_row(
@@ -4746,6 +4781,15 @@ mod tests {
         let filename = backup_filename_timestamp();
         assert!(!filename.contains(':'));
         assert!(filename.ends_with('Z'));
+    }
+
+    #[test]
+    fn telegram_execution_guard_prevents_concurrent_duplicate_send() {
+        let task_id = format!("guard-{}", uuid_like());
+        let first = try_claim_telegram_execution(&task_id).expect("first execution claim should succeed");
+        assert!(try_claim_telegram_execution(&task_id).is_err());
+        drop(first);
+        assert!(try_claim_telegram_execution(&task_id).is_ok());
     }
 
     #[test]
