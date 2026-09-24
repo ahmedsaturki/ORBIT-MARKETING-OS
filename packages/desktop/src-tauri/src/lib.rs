@@ -10,16 +10,31 @@ use rand::RngCore;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::PathBuf,
+    sync::{OnceLock, RwLock},
+};
 use tauri::Manager;
 use time::{format_description::well_known::Rfc3339, Duration, OffsetDateTime};
 use thiserror::Error;
 use zeroize::Zeroizing;
 
-const DEFAULT_WORKSPACE_ID: &str = "default";
+const active_workspace_id(): &str = "default";
 const SCHEMA_VERSION: i64 = 6;
 
 const SCHEMA: &str = r#"
+CREATE TABLE IF NOT EXISTS workspaces (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS runtime_state (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS vault_records (
   label TEXT PRIMARY KEY,
   payload_json TEXT NOT NULL,
@@ -205,6 +220,14 @@ struct EncryptedPayload {
     salt: String,
     nonce: String,
     ciphertext: String,
+}
+
+#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize)]
+struct WorkspaceView {
+    id: String,
+    name: String,
+    created_at: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -445,7 +468,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
              WHERE workspace_id=?1
              ORDER BY rowid ASC",
         )?;
-        let rows = statement.query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+        let rows = statement.query_map(params![active_workspace_id()], |row| {
             Ok((
                 row.get::<_, i64>(0)?,
                 row.get::<_, String>(1)?,
@@ -592,27 +615,53 @@ fn write_private_file(path: &PathBuf, contents: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+fn ensure_workspace_context(connection: &Connection) -> Result<(), AppError> {
+    let timestamp = chrono_like_timestamp();
+    connection.execute(
+        "INSERT OR IGNORE INTO workspaces(id, name, created_at) VALUES (?1, ?2, ?3)",
+        params![active_workspace_id(), "Default Workspace", timestamp],
+    )?;
+
+    let stored: Option<String> = connection
+        .query_row(
+            "SELECT value FROM runtime_state WHERE key='active_workspace_id'",
+            [],
+            |row| row.get(0),
+        )
+        .optional()?;
+
+    let candidate = stored.unwrap_or_else(|| active_workspace_id().to_string());
+    let exists: bool = connection.query_row(
+        "SELECT EXISTS(SELECT 1 FROM workspaces WHERE id=?1)",
+        params![candidate],
+        |row| row.get(0),
+    )?;
+    let selected = if exists {
+        candidate
+    } else {
+        active_workspace_id().to_string()
+    };
+
+    connection.execute(
+        "INSERT INTO runtime_state(key, value) VALUES ('active_workspace_id', ?1)
+         ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        params![selected],
+    )?;
+    set_active_workspace_id(&selected)?;
+    Ok(())
+}
+
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     let app_data = app.path().app_data_dir().map_err(|_| AppError::Path)?;
     fs::create_dir_all(&app_data)?;
-    cleanup_stale_database_artifacts(&app_data)?;
     let db_path: PathBuf = app_data.join("orbit.sqlite3");
-    let connection = Connection::open(&db_path)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&db_path, fs::Permissions::from_mode(0o600))?;
-    }
-    connection.execute_batch(
-        "PRAGMA foreign_keys = ON;
-         PRAGMA journal_mode = WAL;
-         PRAGMA synchronous = NORMAL;
-         PRAGMA busy_timeout = 5000;",
-    )?;
+    let connection = Connection::open(db_path)?;
     connection.execute_batch(SCHEMA)?;
     migrate_schema(&connection)?;
+    ensure_workspace_context(&connection)?;
     Ok(connection)
 }
+
 
 fn derive_key(password: &str, salt: &[u8]) -> Result<Zeroizing<[u8; 32]>, AppError> {
     if password.is_empty() || salt.len() < 16 {
@@ -692,7 +741,7 @@ async fn telegram_execute_task(
         let current: Option<String> = connection
             .query_row(
                 "SELECT status FROM tasks WHERE id=?1 AND workspace_id=?2",
-                params![&task_id, DEFAULT_WORKSPACE_ID],
+                params![&task_id, active_workspace_id()],
                 |row| row.get(0),
             )
             .optional()
@@ -700,7 +749,7 @@ async fn telegram_execute_task(
         if current.as_deref() == Some("running") {
             if let Err(error) = connection.execute(
                 "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, DEFAULT_WORKSPACE_ID],
+                params![&task_id, active_workspace_id()],
             ) {
                 return Err(error.to_string());
             }
@@ -724,7 +773,7 @@ async fn telegram_execute_task(
         .query_row(
             "SELECT account_id, platform, kind, content_id, destination_id, status, attempts, max_attempts
              FROM tasks WHERE id=?1 AND workspace_id=?2",
-            params![&task_id, DEFAULT_WORKSPACE_ID],
+            params![&task_id, active_workspace_id()],
             |row| {
                 Ok((
                     row.get::<_, String>(0)?,
@@ -760,7 +809,7 @@ async fn telegram_execute_task(
     let (session_payload_json, account_status) = connection
         .query_row(
             "SELECT session_payload_json, status FROM accounts WHERE id=?1 AND workspace_id=?2 AND platform='telegram'",
-            params![&account_id, DEFAULT_WORKSPACE_ID],
+            params![&account_id, active_workspace_id()],
             |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, String>(1)?)),
         )
         .map_err(|error| error.to_string())?;
@@ -769,7 +818,7 @@ async fn telegram_execute_task(
         connection
             .execute(
                 "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, DEFAULT_WORKSPACE_ID],
+                params![&task_id, active_workspace_id()],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "account_not_connected", "blocked")?;
@@ -793,7 +842,7 @@ async fn telegram_execute_task(
     let (body, approval_status) = connection
         .query_row(
             "SELECT body, approval_status FROM content_items WHERE id=?1 AND workspace_id=?2",
-            params![&content_id, DEFAULT_WORKSPACE_ID],
+            params![&content_id, active_workspace_id()],
             |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
         )
         .map_err(|error| error.to_string())?;
@@ -802,7 +851,7 @@ async fn telegram_execute_task(
         connection
             .execute(
                 "UPDATE tasks SET status='awaiting_approval' WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, DEFAULT_WORKSPACE_ID],
+                params![&task_id, active_workspace_id()],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "approval_required", "blocked")?;
@@ -841,7 +890,7 @@ async fn telegram_execute_task(
         connection
             .execute(
                 "UPDATE tasks SET status='succeeded' WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, DEFAULT_WORKSPACE_ID],
+                params![&task_id, active_workspace_id()],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "send_message", "success")?;
@@ -858,13 +907,13 @@ async fn telegram_execute_task(
         connection
             .execute(
                 "UPDATE accounts SET status='needs_refresh', updated_at=?1 WHERE id=?2 AND workspace_id=?3",
-                params![chrono_like_timestamp(), &account_id, DEFAULT_WORKSPACE_ID],
+                params![chrono_like_timestamp(), &account_id, active_workspace_id()],
             )
             .map_err(|error| error.to_string())?;
         connection
             .execute(
                 "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, DEFAULT_WORKSPACE_ID],
+                params![&task_id, active_workspace_id()],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "authorization_failed", "blocked")?;
@@ -887,7 +936,7 @@ async fn telegram_execute_task(
         connection
             .execute(
                 "UPDATE tasks SET status='pending', available_at=?1 WHERE id=?2 AND workspace_id=?3 AND status='running'",
-                params![retry_at, &task_id, DEFAULT_WORKSPACE_ID],
+                params![retry_at, &task_id, active_workspace_id()],
             )
             .map_err(|error| error.to_string())?;
         telegram_task_audit(&connection, &task_id, "rate_limited", "blocked")?;
@@ -912,7 +961,7 @@ async fn telegram_execute_task(
     connection
         .execute(
             "UPDATE tasks SET status=?1, attempts=?2, available_at=?3 WHERE id=?4 AND workspace_id=?5 AND status='running'",
-            params![next_status, next_attempt, next_available, &task_id, DEFAULT_WORKSPACE_ID],
+            params![next_status, next_attempt, next_available, &task_id, active_workspace_id()],
         )
         .map_err(|error| error.to_string())?;
     telegram_task_audit(&connection, &task_id, "send_failed", "failure")?;
@@ -924,6 +973,110 @@ async fn telegram_execute_task(
         message: parsed.description.unwrap_or_else(|| "Telegram delivery failed.".to_string()),
         retry_at: if terminal { None } else { Some(next_available) },
     })
+}
+
+#[tauri::command]
+fn workspace_list(app: tauri::AppHandle) -> Result<Vec<WorkspaceView>, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare("SELECT id, name, created_at FROM workspaces ORDER BY created_at ASC, id ASC")
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok(WorkspaceView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                created_at: row.get(2)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn workspace_current(app: tauri::AppHandle) -> Result<WorkspaceView, String> {
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let id = active_workspace_id();
+    connection
+        .query_row(
+            "SELECT id, name, created_at FROM workspaces WHERE id=?1",
+            params![id],
+            |row| {
+                Ok(WorkspaceView {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    created_at: row.get(2)?,
+                })
+            },
+        )
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn workspace_create(
+    app: tauri::AppHandle,
+    id: Option<String>,
+    name: String,
+) -> Result<WorkspaceView, String> {
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let workspace_id = id
+        .filter(|value| !value.trim().is_empty())
+        .map(|value| validate_label(&value))
+        .transpose()
+        .map_err(|error| error.to_string())?
+        .unwrap_or_else(|| uuid_like());
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let created_at = chrono_like_timestamp();
+
+    connection
+        .execute(
+            "INSERT INTO workspaces(id, name, created_at) VALUES (?1, ?2, ?3)",
+            params![workspace_id, name, created_at],
+        )
+        .map_err(|error| error.to_string())?;
+
+    Ok(WorkspaceView {
+        id: workspace_id,
+        name,
+        created_at,
+    })
+}
+
+#[tauri::command]
+fn workspace_select(app: tauri::AppHandle, id: String) -> Result<WorkspaceView, String> {
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let workspace = connection
+        .query_row(
+            "SELECT id, name, created_at FROM workspaces WHERE id=?1",
+            params![id],
+            |row| {
+                Ok(WorkspaceView {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    created_at: row.get(2)?,
+                })
+            },
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+
+    let Some(workspace) = workspace else {
+        return Err("workspace not found".to_string());
+    };
+
+    connection
+        .execute(
+            "INSERT INTO runtime_state(key, value) VALUES ('active_workspace_id', ?1)
+             ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            params![workspace.id],
+        )
+        .map_err(|error| error.to_string())?;
+    set_active_workspace_id(&workspace.id).map_err(|error| error.to_string())?;
+    write_audit(&connection, "security", "workspace.select", "success", "user", Some(&workspace.id))
+        .map_err(|error| error.to_string())?;
+
+    Ok(workspace)
 }
 
 #[tauri::command]
@@ -1056,7 +1209,7 @@ fn account_upsert(
                username=excluded.username,
                session_payload_json=COALESCE(excluded.session_payload_json, accounts.session_payload_json),
                updated_at=excluded.updated_at",
-            params![id, DEFAULT_WORKSPACE_ID, platform, display_name, username, status, session_payload_json, timestamp],
+            params![id, active_workspace_id(), platform, display_name, username, status, session_payload_json, timestamp],
         )
         .map_err(|error| error.to_string())?;
 
@@ -1081,7 +1234,7 @@ fn account_list(app: tauri::AppHandle) -> Result<Vec<AccountView>, String> {
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+        .query_map(params![active_workspace_id()], |row| {
             Ok(AccountView {
                 id: row.get(0)?,
                 platform: row.get(1)?,
@@ -1112,7 +1265,7 @@ fn account_get_session(
     let payload_json: Option<String> = connection
         .query_row(
             "SELECT session_payload_json FROM accounts WHERE id = ?1 AND workspace_id = ?2",
-            params![id, DEFAULT_WORKSPACE_ID],
+            params![id, active_workspace_id()],
             |row| row.get(0),
         )
         .map_err(|error| match error {
@@ -1131,7 +1284,7 @@ fn account_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     let changed = connection
-        .execute("DELETE FROM accounts WHERE id = ?1 AND workspace_id = ?2", params![id, DEFAULT_WORKSPACE_ID])
+        .execute("DELETE FROM accounts WHERE id = ?1 AND workspace_id = ?2", params![id, active_workspace_id()])
         .map_err(|error| error.to_string())?;
     if changed > 0 {
         write_audit(&connection, "account", "delete", "success", "user", Some(&id))
@@ -1162,7 +1315,7 @@ fn campaign_create(
     transaction
         .execute(
             "INSERT INTO campaigns(id, workspace_id, name, status, created_at) VALUES (?1, ?2, ?3, 'draft', ?4)",
-            params![campaign_id, DEFAULT_WORKSPACE_ID, name, timestamp],
+            params![campaign_id, active_workspace_id(), name, timestamp],
         )
         .map_err(|error| error.to_string())?;
 
@@ -1170,7 +1323,7 @@ fn campaign_create(
         transaction
             .execute(
                 "INSERT INTO campaign_accounts(workspace_id, campaign_id, account_id) VALUES (?1, ?2, ?3)",
-                params![DEFAULT_WORKSPACE_ID, campaign_id, validate_label(account_id).map_err(|error| error.to_string())?],
+                params![active_workspace_id(), campaign_id, validate_label(account_id).map_err(|error| error.to_string())?],
             )
             .map_err(|error| error.to_string())?;
     }
@@ -1204,7 +1357,7 @@ fn campaign_list(app: tauri::AppHandle) -> Result<Vec<CampaignView>, String> {
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+        .query_map(params![active_workspace_id()], |row| {
             Ok(CampaignView {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -1292,7 +1445,7 @@ fn content_upsert(
                approval_status=excluded.approval_status,
                tags_json=excluded.tags_json,
                updated_at=excluded.updated_at",
-            params![id, DEFAULT_WORKSPACE_ID, title, body, approval_status, tags_json, timestamp],
+            params![id, active_workspace_id(), title, body, approval_status, tags_json, timestamp],
         )
         .map_err(|error| error.to_string())?;
     write_audit(&connection, "content", "upsert", "success", "user", Some(&id))
@@ -1319,7 +1472,7 @@ fn content_list(app: tauri::AppHandle) -> Result<Vec<ContentView>, String> {
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+        .query_map(params![active_workspace_id()], |row| {
             Ok(ContentView {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -1352,7 +1505,7 @@ fn campaign_attach_content(
                WHERE c.id=?1 AND c.workspace_id=?3
                  AND ci.id=?2 AND ci.workspace_id=?3
              )",
-            params![campaign_id, content_id, DEFAULT_WORKSPACE_ID],
+            params![campaign_id, content_id, active_workspace_id()],
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
@@ -1364,7 +1517,7 @@ fn campaign_attach_content(
         .execute(
             "INSERT OR IGNORE INTO campaign_content(workspace_id, campaign_id, content_id)
              VALUES (?1, ?2, ?3)",
-            params![DEFAULT_WORKSPACE_ID, campaign_id, content_id],
+            params![active_workspace_id(), campaign_id, content_id],
         )
         .map_err(|error| error.to_string())?;
     write_audit(&connection, "campaign", "attach_content", "success", "user", Some(&campaign_id))
@@ -1400,7 +1553,7 @@ fn approval_request(
                SELECT 1 FROM content_items
                WHERE id=?1 AND workspace_id=?2
              )",
-            params![content_id, DEFAULT_WORKSPACE_ID],
+            params![content_id, active_workspace_id()],
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
@@ -1414,14 +1567,14 @@ fn approval_request(
             "INSERT INTO approvals(
                id, workspace_id, content_id, requested_by, reviewer_ids_json, status, note
              ) VALUES (?1, ?2, ?3, ?4, ?5, 'pending', ?6)",
-            params![id, DEFAULT_WORKSPACE_ID, content_id, requested_by, reviewer_ids_json, note],
+            params![id, active_workspace_id(), content_id, requested_by, reviewer_ids_json, note],
         )
         .map_err(|error| error.to_string())?;
     connection
         .execute(
             "UPDATE content_items SET approval_status='pending', updated_at=?1
              WHERE id=?2 AND workspace_id=?3",
-            params![timestamp, content_id, DEFAULT_WORKSPACE_ID],
+            params![timestamp, content_id, active_workspace_id()],
         )
         .map_err(|error| error.to_string())?;
     write_audit(&connection, "content", "approval_request", "success", "user", Some(&content_id))
@@ -1458,7 +1611,7 @@ fn approval_decide(
         .query_row(
             "SELECT content_id, requested_by, status, reviewer_ids_json, note
              FROM approvals WHERE id=?1 AND workspace_id=?2",
-            params![id, DEFAULT_WORKSPACE_ID],
+            params![id, active_workspace_id()],
             |row| Ok((
                 row.get(0)?,
                 row.get(1)?,
@@ -1487,14 +1640,14 @@ fn approval_decide(
             "UPDATE approvals
              SET status=?1, decided_by=?2, decided_at=?3, note=?4
              WHERE id=?5 AND workspace_id=?6 AND status='pending'",
-            params![status, decided_by, timestamp, note, &id, DEFAULT_WORKSPACE_ID],
+            params![status, decided_by, timestamp, note, &id, active_workspace_id()],
         )
         .map_err(|error| error.to_string())?;
     connection
         .execute(
             "UPDATE content_items SET approval_status=?1, updated_at=?2
              WHERE id=?3 AND workspace_id=?4",
-            params![status, timestamp, content_id, DEFAULT_WORKSPACE_ID],
+            params![status, timestamp, content_id, active_workspace_id()],
         )
         .map_err(|error| error.to_string())?;
     write_audit(&connection, "content", "approval_decide", "success", "user", Some(&content_id))
@@ -1523,7 +1676,7 @@ fn approval_list(app: tauri::AppHandle) -> Result<Vec<ApprovalView>, String> {
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+        .query_map(params![active_workspace_id()], |row| {
             Ok(ApprovalView {
                 id: row.get(0)?,
                 content_id: row.get(1)?,
@@ -1603,7 +1756,7 @@ fn task_enqueue(
                  AND a.workspace_id=?3
                  AND a.platform=?4
              )",
-            params![campaign_id, account_id, DEFAULT_WORKSPACE_ID, platform],
+            params![campaign_id, account_id, active_workspace_id(), platform],
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
@@ -1623,7 +1776,7 @@ fn task_enqueue(
                      AND cc.content_id=?2
                      AND ci.workspace_id=?3
                  )",
-                params![campaign_id, content_id, DEFAULT_WORKSPACE_ID],
+                params![campaign_id, content_id, active_workspace_id()],
                 |row| row.get(0),
             )
             .map_err(|error| error.to_string())?;
@@ -1643,7 +1796,7 @@ fn task_enqueue(
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'pending', 0, ?10, ?11, ?12, ?13)",
             params![
                 id,
-                DEFAULT_WORKSPACE_ID,
+                active_workspace_id(),
                 campaign_id,
                 content_id,
                 destination_id,
@@ -1697,7 +1850,7 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
                AND available_at <= ?1
              ORDER BY priority DESC, available_at ASC, created_at ASC
              LIMIT 1",
-            params![now, DEFAULT_WORKSPACE_ID],
+            params![now, active_workspace_id()],
             |row| {
                 Ok(TaskView {
                     id: row.get(0)?,
@@ -1732,7 +1885,7 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
             "UPDATE tasks
              SET status='running'
              WHERE id=?1 AND workspace_id=?2 AND status='pending'",
-            params![task.id, DEFAULT_WORKSPACE_ID],
+            params![task.id, active_workspace_id()],
         )
         .map_err(|error| error.to_string())?;
 
@@ -1763,7 +1916,7 @@ fn task_set_status(
     let current: Option<String> = connection
         .query_row(
             "SELECT status FROM tasks WHERE id=?1 AND workspace_id=?2",
-            params![&entity_id, DEFAULT_WORKSPACE_ID],
+            params![&entity_id, active_workspace_id()],
             |row| row.get(0),
         )
         .optional()
@@ -1788,7 +1941,7 @@ fn task_set_status(
     let changed = connection
         .execute(
             "UPDATE tasks SET status=?1 WHERE id=?2 AND workspace_id=?3 AND status=?4",
-            params![status, &entity_id, DEFAULT_WORKSPACE_ID, current],
+            params![status, &entity_id, active_workspace_id(), current],
         )
         .map_err(|error| error.to_string())?;
 
@@ -1828,7 +1981,7 @@ fn task_fail(
                     status, idempotency_key, available_at, created_at
              FROM tasks
              WHERE id=?1 AND workspace_id=?2",
-            params![&entity_id, DEFAULT_WORKSPACE_ID],
+            params![&entity_id, active_workspace_id()],
             |row| {
                 Ok((
                     row.get(0)?,
@@ -1874,7 +2027,7 @@ fn task_fail(
             "UPDATE tasks
              SET status=?1, attempts=?2, available_at=?3
              WHERE id=?4 AND workspace_id=?5 AND status='running'",
-            params![next_status, next_attempt, next_available, &entity_id, DEFAULT_WORKSPACE_ID],
+            params![next_status, next_attempt, next_available, &entity_id, active_workspace_id()],
         )
         .map_err(|error| error.to_string())?;
 
@@ -1926,7 +2079,7 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![DEFAULT_WORKSPACE_ID, campaign_id], |row| {
+        .query_map(params![active_workspace_id(), campaign_id], |row| {
             Ok(TaskView {
                 id: row.get(0)?,
                 campaign_id: row.get(1)?,
@@ -1986,7 +2139,7 @@ fn contact_upsert(
                updated_at=excluded.updated_at",
             params![
                 id,
-                DEFAULT_WORKSPACE_ID,
+                active_workspace_id(),
                 display_name,
                 phone,
                 email,
@@ -2028,7 +2181,7 @@ fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<Con
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![DEFAULT_WORKSPACE_ID, pattern], |row| {
+        .query_map(params![active_workspace_id(), pattern], |row| {
             Ok(ContactView {
                 id: row.get(0)?,
                 display_name: row.get(1)?,
@@ -2254,7 +2407,7 @@ fn write_audit(
     let previous_hash: String = transaction
         .query_row(
             "SELECT hash FROM audit_events WHERE workspace_id=?1 ORDER BY rowid DESC LIMIT 1",
-            params![DEFAULT_WORKSPACE_ID],
+            params![active_workspace_id()],
             |row| row.get(0),
         )
         .optional()?
@@ -2264,7 +2417,7 @@ fn write_audit(
     let hash = audit_hash(
         &previous_hash,
         &id,
-        DEFAULT_WORKSPACE_ID,
+        active_workspace_id(),
         &timestamp,
         category,
         action,
@@ -2282,7 +2435,7 @@ fn write_audit(
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, ?10)",
         params![
             id,
-            DEFAULT_WORKSPACE_ID,
+            active_workspace_id(),
             timestamp,
             category,
             action,
@@ -2319,7 +2472,7 @@ fn conversation_upsert(
     let account_platform: Option<String> = connection
         .query_row(
             "SELECT platform FROM accounts WHERE id=?1 AND workspace_id=?2",
-            params![account_id, DEFAULT_WORKSPACE_ID],
+            params![account_id, active_workspace_id()],
             |row| row.get(0),
         )
         .optional()
@@ -2336,7 +2489,7 @@ fn conversation_upsert(
                 "SELECT EXISTS(
                    SELECT 1 FROM contacts WHERE id=?1 AND workspace_id=?2
                  )",
-                params![contact_id, DEFAULT_WORKSPACE_ID],
+                params![contact_id, active_workspace_id()],
                 |row| row.get(0),
             )
             .map_err(|error| error.to_string())?;
@@ -2362,7 +2515,7 @@ fn conversation_upsert(
                updated_at=excluded.updated_at",
             params![
                 id,
-                DEFAULT_WORKSPACE_ID,
+                active_workspace_id(),
                 account_id,
                 contact_id,
                 platform,
@@ -2412,7 +2565,7 @@ fn message_add(
             "SELECT EXISTS(
                SELECT 1 FROM conversations WHERE id=?1 AND workspace_id=?2
              )",
-            params![conversation_id, DEFAULT_WORKSPACE_ID],
+            params![conversation_id, active_workspace_id()],
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
@@ -2431,7 +2584,7 @@ fn message_add(
     connection
         .execute(
             "UPDATE conversations SET updated_at=?1 WHERE id=?2 AND workspace_id=?3",
-            params![sent_at, conversation_id, DEFAULT_WORKSPACE_ID],
+            params![sent_at, conversation_id, active_workspace_id()],
         )
         .map_err(|error| error.to_string())?;
 
@@ -2462,7 +2615,7 @@ fn inbox_list(app: tauri::AppHandle) -> Result<Vec<ConversationView>, String> {
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+        .query_map(params![active_workspace_id()], |row| {
             Ok(ConversationView {
                 id: row.get(0)?,
                 account_id: row.get(1)?,
@@ -2496,7 +2649,7 @@ fn message_list(
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![conversation_id, DEFAULT_WORKSPACE_ID], |row| {
+        .query_map(params![conversation_id, active_workspace_id()], |row| {
             Ok(MessageView {
                 id: row.get(0)?,
                 conversation_id: row.get(1)?,
@@ -2523,7 +2676,7 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![DEFAULT_WORKSPACE_ID, limit], |row| {
+        .query_map(params![active_workspace_id(), limit], |row| {
             Ok(AuditView {
                 id: row.get(0)?,
                 timestamp: row.get(1)?,
@@ -2554,7 +2707,7 @@ fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(params![DEFAULT_WORKSPACE_ID], |row| {
+        .query_map(params![active_workspace_id()], |row| {
             Ok((
                 row.get::<_, String>(0)?,
                 row.get::<_, String>(1)?,
@@ -2687,7 +2840,7 @@ mod tests {
         let first_hash = audit_hash(
             "GENESIS",
             first_id,
-            DEFAULT_WORKSPACE_ID,
+            active_workspace_id(),
             first_timestamp,
             "security",
             "test",
@@ -2699,7 +2852,7 @@ mod tests {
         let second_hash = audit_hash(
             &first_hash,
             "audit-2",
-            DEFAULT_WORKSPACE_ID,
+            active_workspace_id(),
             "1001",
             "security",
             "test",
@@ -2714,7 +2867,7 @@ mod tests {
         let mutated = audit_hash(
             "GENESIS",
             first_id,
-            DEFAULT_WORKSPACE_ID,
+            active_workspace_id(),
             first_timestamp,
             "security",
             "tampered",
@@ -2869,7 +3022,7 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
                 |row| Ok((row.get(0)?, row.get(1)?)),
             )
             .expect("migrated task should exist");
-        assert_eq!(values.0, DEFAULT_WORKSPACE_ID);
+        assert_eq!(values.0, active_workspace_id());
         assert_eq!(values.1, "legacy-task");
     }
 }
