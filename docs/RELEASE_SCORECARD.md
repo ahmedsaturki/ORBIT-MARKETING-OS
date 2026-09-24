@@ -61,7 +61,7 @@ Status meanings:
 
 | Gate | Current status | Evidence |
 |---|---|---|
-| REL-01 Reproducible install | BLOCKED | pnpm-lock.yaml is a required release artifact but is not present; it will not be fabricated without a real dependency resolution environment |
+| REL-01 Reproducible install | BLOCKED | `pnpm-lock.yaml` and `Cargo.lock` are required release artifacts but are not present; they will not be fabricated without a real dependency resolution environment |
 | REL-02 Signed desktop artifact | UNVERIFIED | Release workflow builds unsigned validation artifacts |
 | REL-03 Checksum verification | IMPLEMENTED / UNVERIFIED | Release workflow generates and checks SHA-256 manifest |
 | OPS-01 Crash/restart recovery | UNVERIFIED | Native recovery logic exists; forced-termination test pending |
@@ -77,7 +77,7 @@ Status meanings:
 
 ### Vercel current deployment evidence
 
-The latest observed Vercel deployment for this branch (`dpl_Fa6zfs1JiTLWGidxjdTaTgH7RZPd`) is in `ERROR` at the install step with `errorCode=ENOENT` and `errorMessage=Command "bash scripts/vercel-install.sh" exited with 1`. The repository-side script fails closed because `pnpm-lock.yaml` is absent. The deployment metadata reports the project framework as `vite`; project-level framework/root settings still require confirmation. No more specific build failure is asserted.
+The latest observed Vercel deployment for this branch (`dpl_Fa6zfs1JiTLWGidxjdTaTgH7RZPd`) is in `ERROR` at the install step with `errorCode=ENOENT` and `errorMessage=Command "bash scripts/vercel-install.sh" exited with 1`. The repository-side script fails closed because the committed `pnpm-lock.yaml` is absent. The deployment metadata reports the project framework as `vite`; project-level framework/root settings still require confirmation. No more specific build failure is asserted.
 
 
 ### GitHub Actions
