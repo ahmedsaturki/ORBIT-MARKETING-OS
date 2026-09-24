@@ -1,141 +1,66 @@
-import React, { useState } from 'react';
-import { 
-  Bot, Image as ImageIcon, PenTool, Rocket, Inbox, 
-  ShieldCheck, Users, Database, Sparkles, Activity, 
-  Terminal, Laptop, Lock, Globe, ExternalLink
-} from 'lucide-react';
+import { useEffect, useState } from "react";
 
-import AiChatbot from './components/AiChatbot';
-import ImageAnalysisStudio from './components/ImageAnalysisStudio';
-import ContentStudio from './components/ContentStudio';
-import CampaignHub from './components/CampaignHub';
-import UnifiedInbox from './components/UnifiedInbox';
-import SafetyShield from './components/SafetyShield';
-import AccountsManager from './components/AccountsManager';
-import LocalArchitecture from './components/LocalArchitecture';
+const githubUrl = "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS";
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'vision' | 'content' | 'campaigns' | 'inbox' | 'safety' | 'accounts' | 'architecture'>('chat');
+export default function App(): JSX.Element {
+  const [online, setOnline] = useState(false);
 
-  const handleSendContentToCampaign = (content: string, platform: string) => {
-    setActiveTab('campaigns');
-  };
-
-  const navItems = [
-    { id: 'chat', label: 'المساعد الذكي (AI Chatbot)', icon: Bot, badge: 'متعدد الأدوار' },
-    { id: 'vision', label: 'تحليل الإعلانات (Vision AI)', icon: ImageIcon, badge: '3.1 Pro' },
-    { id: 'content', label: 'استوديو المحتوى', icon: PenTool },
-    { id: 'campaigns', label: 'إدارة الحملات والجدولة', icon: Rocket },
-    { id: 'inbox', label: 'صندوق المحادثات والـ CRM', icon: Inbox },
-    { id: 'safety', label: 'درع الحماية وقاطع الدائرة', icon: ShieldCheck, badge: 'Safety' },
-    { id: 'accounts', label: 'الحسابات الاجتماعية', icon: Users },
-    { id: 'architecture', label: 'الهندسة والتسعير', icon: Database },
-  ] as const;
+  useEffect(() => {
+    setOnline(navigator.onLine);
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Top Main Navigation Bar */}
-      <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-xl sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo & Brand */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-slate-950 font-black text-xl tracking-wider">
-                O
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="font-extrabold text-lg tracking-tight text-white">ORBIT MARKETING OS</h1>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold">
-                    v0.2.0 Rebuild
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400 font-medium">منصة تشغيل تسويق وأتمتة شاملة متعددة القنوات</p>
-              </div>
-            </div>
-
-            {/* Quick Status Badges */}
-            <div className="hidden lg:flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="text-slate-300 font-medium">الوكيل المحلي:</span>
-                <span className="text-emerald-400 font-mono font-bold">وضع الويب التجريبي</span>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-slate-300 font-medium">قاطع الدائرة:</span>
-                <span className="text-emerald-400 font-bold">نشط وآمن (96%)</span>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
-                <Lock className="w-3.5 h-3.5 text-purple-400" />
-                <span className="text-slate-300 font-medium">الجلسات:</span>
-                <span className="text-purple-300 font-mono font-semibold">التخزين الحساس: مشفّر محلياً</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Sub Navigation Bar Tabs */}
-          <nav className="flex items-center gap-1 overflow-x-auto py-2 border-t border-slate-800/60 no-scrollbar">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                    isActive
-                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                  {'badge' in item && item.badge && (
-                    <span
-                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono ${
-                        isActive
-                          ? 'bg-slate-950/20 text-slate-950 font-bold'
-                          : 'bg-slate-800 text-emerald-400 border border-slate-700'
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+    <main style={{ minHeight: "100vh", padding: "48px 24px", fontFamily: "system-ui, sans-serif", background: "#020617", color: "#e2e8f0" }}>
+      <section style={{ maxWidth: 900, margin: "0 auto", border: "1px solid #1e293b", borderRadius: 24, padding: 32, background: "#0f172a" }}>
+        <div style={{ fontSize: 12, letterSpacing: "0.16em", color: "#34d399", fontWeight: 800 }}>
+          ORBIT MARKETING OS
         </div>
-      </header>
+        <h1 style={{ fontSize: 42, lineHeight: 1.1, margin: "14px 0" }}>
+          Compatibility shell — production interfaces live in the monorepo packages.
+        </h1>
+        <p style={{ color: "#94a3b8", fontSize: 18, lineHeight: 1.7 }}>
+          هذا الجذر متعمد أن يكون آمنًا وغير تشغيلي للتكاملات الخارجية. السطح الإنتاجي هو
+          <code style={{ marginInline: 6 }}>packages/web</code> للويب و
+          <code style={{ marginInline: 6 }}>packages/desktop</code> للتشغيل المحلي.
+          لا يتم عرض الـlegacy demo هنا ولا تُنفذ أي إجراءات على منصات خارجية.
+        </p>
 
-      {/* Main App Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        {activeTab === 'chat' && <AiChatbot />}
-        {activeTab === 'vision' && <ImageAnalysisStudio />}
-        {activeTab === 'content' && <ContentStudio onSendToCampaign={handleSendContentToCampaign} />}
-        {activeTab === 'campaigns' && <CampaignHub />}
-        {activeTab === 'inbox' && <UnifiedInbox />}
-        {activeTab === 'safety' && <SafetyShield />}
-        {activeTab === 'accounts' && <AccountsManager />}
-        {activeTab === 'architecture' && <LocalArchitecture />}
-      </main>
-
-      {/* Platform Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 text-slate-500 text-xs py-4 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
-          <div>
-            Orbit Marketing OS — منصة تشغيل تسويق وأتمتة متكاملة • Local-First • بدون خوادم مركزية • بيانات محلية افتراضيًا
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 24 }}>
+          <div style={{ border: "1px solid #1e293b", borderRadius: 18, padding: 18, background: "#0b1220" }}>
+            <strong>Web</strong>
+            <p style={{ color: "#94a3b8", marginBottom: 0 }}>Next.js static product / pricing / legal surface.</p>
           </div>
-          <div className="flex items-center gap-4 text-slate-400">
-            <span>الذكاء الاصطناعي: مزود محلي عبر Ollama (النموذج قابل للتهيئة)</span>
-            <span>•</span>
-            <span className="text-emerald-400 font-mono">حالة النظام: واجهة legacy تجريبية</span>
+          <div style={{ border: "1px solid #1e293b", borderRadius: 18, padding: 18, background: "#0b1220" }}>
+            <strong>Desktop</strong>
+            <p style={{ color: "#94a3b8", marginBottom: 0 }}>Tauri local runtime, SQLite, vault, queue and governed execution.</p>
+          </div>
+          <div style={{ border: "1px solid #1e293b", borderRadius: 18, padding: 18, background: "#0b1220" }}>
+            <strong>Safety</strong>
+            <p style={{ color: "#94a3b8", marginBottom: 0 }}>User authorization, approvals, limits and human-intervention gates.</p>
           </div>
         </div>
-      </footer>
-    </div>
+
+        <div style={{ marginTop: 24, padding: 16, borderRadius: 16, border: "1px solid #1e293b", background: "#020617", color: online ? "#34d399" : "#fbbf24" }}>
+          Browser network state: {online ? "online" : "offline"}
+        </div>
+
+        <a
+          href={githubUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{ display: "inline-flex", marginTop: 22, padding: "12px 18px", borderRadius: 12, background: "#10b981", color: "#052e1d", fontWeight: 800 }}
+        >
+          Repository
+        </a>
+      </section>
+    </main>
   );
 }
