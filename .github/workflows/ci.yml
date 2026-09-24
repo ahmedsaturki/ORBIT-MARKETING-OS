@@ -34,8 +34,10 @@ jobs:
           pnpm --version
           test "$(pnpm --version)" = "10.17.1"
 
-      - name: Require committed lockfile
+      - name: Require committed lockfiles
         run: test -f pnpm-lock.yaml
+      - name: Require desktop Cargo.lock
+        run: test -f packages/desktop/src-tauri/Cargo.lock
 
       - name: Workspace sanity
         run: pnpm verify:workspace
