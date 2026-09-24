@@ -41,6 +41,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | BACK-03 | Restore rejects newer/incompatible schema | restore integration test |
 | CONN-01 | Capability handshake | connector contract test |
 | CONN-02 | Unsupported action rejected | negative connector test |
+| CONN-03 | Challenge causes safe stop | browser fixture test | PASS | `e2e/connector-challenge.spec.ts` (3 Chromium tests covering captcha/2FA/checkpoint detection, safe-stop, normal control path, and no-challenge behavior) + connector core logic |
 | CONN-03 | Challenge causes safe stop | browser fixture test |
 | CONN-04 | Native direct execution enforces local daily/circuit safety budgets | Rust unit test + source gate |
 | CONN-05 | LinkedIn Posts API connector is capability/authorization scoped | connector unit fixtures + controlled API test |
@@ -56,7 +57,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | PERF-01 | Startup target | measured benchmark |
 | PERF-02 | Memory target | measured benchmark |
 | QA-01 | Unit coverage threshold | coverage report |
-| QA-02 | Critical E2E paths | Playwright report |
+| QA-02 | Critical E2E paths | Playwright report | UNVERIFIED | `e2e/public-web.spec.ts` + `e2e/web-smoke.spec.ts` are present; connector challenge browser coverage is `e2e/connector-challenge.spec.ts`. No successful clean-run evidence is claimed yet. |
 | DOC-01 | User guide matches product | documentation review |
 | DOC-02 | Security model documented | security review |
 
