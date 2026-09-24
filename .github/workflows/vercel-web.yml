@@ -9,7 +9,31 @@ permissions:
   contents: read
 
 jobs:
+  quality:
+    name: Web quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install workspace
+        run: pnpm install --no-frozen-lockfile
+      - name: Workspace sanity
+        run: pnpm verify:workspace
+      - name: Web typecheck
+        run: pnpm --filter @orbit/web typecheck
+      - name: Web lint
+        run: pnpm --filter @orbit/web lint
+      - name: Web build
+        run: pnpm --filter @orbit/web build
+
   deploy:
+    needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
