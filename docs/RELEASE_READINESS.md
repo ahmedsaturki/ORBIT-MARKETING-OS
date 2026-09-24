@@ -68,4 +68,4 @@ Global multi-device seat counting remains intentionally unclaimed because the cu
 
 ## Vercel deployment diagnosis
 
-The connected `orbit-marketing-os` project exists, but recent Git deployments are failing at the Vercel build step with `NEXT_NO_VERSION`. The deployment metadata reports framework `vite`, while the repository's Web product is Next.js. The repository now exposes the Next.js version at the monorepo root as a compatibility fallback, but project-level Root Directory/Framework configuration should still point at `packages/web` / Next.js before a release claim.
+The connected `orbit-marketing-os` project exists, but recent Git deployments are failing before a usable production deployment is established. The latest concrete Vercel diagnostic observed was `NEXT_NO_VERSION`, while deployment metadata reported framework `vite`. The repository now exposes Next.js at the monorepo root as a compatibility fallback, but the Vercel project's Root Directory/Framework settings still need to point at `packages/web` / Next.js before a release claim.
