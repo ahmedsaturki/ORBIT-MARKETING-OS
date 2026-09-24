@@ -1,5 +1,9 @@
 name: Rebuild Rust
 
+
+concurrency:
+  group: orbit-.github-workflows-rebuild-rust.yml-${{ github.ref }}
+  cancel-in-progress: true
 on:
   workflow_dispatch:
   push:
