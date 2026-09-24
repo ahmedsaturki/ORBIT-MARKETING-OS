@@ -11,6 +11,33 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
 const RUNTIME_HOST = process.env.RUNTIME_HOST ?? "127.0.0.1";
+const RUNTIME_AUTH_TOKEN = (process.env.RUNTIME_AUTH_TOKEN ?? "").trim();
+
+function isLoopbackHost(host: string): boolean {
+  return host === "127.0.0.1" || host === "::1" || host === "localhost";
+}
+
+function runtimeAuthRequired(): boolean {
+  return !isLoopbackHost(RUNTIME_HOST);
+}
+
+function authorizeRuntime(req: express.Request, res: express.Response): boolean {
+  if (!runtimeAuthRequired()) return true;
+  if (!RUNTIME_AUTH_TOKEN) {
+    res.status(503).json({ error: "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback." });
+    return false;
+  }
+  const supplied = req.header("authorization");
+  if (supplied !== `Bearer ${RUNTIME_AUTH_TOKEN}`) {
+    res.status(401).json({ error: "Unauthorized runtime request" });
+    return false;
+  }
+  return true;
+}
+
+app.use("/api", (req, res, next) => {
+  if (authorizeRuntime(req, res)) next();
+});
 const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").replace(/\/$/, "");
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.1:8b";
 const OLLAMA_FAST_MODEL = process.env.OLLAMA_FAST_MODEL ?? OLLAMA_MODEL;
