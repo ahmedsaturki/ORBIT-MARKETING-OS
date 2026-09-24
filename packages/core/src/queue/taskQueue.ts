@@ -28,6 +28,10 @@ export class TaskQueue {
   private readonly tasks = new Map<string, Task>();
   private readonly idempotencyKeys = new Set<string>();
 
+  private idempotencyKey(task: Task): string {
+    return `${task.workspaceId}\u0000${task.idempotencyKey}`;
+  }
+
   public constructor(private readonly options: TaskQueueOptions) {
     if (options.retryPolicy.maxAttempts < 1) {
       throw new RangeError("retryPolicy.maxAttempts must be at least 1");
@@ -38,7 +42,8 @@ export class TaskQueue {
   public enqueue(task: Task): void {
     this.validateTask(task);
     if (this.tasks.has(task.id)) throw new Error("Task already exists: " + task.id);
-    if (this.idempotencyKeys.has(task.idempotencyKey)) {
+    const scopedIdempotencyKey = this.idempotencyKey(task);
+    if (this.idempotencyKeys.has(scopedIdempotencyKey)) {
       throw new Error("Task idempotency key already exists: " + task.idempotencyKey);
     }
     const stored = cloneTask({
@@ -47,7 +52,7 @@ export class TaskQueue {
       createdAt: this.normalizeTimestamp(task.createdAt, "createdAt"),
     });
     this.tasks.set(task.id, stored);
-    this.idempotencyKeys.add(task.idempotencyKey);
+    this.idempotencyKeys.add(scopedIdempotencyKey);
   }
 
   /** Returns a task without mutating queue state. */
