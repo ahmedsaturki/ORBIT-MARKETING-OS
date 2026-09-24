@@ -26,6 +26,10 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | CAMP-03 | Approval gates block execution | workflow test |
 | CONT-01 | Content variants | local AI fixture/provider test |
 | CONT-02 | Media metadata/search | indexing test |
+| CONT-03 | Content validation and platform variant selection | deterministic content contract tests |
+| MEDIA-01 | Media type/size/hash validation and local search | media contract tests |
+| AN-01 | Campaign analytics remain campaign-scoped | analytics isolation tests |
+| AUTO-01 | Enabled external automation rules require confirmation | rule-pack validation tests |
 | INBOX-01 | Unified conversation model | connector fixture integration |
 | CRM-01 | Conversation-contact linking | relational integration test |
 | SYNC-01 | Offline edits survive restart | device simulation test |
@@ -41,6 +45,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | REL-01 | Reproducible workspace install | clean CI checkout |
 | REL-02 | Signed desktop artifact | release pipeline evidence |
 | REL-03 | Checksums match distributed artifacts | release verification |
+| LIC-01 | Offline license install/verification/removal | signed token tests + native integration |
 | OPS-01 | Crash recovery | forced termination test |
 | OPS-02 | 24h stability | soak-test evidence |
 | PERF-01 | Startup target | measured benchmark |
