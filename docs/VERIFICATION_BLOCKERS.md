@@ -6,7 +6,7 @@ Updated: 2026-09-24
 
 Current rebuild HEAD at the latest source revision:
 
-`e43bff0114f93bc0f123afdce49413cb6b6f026e`
+`049cc864d6414c8c3d9d56620de497dd9340b3ef`
 
 The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
 
@@ -41,7 +41,7 @@ The latest verified deployment diagnostics identified and then addressed these c
 
 The repository `vercel.json` has now been hardened so missing Git revision context does not produce a fatal `bad revision` error. No fresh deployment has appeared after this fix yet, so a successful Vercel build is still unverified.
 
-The project metadata previously reported framework `vite` while the repository deployment contract targets Next.js static output. This remains a project-configuration verification item until a successful deployment confirms the effective build settings.
+The connected project metadata continues to report framework `vite` while the repository deployment contract targets Next.js static output. This remains a project-configuration verification item until project settings are corrected/confirmed and a successful deployment validates the effective settings.
 
 ## 4. Reproducible release blocker
 
