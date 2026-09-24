@@ -1947,7 +1947,11 @@ fn account_upsert(
                platform=excluded.platform,
                display_name=excluded.display_name,
                username=excluded.username,
-               status=excluded.status,
+               status=CASE
+                 WHEN excluded.session_payload_json IS NOT NULL THEN 'connected'
+                 WHEN accounts.session_payload_json IS NOT NULL THEN accounts.status
+                 ELSE 'needs_refresh'
+               END,
                session_payload_json=COALESCE(excluded.session_payload_json, accounts.session_payload_json),
                updated_at=excluded.updated_at
              WHERE accounts.workspace_id=excluded.workspace_id",
@@ -1958,13 +1962,16 @@ fn account_upsert(
         return Err("account id already belongs to another workspace".to_string());
     }
 
-    let has_encrypted_session: bool = connection
+    let persisted: (String, bool) = connection
         .query_row(
-            "SELECT session_payload_json IS NOT NULL FROM accounts WHERE id=?1 AND workspace_id=?2",
+            "SELECT status, session_payload_json IS NOT NULL
+             FROM accounts
+             WHERE id=?1 AND workspace_id=?2",
             params![&id, &workspace_id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .map_err(|error| error.to_string())?;
+    let has_encrypted_session = persisted.1;
 
     write_audit(&connection, "account", "upsert", "success", "user", Some(&id))
         .map_err(|error| error.to_string())?;
@@ -1974,7 +1981,7 @@ fn account_upsert(
         platform,
         display_name,
         username,
-        status: status.to_string(),
+        status: persisted.0,
         has_encrypted_session,
     })
 }
@@ -4632,6 +4639,49 @@ mod tests {
             )
             .expect("account state should be readable");
         assert_eq!(state, ("connected".to_string(), true));
+
+        connection
+            .execute(
+                "INSERT INTO accounts(
+                   id, workspace_id, platform, display_name, username, status,
+                   session_payload_json, created_at, updated_at
+                 )
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+                 ON CONFLICT(id) DO UPDATE SET
+                   platform=excluded.platform,
+                   display_name=excluded.display_name,
+                   username=excluded.username,
+                   status=CASE
+                     WHEN excluded.session_payload_json IS NOT NULL THEN 'connected'
+                     WHEN accounts.session_payload_json IS NOT NULL THEN accounts.status
+                     ELSE 'needs_refresh'
+                   END,
+                   session_payload_json=COALESCE(excluded.session_payload_json, accounts.session_payload_json),
+                   updated_at=excluded.updated_at
+                 WHERE accounts.workspace_id=excluded.workspace_id",
+                params![
+                    "account-1",
+                    "workspace-1",
+                    "telegram",
+                    "Telegram Updated",
+                    "orbit",
+                    "needs_refresh",
+                    Option::<String>::None,
+                    "3"
+                ],
+            )
+            .expect("metadata-only account update should succeed");
+
+        let preserved: (String, bool) = connection
+            .query_row(
+                "SELECT status, session_payload_json IS NOT NULL
+                 FROM accounts
+                 WHERE id='account-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("preserved account state should be readable");
+        assert_eq!(preserved, ("connected".to_string(), true));
     }
 
     #[test]
