@@ -3596,7 +3596,8 @@ fn task_fail(
     }
 
     let next_attempt = attempts + 1;
-    let terminal = next_attempt >= max_attempts;
+    let effective_task_max_attempts = max_attempts.clamp(1, 10);
+    let terminal = next_attempt >= effective_task_max_attempts;
     let next_available = if terminal {
         available_at.clone()
     } else {
@@ -4663,6 +4664,12 @@ mod tests {
         assert!((1i64..=10i64).contains(&1));
         assert!((1i64..=10i64).contains(&10));
         assert!(!(1i64..=10i64).contains(&11));
+    }
+
+    #[test]
+    fn legacy_task_retry_limit_is_bounded() {
+        assert_eq!(12i64.clamp(1, 10), 10);
+        assert_eq!(3i64.clamp(1, 10), 3);
     }
 
     #[test]
