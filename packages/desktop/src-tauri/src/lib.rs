@@ -347,7 +347,6 @@ struct ContentView {
     updated_at: String,
 }
 #[derive(Debug, Serialize)]
-#[derive(Debug, Serialize)]
 struct MediaAssetView {
     id: String,
     kind: String,
@@ -441,7 +440,6 @@ struct MessageView {
     sent_at: String,
 }
 
-#[derive(Debug, Serialize)]
 #[derive(Debug, Serialize)]
 struct AnalyticsSummaryView {
     attempted: i64,
@@ -5258,8 +5256,8 @@ mod media_rule_pack_tests {
         assert!(validate_rule_pack_json("telegram", valid).is_ok());
 
         let unsafe_rules = valid.replace(
-            ""requiresConfirmation": true",
-            ""requiresConfirmation": false",
+            "\"requiresConfirmation\": true",
+            "\"requiresConfirmation\": false",
         );
         assert!(validate_rule_pack_json("telegram", &unsafe_rules).is_err());
     }
