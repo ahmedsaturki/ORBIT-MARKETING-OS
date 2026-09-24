@@ -11,7 +11,7 @@ const features = [
 
 export default function HomePage(): JSX.Element {
   return (
-    <main>
+    <main data-release="0.2.0">
       <header className="topbar">
         <div className="container nav">
           <strong>ORBIT</strong>
@@ -53,7 +53,7 @@ export default function HomePage(): JSX.Element {
         </p>
       </section>
 
-      <footer className="container footer">ORBIT Marketing OS • v0.2.0</footer>
+      <footer className="container footer">ORBIT Marketing OS • v0.2.0 • Local-first</footer>
     </main>
   );
 }
