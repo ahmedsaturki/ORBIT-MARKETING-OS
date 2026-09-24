@@ -1164,6 +1164,10 @@ fn task_enqueue(
         .unwrap_or_else(|| id.clone());
     let idempotency_key = validate_label(&idempotency_key).map_err(|error| error.to_string())?;
 
+    if kind != "sync" && content_id.is_none() {
+        return Err("content_id is required for external tasks".to_string());
+    }
+
     if priority < 0 || max_attempts < 1 || available_at.trim().is_empty() {
         return Err("invalid task parameters".to_string());
     }
