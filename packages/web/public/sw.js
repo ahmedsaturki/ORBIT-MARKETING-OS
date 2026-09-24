@@ -1,4 +1,4 @@
-const CACHE = "orbit-web-v2";
+const CACHE = "orbit-web-v3";
 const CORE = ["/", "/manifest.json", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -36,7 +36,7 @@ self.addEventListener("fetch", (event) => {
           void caches.open(CACHE).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match("/")),
+        .catch(() => Response.error()),
     );
     return;
   }
