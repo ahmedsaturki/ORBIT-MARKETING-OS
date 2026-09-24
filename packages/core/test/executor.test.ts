@@ -133,6 +133,76 @@ describe("task execution orchestrator", () => {
     expect(audit.list()[0]?.action).toBe("execution.succeeded");
   });
 
+  it("blocks concurrent execution of the same claimed task", async () => {
+    const task = makeTask();
+    const taskQueue = queue(task);
+    const claimed = taskQueue.claimNext("2026-09-24T00:00:01.000Z");
+    expect(claimed).toBeDefined();
+
+    let releaseConnector: (() => void) | undefined;
+    const connectorGate = new Promise<void>((resolve) => {
+      releaseConnector = resolve;
+    });
+
+    let executeCalls = 0;
+    const registry = new ConnectorRegistry();
+    registry.register({
+      platform: "facebook",
+      capabilities: {
+        publish: true,
+        messaging: true,
+        comments: true,
+        inbox: true,
+        analytics: true,
+        media: true,
+      },
+      connect: async () => ({ status: "succeeded", message: "ok" }),
+      disconnect: async () => ({ status: "succeeded", message: "ok" }),
+      execute: async () => {
+        executeCalls += 1;
+        await connectorGate;
+        return { status: "succeeded", message: "done" };
+      },
+      sync: async () => ({ status: "succeeded", message: "ok" }),
+    });
+
+    const dependencies = {
+      queue: taskQueue,
+      connectors: registry,
+      audit: new AuditLog(),
+      loadContext: async () => context(task),
+    };
+
+    const first = executeClaimedTask(
+      dependencies,
+      claimed!,
+      true,
+      "2026-09-24T00:00:01.000Z",
+    );
+
+    await Promise.resolve();
+
+    const second = await executeClaimedTask(
+      dependencies,
+      claimed!,
+      true,
+      "2026-09-24T00:00:01.000Z",
+    );
+
+    expect(second).toMatchObject({
+      status: "blocked",
+      taskId: task.id,
+      reason: "already_executing",
+    });
+    expect(executeCalls).toBe(1);
+    expect(taskQueue.get(task.id)?.status).toBe("running");
+
+    releaseConnector?.();
+    const firstResult = await first;
+    expect(firstResult.status).toBe("succeeded");
+    expect(taskQueue.get(task.id)?.status).toBe("succeeded");
+  });
+
   it("passes loaded content into the execution policy", async () => {
     const task = makeTask();
     const taskQueue = queue(task);
