@@ -1676,7 +1676,7 @@ fn account_upsert(
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
     let status = if session_payload_json.is_some() { "connected" } else { "needs_refresh" };
-    connection
+    let changed = connection
         .execute(
             "INSERT INTO accounts(id, workspace_id, platform, display_name, username, status, session_payload_json, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
@@ -1685,10 +1685,14 @@ fn account_upsert(
                display_name=excluded.display_name,
                username=excluded.username,
                session_payload_json=COALESCE(excluded.session_payload_json, accounts.session_payload_json),
-               updated_at=excluded.updated_at",
+               updated_at=excluded.updated_at
+             WHERE accounts.workspace_id=excluded.workspace_id",
             params![id, workspace_id, platform, display_name, username, status, session_payload_json, timestamp],
         )
         .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("account id already belongs to another workspace".to_string());
+    }
 
     write_audit(&connection, "account", "upsert", "success", "user", Some(&id))
         .map_err(|error| error.to_string())?;
@@ -1934,7 +1938,7 @@ fn content_upsert(
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
-    connection
+    let changed = connection
         .execute(
             "INSERT INTO content_items(id, workspace_id, title, body, approval_status, tags_json, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
@@ -1943,10 +1947,14 @@ fn content_upsert(
                body=excluded.body,
                approval_status=excluded.approval_status,
                tags_json=excluded.tags_json,
-               updated_at=excluded.updated_at",
+               updated_at=excluded.updated_at
+             WHERE content_items.workspace_id=excluded.workspace_id",
             params![id, workspace_id, title, body, approval_status, tags_json, timestamp],
         )
         .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("content id already belongs to another workspace".to_string());
+    }
     write_audit(&connection, "content", "upsert", "success", "user", Some(&id))
         .map_err(|error| error.to_string())?;
     Ok(ContentView {
@@ -2643,7 +2651,7 @@ fn contact_upsert(
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator"]).map_err(|error| error.to_string())?;
-    connection
+    let changed = connection
         .execute(
             "INSERT INTO contacts(
                id, workspace_id, display_name, phone, email, source_platform,
@@ -2657,7 +2665,8 @@ fn contact_upsert(
                source_platform=excluded.source_platform,
                status=excluded.status,
                notes=excluded.notes,
-               updated_at=excluded.updated_at",
+               updated_at=excluded.updated_at
+             WHERE contacts.workspace_id=excluded.workspace_id",
             params![
                 id,
                 workspace_id,
@@ -2671,6 +2680,9 @@ fn contact_upsert(
             ],
         )
         .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("contact id already belongs to another workspace".to_string());
+    }
 
     write_audit(&connection, "contact", "upsert", "success", "user", Some(&id))
         .map_err(|error| error.to_string())?;
@@ -3065,7 +3077,7 @@ fn conversation_upsert(
     }
 
     let timestamp = chrono_like_timestamp();
-    connection
+    let changed = connection
         .execute(
             "INSERT INTO conversations(
                id, workspace_id, account_id, contact_id, platform, external_thread_id,
@@ -3078,7 +3090,8 @@ fn conversation_upsert(
                platform=excluded.platform,
                external_thread_id=excluded.external_thread_id,
                status=excluded.status,
-               updated_at=excluded.updated_at",
+               updated_at=excluded.updated_at
+             WHERE conversations.workspace_id=excluded.workspace_id",
             params![
                 id,
                 workspace_id,
@@ -3091,6 +3104,9 @@ fn conversation_upsert(
             ],
         )
         .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("conversation id already belongs to another workspace".to_string());
+    }
 
     write_audit(&connection, "conversation", "upsert", "success", "user", Some(&id))
         .map_err(|error| error.to_string())?;
