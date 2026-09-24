@@ -38,6 +38,22 @@
       "import": "./dist/audit/index.js"
     },
     "./package.json": "./package.json",
+    "./content": {
+      "types": "./dist/content/index.d.ts",
+      "import": "./dist/content/index.js"
+    },
+    "./media": {
+      "types": "./dist/media/index.d.ts",
+      "import": "./dist/media/index.js"
+    },
+    "./analytics": {
+      "types": "./dist/analytics/index.d.ts",
+      "import": "./dist/analytics/index.js"
+    },
+    "./automation": {
+      "types": "./dist/automation/index.d.ts",
+      "import": "./dist/automation/index.js"
+    },
     "./access": {
       "types": "./dist/access/control.d.ts",
       "import": "./dist/access/control.js"
