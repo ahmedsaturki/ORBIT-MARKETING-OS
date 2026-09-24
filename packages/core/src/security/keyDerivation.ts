@@ -14,7 +14,7 @@ export interface Argon2idParameters {
 }
 
 export interface KeyDerivationProvider {
-  deriveKey(secret: string, salt: Uint8Array, parameters: Argon2idParameters): Promise<CryptoKey>;
+  deriveKey(secret: string, salt: Uint8Array, parameters: Argon2idParameters): Promise<Uint8Array>;
 }
 
 export function validateArgon2idParameters(parameters: Argon2idParameters): void {
