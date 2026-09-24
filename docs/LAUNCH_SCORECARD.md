@@ -45,7 +45,7 @@ Legend:
 
 ## Current infrastructure blocker
 
-The latest rebuild CI run `36049164892` created jobs `107800093660` and `107800093968`; both failed before any workflow step executed with `runner_id=0`, an empty runner name, and `steps=[]`. This is execution-infrastructure evidence, not source-build evidence.
+The latest rebuild CI run `36049705206` created jobs `107801904537` and `107801904994`; both failed before any workflow step executed with `runner_id=0`, an empty runner name, and `steps=[]`. This is execution-infrastructure evidence, not source-build evidence.
 
 ## Zero-cost verification fallback
 
