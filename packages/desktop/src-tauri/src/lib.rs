@@ -10438,6 +10438,58 @@ mod tests {
             )
             .expect("outcomes should persist inside their workspace");
 
+        assert!(connection
+            .execute(
+                "INSERT INTO opportunities(
+                   id, workspace_id, contact_id, campaign_id, name, stage, value,
+                   currency, probability, created_at, updated_at
+                 ) VALUES (
+                   'opp-b', 'workspace-a', 'contact-a', 'campaign-a', 'Deal', 'invalid',
+                   1000, 'USD', 50, '1', '1'
+                 )",
+                [],
+            )
+            .is_err());
+
+        assert!(connection
+            .execute(
+                "INSERT INTO opportunities(
+                   id, workspace_id, contact_id, campaign_id, name, stage, value,
+                   currency, probability, created_at, updated_at
+                 ) VALUES (
+                   'opp-c', 'workspace-a', 'contact-a', 'campaign-a', 'qualified',
+                   1000, 'usd', 50, '1', '1'
+                 )",
+                [],
+            )
+            .is_err());
+
+        assert!(connection
+            .execute(
+                "INSERT INTO opportunities(
+                   id, workspace_id, contact_id, campaign_id, name, stage, value,
+                   currency, probability, created_at, updated_at
+                 ) VALUES (
+                   'opp-d', 'workspace-a', 'contact-a', 'campaign-a', 'Deal', 'qualified',
+                   1000, 'USD', 101, '1', '1'
+                 )",
+                [],
+            )
+            .is_err());
+
+        assert!(connection
+            .execute(
+                "INSERT INTO insights(
+                   id, workspace_id, kind, title, summary, confidence,
+                   source_ids_json, observed_at, created_at, updated_at
+                 ) VALUES (
+                   'insight-b', 'workspace-a', 'learning', 'Insight', 'Grounded', 1.1,
+                   '[\"analytics-b\"]', '2026-09-25T00:00:00Z', '1', '1'
+                 )",
+                [],
+            )
+            .is_err());
+
         let opportunity_exists: i64 = connection
             .query_row(
                 "SELECT COUNT(*) FROM opportunities WHERE workspace_id='workspace-a' AND id='opp-a'",
