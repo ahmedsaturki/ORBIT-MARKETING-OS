@@ -5,6 +5,8 @@ Updated: 2026-09-25
 | Surface                           | Implemented        | Verified runtime                                                                  | Release state   |
 | --------------------------------- | ------------------ | --------------------------------------------------------------------------------- | --------------- |
 | Core domain                       | yes                | Main CI typecheck/tests/coverage passed                                           | VERIFIED        |
+| Operating graph + governed work   | yes                | Core graph/decision tests + native persistence contracts added in PR #39              | PARTIAL         |
+| Opportunities + insights          | yes                | v12 migration/validation exists; full product E2E remains                                  | PARTIAL         |
 | Desktop Tauri shell               | yes                | Native packaging + native E2E validation is running in PR #38                     | PARTIAL         |
 | Desktop SQLite/vault/backup       | yes                | Rust test suite passed; dedicated real-instance recovery drill remains            | PARTIAL         |
 | Desktop campaigns/tasks/CRM/inbox | yes                | Main unit/integration coverage passed; full real-instance scenario remains        | PARTIAL         |
