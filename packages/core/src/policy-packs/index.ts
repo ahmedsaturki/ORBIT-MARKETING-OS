@@ -5,17 +5,16 @@ import type {
 } from "../policies/index.js";
 
 export type PolicyPackId =
-  | "conservative"
-  | "balanced"
-  | "agency"
-  | "enterprise"
-  | "regulated";
+  "conservative" | "balanced" | "agency" | "enterprise" | "regulated";
 
 export interface PolicyPack {
   readonly id: PolicyPackId;
   readonly name: string;
   readonly description: string;
-  readonly policy: Omit<MarketingExecutionPolicy, "id" | "workspaceId" | "name">;
+  readonly policy: Omit<
+    MarketingExecutionPolicy,
+    "id" | "workspaceId" | "name"
+  >;
 }
 
 const SAFETY_BLOCKS = [
