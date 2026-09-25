@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { OutcomesPanel } from "./components/OutcomesPanel";
+import { MissionControlPanel } from "./components/MissionControlPanel";
 import { OperatingGraphPanel } from "./components/OperatingGraphPanel";
 import { StrategyStudioPanel } from "./components/StrategyStudioPanel";
 import {
@@ -1423,6 +1424,20 @@ export function App(): ReactElement {
 
   return (
     <main className="shell">
+      {activeWorkspace ? (
+        <MissionControlPanel
+          workspaceName={activeWorkspace.name}
+          accounts={accounts}
+          campaigns={campaigns}
+          tasks={tasks}
+          approvals={approvals}
+          conversations={conversations}
+          analytics={analyticsSummary}
+          runtimeOnline={runtimeHealth?.status === "ok"}
+        />
+      ) : null}
+
+
       <header className="hero">
         <div>
           <div className="eyebrow">LOCAL-FIRST • TAURI V2</div>
