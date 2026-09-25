@@ -241,10 +241,11 @@ try {
     num_ctx: capturedOllamaBody?.options?.num_ctx,
   }));
 } finally {
+  const unexpectedExitCode = child.exitCode;
   await terminateChild(child);
-  if (child.exitCode !== null && child.exitCode !== 0) {
+  if (unexpectedExitCode !== null && unexpectedExitCode !== 0) {
     console.error(logs);
-    throw new Error("runtime process exited with code " + child.exitCode);
+    throw new Error("child exited unexpectedly with code " + unexpectedExitCode);
   }
 }
 
@@ -285,10 +286,11 @@ try {
   assert(missingTokenResponse.status === 503, "expected 503 without LAN token configuration");
   console.log("runtime missing-token startup guard passed");
 } finally {
+  const unexpectedExitCode = missingTokenChild.exitCode;
   await terminateChild(missingTokenChild);
-  if (missingTokenChild.exitCode !== null && missingTokenChild.exitCode !== 0) {
+  if (unexpectedExitCode !== null && unexpectedExitCode !== 0) {
     console.error(missingTokenLogs);
-    throw new Error("missing-token runtime exited with code " + missingTokenChild.exitCode);
+    throw new Error("missingTokenChild exited unexpectedly with code " + unexpectedExitCode);
   }
 }
 
@@ -365,10 +367,11 @@ try {
   assert(rateResponses.at(-1) === 429, "expected 429 after exceeding runtime rate limit");
   console.log("runtime LAN perimeter smoke passed");
 } finally {
+  const unexpectedExitCode = authChild.exitCode;
   await terminateChild(authChild);
-  if (authChild.exitCode !== null && authChild.exitCode !== 0) {
+  if (unexpectedExitCode !== null && unexpectedExitCode !== 0) {
     console.error(authLogs);
-    throw new Error("LAN runtime exited with code " + authChild.exitCode);
+    throw new Error("authChild exited unexpectedly with code " + unexpectedExitCode);
   }
 }
 
@@ -418,10 +421,11 @@ try {
 
   console.log("runtime invalid-token rate-limit smoke passed");
 } finally {
+  const unexpectedExitCode = bruteForceChild.exitCode;
   await terminateChild(bruteForceChild);
-  if (bruteForceChild.exitCode !== null && bruteForceChild.exitCode !== 0) {
+  if (unexpectedExitCode !== null && unexpectedExitCode !== 0) {
     console.error(bruteForceLogs);
-    throw new Error("brute-force runtime exited with code " + bruteForceChild.exitCode);
+    throw new Error("bruteForceChild exited unexpectedly with code " + unexpectedExitCode);
   }
 }
 
