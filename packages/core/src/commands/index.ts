@@ -207,3 +207,5 @@ export class CommandRegistry {
 }
 
 export const DEFAULT_COMMANDS: readonly CommandDefinition[] = BUILTIN_COMMANDS;
+
+export * from "./dispatcher.js";
