@@ -65,9 +65,7 @@ describe("execution replay kernel", () => {
 
   it("rejects traces that do not start at sequence zero", () => {
     expect(
-      validateReplayTrace([
-        event(1, "decision", "allowed", "created"),
-      ]),
+      validateReplayTrace([event(1, "decision", "allowed", "created")]),
     ).toEqual({
       valid: false,
       reason: "replay_sequence_must_start_at_zero",
