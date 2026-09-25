@@ -1,4 +1,3 @@
-/* prettier-trigger-20260925 */
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
