@@ -34,6 +34,10 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | AN-01    | Campaign analytics remain campaign-scoped                                   | analytics isolation tests                           |
 | AUTO-01  | Enabled external automation rules require confirmation                      | rule-pack validation tests                          |
 | AUTO-02  | Enabled Rule Pack lifecycle is persisted and bounded                        | native lifecycle integration test                   |
+| OUT-01   | Opportunity is workspace-scoped and contact/campaign references stay in-workspace | migration + integrity trigger + negative IPC test |
+| OUT-02   | Opportunity value/currency/probability constraints are enforced               | validation + SQLite constraint tests              |
+| INS-01   | Insight is workspace-scoped and grounded by at least one source               | validation + persistence test                     |
+| INS-02   | Insight confidence/value constraints are enforced                              | validation + SQLite constraint tests              |
 | INBOX-01 | Unified conversation model                                                  | connector fixture integration                       |
 | CRM-01   | Conversation-contact linking                                                | relational integration test                         |
 | SYNC-01  | Offline edits survive restart                                               | device simulation test                              |
