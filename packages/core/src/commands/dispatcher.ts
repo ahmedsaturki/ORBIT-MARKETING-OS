@@ -209,6 +209,10 @@ export class CommandDispatcher {
     } catch (caught: unknown) {
       const message =
         caught instanceof Error ? caught.message : String(caught);
+      const errorType =
+        caught instanceof Error && caught.name.trim()
+          ? caught.name.trim()
+          : "unknown";
       const failedEvent = eventLog.append({
         workspaceId: request.invocation.workspaceId,
         timestamp: now(),
@@ -220,7 +224,11 @@ export class CommandDispatcher {
         entityId: request.invocation.commandId,
         traceId,
         parentEventId: authorizedEvent.id,
-        payload: { surface: request.surface, error: message },
+        payload: {
+          surface: request.surface,
+          error: "handler_failed",
+          errorType,
+        },
       });
 
       return {
