@@ -159,6 +159,40 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(proc!.killed).toBe(false);
   });
 
+  test("native runtime restart preserves workspace state", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+
+    const before = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+
+    await killApp();
+
+    proc = spawn(exe!, [], {
+      env: {
+        ...process.env,
+        WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
+      },
+      stdio: "ignore",
+    });
+
+    await new Promise((r) => setTimeout(r, 6000));
+
+    const { chromium } = await import("@playwright/test");
+    browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+    const ctx = browser.contexts()[0];
+    page = ctx.pages()[0] ?? (await ctx.waitForEvent("page"));
+    await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
+
+    const after = (await page.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+
+    expect(after.id).toBe(before.id);
+    expect(after.name).toBe(before.name);
+    await expect(page).toHaveTitle(/Orbit Marketing OS/);
+  });
+
   test("CSP blocks remote script injection", async () => {
     expect(page, "boot test must run first").not.toBeNull();
 
