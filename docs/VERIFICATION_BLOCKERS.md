@@ -1,51 +1,38 @@
 # Verification Blockers
 
-Updated: 2026-09-25
+Updated: 2026-09-26
 
-## 1. GitHub Actions hosted-runner blocker
+## Current state
 
-Current rebuild HEAD at the latest source revision:
+The earlier hosted-runner pre-step failure is historical. Current GitHub-hosted CI executes real workflow steps and PR #47 completed CI, Desktop Native Validation and Mobile Validation successfully before merge.
 
-`8904f23766b502525bbcb7d3dee825687ff914f0`
+The current validation branch also has fresh hosted runs for the Command Dispatcher release candidate. Their exact-head outcomes must settle before merge.
 
-The branch is generating GitHub Actions runs, but the hosted jobs currently fail before their first workflow step is registered.
+## Vercel deployment evidence
 
-Latest observed hosted-runner behavior:
+The Vercel project `orbit-marketing-os` is connected and has a READY production deployment.
 
-- The newest hosted CI run on the consolidated line (`36055292748`) failed before any workflow step executed; the job record has no usable steps/logs.
-- A self-hosted verification run (`36055285400`) is now queued against the exact consolidation HEAD `8904f23766b502525bbcb7d3dee825687ff914f0` and awaits a matching `self-hosted, x64, linux` runner.
+Current verified facts:
 
-A deliberately minimal runner probe was also tested earlier and failed before any workflow step executed. It was removed after diagnosis.
+- project metadata reports `framework: vite`;
+- repository deployment contract expects Next.js static export to `packages/web/out`;
+- latest READY production deployment has empty Git metadata;
+- the selected seven-day runtime error aggregation currently reports no runtime errors.
 
-**Interpretation:** these runs are execution-infrastructure evidence, not TypeScript/Rust compilation evidence. They must remain a technical verification blocker until a real runner executes the workflow.
+The remaining Vercel blocker is therefore configuration/provenance reconciliation and a fresh rollback drill, not general web availability.
 
-## 2. Local network limitation
+## Reproducible installation
 
-The current source environment cannot resolve GitHub/npm through shell networking, so a second independent clean checkout could not be created locally. A real `pnpm-lock.yaml` has not been fabricated.
+The canonical `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` are present on the current main lineage and have passed frozen-install validation in hosted CI. No fabricated lockfile is part of the release process.
 
-The primary zero-cost path is GitHub-hosted Actions. The repository also provides the self-hosted fallback:
+## Local execution
 
-- `scripts/bootstrap-lockfile.ps1` for Windows.
-- `scripts/bootstrap-lockfile.sh` for Linux/WSL/macOS.
-- `.github/workflows/self-hosted-verify.yml` as the full verification path (push/manual) on an owned runner.
+The developer shell's external network limitations are not treated as the primary release path. GitHub-hosted validation is the authoritative zero-cost automated verification path, with the repository's self-hosted workflow retained as a manual fallback.
 
-## 3. Vercel deployment evidence
+## Governance
 
-The Vercel project `orbit-marketing-os` is connected. Automatic Git builds are disabled repository-side; the intended release path is guarded prebuilt deployment.
-
-The latest verified deployment diagnostics identified and then addressed these configuration failures:
-
-1. `ignoreCommand` exceeded Vercel's 256-character schema limit.
-2. The shortened command then failed when `VERCEL_GIT_PREVIOUS_SHA` was empty and `git diff` received an empty revision.
-
-The repository `vercel.json` has now been hardened so missing Git revision context does not produce a fatal `bad revision` error. Automatic Git deployments are now disabled repository-side. The connected deployment status is clear on the current source snapshot; successful prebuilt production deployment remains unverified.
-
-The connected project metadata has reported framework `vite` while the repository deployment contract targets Next.js static output. This remains a project-configuration verification item until project settings are corrected/confirmed and a successful deployment validates the effective settings.
-
-## 4. Reproducible release blocker
-
-`pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` are still absent from the rebuild branch. This is intentional: no lockfile is being fabricated. Bootstrap scripts/workflow exist to generate both lockfiles on an owned runner, after which frozen installs become the release path.
+Live GitHub ruleset read currently returns an empty ruleset collection. Main-branch protection/direct-push enforcement therefore remains unverified and is kept as an open governance gate.
 
 ## Release consequence
 
-Do not merge PR #9 or claim production readiness while clean install, TypeScript checks, Rust checks, runtime integration, E2E, security, performance, signing, distribution, and other applicable release gates remain unverified.
+Do not publish a commercial release or label the product production-ready while required runtime, connector, distribution, provenance, governance, legal or billing evidence remains unverified or externally blocked.
