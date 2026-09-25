@@ -27,15 +27,20 @@ interface OpportunityView {
   readonly updated_at: string;
 }
 
+interface OutcomeCurrencySummary {
+  readonly currency: string;
+  readonly pipeline_value: number;
+  readonly weighted_pipeline_value: number;
+  readonly won_value: number;
+}
+
 interface OutcomeAnalyticsView {
   readonly opportunity_count: number;
   readonly open_opportunity_count: number;
   readonly won_opportunity_count: number;
   readonly lost_opportunity_count: number;
-  readonly pipeline_value: number;
-  readonly weighted_pipeline_value: number;
-  readonly won_value: number;
   readonly insight_count: number;
+  readonly by_currency: readonly OutcomeCurrencySummary[];
 }
 
 interface InsightView {
@@ -224,24 +229,40 @@ export function OutcomesPanel({
         <div className="grid">
           <div className="card">
             <strong>Open pipeline</strong>
-            <div className="price">{analytics.pipeline_value.toLocaleString()} EGP</div>
-            <div className="account-meta">
-              Weighted: {analytics.weighted_pipeline_value.toLocaleString()} EGP
-            </div>
+            {analytics.by_currency.length ? (
+              analytics.by_currency.map((item) => (
+                <div className="account-row" key={item.currency}>
+                  <div>
+                    <div className="price">
+                      {item.pipeline_value.toLocaleString()} {item.currency}
+                    </div>
+                    <div className="account-meta">
+                      Weighted: {item.weighted_pipeline_value.toLocaleString()}{" "}
+                      {item.currency}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="account-meta">لا توجد قيم pipeline بعد.</div>
+            )}
           </div>
           <div className="card">
-            <strong>Won value</strong>
-            <div className="price">{analytics.won_value.toLocaleString()} EGP</div>
+            <strong>Won / Lost</strong>
+            <div className="price">{analytics.won_opportunity_count}</div>
             <div className="account-meta">
-              {analytics.won_opportunity_count} won • {analytics.lost_opportunity_count} lost
+              won • {analytics.lost_opportunity_count} lost
             </div>
+            {analytics.by_currency.map((item) => (
+              <div className="account-meta" key={item.currency}>
+                Won: {item.won_value.toLocaleString()} {item.currency}
+              </div>
+            ))}
           </div>
           <div className="card">
             <strong>Opportunities</strong>
             <div className="price">{analytics.opportunity_count}</div>
-            <div className="account-meta">
-              {analytics.open_opportunity_count} open
-            </div>
+            <div className="account-meta">{analytics.open_opportunity_count} open</div>
           </div>
           <div className="card">
             <strong>Learning</strong>
