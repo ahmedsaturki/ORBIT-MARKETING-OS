@@ -23,3 +23,4 @@ export * from "./operations/index.js";
 export * from "./graph/index.js";
 export * from "./graph/context.js";
 export * from "./execution/decision.js";
+export * from "./outcomes/index.js";
