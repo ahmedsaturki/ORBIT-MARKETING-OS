@@ -7,3 +7,9 @@ build
 .expo
 coverage
 packages/desktop/src-tauri/target
+
+# Repository-managed generated/dependency metadata.
+.github/workflows/
+src-tauri/gen/
+pnpm-lock.yaml
+**/package-lock.json
