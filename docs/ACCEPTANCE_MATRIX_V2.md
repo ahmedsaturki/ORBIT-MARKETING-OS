@@ -41,6 +41,9 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | OUT-02   | Opportunity value/currency/probability constraints are enforced                          | validation + SQLite constraint tests                |
 | INS-01   | Insight is workspace-scoped and grounded by at least one source                          | validation + persistence test                       |
 | INS-02   | Insight confidence/value constraints are enforced                                        | validation + SQLite constraint tests                |
+| SIM-01   | Governed execution simulation produces a read-only deterministic plan                    | simulation tests + no-dispatch invariant             |
+| REP-01   | Execution replay reconstructs state without re-running external actions                  | replay validation + deterministic reconstruction     |
+| POL-01   | Built-in policy packs materialize explicit workspace-bound safety policies               | policy pack tests + workspace identity validation    |
 | INBOX-01 | Unified conversation model                                                               | connector fixture integration                       |
 | CRM-01   | Conversation-contact linking                                                             | relational integration test                         |
 | SYNC-01  | Offline edits survive restart                                                            | device simulation test                              |
@@ -74,7 +77,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 
 ## Gate rules
 
-- Any `FAIL` in SEC, DATA, QUE, CAMP, CONN or REL blocks release.
+- Any `FAIL` in SEC, DATA, QUE, CAMP, CONN, REL, SIM, REP or POL blocks release.
 - Any `UNVERIFIED` runtime requirement blocks the claim "production ready".
 - Performance targets are measured, never inferred from code size.
 - Real-platform tests must be controlled and must not be used to claim immunity from platform enforcement.
