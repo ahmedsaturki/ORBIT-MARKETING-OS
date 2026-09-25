@@ -27,6 +27,17 @@ interface OpportunityView {
   readonly updated_at: string;
 }
 
+interface OutcomeAnalyticsView {
+  readonly opportunity_count: number;
+  readonly open_opportunity_count: number;
+  readonly won_opportunity_count: number;
+  readonly lost_opportunity_count: number;
+  readonly pipeline_value: number;
+  readonly weighted_pipeline_value: number;
+  readonly won_value: number;
+  readonly insight_count: number;
+}
+
 interface InsightView {
   readonly id: string;
   readonly kind: string;
@@ -81,6 +92,7 @@ export function OutcomesPanel({
     [],
   );
   const [insights, setInsights] = useState<readonly InsightView[]>([]);
+  const [analytics, setAnalytics] = useState<OutcomeAnalyticsView | null>(null);
   const [opportunityId, setOpportunityId] = useState("");
   const [opportunityName, setOpportunityName] = useState("");
   const [opportunityContactId, setOpportunityContactId] = useState("");
@@ -103,12 +115,14 @@ export function OutcomesPanel({
   const load = async (): Promise<void> => {
     try {
       setError("");
-      const [nextOpportunities, nextInsights] = await Promise.all([
+      const [nextOpportunities, nextInsights, nextAnalytics] = await Promise.all([
         native<OpportunityView[]>("opportunity_list"),
         native<InsightView[]>("insight_list"),
+        native<OutcomeAnalyticsView>("outcome_analytics"),
       ]);
       setOpportunities(nextOpportunities);
       setInsights(nextInsights);
+      setAnalytics(nextAnalytics);
       setOpportunityContactId((current) => current || contacts[0]?.id || "");
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تحميل الـOutcomes");
@@ -205,6 +219,37 @@ export function OutcomesPanel({
       </div>
 
       {error ? <div className="result">{error}</div> : null}
+
+            {analytics ? (
+        <div className="grid">
+          <div className="card">
+            <strong>Open pipeline</strong>
+            <div className="price">{analytics.pipeline_value.toLocaleString()} EGP</div>
+            <div className="account-meta">
+              Weighted: {analytics.weighted_pipeline_value.toLocaleString()} EGP
+            </div>
+          </div>
+          <div className="card">
+            <strong>Won value</strong>
+            <div className="price">{analytics.won_value.toLocaleString()} EGP</div>
+            <div className="account-meta">
+              {analytics.won_opportunity_count} won • {analytics.lost_opportunity_count} lost
+            </div>
+          </div>
+          <div className="card">
+            <strong>Opportunities</strong>
+            <div className="price">{analytics.opportunity_count}</div>
+            <div className="account-meta">
+              {analytics.open_opportunity_count} open
+            </div>
+          </div>
+          <div className="card">
+            <strong>Learning</strong>
+            <div className="price">{analytics.insight_count}</div>
+            <div className="account-meta">grounded insights</div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid">
         <div className="card">
