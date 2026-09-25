@@ -242,8 +242,11 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       });
     })) as { id: string; name: string };
 
-    await page!.evaluate((workspaceId) =>
-      window.__TAURI_INTERNALS__.invoke("workspace_select", { id: workspaceId }),
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
       created.id,
     );
 
@@ -270,8 +273,11 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(after.name).toBe(created.name);
 
     // Restore the original workspace so later tests do not inherit test state.
-    await page.evaluate((workspaceId) =>
-      window.__TAURI_INTERNALS__.invoke("workspace_select", { id: workspaceId }),
+    await page.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
       before.id,
     );
     const restored = (await page.evaluate(() =>
