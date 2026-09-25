@@ -11949,6 +11949,98 @@ pub fn run() {
 }
 
 #[cfg(test)]
+mod operational_audit_bridge_tests {
+    use super::*;
+
+    #[test]
+    fn audit_append_creates_correlated_operational_event() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection
+            .execute_batch(
+                "
+                CREATE TABLE audit_events(
+                  id TEXT PRIMARY KEY,
+                  workspace_id TEXT NOT NULL,
+                  timestamp TEXT NOT NULL,
+                  category TEXT NOT NULL,
+                  action TEXT NOT NULL,
+                  outcome TEXT NOT NULL,
+                  actor TEXT NOT NULL,
+                  entity_id TEXT,
+                  metadata_json TEXT,
+                  previous_hash TEXT NOT NULL,
+                  hash TEXT NOT NULL
+                );
+                CREATE TABLE operational_events(
+                  id TEXT PRIMARY KEY,
+                  workspace_id TEXT NOT NULL,
+                  sequence INTEGER NOT NULL,
+                  timestamp TEXT NOT NULL,
+                  kind TEXT NOT NULL,
+                  outcome TEXT NOT NULL,
+                  actor TEXT NOT NULL,
+                  actor_id TEXT NOT NULL,
+                  entity_type TEXT,
+                  entity_id TEXT,
+                  trace_id TEXT,
+                  parent_event_id TEXT,
+                  payload_json TEXT
+                );
+                CREATE UNIQUE INDEX ux_operational_events_sequence
+                  ON operational_events(workspace_id, sequence);
+                ",
+            )
+            .expect("fixtures should exist");
+
+        append_audit_event(
+            &connection,
+            "workspace-1",
+            "content",
+            "approval_request",
+            "success",
+            "user",
+            Some("content-1"),
+        )
+        .expect("audit append should succeed");
+
+        let audit: (String, String, String) = connection
+            .query_row(
+                "SELECT id, action, outcome FROM audit_events LIMIT 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("audit row should exist");
+
+        let operational: (String, String, String, String, String, String) = connection
+            .query_row(
+                "SELECT id, kind, outcome, actor_id, entity_id, trace_id
+                 FROM operational_events
+                 LIMIT 1",
+                [],
+                |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                        row.get(5)?,
+                    ))
+                },
+            )
+            .expect("operational row should exist");
+
+        assert_eq!(audit.1, "approval_request");
+        assert_eq!(audit.2, "success");
+        assert_eq!(operational.1, "approval.requested");
+        assert_eq!(operational.2, "succeeded");
+        assert_eq!(operational.3, "user");
+        assert_eq!(operational.4, "content-1");
+        assert_eq!(operational.5, audit.0);
+    }
+}
+
+#[cfg(test)]
 mod interrupted_restore_recovery_tests {
     use super::*;
 
