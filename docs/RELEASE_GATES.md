@@ -57,12 +57,15 @@ A release candidate may only be promoted when every applicable gate is PASS.
 
 ## Gate 7 — Distribution
 
-- Windows installer\n- native Windows E2E
+- Windows installer
+- native Windows E2E
 - macOS package/signing where credentials are available
 - Linux packages
-- Android artifact\n- Android build/runtime validation evidence
+- Android artifact
+- Android build/runtime validation evidence
 - iOS/TestFlight artifact where Apple signing is available
-- web deployment\n- current production web smoke/headers/404 evidence
+- web deployment
+- current production web smoke/headers/404 evidence
 - update/rollback verification
 
 ## Gate 8 — Documentation
