@@ -77,6 +77,29 @@ describe("operating graph kernel", () => {
     expect(result.issues.map((issue) => issue.code)).toContain("duplicate_link");
   });
 
+  it("rejects links whose declared workspace differs from the graph workspace", () => {
+    const graph: OperatingGraph = {
+      workspaceId: "ws-1",
+      nodes: [node("strategy", "s-1"), node("campaign", "c-1")],
+      links: [
+        {
+          workspaceId: "ws-2",
+          fromType: "strategy",
+          fromId: "s-1",
+          toType: "campaign",
+          toId: "c-1",
+          relation: "supports",
+        },
+      ],
+    };
+
+    const result = validateOperatingGraph(graph);
+    expect(result.valid).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toContain(
+      "cross_workspace_link",
+    );
+  });
+
   it("supports immutable link insertion with validation", () => {
     const base: OperatingGraph = {
       workspaceId: "ws-1",
