@@ -38,3 +38,7 @@ These are initial canonical commands, not the complete future API. New commands 
 ## Future CLI/MCP mapping
 
 The same command ID must remain stable across interfaces. A CLI subcommand, an MCP tool, a desktop action, and an agent tool call can all resolve to the same registry definition and then pass through the existing execution/policy/approval gates.
+
+## Command Execution Kernel
+
+The Command Registry is paired with a shared Command Dispatcher. The dispatcher emits the governed command lifecycle, verifies the registry decision, resolves only registered handlers, and converts handler success/failure into explicit results and operational events. It is a coordination boundary, not a connector executor, and cannot bypass policy, approval, safety budgets, or human intervention. The same contract is intended for Desktop, Web, Mobile, CLI, MCP, and bounded Agents.
