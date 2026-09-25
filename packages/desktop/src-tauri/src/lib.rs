@@ -475,6 +475,37 @@ struct MessageView {
 }
 
 #[derive(Debug, Serialize)]
+struct OpportunityView {
+    id: String,
+    contact_id: String,
+    campaign_id: Option<String>,
+    name: String,
+    stage: String,
+    value: f64,
+    currency: String,
+    probability: f64,
+    source: Option<String>,
+    owner_id: Option<String>,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct InsightView {
+    id: String,
+    kind: String,
+    title: String,
+    summary: String,
+    metric: Option<String>,
+    value: Option<f64>,
+    confidence: f64,
+    source_ids_json: String,
+    observed_at: String,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
 struct AnalyticsSummaryView {
     attempted: i64,
     succeeded: i64,
