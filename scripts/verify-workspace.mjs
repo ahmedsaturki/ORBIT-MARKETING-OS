@@ -733,13 +733,19 @@ if (rootVercel.git?.deploymentEnabled !== false)
   );
 
 const workflowFiles = [
+  ".github/workflows/bootstrap-lockfile.yml",
+  ".github/workflows/bootstrap-lockfiles-hosted.yml",
   ".github/workflows/ci.yml",
+  ".github/workflows/desktop-native-validation.yml",
+  ".github/workflows/format-rebuild.yml",
+  ".github/workflows/mobile-validation.yml",
   ".github/workflows/rebuild-rust.yml",
   ".github/workflows/release-desktop.yml",
   ".github/workflows/release-mobile.yml",
-  ".github/workflows/vercel-web.yml",
   ".github/workflows/self-hosted-verify.yml",
-  ".github/workflows/bootstrap-lockfile.yml",
+  ".github/workflows/stability-soak.yml",
+  ".github/workflows/vercel-web.yml",
+  ".github/workflows/web-release-selfhosted.yml",
 ];
 const selfHostedWorkflow = await readFile(
   join(root, ".github/workflows/self-hosted-verify.yml"),
