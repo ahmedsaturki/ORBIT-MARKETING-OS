@@ -1,4 +1,4 @@
-export const DATABASE_SCHEMA_VERSION = 12;
+export const DATABASE_SCHEMA_VERSION = 13;
 
 export const DATABASE_SCHEMA_SQL = `
 PRAGMA foreign_keys = ON;
@@ -519,6 +519,34 @@ CREATE INDEX IF NOT EXISTS idx_insights_workspace_kind
 CREATE INDEX IF NOT EXISTS idx_insights_workspace_updated
   ON insights(workspace_id, updated_at);
 
-PRAGMA user_version = 12;
+CREATE TABLE IF NOT EXISTS operational_events (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  sequence INTEGER NOT NULL CHECK(sequence > 0),
+  timestamp TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id TEXT,
+  trace_id TEXT,
+  parent_event_id TEXT,
+  payload_json TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_operational_events_sequence
+  ON operational_events(workspace_id, sequence);
+
+CREATE INDEX IF NOT EXISTS idx_operational_events_workspace_time
+  ON operational_events(workspace_id, timestamp);
+
+CREATE INDEX IF NOT EXISTS idx_operational_events_entity
+  ON operational_events(workspace_id, entity_type, entity_id, timestamp);
+
+CREATE INDEX IF NOT EXISTS idx_operational_events_trace
+  ON operational_events(workspace_id, trace_id, sequence);
+
+PRAGMA user_version = 13;
 
 `;
