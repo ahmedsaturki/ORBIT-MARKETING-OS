@@ -60,7 +60,7 @@ A feature is not release-complete merely because its source code exists. Release
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md](docs/ACCEPTANCE_MATRIX_V2.md), and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
 
-Product north star: [docs/TARGET_PRODUCT_BLUEPRINT.md](docs/TARGET_PRODUCT_BLUEPRINT.md) defines the Strategy → Campaign → Content → Execution → CRM/Inbox → Analytics → Learning operating graph and the staged platform roadmap.
+Product north star: [docs/TARGET_PRODUCT_BLUEPRINT.md](docs/TARGET_PRODUCT_BLUEPRINT.md) defines the Strategy → Campaign → Content → Execution → CRM/Inbox → Analytics → Learning operating graph and the staged platform roadmap. The Desktop currently exposes Mission Control, Strategy Studio, Outcomes/Learning, and the Operating Graph as governed local workspace surfaces.
 
 Launch control: `docs/LAUNCH_SCORECARD.md`
 
