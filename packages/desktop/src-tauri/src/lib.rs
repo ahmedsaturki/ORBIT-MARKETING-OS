@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256};
 use std::{
     fs,
     io::{BufReader, Read},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{Mutex, OnceLock, RwLock},
 };
 use tauri::Manager;
@@ -912,8 +912,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         )?;
     }
 
-    if version < 8 {
-        if !has_column(connection, "vault_records", "workspace_id")? {
+    if version < 8 && !has_column(connection, "vault_records", "workspace_id")? {
             let transaction = connection.unchecked_transaction()?;
             transaction.execute_batch(
                 "CREATE TABLE IF NOT EXISTS vault_records (
@@ -935,7 +934,6 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
                  ALTER TABLE vault_records_v8 RENAME TO vault_records;",
             )?;
             transaction.commit()?;
-        }
     }
 
     if version < 10 {
@@ -996,7 +994,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         };
 
         for (id, available_at, created_at, attempts, max_attempts) in legacy_tasks {
-            if attempts < 0 || max_attempts < 1 || max_attempts > 10 || attempts > max_attempts {
+            if attempts < 0 || !(1..=10).contains(&max_attempts) || attempts > max_attempts {
                 return Err(AppError::InvalidPayload);
             }
 
@@ -1243,7 +1241,7 @@ fn recover_interrupted_tasks(connection: &Connection) -> Result<usize, AppError>
     Ok(interrupted.len())
 }
 
-fn recover_database_before_open(app_data: &PathBuf, db_path: &PathBuf) -> Result<(), AppError> {
+fn recover_database_before_open(app_data: &Path, db_path: &Path) -> Result<(), AppError> {
     let previous = app_data.join("orbit.previous.sqlite3");
     let temporary = app_data.join("orbit.restore.sqlite3");
     let backup_source = app_data.join("backups/orbit-backup-source.sqlite3");
@@ -1260,7 +1258,7 @@ fn recover_database_before_open(app_data: &PathBuf, db_path: &PathBuf) -> Result
     Ok(())
 }
 
-fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> {
+fn cleanup_stale_database_artifacts(app_data: &Path) -> Result<(), AppError> {
     for name in [
         "orbit.restore.sqlite3",
         "orbit.previous.sqlite3",
@@ -2162,7 +2160,7 @@ fn workspace_create(
         .map(|value| validate_label(&value))
         .transpose()
         .map_err(|error| error.to_string())?
-        .unwrap_or_else(|| uuid_like());
+        .unwrap_or_else(uuid_like);
     let mut connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let created_at = chrono_like_timestamp();
@@ -3079,6 +3077,7 @@ fn validate_rule_pack_json(platform: &str, rules_json: &str) -> Result<serde_jso
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 fn media_asset_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -3980,6 +3979,7 @@ fn approval_list(app: tauri::AppHandle) -> Result<Vec<ApprovalView>, String> {
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 fn task_enqueue(
     app: tauri::AppHandle,
     id: String,
@@ -4301,6 +4301,11 @@ fn retry_delay_ms(next_attempt: i64) -> i64 {
 }
 
 #[tauri::command]
+type TaskFailureRow = (
+    i64, i64, String, Option<String>, Option<String>, String, String,
+    String, i64, String, String, String, String,
+);
+
 fn task_fail(app: tauri::AppHandle, id: String, now: String) -> Result<TaskView, String> {
     let workspace_id = active_workspace_id();
     let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
@@ -4310,7 +4315,7 @@ fn task_fail(app: tauri::AppHandle, id: String, now: String) -> Result<TaskView,
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"])
         .map_err(|error| error.to_string())?;
-    let current: Option<(i64, i64, String, Option<String>, Option<String>, String, String, String, i64, String, String, String, String)> = connection
+    let current: Option<TaskFailureRow> = connection
         .query_row(
             "SELECT attempts, max_attempts, campaign_id, content_id, destination_id, account_id, platform, kind, priority,
                     status, idempotency_key, available_at, created_at
@@ -4467,6 +4472,7 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 fn contact_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -4867,6 +4873,7 @@ fn prepare_backup_database_for_restore(connection: &Connection) -> Result<(), St
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn audit_hash(
     previous_hash: &str,
     id: &str,
@@ -5475,15 +5482,13 @@ mod tests {
         let payload = match seal("correct-password", "local-secret") {
             Ok(value) => value,
             Err(error) => {
-                assert!(false, "test encryption failed: {error}");
-                return;
+                panic!("test encryption failed: {error}");
             }
         };
         let recovered = match open_payload("correct-password", &payload) {
             Ok(value) => value,
             Err(error) => {
-                assert!(false, "test decryption failed: {error}");
-                return;
+                panic!("test decryption failed: {error}");
             }
         };
         assert_eq!(recovered, "local-secret");
@@ -5494,8 +5499,7 @@ mod tests {
         let payload = match seal("correct-password", "local-secret") {
             Ok(value) => value,
             Err(error) => {
-                assert!(false, "test encryption failed: {error}");
-                return;
+                panic!("test encryption failed: {error}");
             }
         };
         assert!(open_payload("wrong-password", &payload).is_err());
@@ -7106,8 +7110,7 @@ mod tests {
         let connection = match Connection::open_in_memory() {
             Ok(value) => value,
             Err(error) => {
-                assert!(false, "in-memory SQLite unavailable: {error}");
-                return;
+                panic!("in-memory SQLite unavailable: {error}");
             }
         };
 
@@ -7129,13 +7132,11 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
 "#;
 
         if let Err(error) = connection.execute_batch(legacy) {
-            assert!(false, "legacy schema setup failed: {error}");
-            return;
+            panic!("legacy schema setup failed: {error}");
         }
 
         if let Err(error) = migrate_schema(&connection) {
-            assert!(false, "legacy migration failed: {error}");
-            return;
+            panic!("legacy migration failed: {error}");
         }
 
         let version = connection
@@ -7492,10 +7493,10 @@ mod execution_counter_tests {
 pub fn run() {
     let result = tauri::Builder::default()
         .setup(|app| {
-            let connection = open_db(&app.handle())
-                .map_err(|error| Box::<dyn std::error::Error>::from(error))?;
+            let connection = open_db(app.handle())
+                .map_err(Box::<dyn std::error::Error>::from)?;
             recover_interrupted_tasks(&connection)
-                .map_err(|error| Box::<dyn std::error::Error>::from(error))?;
+                .map_err(Box::<dyn std::error::Error>::from)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
