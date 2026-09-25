@@ -1062,7 +1062,6 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         transaction.commit()?;
     }
 
-
     if version < 11 {
         connection.execute_batch(
             "
@@ -5002,7 +5001,6 @@ fn backup_filename_timestamp() -> String {
     chrono_like_timestamp().replace(':', "-")
 }
 
-
 #[derive(Debug, Serialize)]
 struct MarketingObjectiveView {
     id: String,
@@ -5106,8 +5104,14 @@ fn validate_opportunity_stage(value: &str) -> Result<String, String> {
 
 fn validate_insight_kind(value: &str) -> Result<String, String> {
     let value = value.trim().to_lowercase();
-    if ["performance", "anomaly", "learning", "trend", "recommendation"]
-        .contains(&value.as_str())
+    if [
+        "performance",
+        "anomaly",
+        "learning",
+        "trend",
+        "recommendation",
+    ]
+    .contains(&value.as_str())
     {
         Ok(value)
     } else {
@@ -5117,7 +5121,11 @@ fn validate_insight_kind(value: &str) -> Result<String, String> {
 
 fn validate_currency(value: &str) -> Result<String, String> {
     let value = value.trim().to_uppercase();
-    if value.len() == 3 && value.chars().all(|character| character.is_ascii_uppercase()) {
+    if value.len() == 3
+        && value
+            .chars()
+            .all(|character| character.is_ascii_uppercase())
+    {
         Ok(value)
     } else {
         Err("currency must be a three-letter ISO-style code".to_string())
@@ -5181,7 +5189,9 @@ fn validate_strategy_reference_ids(
             .query_row(sql, params![workspace_id, id], |row| row.get(0))
             .map_err(|error| error.to_string())?;
         if found != 1 {
-            return Err(format!("strategy reference does not belong to active workspace: {id}"));
+            return Err(format!(
+                "strategy reference does not belong to active workspace: {id}"
+            ));
         }
     }
     Ok(())
@@ -5435,7 +5445,8 @@ fn offer_upsert(
     if promise.trim().is_empty() || promise.len() > 10_000 {
         return Err("offer promise is invalid".to_string());
     }
-    let proof_points_json = validate_json_string_array(proof_points_json, "proof_points_json", 100)?;
+    let proof_points_json =
+        validate_json_string_array(proof_points_json, "proof_points_json", 100)?;
     let constraints_json = validate_json_string_array(constraints_json, "constraints_json", 100)?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
@@ -5765,8 +5776,7 @@ fn insight_upsert(
     if !confidence.is_finite() || !(0.0..=1.0).contains(&confidence) {
         return Err("insight confidence must be between 0 and 1".to_string());
     }
-    let source_ids_json =
-        validate_json_string_array(source_ids_json, "source_ids_json", 100)?;
+    let source_ids_json = validate_json_string_array(source_ids_json, "source_ids_json", 100)?;
     if serde_json::from_str::<Vec<String>>(&source_ids_json)
         .map_err(|_| "source_ids_json must be a JSON array".to_string())?
         .is_empty()
@@ -5988,10 +5998,13 @@ fn strategy_upsert(
     if positioning.trim().is_empty() || positioning.len() > 20_000 {
         return Err("strategy positioning is invalid".to_string());
     }
-    let objective_ids_json = validate_json_string_array(objective_ids_json, "objective_ids_json", 100)?;
-    let audience_ids_json = validate_json_string_array(audience_ids_json, "audience_ids_json", 100)?;
+    let objective_ids_json =
+        validate_json_string_array(objective_ids_json, "objective_ids_json", 100)?;
+    let audience_ids_json =
+        validate_json_string_array(audience_ids_json, "audience_ids_json", 100)?;
     let offer_ids_json = validate_json_string_array(offer_ids_json, "offer_ids_json", 100)?;
-    let key_messages_json = validate_json_string_array(key_messages_json, "key_messages_json", 100)?;
+    let key_messages_json =
+        validate_json_string_array(key_messages_json, "key_messages_json", 100)?;
     let content_pillars_json =
         validate_json_string_array(content_pillars_json, "content_pillars_json", 100)?;
     let channels_json = validate_json_string_array(channels_json, "channels_json", 50)?;
@@ -6007,18 +6020,8 @@ fn strategy_upsert(
         "marketing_objectives",
         &objective_ids_json,
     )?;
-    validate_strategy_reference_ids(
-        &connection,
-        &workspace_id,
-        "audiences",
-        &audience_ids_json,
-    )?;
-    validate_strategy_reference_ids(
-        &connection,
-        &workspace_id,
-        "offers",
-        &offer_ids_json,
-    )?;
+    validate_strategy_reference_ids(&connection, &workspace_id, "audiences", &audience_ids_json)?;
+    validate_strategy_reference_ids(&connection, &workspace_id, "offers", &offer_ids_json)?;
 
     let positioning = positioning.trim().to_string();
     let timestamp = chrono_like_timestamp();
@@ -6213,7 +6216,9 @@ fn validate_workspace_source_ids(
             )
             .map_err(|error| error.to_string())?;
         if found != 1 {
-            return Err(format!("knowledge source does not belong to active workspace: {id}"));
+            return Err(format!(
+                "knowledge source does not belong to active workspace: {id}"
+            ));
         }
     }
     Ok(())
@@ -6329,8 +6334,7 @@ fn knowledge_item_upsert(
     if statement.is_empty() || statement.len() > 20_000 {
         return Err("knowledge statement is invalid".to_string());
     }
-    let source_ids_json =
-        validate_json_string_array(source_ids_json, "source_ids_json", 100)?;
+    let source_ids_json = validate_json_string_array(source_ids_json, "source_ids_json", 100)?;
     if source_ids_json == "[]" {
         return Err("knowledge item requires at least one source".to_string());
     }
@@ -6645,8 +6649,13 @@ fn validate_agent_role(value: &str) -> Result<String, String> {
 
 fn validate_agent_autonomy(value: &str) -> Result<String, String> {
     let value = value.trim().to_lowercase();
-    if ["suggest", "draft", "execute_bounded", "execute_with_approval"]
-        .contains(&value.as_str())
+    if [
+        "suggest",
+        "draft",
+        "execute_bounded",
+        "execute_with_approval",
+    ]
+    .contains(&value.as_str())
     {
         Ok(value)
     } else {
@@ -6675,8 +6684,8 @@ fn validate_agent_status(value: &str) -> Result<String, String> {
 
 fn validate_agent_tool_grants(value: Option<String>) -> Result<String, String> {
     let raw = value.unwrap_or_else(|| "[]".to_string());
-    let parsed: serde_json::Value =
-        serde_json::from_str(&raw).map_err(|_| "tool_grants_json must be valid JSON".to_string())?;
+    let parsed: serde_json::Value = serde_json::from_str(&raw)
+        .map_err(|_| "tool_grants_json must be valid JSON".to_string())?;
     let Some(grants) = parsed.as_array() else {
         return Err("tool_grants_json must be a JSON array".to_string());
     };
@@ -6945,8 +6954,12 @@ fn agent_run_create(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator"])
-        .map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
 
     let agent_exists: bool = connection
         .query_row(
@@ -7015,7 +7028,11 @@ fn agent_run_set_status(
         .map_err(|error| error.to_string())?;
 
     let timestamp = chrono_like_timestamp();
-    let started_at = if status == "running" { Some(timestamp.clone()) } else { None };
+    let started_at = if status == "running" {
+        Some(timestamp.clone())
+    } else {
+        None
+    };
     let completed_at = if ["succeeded", "failed", "cancelled"].contains(&status.as_str()) {
         Some(timestamp.clone())
     } else {
@@ -7030,7 +7047,14 @@ fn agent_run_set_status(
                  completed_at=COALESCE(?3, completed_at),
                  blocked_reason=?4
              WHERE id=?5 AND workspace_id=?6",
-            params![status, started_at, completed_at, blocked_reason, id, workspace_id],
+            params![
+                status,
+                started_at,
+                completed_at,
+                blocked_reason,
+                id,
+                workspace_id
+            ],
         )
         .map_err(|error| error.to_string())?;
     if changed != 1 {
@@ -7263,11 +7287,17 @@ fn work_item_upsert(
     let target_id = target_id
         .map(|value| validate_label(&value).map_err(|error| error.to_string()))
         .transpose()?;
-    let due_at = due_at.map(|value| normalize_rfc3339_utc(&value)).transpose()?;
+    let due_at = due_at
+        .map(|value| normalize_rfc3339_utc(&value))
+        .transpose()?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator"])
-        .map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
 
     let timestamp = chrono_like_timestamp();
     let changed = connection
@@ -7381,8 +7411,7 @@ fn work_dependency_upsert(
     kind: String,
 ) -> Result<WorkDependencyView, String> {
     let workspace_id = active_workspace_id();
-    let predecessor_id =
-        validate_label(&predecessor_id).map_err(|error| error.to_string())?;
+    let predecessor_id = validate_label(&predecessor_id).map_err(|error| error.to_string())?;
     let successor_id = validate_label(&successor_id).map_err(|error| error.to_string())?;
     let kind = validate_work_dependency_kind(&kind)?;
     if predecessor_id == successor_id {
@@ -7390,8 +7419,12 @@ fn work_dependency_upsert(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator"])
-        .map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
 
     for id in [&predecessor_id, &successor_id] {
         let exists: bool = connection
@@ -7513,23 +7546,41 @@ fn operational_entity_exists(
 ) -> Result<bool, String> {
     let table = validate_operational_entity_type(entity_type)?;
     let sql = match table {
-        "marketing_objectives" => "SELECT EXISTS(SELECT 1 FROM marketing_objectives WHERE id=?1 AND workspace_id=?2)",
-        "strategy_documents" => "SELECT EXISTS(SELECT 1 FROM strategy_documents WHERE id=?1 AND workspace_id=?2)",
+        "marketing_objectives" => {
+            "SELECT EXISTS(SELECT 1 FROM marketing_objectives WHERE id=?1 AND workspace_id=?2)"
+        }
+        "strategy_documents" => {
+            "SELECT EXISTS(SELECT 1 FROM strategy_documents WHERE id=?1 AND workspace_id=?2)"
+        }
         "audiences" => "SELECT EXISTS(SELECT 1 FROM audiences WHERE id=?1 AND workspace_id=?2)",
         "offers" => "SELECT EXISTS(SELECT 1 FROM offers WHERE id=?1 AND workspace_id=?2)",
-        "knowledge_items" => "SELECT EXISTS(SELECT 1 FROM knowledge_items WHERE id=?1 AND workspace_id=?2)",
-        "agent_definitions" => "SELECT EXISTS(SELECT 1 FROM agent_definitions WHERE id=?1 AND workspace_id=?2)",
-        "marketing_policies" => "SELECT EXISTS(SELECT 1 FROM marketing_policies WHERE id=?1 AND workspace_id=?2)",
+        "knowledge_items" => {
+            "SELECT EXISTS(SELECT 1 FROM knowledge_items WHERE id=?1 AND workspace_id=?2)"
+        }
+        "agent_definitions" => {
+            "SELECT EXISTS(SELECT 1 FROM agent_definitions WHERE id=?1 AND workspace_id=?2)"
+        }
+        "marketing_policies" => {
+            "SELECT EXISTS(SELECT 1 FROM marketing_policies WHERE id=?1 AND workspace_id=?2)"
+        }
         "work_items" => "SELECT EXISTS(SELECT 1 FROM work_items WHERE id=?1 AND workspace_id=?2)",
         "agent_runs" => "SELECT EXISTS(SELECT 1 FROM agent_runs WHERE id=?1 AND workspace_id=?2)",
-        "opportunities" => "SELECT EXISTS(SELECT 1 FROM opportunities WHERE id=?1 AND workspace_id=?2)",
+        "opportunities" => {
+            "SELECT EXISTS(SELECT 1 FROM opportunities WHERE id=?1 AND workspace_id=?2)"
+        }
         "insights" => "SELECT EXISTS(SELECT 1 FROM insights WHERE id=?1 AND workspace_id=?2)",
         "campaigns" => "SELECT EXISTS(SELECT 1 FROM campaigns WHERE id=?1 AND workspace_id=?2)",
-        "content_items" => "SELECT EXISTS(SELECT 1 FROM content_items WHERE id=?1 AND workspace_id=?2)",
+        "content_items" => {
+            "SELECT EXISTS(SELECT 1 FROM content_items WHERE id=?1 AND workspace_id=?2)"
+        }
         "tasks" => "SELECT EXISTS(SELECT 1 FROM tasks WHERE id=?1 AND workspace_id=?2)",
-        "conversations" => "SELECT EXISTS(SELECT 1 FROM conversations WHERE id=?1 AND workspace_id=?2)",
+        "conversations" => {
+            "SELECT EXISTS(SELECT 1 FROM conversations WHERE id=?1 AND workspace_id=?2)"
+        }
         "contacts" => "SELECT EXISTS(SELECT 1 FROM contacts WHERE id=?1 AND workspace_id=?2)",
-        "media_assets" => "SELECT EXISTS(SELECT 1 FROM media_assets WHERE id=?1 AND workspace_id=?2)",
+        "media_assets" => {
+            "SELECT EXISTS(SELECT 1 FROM media_assets WHERE id=?1 AND workspace_id=?2)"
+        }
         _ => return Err("unsupported operational entity type".to_string()),
     };
     connection
@@ -7541,11 +7592,15 @@ fn validate_operational_relation(value: &str) -> Result<String, String> {
     let relation = value.trim();
     if relation.is_empty()
         || relation.len() > 80
+        || !relation.chars().enumerate().all(|(index, c)| {
+            c.is_ascii_lowercase()
+                || c.is_ascii_digit() && index > 0
+                || matches!(c, '_' | '-' | '.')
+        })
         || !relation
             .chars()
-            .enumerate()
-            .all(|(index, c)| c.is_ascii_lowercase() || c.is_ascii_digit() && index > 0 || matches!(c, '_' | '-' | '.'))
-        || !relation.chars().next().is_some_and(|c| c.is_ascii_lowercase())
+            .next()
+            .is_some_and(|c| c.is_ascii_lowercase())
     {
         return Err("invalid operational relation".to_string());
     }
@@ -7658,14 +7713,7 @@ fn operational_link_delete(
                AND to_type=?4
                AND to_id=?5
                AND relation=?6",
-            params![
-                workspace_id,
-                from_type,
-                from_id,
-                to_type,
-                to_id,
-                relation
-            ],
+            params![workspace_id, from_type, from_id, to_type, to_id, relation],
         )
         .map_err(|error| error.to_string())?;
 
@@ -7722,17 +7770,20 @@ fn operational_link_list(
         .map_err(|error| error.to_string())?;
 
     let rows = statement
-        .query_map(params![workspace_id, normalized_type, normalized_id], |row| {
-            Ok(OperationalLinkView {
-                workspace_id: row.get(0)?,
-                from_type: row.get(1)?,
-                from_id: row.get(2)?,
-                to_type: row.get(3)?,
-                to_id: row.get(4)?,
-                relation: row.get(5)?,
-                created_at: row.get(6)?,
-            })
-        })
+        .query_map(
+            params![workspace_id, normalized_type, normalized_id],
+            |row| {
+                Ok(OperationalLinkView {
+                    workspace_id: row.get(0)?,
+                    from_type: row.get(1)?,
+                    from_id: row.get(2)?,
+                    to_type: row.get(3)?,
+                    to_id: row.get(4)?,
+                    relation: row.get(5)?,
+                    created_at: row.get(6)?,
+                })
+            },
+        )
         .map_err(|error| error.to_string())?;
 
     rows.collect::<Result<Vec<_>, _>>()
@@ -10178,8 +10229,7 @@ mod tests {
         let grants_json =
             r#"[{"tool":"publisher","scopes":["campaign.publish"],"requiresApproval":true}]"#;
         let grants_input: Option<String> = Some(grants_json.to_string());
-        let grants = validate_agent_tool_grants(grants_input)
-            .expect("tool grant should validate");
+        let grants = validate_agent_tool_grants(grants_input).expect("tool grant should validate");
         assert!(grants.contains("publisher"));
 
         let missing_scopes_json = r#"[{"tool":"publisher"}]"#;
@@ -10260,8 +10310,7 @@ mod tests {
         );
         assert!(validate_knowledge_trust("trusted").is_err());
         assert_eq!(
-            validate_hash_64(&"A".repeat(64), "excerpt_hash")
-                .expect("valid hash should normalize"),
+            validate_hash_64(&"A".repeat(64), "excerpt_hash").expect("valid hash should normalize"),
             "a".repeat(64)
         );
         assert!(validate_hash_64("abcd", "excerpt_hash").is_err());
@@ -10286,53 +10335,32 @@ mod tests {
             )
             .expect("knowledge source fixtures should be inserted");
 
-        assert!(validate_workspace_source_ids(
-            &connection,
-            "workspace-a",
-            r#"["source-a"]"#,
-        )
-        .is_ok());
-        assert!(validate_workspace_source_ids(
-            &connection,
-            "workspace-a",
-            r#"["source-b"]"#,
-        )
-        .is_err());
+        assert!(
+            validate_workspace_source_ids(&connection, "workspace-a", r#"["source-a"]"#,).is_ok()
+        );
+        assert!(
+            validate_workspace_source_ids(&connection, "workspace-a", r#"["source-b"]"#,).is_err()
+        );
     }
 
     #[test]
     fn strategy_brain_validators_reject_malformed_payloads() {
         assert_eq!(
-            validate_json_string_array(
-                Some(r#"["one"," two "]"#.to_string()),
-                "values",
-                10
-            )
-            .expect("array should normalize"),
+            validate_json_string_array(Some(r#"["one"," two "]"#.to_string()), "values", 10)
+                .expect("array should normalize"),
             r#"["one","two"]"#
         );
-        assert!(validate_json_string_array(
-            Some(r#"{"not":"array"}"#.to_string()),
-            "values",
-            10
-        )
-        .is_err());
-        assert!(validate_json_string_array(
-            Some(r#"[""]"#.to_string()),
-            "values",
-            10
-        )
-        .is_err());
+        assert!(
+            validate_json_string_array(Some(r#"{"not":"array"}"#.to_string()), "values", 10)
+                .is_err()
+        );
+        assert!(validate_json_string_array(Some(r#"[""]"#.to_string()), "values", 10).is_err());
         assert_eq!(
             validate_json_object(Some(r#"{"region":"Cairo"}"#.to_string()), "attributes")
                 .expect("object should normalize"),
             r#"{"region":"Cairo"}"#
         );
-        assert!(validate_json_object(
-            Some(r#"["not-object"]"#.to_string()),
-            "attributes"
-        )
-        .is_err());
+        assert!(validate_json_object(Some(r#"["not-object"]"#.to_string()), "attributes").is_err());
         assert_eq!(
             validate_strategy_metric("LEADS").expect("metric should normalize"),
             "leads"
@@ -10423,13 +10451,10 @@ mod tests {
             !operational_entity_exists(&connection, "workspace-b", "campaign", "campaign-a")
                 .expect("cross-workspace entity must not be found")
         );
-        assert!(operational_entity_exists(
-            &connection,
-            "workspace-a",
-            "campaign",
-            "missing"
-        )
-        .is_ok_and(|value| !value));
+        assert!(
+            operational_entity_exists(&connection, "workspace-a", "campaign", "missing")
+                .is_ok_and(|value| !value)
+        );
     }
 
     #[test]
@@ -11370,7 +11395,6 @@ pub fn run() {
             automation_rule_pack_set_enabled,
             automation_rule_pack_list,
             knowledge_source_upsert,
-
             agent_upsert,
             agent_list,
             agent_run_create,
