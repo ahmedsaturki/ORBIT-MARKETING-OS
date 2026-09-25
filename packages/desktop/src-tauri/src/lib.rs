@@ -491,6 +491,18 @@ struct OpportunityView {
 }
 
 #[derive(Debug, Serialize)]
+struct OutcomeAnalyticsView {
+    opportunity_count: i64,
+    open_opportunity_count: i64,
+    won_opportunity_count: i64,
+    lost_opportunity_count: i64,
+    pipeline_value: f64,
+    weighted_pipeline_value: f64,
+    won_value: f64,
+    insight_count: i64,
+}
+
+#[derive(Debug, Serialize)]
 struct InsightView {
     id: String,
     kind: String,
@@ -5784,6 +5796,47 @@ fn insight_upsert(
         created_at: timestamp.clone(),
         updated_at: timestamp,
     })
+}
+
+#[tauri::command]
+fn outcome_analytics(app: tauri::AppHandle) -> Result<OutcomeAnalyticsView, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let row = connection
+        .query_row(
+            "SELECT
+               COUNT(*),
+               COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage = 'won' THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage = 'lost' THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value * probability / 100.0 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage = 'won' THEN value ELSE 0 END), 0),
+               (SELECT COUNT(*) FROM insights WHERE workspace_id=?1)",
+            params![&workspace_id],
+            |row| {
+                Ok(OutcomeAnalyticsView {
+                    opportunity_count: row.get(0)?,
+                    open_opportunity_count: row.get(1)?,
+                    won_opportunity_count: row.get(2)?,
+                    lost_opportunity_count: row.get(3)?,
+                    pipeline_value: row.get(4)?,
+                    weighted_pipeline_value: row.get(5)?,
+                    won_value: row.get(6)?,
+                    insight_count: row.get(7)?,
+                })
+            },
+        )
+        .map_err(|error| error.to_string())?;
+
+    Ok(row)
 }
 
 #[tauri::command]
@@ -11084,6 +11137,7 @@ pub fn run() {
             opportunity_list,
             insight_upsert,
             insight_list,
+            outcome_analytics,
             strategy_upsert,
             strategy_list,
             operational_link_upsert,
