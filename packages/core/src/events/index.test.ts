@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { OperationalEventLog, createOperationalEvent } from "./index.js";
+import {
+  OperationalEventLog,
+  createOperationalEvent,
+  type OperationalEvent,
+} from "./index.js";
 
 describe("OperationalEventLog", () => {
   it("assigns contiguous sequences and preserves append order", () => {
@@ -38,7 +42,7 @@ describe("OperationalEventLog", () => {
         kind: "command.received",
         outcome: "started",
         actor: "user",
-      actorId: "user-1",
+        actorId: "user-1",
       }),
     ).toThrow("operational_event_workspace_mismatch");
 
@@ -67,6 +71,19 @@ describe("OperationalEventLog", () => {
     });
 
     expect(event.payload).toEqual({ accessToken: "[REDACTED]", result: "ok" });
+  });
+
+  it("rejects missing actor identity", () => {
+    expect(() =>
+      createOperationalEvent({
+        workspaceId: "ws-1",
+        timestamp: "2026-09-26T00:00:00Z",
+        kind: "command.received",
+        outcome: "started",
+        actor: "user",
+        actorId: " ",
+      }),
+    ).toThrow("operational_event_actor_required");
   });
 
   it("returns defensive deep copies", () => {
