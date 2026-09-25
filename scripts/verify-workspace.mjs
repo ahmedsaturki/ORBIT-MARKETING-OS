@@ -650,7 +650,7 @@ const sensitiveDesktopCommands = {
 
 const rustCommandPositions = [
   ...rust.matchAll(
-    /#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g,
+    /#\[tauri::command\](?:\s*#\[[^\n]+\])*\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g,
   ),
 ]
   .map((match) => ({ name: match[1], index: match.index ?? -1 }))
