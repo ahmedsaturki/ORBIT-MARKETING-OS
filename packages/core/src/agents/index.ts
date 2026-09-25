@@ -107,7 +107,9 @@ export function authorizeAgentAction(
       agent.autonomy === "execute_with_approval");
 
   if (
-    (request.requiresApproval || grantRequiresApproval || autonomyRequiresApproval) &&
+    (request.requiresApproval ||
+      grantRequiresApproval ||
+      autonomyRequiresApproval) &&
     !approved
   ) {
     return { allowed: false, reason: "approval_required" };
