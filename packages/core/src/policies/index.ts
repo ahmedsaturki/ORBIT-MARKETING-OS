@@ -1,7 +1,7 @@
 export type ActionRisk = "low" | "medium" | "high" | "critical";
 export type AutonomyMode = "manual" | "assisted" | "bounded" | "approved";
 
-export interface ExecutionPolicy {
+export interface MarketingExecutionPolicy {
   readonly id: string;
   readonly workspaceId: string;
   readonly name: string;
@@ -35,7 +35,7 @@ export type PolicyDecision =
     };
 
 export function evaluatePolicy(
-  policy: ExecutionPolicy,
+  policy: MarketingExecutionPolicy,
   input: PolicyEvaluationInput,
 ): PolicyDecision {
   if (policy.blockedActions.includes(input.action)) {
