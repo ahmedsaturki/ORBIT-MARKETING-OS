@@ -42,10 +42,25 @@ function assertTimestamp(value: string): void {
   }
 }
 
+function cloneValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(cloneValue);
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        cloneValue(entry),
+      ]),
+    );
+  }
+  return value;
+}
+
 function cloneEvent(event: OperationalEvent): OperationalEvent {
   return {
     ...event,
-    ...(event.payload ? { payload: { ...event.payload } } : {}),
+    ...(event.payload
+      ? { payload: cloneValue(event.payload) as Readonly<Record<string, unknown>> }
+      : {}),
   };
 }
 
