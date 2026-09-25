@@ -143,7 +143,7 @@ describe("CommandDispatcher", () => {
     const log = new OperationalEventLog("ws-1");
 
     dispatcher.register("analytics.explain", () => {
-      throw new Error("controlled-handler-failure");
+      throw new Error("controlled-handler-failure secret-value");
     });
 
     const result = await dispatcher.execute(
@@ -156,8 +156,14 @@ describe("CommandDispatcher", () => {
     );
 
     expect(result.ok).toBe(false);
-    expect(result.error).toBe("controlled-handler-failure");
+    expect(result.error).toBe("controlled-handler-failure secret-value");
     expect(log.list().at(-1)?.outcome).toBe("failed");
+    expect(log.list().at(-1)?.payload).toEqual({
+      surface: "desktop",
+      error: "handler_failed",
+      errorType: "Error",
+    });
+    expect(JSON.stringify(log.list())).not.toContain("secret-value");
   });
 
   it("uses distinct traces for separate command invocations", async () => {
