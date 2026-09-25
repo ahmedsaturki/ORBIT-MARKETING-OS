@@ -89,7 +89,28 @@ jobs:
         run: pnpm test:e2e
 
       - name: Format check
+        id: format_check
+        continue-on-error: true
         run: pnpm format:check
+
+      - name: Prettier oracle diff
+        if: steps.format_check.outcome == 'failure'
+        run: |
+          pnpm exec prettier --write \
+            docs/ACCEPTANCE_MATRIX_V2.md \
+            docs/ARCHITECTURE.md \
+            docs/LAUNCH_SCORECARD.md \
+            packages/core/src/commands/index.ts \
+            packages/core/src/events/index.ts \
+            packages/desktop/src/components/OperationalEventTimelinePanel.tsx
+          git diff --no-ext-diff --unified=5 -- \
+            docs/ACCEPTANCE_MATRIX_V2.md \
+            docs/ARCHITECTURE.md \
+            docs/LAUNCH_SCORECARD.md \
+            packages/core/src/commands/index.ts \
+            packages/core/src/events/index.ts \
+            packages/desktop/src/components/OperationalEventTimelinePanel.tsx
+          exit 1
 
   rust:
     name: Rust quality
