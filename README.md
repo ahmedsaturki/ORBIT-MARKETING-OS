@@ -60,6 +60,8 @@ A feature is not release-complete merely because its source code exists. Release
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md](docs/ACCEPTANCE_MATRIX_V2.md), and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
 
+Product north star: [docs/TARGET_PRODUCT_BLUEPRINT.md](docs/TARGET_PRODUCT_BLUEPRINT.md) defines the Strategy → Campaign → Content → Execution → CRM/Inbox → Analytics → Learning operating graph and the staged platform roadmap.
+
 Launch control: `docs/LAUNCH_SCORECARD.md`\n\nThe current web product is live on Vercel; desktop artifacts and Android validation artifacts are built by GitHub Actions. Commercial launch remains gated by signing, real connector E2E, soak/rollback, and billing evidence.
 
 Zero-cost technical verification fallback: `docs/SELF_HOSTED_VERIFICATION.md`
