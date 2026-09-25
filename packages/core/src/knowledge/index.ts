@@ -8,10 +8,7 @@ export type KnowledgeSourceType =
   | "user";
 
 export type KnowledgeTrust =
-  | "verified"
-  | "approved"
-  | "observed"
-  | "unverified";
+  "verified" | "approved" | "observed" | "unverified";
 
 export interface KnowledgeSource {
   readonly id: string;
