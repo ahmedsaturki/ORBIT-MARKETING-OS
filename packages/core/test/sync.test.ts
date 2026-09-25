@@ -22,7 +22,9 @@ describe("Yjs sync", () => {
     expect(right.getMap("records").toJSON()).toEqual({ left: "A", right: "B" });
   });
 
-  it("survives encrypted transport disconnect/reconnect and converges across two devices", async () => {
+  it(
+    "survives encrypted transport disconnect/reconnect and converges across two devices",
+    async () => {
     const left = createSyncDocument();
     const right = createSyncDocument();
 
@@ -69,15 +71,16 @@ describe("Yjs sync", () => {
     const rightRecovery = await decryptSyncUpdate(rightEnvelope, key);
     applySyncUpdate(left, rightRecovery);
 
-    expect(left.getMap("records").toJSON()).toEqual({
-      left: "A",
-      right: "B",
-    });
-    expect(right.getMap("records").toJSON()).toEqual({
-      left: "A",
-      right: "B",
-    });
-  });
+      expect(left.getMap("records").toJSON()).toEqual({
+        left: "A",
+        right: "B",
+      });
+      expect(right.getMap("records").toJSON()).toEqual({
+        left: "A",
+        right: "B",
+      });
+    },
+  );
 
   it("rejects encrypted transport replay with the wrong key", async () => {
     const document = createSyncDocument();
@@ -87,9 +90,7 @@ describe("Yjs sync", () => {
     const wrongKey = await generateAes256Key();
     const envelope = await encryptSyncUpdate(encodeSyncUpdate(document), key);
 
-    await expect(
-      decryptSyncUpdate(envelope, wrongKey),
-    ).rejects.toThrow();
+    await expect(decryptSyncUpdate(envelope, wrongKey)).rejects.toThrow();
   });
 
   it("encrypts updates before transport", async () => {
