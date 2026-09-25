@@ -4846,6 +4846,658 @@ fn backup_filename_timestamp() -> String {
 
 
 #[derive(Debug, Serialize)]
+struct MarketingObjectiveView {
+    id: String,
+    name: String,
+    metric: String,
+    target: f64,
+    period_start: String,
+    period_end: String,
+    status: String,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct AudienceView {
+    id: String,
+    name: String,
+    description: String,
+    attributes_json: String,
+    exclusions_json: String,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OfferView {
+    id: String,
+    name: String,
+    promise: String,
+    proof_points_json: String,
+    constraints_json: String,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct StrategyDocumentView {
+    id: String,
+    version: i64,
+    objective_ids_json: String,
+    audience_ids_json: String,
+    offer_ids_json: String,
+    positioning: String,
+    key_messages_json: String,
+    content_pillars_json: String,
+    channels_json: String,
+    status: String,
+    created_at: String,
+    updated_at: String,
+}
+
+fn validate_json_string_array(
+    value: Option<String>,
+    field: &str,
+    max_items: usize,
+) -> Result<String, String> {
+    let raw = value.unwrap_or_else(|| "[]".to_string());
+    let parsed: Vec<String> = serde_json::from_str(&raw)
+        .map_err(|_| format!("{field} must be a JSON array of strings"))?;
+    if parsed.len() > max_items {
+        return Err(format!("{field} contains too many items"));
+    }
+    let cleaned = parsed
+        .into_iter()
+        .map(|item| item.trim().to_string())
+        .collect::<Vec<_>>();
+    if cleaned.iter().any(String::is_empty) {
+        return Err(format!("{field} contains an empty item"));
+    }
+    serde_json::to_string(&cleaned).map_err(|error| error.to_string())
+}
+
+fn validate_json_object(value: Option<String>, field: &str) -> Result<String, String> {
+    let raw = value.unwrap_or_else(|| "{}".to_string());
+    let parsed: serde_json::Value =
+        serde_json::from_str(&raw).map_err(|_| format!("{field} must be valid JSON"))?;
+    if !parsed.is_object() {
+        return Err(format!("{field} must be a JSON object"));
+    }
+    serde_json::to_string(&parsed).map_err(|error| error.to_string())
+}
+
+fn validate_strategy_metric(metric: &str) -> Result<String, String> {
+    let value = metric.trim().to_lowercase();
+    if [
+        "awareness",
+        "engagement",
+        "leads",
+        "opportunities",
+        "revenue",
+        "retention",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported objective metric".to_string())
+    }
+}
+
+fn validate_strategy_status(status: &str) -> Result<String, String> {
+    let value = status.trim().to_lowercase();
+    if ["draft", "active", "paused", "archived"].contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err("unsupported strategy status".to_string())
+    }
+}
+
+fn validate_strategy_reference_ids(
+    connection: &Connection,
+    workspace_id: &str,
+    table: &str,
+    ids_json: &str,
+) -> Result<(), String> {
+    let ids: Vec<String> = serde_json::from_str(ids_json)
+        .map_err(|_| "strategy reference list must be a JSON array".to_string())?;
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let normalized = ids
+        .iter()
+        .map(|id| validate_label(id).map_err(|error| error.to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let sql = match table {
+        "marketing_objectives" => {
+            "SELECT COUNT(*) FROM marketing_objectives WHERE workspace_id=?1 AND id=?2"
+        }
+        "audiences" => "SELECT COUNT(*) FROM audiences WHERE workspace_id=?1 AND id=?2",
+        "offers" => "SELECT COUNT(*) FROM offers WHERE workspace_id=?1 AND id=?2",
+        _ => return Err("unsupported strategy reference table".to_string()),
+    };
+
+    for id in normalized {
+        let found: i64 = connection
+            .query_row(sql, params![workspace_id, id], |row| row.get(0))
+            .map_err(|error| error.to_string())?;
+        if found != 1 {
+            return Err(format!("strategy reference does not belong to active workspace: {id}"));
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn objective_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    name: String,
+    metric: String,
+    target: f64,
+    period_start: String,
+    period_end: String,
+    status: String,
+) -> Result<MarketingObjectiveView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let metric = validate_strategy_metric(&metric)?;
+    if !target.is_finite() || target < 0.0 {
+        return Err("objective target must be a finite non-negative number".to_string());
+    }
+    let period_start = normalize_rfc3339_utc(&period_start)?;
+    let period_end = normalize_rfc3339_utc(&period_end)?;
+    if period_end <= period_start {
+        return Err("objective period_end must be after period_start".to_string());
+    }
+    let status = validate_strategy_status(&status)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO marketing_objectives(
+               id, workspace_id, name, metric, target, period_start, period_end, status,
+               created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name,
+               metric=excluded.metric,
+               target=excluded.target,
+               period_start=excluded.period_start,
+               period_end=excluded.period_end,
+               status=excluded.status,
+               updated_at=excluded.updated_at
+             WHERE marketing_objectives.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                name,
+                metric,
+                target,
+                period_start,
+                period_end,
+                status,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("objective id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "strategy",
+        "objective_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(MarketingObjectiveView {
+        id,
+        name,
+        metric,
+        target,
+        period_start,
+        period_end,
+        status,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn objective_list(app: tauri::AppHandle) -> Result<Vec<MarketingObjectiveView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, metric, target, period_start, period_end, status, created_at, updated_at
+             FROM marketing_objectives
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(MarketingObjectiveView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                metric: row.get(2)?,
+                target: row.get(3)?,
+                period_start: row.get(4)?,
+                period_end: row.get(5)?,
+                status: row.get(6)?,
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn audience_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    name: String,
+    description: String,
+    attributes_json: Option<String>,
+    exclusions_json: Option<String>,
+) -> Result<AudienceView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    if description.trim().len() > 10_000 {
+        return Err("audience description is too long".to_string());
+    }
+    let attributes_json = validate_json_object(attributes_json, "attributes_json")?;
+    let exclusions_json = validate_json_string_array(exclusions_json, "exclusions_json", 100)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let description = description.trim().to_string();
+    let changed = connection
+        .execute(
+            "INSERT INTO audiences(
+               id, workspace_id, name, description, attributes_json, exclusions_json, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name,
+               description=excluded.description,
+               attributes_json=excluded.attributes_json,
+               exclusions_json=excluded.exclusions_json,
+               updated_at=excluded.updated_at
+             WHERE audiences.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                name,
+                description,
+                attributes_json,
+                exclusions_json,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("audience id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "strategy",
+        "audience_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(AudienceView {
+        id,
+        name,
+        description,
+        attributes_json,
+        exclusions_json,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn audience_list(app: tauri::AppHandle) -> Result<Vec<AudienceView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, description, attributes_json, exclusions_json, created_at, updated_at
+             FROM audiences
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(AudienceView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                attributes_json: row.get(3)?,
+                exclusions_json: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn offer_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    name: String,
+    promise: String,
+    proof_points_json: Option<String>,
+    constraints_json: Option<String>,
+) -> Result<OfferView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    if promise.trim().is_empty() || promise.len() > 10_000 {
+        return Err("offer promise is invalid".to_string());
+    }
+    let proof_points_json = validate_json_string_array(proof_points_json, "proof_points_json", 100)?;
+    let constraints_json = validate_json_string_array(constraints_json, "constraints_json", 100)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let promise = promise.trim().to_string();
+    let changed = connection
+        .execute(
+            "INSERT INTO offers(
+               id, workspace_id, name, promise, proof_points_json, constraints_json, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name,
+               promise=excluded.promise,
+               proof_points_json=excluded.proof_points_json,
+               constraints_json=excluded.constraints_json,
+               updated_at=excluded.updated_at
+             WHERE offers.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                name,
+                promise,
+                proof_points_json,
+                constraints_json,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("offer id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "strategy",
+        "offer_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(OfferView {
+        id,
+        name,
+        promise,
+        proof_points_json,
+        constraints_json,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn offer_list(app: tauri::AppHandle) -> Result<Vec<OfferView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, promise, proof_points_json, constraints_json, created_at, updated_at
+             FROM offers
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(OfferView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                promise: row.get(2)?,
+                proof_points_json: row.get(3)?,
+                constraints_json: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn strategy_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    version: i64,
+    objective_ids_json: Option<String>,
+    audience_ids_json: Option<String>,
+    offer_ids_json: Option<String>,
+    positioning: String,
+    key_messages_json: Option<String>,
+    content_pillars_json: Option<String>,
+    channels_json: Option<String>,
+    status: String,
+) -> Result<StrategyDocumentView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    if version < 1 {
+        return Err("strategy version must be at least 1".to_string());
+    }
+    if positioning.trim().is_empty() || positioning.len() > 20_000 {
+        return Err("strategy positioning is invalid".to_string());
+    }
+    let objective_ids_json = validate_json_string_array(objective_ids_json, "objective_ids_json", 100)?;
+    let audience_ids_json = validate_json_string_array(audience_ids_json, "audience_ids_json", 100)?;
+    let offer_ids_json = validate_json_string_array(offer_ids_json, "offer_ids_json", 100)?;
+    let key_messages_json = validate_json_string_array(key_messages_json, "key_messages_json", 100)?;
+    let content_pillars_json =
+        validate_json_string_array(content_pillars_json, "content_pillars_json", 100)?;
+    let channels_json = validate_json_string_array(channels_json, "channels_json", 50)?;
+    let status = validate_strategy_status(&status)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    validate_strategy_reference_ids(
+        &connection,
+        &workspace_id,
+        "marketing_objectives",
+        &objective_ids_json,
+    )?;
+    validate_strategy_reference_ids(
+        &connection,
+        &workspace_id,
+        "audiences",
+        &audience_ids_json,
+    )?;
+    validate_strategy_reference_ids(
+        &connection,
+        &workspace_id,
+        "offers",
+        &offer_ids_json,
+    )?;
+
+    let positioning = positioning.trim().to_string();
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO strategy_documents(
+               id, workspace_id, version, objective_ids_json, audience_ids_json, offer_ids_json,
+               positioning, key_messages_json, content_pillars_json, channels_json, status,
+               created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?12)
+             ON CONFLICT(id) DO UPDATE SET
+               version=excluded.version,
+               objective_ids_json=excluded.objective_ids_json,
+               audience_ids_json=excluded.audience_ids_json,
+               offer_ids_json=excluded.offer_ids_json,
+               positioning=excluded.positioning,
+               key_messages_json=excluded.key_messages_json,
+               content_pillars_json=excluded.content_pillars_json,
+               channels_json=excluded.channels_json,
+               status=excluded.status,
+               updated_at=excluded.updated_at
+             WHERE strategy_documents.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                version,
+                objective_ids_json,
+                audience_ids_json,
+                offer_ids_json,
+                positioning,
+                key_messages_json,
+                content_pillars_json,
+                channels_json,
+                status,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("strategy id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "strategy",
+        "document_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(StrategyDocumentView {
+        id,
+        version,
+        objective_ids_json,
+        audience_ids_json,
+        offer_ids_json,
+        positioning,
+        key_messages_json,
+        content_pillars_json,
+        channels_json,
+        status,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn strategy_list(app: tauri::AppHandle) -> Result<Vec<StrategyDocumentView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, version, objective_ids_json, audience_ids_json, offer_ids_json,
+                    positioning, key_messages_json, content_pillars_json, channels_json,
+                    status, created_at, updated_at
+             FROM strategy_documents
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(StrategyDocumentView {
+                id: row.get(0)?,
+                version: row.get(1)?,
+                objective_ids_json: row.get(2)?,
+                audience_ids_json: row.get(3)?,
+                offer_ids_json: row.get(4)?,
+                positioning: row.get(5)?,
+                key_messages_json: row.get(6)?,
+                content_pillars_json: row.get(7)?,
+                channels_json: row.get(8)?,
+                status: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[derive(Debug, Serialize)]
 struct OperationalLinkView {
     workspace_id: String,
     from_type: String,
@@ -8146,6 +8798,14 @@ pub fn run() {
             automation_rule_pack_upsert,
             automation_rule_pack_set_enabled,
             automation_rule_pack_list,
+            objective_upsert,
+            objective_list,
+            audience_upsert,
+            audience_list,
+            offer_upsert,
+            offer_list,
+            strategy_upsert,
+            strategy_list,
             operational_link_upsert,
             operational_link_list,
             operational_link_delete,
