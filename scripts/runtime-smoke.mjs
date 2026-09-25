@@ -1,137 +1,193 @@
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-  }
+import { createServer } from "node:http";
+import { spawn, spawnSync } from "node:child_process";
 
-  if (!response) {
-    throw new Error(lastError);
-  }
+const OLLAMA_PORT = 3110;
+const RUNTIME_PORT = 3101;
+const AUTH_PORT = 3102;
+const BRUTE_FORCE_PORT = 3103;
 
-  const body = await response.json();
-  if (response.status !== 200) {
-    throw new Error(`health returned HTTP ${response.status}`);
-  }
-  if (body?.provider !== "ollama-local") {
-    throw new Error("health provider contract mismatch");
-  }
-  if (!["ok", "degraded"].includes(body?.status)) {
-    throw new Error("health status contract mismatch");
-  }
-  const loopbackBrowserBlocked = await fetch(`http://127.0.0.1:${port}/api/health`, {
-    headers: { Origin: "https://untrusted.example" },
-  });
-  if (loopbackBrowserBlocked.status !== 403) {
-    throw new Error("loopback runtime must reject unconfigured browser origins");
-  }
-
-  const tauriOriginHealth = await fetch(`http://127.0.0.1:${port}/api/health`, {
-    headers: { Origin: "http://tauri.localhost" },
-  });
-  if (tauriOriginHealth.status !== 200) {
-    throw new Error("official Tauri webview origin must be allowed by default");
-  }
-
-  const tauriDevOriginHealth = await fetch(`http://127.0.0.1:${port}/api/health`, {
-    headers: { Origin: "http://127.0.0.1:1420" },
-  });
-  if (tauriDevOriginHealth.status !== 200) {
-    throw new Error("Tauri development origin must be allowed by default");
-  }
-
-  const generation = await fetch(`http://127.0.0.1:${port}/api/generate-content`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      topic: "اختبار ORBIT",
-      dialect: "فصحى مبسطة",
-      tone: "احترافي",
-      targetAudience: "اختبار",
-    }),
-  });
-  if (generation.status !== 200) {
-    throw new Error(`generation returned HTTP ${generation.status}`);
-  }
-  if (!capturedOllamaBody?.options || capturedOllamaBody.options.num_ctx !== 4096) {
-    throw new Error("Ollama context budget contract mismatch");
-  }
-  if (capturedOllamaBody.model !== "llama3.2:3b") {
-    throw new Error("resource-aware default model contract mismatch");
-  }
-
-  const chat = await fetch(`http://127.0.0.1:${port}/api/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      messages: [{ role: "user", text: "اختبار محادثة ORBIT" }],
-      roleId: "copywriter",
-      profile: "fast",
-    }),
-  });
-  if (chat.status !== 200) {
-    throw new Error(`chat returned HTTP ${chat.status}`);
-  }
-  const chatBody = await chat.json();
-  if (chatBody?.provider !== "ollama-local" || chatBody?.text !== "fake ollama response") {
-    throw new Error("chat response contract mismatch");
-  }
-  if (capturedOllamaBody.model !== "llama3.2:3b") {
-    throw new Error("chat model contract mismatch");
-  }
-  if (!Array.isArray(capturedOllamaBody.messages) || capturedOllamaBody.messages.at(-1)?.content !== "اختبار محادثة ORBIT") {
-    throw new Error("chat Ollama payload contract mismatch");
-  }
-
-  const imageAnalysis = await fetch(`http://127.0.0.1:${port}/api/analyze-image`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      imageBase64: "AAAA",
-      analysisType: "comprehensive",
-    }),
-  });
-  if (imageAnalysis.status !== 503) {
-    throw new Error("image analysis must require an explicitly configured vision model");
-  }
-
-  console.log("runtime AI smoke passed", JSON.stringify({
-    health: body,
-    model: capturedOllamaBody.model,
-    num_ctx: capturedOllamaBody.options.num_ctx,
-  }));
-} finally {
-  child.kill("SIGTERM");
-  await waitForChildExit(child);
-  if (child.exitCode !== null && child.exitCode !== 0) {
-    console.error(logs);
-    throw new Error(`runtime process exited with code ${child.exitCode}`);
-  }
+async function waitForChildExit(child, timeoutMs = 3_000) {
+  if (child.exitCode !== null) return;
+  await Promise.race([
+    new Promise((resolve) => child.once("exit", resolve)),
+    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
 }
 
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+let capturedOllamaBody = null;
+const ollamaServer = createServer((req, res) => {
+  if (req.method === "GET" && req.url === "/api/tags") {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ models: [{ name: "llama3.2:3b" }] }));
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/chat") {
+    let body = "";
+    req.setEncoding("utf8");
+    req.on("data", (chunk) => { body += chunk; });
+    req.on("end", () => {
+      try {
+        capturedOllamaBody = JSON.parse(body);
+      } catch {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid fake ollama request" }));
+        return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({
+        model: capturedOllamaBody?.model ?? "llama3.2:3b",
+        message: { role: "assistant", content: "fake ollama response" },
+      }));
+    });
+    return;
+  }
+  res.writeHead(404);
+  res.end();
+});
+
+await new Promise((resolve, reject) => {
+  ollamaServer.once("error", reject);
+  ollamaServer.listen(OLLAMA_PORT, "127.0.0.1", resolve);
+});
+process.once("exit", () => ollamaServer.close());
 
 for (const url of [
   "http://user:password@example.com:11434",
   "http://example.com:11434",
   "https://example.com:11434",
 ]) {
-  const probe = (await import("node:child_process")).spawnSync(
-    "pnpm",
-    ["exec", "tsx", "server.ts"],
+  const probe = spawnSync("pnpm", ["exec", "tsx", "server.ts"], {
+    env: { ...process.env, OLLAMA_BASE_URL: url, PORT: "3199" },
+    encoding: "utf8",
+  });
+  const output = (probe.stderr ?? "") + (probe.stdout ?? "");
+  assert(probe.status !== 0 && /OLLAMA_BASE_URL/.test(output),
+    "runtime must reject unsafe Ollama endpoint: " + url);
+}
+
+const child = spawn("pnpm", ["runtime:start"], {
+  env: {
+    ...process.env,
+    PORT: String(RUNTIME_PORT),
+    RUNTIME_HOST: "127.0.0.1",
+    OLLAMA_BASE_URL: "http://127.0.0.1:" + OLLAMA_PORT,
+  },
+  stdio: ["ignore", "pipe", "pipe"],
+  shell: process.platform === "win32",
+});
+let logs = "";
+child.stdout.on("data", (chunk) => { logs += String(chunk); });
+child.stderr.on("data", (chunk) => { logs += String(chunk); });
+
+try {
+  let response;
+  let lastError = "runtime did not respond";
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    try {
+      response = await fetch("http://127.0.0.1:" + RUNTIME_PORT + "/api/health");
+      break;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+  if (!response) throw new Error(lastError);
+
+  const body = await response.json();
+  assert(response.status === 200, "health returned HTTP " + response.status);
+  assert(body?.provider === "ollama-local", "health provider contract mismatch");
+  assert(["ok", "degraded"].includes(body?.status), "health status contract mismatch");
+  assert(body?.ai?.status === "ok", "fake Ollama fixture must report healthy AI state");
+
+  const loopbackBrowserBlocked = await fetch(
+    "http://127.0.0.1:" + RUNTIME_PORT + "/api/health",
+    { headers: { Origin: "https://untrusted.example" } },
+  );
+  assert(loopbackBrowserBlocked.status === 403, "loopback runtime must reject untrusted browser origins");
+
+  const tauriOriginHealth = await fetch(
+    "http://127.0.0.1:" + RUNTIME_PORT + "/api/health",
+    { headers: { Origin: "http://tauri.localhost" } },
+  );
+  assert(tauriOriginHealth.status === 200, "Tauri webview origin must be allowed");
+
+  const tauriDevOriginHealth = await fetch(
+    "http://127.0.0.1:" + RUNTIME_PORT + "/api/health",
+    { headers: { Origin: "http://127.0.0.1:1420" } },
+  );
+  assert(tauriDevOriginHealth.status === 200, "Tauri development origin must be allowed");
+
+  const generation = await fetch(
+    "http://127.0.0.1:" + RUNTIME_PORT + "/api/generate-content",
     {
-      env: { ...process.env, OLLAMA_BASE_URL: url, PORT: "3199" },
-      encoding: "utf8",
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        topic: "اختبار ORBIT",
+        dialect: "فصحى مبسطة",
+        tone: "احترافي",
+        targetAudience: "اختبار",
+      }),
     },
   );
-  const output = (probe.stderr ?? "") + (probe.stdout ?? "");
-  if (probe.status === 0 || !/OLLAMA_BASE_URL/.test(output)) {
-    throw new Error("runtime must reject unsafe Ollama endpoint: " + url);
+  assert(generation.status === 200, "generation returned HTTP " + generation.status);
+  assert(capturedOllamaBody?.options?.num_ctx === 4096, "Ollama context budget contract mismatch");
+  assert(capturedOllamaBody?.model === "llama3.2:3b", "default model contract mismatch");
+
+  const chat = await fetch(
+    "http://127.0.0.1:" + RUNTIME_PORT + "/api/chat",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", text: "اختبار محادثة ORBIT" }],
+        roleId: "copywriter",
+        profile: "fast",
+      }),
+    },
+  );
+  assert(chat.status === 200, "chat returned HTTP " + chat.status);
+  const chatBody = await chat.json();
+  assert(chatBody?.provider === "ollama-local" && chatBody?.text === "fake ollama response",
+    "chat response contract mismatch");
+  assert(Array.isArray(capturedOllamaBody?.messages) &&
+    capturedOllamaBody.messages.at(-1)?.content === "اختبار محادثة ORBIT",
+    "chat Ollama payload contract mismatch");
+
+  const imageAnalysis = await fetch(
+    "http://127.0.0.1:" + RUNTIME_PORT + "/api/analyze-image",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ imageBase64: "AAAA", analysisType: "comprehensive" }),
+    },
+  );
+  assert(imageAnalysis.status === 503, "image analysis must require configured vision model");
+
+  console.log("runtime AI smoke passed", JSON.stringify({
+    health: body,
+    model: capturedOllamaBody?.model,
+    num_ctx: capturedOllamaBody?.options?.num_ctx,
+  }));
+} finally {
+  child.kill("SIGTERM");
+  await waitForChildExit(child);
+  if (child.exitCode !== null && child.exitCode !== 0) {
+    console.error(logs);
+    throw new Error("runtime process exited with code " + child.exitCode);
   }
 }
 
-const authPort = "3102";
 const authToken = "orbit-test-token";
 const authChild = spawn("pnpm", ["runtime:start"], {
   env: {
     ...process.env,
-    PORT: authPort,
+    PORT: String(AUTH_PORT),
     RUNTIME_HOST: "0.0.0.0",
     RUNTIME_AUTH_TOKEN: authToken,
     RUNTIME_ALLOWED_ORIGINS: "https://allowed.example",
@@ -143,81 +199,76 @@ const authChild = spawn("pnpm", ["runtime:start"], {
 });
 let authLogs = "";
 authChild.stdout.on("data", (chunk) => { authLogs += String(chunk); });
-
 authChild.stderr.on("data", (chunk) => { authLogs += String(chunk); });
 
 try {
   let authReady = false;
-  const authDeadline = Date.now() + 15_000;
-  while (Date.now() < authDeadline) {
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
     try {
-      const response = await fetch(`http://127.0.0.1:${authPort}/api/health`);
-      if (response.status === 503) {
+      const probe = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health");
+      if (probe.status === 503) {
         authReady = true;
         break;
       }
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  if (!authReady) throw new Error("LAN runtime did not enforce missing-token block");
+  assert(authReady, "LAN runtime did not enforce missing-token block");
 
-  const unauthorized = await fetch(`http://127.0.0.1:${authPort}/api/health`);
-  if (unauthorized.status !== 503) throw new Error("expected 503 without LAN token");
+  const unauthorized = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health");
+  assert(unauthorized.status === 503, "expected 503 without LAN token");
 
-  const wrong = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+  const wrong = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health", {
     headers: { Authorization: "Bearer wrong-token" },
   });
-  if (wrong.status !== 401) throw new Error("expected 401 with wrong LAN token");
+  assert(wrong.status === 401, "expected 401 with wrong LAN token");
 
-  const oversized = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+  const oversized = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health", {
     headers: { Authorization: "Bearer " + "x".repeat(1025) },
   });
-  if (oversized.status !== 401) throw new Error("expected 401 for oversized bearer credential");
+  assert(oversized.status === 401, "expected 401 for oversized bearer credential");
 
-  const blockedOrigin = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+  const blockedOrigin = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health", {
     headers: {
-      Authorization: `Bearer ${authToken}`,
+      Authorization: "Bearer " + authToken,
       Origin: "https://blocked.example",
     },
   });
-  if (blockedOrigin.status !== 403) throw new Error("expected 403 for disallowed browser origin");
+  assert(blockedOrigin.status === 403, "expected 403 for blocked origin");
 
-  const allowedOrigin = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
+  const allowedOrigin = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health", {
     headers: {
-      Authorization: `Bearer ${authToken}`,
+      Authorization: "Bearer " + authToken,
       Origin: "https://allowed.example",
     },
   });
-  if (allowedOrigin.status !== 200) throw new Error("expected 200 for allowed browser origin");
+  assert(allowedOrigin.status === 200, "expected 200 for allowed origin");
 
-  const rateResponses: number[] = [];
+  const rateResponses = [];
   for (let index = 0; index < 3; index += 1) {
-    const response = await fetch(`http://127.0.0.1:${authPort}/api/health`, {
-      headers: { Authorization: `Bearer ${authToken}` },
+    const rateResponse = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health", {
+      headers: { Authorization: "Bearer " + authToken },
     });
-    rateResponses.push(response.status);
+    rateResponses.push(rateResponse.status);
   }
-  if (rateResponses.at(-1) !== 429) {
-    throw new Error("expected 429 after exceeding runtime rate limit");
-  }
-
+  assert(rateResponses.at(-1) === 429, "expected 429 after exceeding runtime rate limit");
   console.log("runtime LAN perimeter smoke passed");
 } finally {
   authChild.kill("SIGTERM");
   await waitForChildExit(authChild);
   if (authChild.exitCode !== null && authChild.exitCode !== 0) {
     console.error(authLogs);
-    throw new Error(`LAN runtime exited with code ${authChild.exitCode}`);
+    throw new Error("LAN runtime exited with code " + authChild.exitCode);
   }
 }
 
-const bruteForcePort = "3103";
 const bruteForceChild = spawn("pnpm", ["runtime:start"], {
   env: {
     ...process.env,
-    PORT: bruteForcePort,
+    PORT: String(BRUTE_FORCE_PORT),
     RUNTIME_HOST: "0.0.0.0",
-    RUNTIME_AUTH_TOKEN: "orbit-test-token",
+    RUNTIME_AUTH_TOKEN: authToken,
     RUNTIME_RATE_LIMIT: "2",
     RUNTIME_ALLOWED_ORIGINS: "",
     OLLAMA_BASE_URL: "http://127.0.0.1:9",
@@ -234,7 +285,7 @@ try {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`http://127.0.0.1:${bruteForcePort}/api/health`, {
+      const response = await fetch("http://127.0.0.1:" + BRUTE_FORCE_PORT + "/api/health", {
         headers: { Authorization: "Bearer wrong-token" },
       });
       if (response.status === 401) {
@@ -244,24 +295,25 @@ try {
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  if (!ready) throw new Error("brute-force perimeter runtime did not start");
+  assert(ready, "brute-force perimeter runtime did not start");
 
-  const firstInvalid = await fetch(`http://127.0.0.1:${bruteForcePort}/api/health`, {
+  const firstInvalid = await fetch("http://127.0.0.1:" + BRUTE_FORCE_PORT + "/api/health", {
     headers: { Authorization: "Bearer wrong-token" },
   });
-  if (firstInvalid.status !== 401) throw new Error("first invalid token should return 401");
+  assert(firstInvalid.status === 401, "first invalid token should return 401");
 
-  const secondInvalid = await fetch(`http://127.0.0.1:${bruteForcePort}/api/health`, {
+  const secondInvalid = await fetch("http://127.0.0.1:" + BRUTE_FORCE_PORT + "/api/health", {
     headers: { Authorization: "Bearer wrong-token" },
   });
-  if (secondInvalid.status !== 429) throw new Error("repeated invalid tokens must be rate-limited");
+  assert(secondInvalid.status === 429, "repeated invalid tokens must be rate-limited");
+
   console.log("runtime invalid-token rate-limit smoke passed");
 } finally {
   bruteForceChild.kill("SIGTERM");
   await waitForChildExit(bruteForceChild);
   if (bruteForceChild.exitCode !== null && bruteForceChild.exitCode !== 0) {
     console.error(bruteForceLogs);
-    throw new Error(`brute-force runtime exited with code ${bruteForceChild.exitCode}`);
+    throw new Error("brute-force runtime exited with code " + bruteForceChild.exitCode);
   }
 }
 
