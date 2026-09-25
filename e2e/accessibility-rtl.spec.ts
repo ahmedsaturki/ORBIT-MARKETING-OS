@@ -16,7 +16,7 @@ test.describe("ORBIT public accessibility and RTL baseline", () => {
 
     for (let index = 0; index < count; index += 1) {
       const link = links.nth(index);
-      await expect(link).toHaveAccessibleName();
+      await expect(link).toHaveAccessibleName(/.+/);
       await expect(link).toHaveAttribute("href", /.+/);
     }
   });
