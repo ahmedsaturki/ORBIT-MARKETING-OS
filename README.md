@@ -6,11 +6,11 @@ Current real connector coverage: Telegram has a native API path and LinkedIn has
 
 ## Repository status
 
-The repository is converging the initial React/Vite/Express prototype into the production monorepo architecture through PR #9.
+The repository is converging the initial React/Vite/Express prototype into the production monorepo architecture through PR #10.
 
 The current production rebuild branch is:
 
-`rebuild/orbit-production-consolidated`
+`rebuild/orbit-production-final`
 
 The rebuild is acceptance-driven: implementation is not considered complete until it has automated tests, integration evidence, security checks, performance evidence, documentation, and a releasable artifact where applicable.
 
