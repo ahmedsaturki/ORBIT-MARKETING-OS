@@ -1,21 +1,21 @@
 name: ORBIT pull request format repair
 
 on:
-  pull_request:
-    types: [synchronize, opened, reopened]
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   format:
-    if: github.event.pull_request.number == 39
+    if: startsWith(github.event.head_commit.message, "[ORBIT FORMAT]")
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: feat/orbit-operating-graph-kernel-20260925
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: pnpm/action-setup@v4
@@ -41,4 +41,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add             docs/ACCEPTANCE_MATRIX_V2.md             docs/LAUNCH_SCORECARD.md             docs/PRODUCT_SURFACE_MATRIX.md             packages/core/src/database/schema.test.ts             packages/core/src/execution/decision.ts             packages/core/src/graph/context.test.ts             packages/core/src/graph/context.ts             packages/core/src/graph/index.test.ts             packages/core/src/graph/index.ts             packages/core/src/outcomes/index.ts             packages/desktop/src/App.tsx             packages/desktop/src/components/MissionControlPanel.tsx             packages/desktop/src/components/OutcomesPanel.tsx             packages/desktop/src/components/StrategyStudioPanel.tsx             scripts/verify-ipc.mjs
           git commit -m "chore: format operating model surfaces"
-          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          git push origin HEAD:feat/orbit-operating-graph-kernel-20260925
