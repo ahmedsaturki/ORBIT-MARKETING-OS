@@ -95,7 +95,9 @@ const RULES: ReadonlyArray<(input: MissionControlInput) => Rule> = [
 export function deriveNextActions(
   input: MissionControlInput,
 ): readonly NextActionCandidate[] {
-  if (!input.workspaceId.trim()) throw new Error("mission_control_workspace_required");
+  if (!input.workspaceId.trim()) {
+    throw new Error("mission_control_workspace_required");
+  }
   if (!input.now.trim() || Number.isNaN(Date.parse(input.now))) {
     throw new Error("mission_control_invalid_timestamp");
   }
