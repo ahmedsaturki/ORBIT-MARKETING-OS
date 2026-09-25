@@ -25,20 +25,40 @@ describe("Yjs sync", () => {
   it(
     "survives encrypted transport disconnect/reconnect and converges across two devices",
     async () => {
-    const left = createSyncDocument();
-    const right = createSyncDocument();
+      const left = createSyncDocument();
+      const right = createSyncDocument();
 
-    left.getMap("records").set("left", "A");
-    const key = await generateAes256Key();
+      left.getMap("records").set("left", "A");
+      const key = await generateAes256Key();
 
-    // Opaque transport queue: ciphertext may be buffered during disconnect,
-    // then delivered and applied only after the link is restored.
-    const offlineQueue: string[] = [];
-    let connected = false;
-    const send = async (update: Uint8Array): Promise<void> => {
-      const envelope = await encryptSyncUpdate(update, key);
-      offlineQueue.push(envelope.update);
-      if (!connected) return;
+      // Opaque transport queue: ciphertext may be buffered during disconnect,
+      // then delivered and applied only after the link is restored.
+      const offlineQueue: string[] = [];
+      let connected = false;
+      const send = async (update: Uint8Array): Promise<void> => {
+        const envelope = await encryptSyncUpdate(update, key);
+        offlineQueue.push(envelope.update);
+        if (!connected) return;
+        while (offlineQueue.length) {
+          const transportPayload = offlineQueue.shift()!;
+          const recovered = await decryptSyncUpdate(
+            { version: 1, update: transportPayload },
+            key,
+          );
+          applySyncUpdate(right, recovered);
+        }
+      };
+
+      await send(encodeSyncUpdate(left));
+      expect(right.getMap("records").toJSON()).toEqual({});
+
+      right.getMap("records").set("right", "B");
+      const rightUpdate = encodeSyncUpdate(right);
+      const rightEnvelope = await encryptSyncUpdate(rightUpdate, key);
+      expect(rightEnvelope.update).not.toContain("left");
+      expect(rightEnvelope.update).not.toContain("right");
+
+      connected = true;
       while (offlineQueue.length) {
         const transportPayload = offlineQueue.shift()!;
         const recovered = await decryptSyncUpdate(
@@ -47,29 +67,9 @@ describe("Yjs sync", () => {
         );
         applySyncUpdate(right, recovered);
       }
-    };
 
-    await send(encodeSyncUpdate(left));
-    expect(right.getMap("records").toJSON()).toEqual({});
-
-    right.getMap("records").set("right", "B");
-    const rightUpdate = encodeSyncUpdate(right);
-    const rightEnvelope = await encryptSyncUpdate(rightUpdate, key);
-    expect(rightEnvelope.update).not.toContain("left");
-    expect(rightEnvelope.update).not.toContain("right");
-
-    connected = true;
-    while (offlineQueue.length) {
-      const transportPayload = offlineQueue.shift()!;
-      const recovered = await decryptSyncUpdate(
-        { version: 1, update: transportPayload },
-        key,
-      );
-      applySyncUpdate(right, recovered);
-    }
-
-    const rightRecovery = await decryptSyncUpdate(rightEnvelope, key);
-    applySyncUpdate(left, rightRecovery);
+      const rightRecovery = await decryptSyncUpdate(rightEnvelope, key);
+      applySyncUpdate(left, rightRecovery);
 
       expect(left.getMap("records").toJSON()).toEqual({
         left: "A",
