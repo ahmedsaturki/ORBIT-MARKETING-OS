@@ -913,27 +913,27 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
     }
 
     if version < 8 && !has_column(connection, "vault_records", "workspace_id")? {
-            let transaction = connection.unchecked_transaction()?;
-            transaction.execute_batch(
-                "CREATE TABLE IF NOT EXISTS vault_records (
-                   label TEXT PRIMARY KEY,
-                   payload_json TEXT NOT NULL,
-                   updated_at TEXT NOT NULL
-                 );
-                 CREATE TABLE vault_records_v8 (
-                   workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
-                   label TEXT NOT NULL,
-                   payload_json TEXT NOT NULL,
-                   updated_at TEXT NOT NULL,
-                   PRIMARY KEY (workspace_id, label)
-                 );
-                 INSERT INTO vault_records_v8(workspace_id, label, payload_json, updated_at)
-                 SELECT 'default', label, payload_json, updated_at
-                 FROM vault_records;
-                 DROP TABLE vault_records;
-                 ALTER TABLE vault_records_v8 RENAME TO vault_records;",
-            )?;
-            transaction.commit()?;
+        let transaction = connection.unchecked_transaction()?;
+        transaction.execute_batch(
+            "CREATE TABLE IF NOT EXISTS vault_records (
+               label TEXT PRIMARY KEY,
+               payload_json TEXT NOT NULL,
+               updated_at TEXT NOT NULL
+             );
+             CREATE TABLE vault_records_v8 (
+               workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+               label TEXT NOT NULL,
+               payload_json TEXT NOT NULL,
+               updated_at TEXT NOT NULL,
+               PRIMARY KEY (workspace_id, label)
+             );
+             INSERT INTO vault_records_v8(workspace_id, label, payload_json, updated_at)
+             SELECT 'default', label, payload_json, updated_at
+             FROM vault_records;
+             DROP TABLE vault_records;
+             ALTER TABLE vault_records_v8 RENAME TO vault_records;",
+        )?;
+        transaction.commit()?;
     }
 
     if version < 10 {
@@ -4300,10 +4300,20 @@ fn retry_delay_ms(next_attempt: i64) -> i64 {
     delay.min(60_000)
 }
 
-#[tauri::command]
 type TaskFailureRow = (
-    i64, i64, String, Option<String>, Option<String>, String, String,
-    String, i64, String, String, String, String,
+    i64,
+    i64,
+    String,
+    Option<String>,
+    Option<String>,
+    String,
+    String,
+    String,
+    i64,
+    String,
+    String,
+    String,
+    String,
 );
 
 fn task_fail(app: tauri::AppHandle, id: String, now: String) -> Result<TaskView, String> {
@@ -7493,10 +7503,8 @@ mod execution_counter_tests {
 pub fn run() {
     let result = tauri::Builder::default()
         .setup(|app| {
-            let connection = open_db(app.handle())
-                .map_err(Box::<dyn std::error::Error>::from)?;
-            recover_interrupted_tasks(&connection)
-                .map_err(Box::<dyn std::error::Error>::from)?;
+            let connection = open_db(app.handle()).map_err(Box::<dyn std::error::Error>::from)?;
+            recover_interrupted_tasks(&connection).map_err(Box::<dyn std::error::Error>::from)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
