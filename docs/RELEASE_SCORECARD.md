@@ -71,7 +71,7 @@ Status meanings:
 | PERF-01 Startup budget         | UNVERIFIED               | Measurement pending                                                         |
 | PERF-02 Memory budget          | UNVERIFIED               | Measurement pending                                                         |
 | QA-01 Coverage threshold       | VERIFIED                 | Main CI coverage gate passed                                                |
-| QA-02 Critical E2E             | VERIFIED*                | Main browser E2E passed; native Windows E2E remains tied to PR #35          |
+| QA-02 Critical E2E             | VERIFIED*                | Main browser E2E passed; native Windows E2E remains tied to PR #38          |
 | DOC-01 Product docs match      | IMPLEMENTED / UNVERIFIED | Architecture/deployment/user/security/release docs updated                  |
 | DOC-02 Security model          | IMPLEMENTED / UNVERIFIED | Threat model + security gates present                                       |
 
