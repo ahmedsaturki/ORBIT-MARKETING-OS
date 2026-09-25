@@ -69,9 +69,11 @@ jobs:
         run: pnpm --filter @orbit/core test:coverage
 
       - name: Runtime smoke
+        timeout-minutes: 3
         run: pnpm test:runtime
 
       - name: Performance smoke
+        timeout-minutes: 3
         run: pnpm test:performance
 
       - name: Build
@@ -81,6 +83,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Web E2E
+        timeout-minutes: 5
         run: pnpm test:e2e
 
       - name: Format check
