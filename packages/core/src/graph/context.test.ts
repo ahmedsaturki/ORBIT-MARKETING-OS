@@ -85,6 +85,23 @@ describe("bounded operating graph context", () => {
     expect(context.links).toHaveLength(1);
   });
 
+  it("rejects roots that belong to another workspace", () => {
+    const graphWithForeignRoot: OperatingGraph = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        { id: "foreign", type: "strategy", workspaceId: "ws-2" },
+      ],
+    };
+
+    expect(() =>
+      projectGraphContext(graphWithForeignRoot, {
+        type: "strategy",
+        id: "foreign",
+      }),
+    ).toThrow("graph_root_workspace_mismatch");
+  });
+
   it("rejects unknown roots instead of silently returning empty context", () => {
     expect(() =>
       projectGraphContext(graph, { type: "campaign", id: "missing" }),
