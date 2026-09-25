@@ -1,5 +1,5 @@
 /**
- * Build the Tauri desktop shell with the correct MSVC environment on machines
+ * Build the production Tauri desktop shell with the correct MSVC environment on machines
  * where a standalone GNU Rust install shadows rustup on PATH.
  *
  * - forces the rustup stable-x86_64-pc-windows-msvc toolchain (RUSTC + PATH)
@@ -16,6 +16,7 @@ import { homedir, tmpdir } from "node:os";
 
 const release = process.argv.includes("--release");
 const root = join(import.meta.dirname, "..");
+const desktopTauriRoot = join(root, "packages", "desktop", "src-tauri");
 
 function findVcvars() {
   const candidates = [
@@ -94,7 +95,7 @@ console.log(`cargo ${cargoArgs.join(" ")}`);
 let code = 1;
 try {
   const res = spawnSync("cmd", ["/c", bat], {
-    cwd: join(root, "src-tauri"),
+    cwd: desktopTauriRoot,
     stdio: "inherit",
   });
   code = res.status ?? 1;
