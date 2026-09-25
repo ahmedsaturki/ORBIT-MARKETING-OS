@@ -135,12 +135,22 @@ export class CommandRegistry {
   public register(command: CommandDefinition): void {
     if (!command.id.trim()) throw new Error("command_id_required");
     if (this.commands.has(command.id)) throw new Error("command_duplicate");
-    this.commands.set(command.id, { ...command, scopes: [...command.scopes], surfaces: [...command.surfaces] });
+    this.commands.set(command.id, {
+      ...command,
+      scopes: [...command.scopes],
+      surfaces: [...command.surfaces],
+    });
   }
 
   public get(commandId: string): CommandDefinition | undefined {
     const command = this.commands.get(commandId);
-    return command ? { ...command, scopes: [...command.scopes], surfaces: [...command.surfaces] } : undefined;
+    return command
+      ? {
+          ...command,
+          scopes: [...command.scopes],
+          surfaces: [...command.surfaces],
+        }
+      : undefined;
   }
 
   public list(): readonly CommandDefinition[] {
@@ -153,21 +163,29 @@ export class CommandRegistry {
     invocation: CommandInvocation,
     surface: CommandSurface,
   ): CommandDecision {
-    if (!invocation.workspaceId.trim()) return { allowed: false, reason: "workspace_required" };
-    if (!invocation.actorId.trim()) return { allowed: false, reason: "actor_required" };
+    if (!invocation.workspaceId.trim())
+      return { allowed: false, reason: "workspace_required" };
+    if (!invocation.actorId.trim())
+      return { allowed: false, reason: "actor_required" };
 
     const command = this.commands.get(invocation.commandId);
     if (!command) return { allowed: false, reason: "unknown_command" };
-    if (!command.surfaces.includes(surface)) return { allowed: false, reason: "surface_denied" };
+    if (!command.surfaces.includes(surface))
+      return { allowed: false, reason: "surface_denied" };
 
-    const hasScopes = command.scopes.every((scope) => invocation.grantedScopes.includes(scope));
+    const hasScopes = command.scopes.every((scope) =>
+      invocation.grantedScopes.includes(scope),
+    );
     if (!hasScopes) return { allowed: false, reason: "scope_denied" };
 
     if (command.requiresApproval && !invocation.approvalGranted) {
       return { allowed: false, reason: "approval_required" };
     }
 
-    return { allowed: true, reason: invocation.approvalGranted ? "approved" : "authorized" };
+    return {
+      allowed: true,
+      reason: invocation.approvalGranted ? "approved" : "authorized",
+    };
   }
 }
 
