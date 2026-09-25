@@ -153,6 +153,7 @@ export class CommandRegistry {
     surface: CommandSurface,
   ): CommandDecision {
     if (!invocation.workspaceId.trim()) return { allowed: false, reason: "workspace_required" };
+    if (!invocation.actorId.trim()) return { allowed: false, reason: "scope_denied" };
 
     const command = this.commands.get(invocation.commandId);
     if (!command) return { allowed: false, reason: "unknown_command" };
