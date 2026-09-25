@@ -1,8 +1,8 @@
 name: ORBIT format debug
 
 on:
-  push:
-    branches: ["feat/marketing-operating-model-20260925"]
+  pull_request:
+    branches: ["main"]
 
 permissions:
   contents: read
