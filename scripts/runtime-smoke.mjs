@@ -6,12 +6,55 @@ const RUNTIME_PORT = 3101;
 const AUTH_PORT = 3102;
 const BRUTE_FORCE_PORT = 3103;
 
-async function waitForChildExit(child, timeoutMs = 3_000) {
+async function waitForChildExit(child, timeoutMs = 5_000) {
   if (child.exitCode !== null) return;
   await Promise.race([
     new Promise((resolve) => child.once("exit", resolve)),
     new Promise((resolve) => setTimeout(resolve, timeoutMs)),
   ]);
+}
+
+async function terminateChild(child) {
+  if (child.exitCode !== null) return;
+  if (child.pid && process.platform !== "win32") {
+    try {
+      process.kill(-child.pid, "SIGTERM");
+    } catch {
+      try {
+        child.kill("SIGTERM");
+      } catch {}
+    }
+  } else {
+    try {
+      child.kill("SIGTERM");
+    } catch {}
+  }
+  await waitForChildExit(child, 5_000);
+  if (child.exitCode === null) {
+    if (child.pid && process.platform !== "win32") {
+      try {
+        process.kill(-child.pid, "SIGKILL");
+      } catch {}
+    } else {
+      try {
+        child.kill("SIGKILL");
+      } catch {}
+    }
+    await waitForChildExit(child, 2_000);
+  }
+  if (child.exitCode === null) {
+    throw new Error("runtime child process did not terminate cleanly");
+  }
+}
+
+function spawnRuntime(env) {
+  return spawn("pnpm", ["runtime:start"], {
+    env,
+    stdio: ["ignore", "pipe", "pipe"],
+    shell: process.platform === "win32",
+    detached: process.platform !== "win32",
+    windowsHide: true,
+  });
 }
 
 function assert(condition, message) {
@@ -69,7 +112,7 @@ for (const url of [
     "runtime must reject unsafe Ollama endpoint: " + url);
 }
 
-const child = spawn("pnpm", ["runtime:start"], {
+const child = spawnRuntime({
   env: {
     ...process.env,
     PORT: String(RUNTIME_PORT),
@@ -175,15 +218,14 @@ try {
     num_ctx: capturedOllamaBody?.options?.num_ctx,
   }));
 } finally {
-  child.kill("SIGTERM");
-  await waitForChildExit(child);
+  await terminateChild(child);
   if (child.exitCode !== null && child.exitCode !== 0) {
     console.error(logs);
     throw new Error("runtime process exited with code " + child.exitCode);
   }
 }
 
-const missingTokenChild = spawn("pnpm", ["runtime:start"], {
+const missingTokenChild = spawnRuntime({
   env: {
     ...process.env,
     PORT: String(AUTH_PORT),
@@ -220,8 +262,7 @@ try {
   assert(missingTokenResponse.status === 503, "expected 503 without LAN token configuration");
   console.log("runtime missing-token startup guard passed");
 } finally {
-  missingTokenChild.kill("SIGTERM");
-  await waitForChildExit(missingTokenChild);
+  await terminateChild(missingTokenChild);
   if (missingTokenChild.exitCode !== null && missingTokenChild.exitCode !== 0) {
     console.error(missingTokenLogs);
     throw new Error("missing-token runtime exited with code " + missingTokenChild.exitCode);
@@ -230,7 +271,7 @@ try {
 
 const authPort = AUTH_PORT + 2;
 const authToken = "orbit-test-token";
-const authChild = spawn("pnpm", ["runtime:start"], {
+const authChild = spawnRuntime({
   env: {
     ...process.env,
     PORT: String(authPort),
@@ -301,15 +342,14 @@ try {
   assert(rateResponses.at(-1) === 429, "expected 429 after exceeding runtime rate limit");
   console.log("runtime LAN perimeter smoke passed");
 } finally {
-  authChild.kill("SIGTERM");
-  await waitForChildExit(authChild);
+  await terminateChild(authChild);
   if (authChild.exitCode !== null && authChild.exitCode !== 0) {
     console.error(authLogs);
     throw new Error("LAN runtime exited with code " + authChild.exitCode);
   }
 }
 
-const bruteForceChild = spawn("pnpm", ["runtime:start"], {
+const bruteForceChild = spawnRuntime({
   env: {
     ...process.env,
     PORT: String(BRUTE_FORCE_PORT),
@@ -355,8 +395,7 @@ try {
 
   console.log("runtime invalid-token rate-limit smoke passed");
 } finally {
-  bruteForceChild.kill("SIGTERM");
-  await waitForChildExit(bruteForceChild);
+  await terminateChild(bruteForceChild);
   if (bruteForceChild.exitCode !== null && bruteForceChild.exitCode !== 0) {
     console.error(bruteForceLogs);
     throw new Error("brute-force runtime exited with code " + bruteForceChild.exitCode);
