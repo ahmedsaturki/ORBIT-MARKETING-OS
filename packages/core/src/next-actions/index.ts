@@ -55,14 +55,16 @@ const RULES: ReadonlyArray<(input: MissionControlInput) => Rule> = [
     kind: "approval",
     score: 900,
     priority: "urgent",
-    reason: "An approval gate is preventing the governed workflow from progressing.",
+    reason:
+      "An approval gate is preventing the governed workflow from progressing.",
     items: input.approvals ?? [],
   }),
   (input) => ({
     kind: "failed_work",
     score: 800,
     priority: "high",
-    reason: "A previously attempted work item failed and needs diagnosis or recovery.",
+    reason:
+      "A previously attempted work item failed and needs diagnosis or recovery.",
     items: input.failedWork ?? [],
   }),
   (input) => ({
