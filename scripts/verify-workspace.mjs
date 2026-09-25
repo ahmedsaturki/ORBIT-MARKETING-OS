@@ -254,7 +254,10 @@ for (const path of rustSourcePaths) {
   });
 }
 
-const rust = rustSources.map((entry) => entry.content).join("\n");
+// Normalize checkout line endings so source-contract regexes behave identically on Linux and Windows.
+const rust = rustSources
+  .map((entry) => entry.content.replace(/\r\n?/g, "\n"))
+  .join("\n");
 
 const duplicateDerivePattern = /#\[derive\(([^\n]+)\)\]\s*#\[derive\(\1\)\]/;
 if (duplicateDerivePattern.test(rust)) {
