@@ -5667,6 +5667,14 @@ fn opportunity_upsert(
     )
     .map_err(|error| error.to_string())?;
 
+    let created_at: String = connection
+        .query_row(
+            "SELECT created_at FROM opportunities WHERE id=?1 AND workspace_id=?2",
+            params![&id, &workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+
     Ok(OpportunityView {
         id,
         contact_id,
@@ -5678,7 +5686,7 @@ fn opportunity_upsert(
         probability,
         source,
         owner_id,
-        created_at: timestamp.clone(),
+        created_at,
         updated_at: timestamp,
     })
 }
@@ -5823,6 +5831,14 @@ fn insight_upsert(
     )
     .map_err(|error| error.to_string())?;
 
+    let created_at: String = connection
+        .query_row(
+            "SELECT created_at FROM insights WHERE id=?1 AND workspace_id=?2",
+            params![&id, &workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+
     Ok(InsightView {
         id,
         kind,
@@ -5833,7 +5849,7 @@ fn insight_upsert(
         confidence,
         source_ids_json,
         observed_at,
-        created_at: timestamp.clone(),
+        created_at,
         updated_at: timestamp,
     })
 }
