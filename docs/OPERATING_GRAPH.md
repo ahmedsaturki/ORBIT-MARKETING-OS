@@ -2,7 +2,7 @@
 
 Updated: 2026-09-25
 
-The operating graph is the structural spine of ORBIT. It prevents core modules from becoming disconnected feature islands.
+The operating graph is the structural spine of ORBIT. It prevents core modules from becoming disconnected feature islands. Outcome entities (opportunities) and learning entities (insights) are persisted locally and can participate in the same governed relationship layer.
 
 ## Canonical flow
 
