@@ -7120,12 +7120,12 @@ CREATE TABLE contacts (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, phone TE
 CREATE TABLE conversations (id TEXT PRIMARY KEY, contact_id TEXT, platform TEXT NOT NULL, external_thread_id TEXT, status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE audit_events (id TEXT PRIMARY KEY, timestamp TEXT NOT NULL, category TEXT NOT NULL, action TEXT NOT NULL, outcome TEXT NOT NULL, actor TEXT NOT NULL, entity_id TEXT, metadata_json TEXT);
 INSERT INTO campaigns(id, name, status, created_at)
-VALUES ('legacy-campaign', 'Legacy Campaign', 'scheduled', '1000');
+VALUES ('legacy-campaign', 'Legacy Campaign', 'scheduled', '2026-01-01T00:00:00Z');
 INSERT INTO accounts(id, platform, display_name, status, created_at, updated_at)
-VALUES ('legacy-account', 'facebook', 'Legacy Account', 'connected', '1000', '1000');
-INSERT INTO audit_events(id, timestamp, category, action, outcome, actor) VALUES ('legacy-audit', '900', 'security', 'legacy', 'success', 'system');
+VALUES ('legacy-account', 'facebook', 'Legacy Account', 'connected', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+INSERT INTO audit_events(id, timestamp, category, action, outcome, actor) VALUES ('legacy-audit', '2025-12-31T23:59:00Z', 'security', 'legacy', 'success', 'system');
 INSERT INTO tasks(id, campaign_id, account_id, platform, kind, priority, status, attempts, max_attempts, available_at, created_at)
-VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish', 0, 'pending', 0, 3, '1000', '1000');
+VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish', 0, 'pending', 0, 3, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
 "#;
 
         if let Err(error) = connection.execute_batch(legacy) {
