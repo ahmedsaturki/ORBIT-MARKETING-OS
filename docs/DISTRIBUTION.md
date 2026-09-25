@@ -12,11 +12,11 @@ Signing is a separate release gate and must never use private signing keys commi
 
 The Expo project supports local development and web export. The current GitHub Actions mobile workflow produces an **unsigned Android debug validation artifact**, not a store release. Native Android/iOS distribution remains a separate gate because production signing, store accounts, and native build environments are product-release concerns.
 
-Free distribution options include source distribution and sideloadable development/testing artifacts. Official stores may impose their own account/registration requirements.
+Free distribution currently includes source distribution plus the generated validation artifacts. Official stores may impose their own account/registration and signing requirements.
 
 ## Web
 
-The web surface can be deployed through the guarded Vercel workflow, but an ORBIT Vercel project must exist and the required secrets must be configured before deployment can occur.
+The web surface is live on the connected Vercel production project. The guarded GitHub deployment workflow remains secret-gated; its latest Web quality gate is green, while direct Vercel deployment is already READY.
 
 ## Release integrity
 
