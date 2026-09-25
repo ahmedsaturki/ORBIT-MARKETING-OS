@@ -17,6 +17,7 @@ export * from "./analytics/index.js";
 export * from "./automation/index.js";
 export * from "./strategy/index.js";
 export * from "./knowledge/index.js";
+export * from "./knowledge/context.js";
 export * from "./agents/index.js";
 export * from "./policies/index.js";
 export * from "./operations/index.js";
