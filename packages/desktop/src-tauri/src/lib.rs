@@ -4995,6 +4995,67 @@ fn operational_link_upsert(
 }
 
 #[tauri::command]
+fn operational_link_delete(
+    app: tauri::AppHandle,
+    from_type: String,
+    from_id: String,
+    to_type: String,
+    to_id: String,
+    relation: String,
+) -> Result<bool, String> {
+    let workspace_id = active_workspace_id();
+    let from_type = from_type.trim().to_string();
+    let from_id = validate_label(&from_id).map_err(|error| error.to_string())?;
+    let to_type = to_type.trim().to_string();
+    let to_id = validate_label(&to_id).map_err(|error| error.to_string())?;
+    let relation = validate_operational_relation(&relation)?;
+
+    validate_operational_entity_type(&from_type)?;
+    validate_operational_entity_type(&to_type)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let deleted = connection
+        .execute(
+            "DELETE FROM operational_links
+             WHERE workspace_id=?1
+               AND from_type=?2
+               AND from_id=?3
+               AND to_type=?4
+               AND to_id=?5
+               AND relation=?6",
+            params![
+                workspace_id,
+                from_type,
+                from_id,
+                to_type,
+                to_id,
+                relation
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+
+    if deleted == 0 {
+        return Ok(false);
+    }
+
+    let link_id = format!("{from_type}:{from_id}->{to_type}:{to_id}:{relation}");
+    write_audit(
+        &connection,
+        "operations",
+        "link_delete",
+        "success",
+        "user",
+        Some(&link_id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(true)
+}
+
+#[tauri::command]
 fn operational_link_list(
     app: tauri::AppHandle,
     entity_type: Option<String>,
@@ -8087,6 +8148,7 @@ pub fn run() {
             automation_rule_pack_list,
             operational_link_upsert,
             operational_link_list,
+            operational_link_delete,
             content_variant_list,
             campaign_attach_content,
             approval_request,
