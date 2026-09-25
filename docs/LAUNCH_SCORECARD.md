@@ -17,7 +17,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Web product surface                             | VERIFIED    | Main CI build/E2E passed; production routes independently checked live                          |
 | Runtime perimeter                               | VERIFIED    | Auth, origin allowlist, rate limiting and fake-Ollama smoke passed                              |
 | Local AI defaults                               | VERIFIED    | Runtime smoke passed with bounded context and local model default                               |
-| Mobile monitoring                               | VERIFIED    | Main/mobile checks passed; Android debug artifact validation is tracked in PR #22               |
+| Mobile monitoring                               | VERIFIED    | Main/mobile checks passed; Android debug artifact validation is tracked in PR #27               |
 | Clean install                                   | VERIFIED    | Main CI run 36126479828 passed frozen install with committed lockfiles                          |
 | Typecheck/lint/tests/coverage/build             | VERIFIED    | Main CI run 36126479828 passed all quality steps                                                |
 | Rust fmt/check/test/clippy                      | VERIFIED    | Main CI run 36126479828 passed all Rust gates                                                   |
@@ -25,8 +25,8 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Performance smoke                               | VERIFIED    | Main CI performance smoke passed                                                                |
 | Browser E2E                                     | VERIFIED    | Main CI Playwright E2E passed                                                                   |
 | Production web deployment                       | VERIFIED*   | Live Vercel production alias is READY and public routes/headers/404 were checked                |
-| Native desktop packaging                        | PARTIAL     | PR #22: Windows/Linux/macOS-arm64 passed; macOS-x64 still running at last poll                  |
-| Android debug validation                        | PARTIAL     | PR #22 quality passed; APK build still running at last poll                                     |
+| Native desktop packaging                        | PARTIAL     | PR #27: Windows/Linux/macOS-arm64 passed; macOS-x64 is still running at last poll                  |
+| Android debug validation                        | PARTIAL     | PR #27 quality passed; APK build still running at last poll                                     |
 | Native runtime restart/migration/crash recovery | UNVERIFIED  | Dedicated full desktop runtime acceptance evidence remains                                      |
 | Real connector E2E                              | UNVERIFIED  | Telegram/LinkedIn live authorization/delivery evidence remains                                  |
 | CRDT encrypted transport/convergence            | UNVERIFIED  | Multi-device transport/convergence evidence remains                                             |
@@ -39,7 +39,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 
 ## Current verified main evidence
 
-Main HEAD: ddc13f4edf516601a9fc038d97172a8037b30753
+Main HEAD at the latest consolidated evidence refresh: 9edaede0f9e01d118829f4592ef90cde10147aa9
 
 Main CI run 36126479828 completed successfully and executed the lockfile, release sanity, security scan, dependency audit, workspace sanity, typecheck, IPC, lint, tests, coverage, runtime smoke, performance smoke, build, Playwright E2E, format check, Rust fmt/check/test/clippy gates.
 
