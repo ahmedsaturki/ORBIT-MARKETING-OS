@@ -145,7 +145,11 @@ export class CommandRegistry {
   public register(command: CommandDefinition): void {
     if (!command.id.trim()) throw new Error("command_id_required");
     if (!command.scopes.length) throw new Error("command_scope_required");
-    if (command.externallyVisible && command.mutatesState && !command.requiresApproval) {
+    if (
+      command.externallyVisible &&
+      command.mutatesState &&
+      !command.requiresApproval
+    ) {
       throw new Error("command_approval_contract_violation");
     }
     if (this.commands.has(command.id)) throw new Error("command_duplicate");
