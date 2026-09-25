@@ -128,4 +128,6 @@ jobs:
         run: cargo test --workspace --all-targets
       - name: Rust clippy
         working-directory: packages/desktop/src-tauri
+        env:
+          RUSTFLAGS: --check-cfg=cfg(feature,values("custom-protocol","e2e-cdp"))
         run: cargo clippy --workspace --all-targets -- -D warnings
