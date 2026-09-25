@@ -57,7 +57,7 @@ describe("ORBIT product foundation", () => {
   });
 
   it("enforces policy budgets and approvals before external execution", () => {
-    const policy = {
+    const policy: import("./policies/index.js").MarketingExecutionPolicy = {
       id: "p-1",
       workspaceId: "ws-1",
       name: "Conservative",
