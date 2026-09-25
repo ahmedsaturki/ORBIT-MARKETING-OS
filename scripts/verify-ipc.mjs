@@ -90,21 +90,23 @@ function collectInvokeArgumentObjects(source) {
   let search = 0;
 
   while (search < source.length) {
-    const match = source.slice(search).match(/(?:callNative|invoke)(?:<[^>]+>)?\s*\(/);
+    const match = source.slice(search).match(
+      /(?:callNative|invoke)(?:<[^>]+>)?\s*\(/,
+    );
     if (!match) break;
 
     const start = search + match.index;
     const open = source.indexOf("(", start);
-    const brace = source.indexOf("{", open);
-    if (brace < 0) break;
+    if (open < 0) break;
 
-    let depth = 0;
+    let parenDepth = 1;
     let end = -1;
     let inString = false;
     let escaped = false;
 
-    for (let index = brace; index < source.length; index += 1) {
+    for (let index = open + 1; index < source.length; index += 1) {
       const character = source[index];
+
       if (inString) {
         if (escaped) {
           escaped = false;
@@ -115,14 +117,16 @@ function collectInvokeArgumentObjects(source) {
         }
         continue;
       }
+
       if (character === '"') {
         inString = true;
         continue;
       }
-      if (character === "{") depth += 1;
-      if (character === "}") {
-        depth -= 1;
-        if (depth === 0) {
+
+      if (character === "(") parenDepth += 1;
+      if (character === ")") {
+        parenDepth -= 1;
+        if (parenDepth === 0) {
           end = index;
           break;
         }
@@ -130,7 +134,37 @@ function collectInvokeArgumentObjects(source) {
     }
 
     if (end < 0) break;
-    segments.push(source.slice(brace, end + 1));
+
+    const args = source.slice(open + 1, end);
+    let brace = -1;
+    inString = false;
+    escaped = false;
+
+    for (let index = 0; index < args.length; index += 1) {
+      const character = args[index];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (character === "\\") {
+          escaped = true;
+        } else if (character === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (character === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (character === "{") {
+        brace = index;
+        break;
+      }
+    }
+
+    if (brace >= 0) segments.push(args.slice(brace));
     search = end + 1;
   }
 
