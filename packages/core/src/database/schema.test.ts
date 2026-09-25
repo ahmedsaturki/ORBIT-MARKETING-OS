@@ -32,6 +32,6 @@ describe("canonical database schema contract", () => {
   });
 
   it("sets SQLite user_version to the canonical version", () => {
-    expect(DATABASE_SCHEMA_SQL).toContain("PRAGMA user_version = 12;");
+    expect(DATABASE_SCHEMA_SQL).toContain("PRAGMA user_version = 13;");
   });
 });
