@@ -2,9 +2,9 @@
 
 ## Current release line
 
-The consolidated production implementation is merged into main through PR #10. Current main HEAD is 4036f88362d81eef1ae449616c272fa8c7e42db0.
+The consolidated production implementation is merged into main through PR #10. The current cleanup/native validation cut is PR #35 on top of current main.
 
-Historical rebuild PR #2 is closed and unmerged. PR #27 is the current cleanup line removing the obsolete root Tauri/Vite surface.
+Historical rebuild PR #2 is closed and unmerged. PR #35 is the current cleanup/native validation line removing the obsolete root Tauri/Vite surface.
 
 ## Verified execution
 
@@ -20,7 +20,7 @@ The GitHub Vercel deployment job remains conditional on repository secrets and w
 
 ## Native validation
 
-PR #27 currently has successful main-style quality and Rust gates, successful Windows/Linux/macOS-arm64 and Windows desktop builds, with all four desktop platform bundle jobs complete; Windows native E2E and Android debug validation remain separate PR #27 gates.
+PR #35 head `b0ee492275b9cd56353a3bcfcb6e2499820da7af` has exact-head CI and Rust runs active. The CI quality and Rust quality gates passed on the immediately preceding exact head before the documentation-only cleanup commit; the new exact-head CI/native runs must settle before those results are treated as final for `b0ee492...`.
 
 ## Remaining release gates
 
