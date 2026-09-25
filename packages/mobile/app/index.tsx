@@ -1,3 +1,4 @@
+/* Native validation retrigger marker: source-only comment; no runtime behavior change. */
 import type { ReactElement } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
