@@ -69,6 +69,21 @@ describe("governed execution decision kernel", () => {
     });
   });
 
+  it("rejects policies from another workspace", () => {
+    const result = evaluateGovernedExecution({
+      ...baseRequest,
+      policy: {
+        ...baseRequest.policy,
+        workspaceId: "ws-2",
+      },
+    });
+    expect(result).toEqual({
+      allowed: false,
+      block: "invalid_request",
+      reason: "policy_workspace_mismatch",
+    });
+  });
+
   it("blocks policy approval requirements explicitly", () => {
     const result = evaluateGovernedExecution({
       ...baseRequest,
