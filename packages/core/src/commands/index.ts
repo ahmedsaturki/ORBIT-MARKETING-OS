@@ -136,9 +136,7 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
 export class CommandRegistry {
   private readonly commands = new Map<string, CommandDefinition>();
 
-  public constructor(
-    commands: readonly CommandDefinition[] = BUILTIN_COMMANDS,
-  ) {
+  public constructor(commands: readonly CommandDefinition[] = BUILTIN_COMMANDS) {
     for (const command of commands) this.register(command);
   }
 
