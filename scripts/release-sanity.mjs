@@ -5,7 +5,7 @@ const text = async (relative) => readFile(new URL(relative, root), "utf8");
 const json = async (relative) => JSON.parse(await text(relative));
 
 const rootPackage = await json("package.json");
-for (const script of ["verify:workspace", "verify:ipc", "verify:release", "security:scan", "test:runtime", "test:performance", "test:e2e"]) {
+for (const script of ["verify:workspace", "verify:ipc", "verify:release", "security:scan", "test:runtime", "test:performance", "test:e2e", "soak"]) {
   if (typeof rootPackage.scripts?.[script] !== "string") {
     throw new Error("Root package script is missing: " + script);
   }
@@ -56,6 +56,7 @@ const requiredFiles = [
   "scripts/self-hosted-preflight.sh",
   "scripts/security-scan.mjs",
   "scripts/performance-smoke.mjs",
+  "scripts/soak.ts",
   "scripts/verify-live-web.mjs",
 ];
 
