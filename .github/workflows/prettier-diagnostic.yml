@@ -5,7 +5,7 @@ on:
     branches: ["main"]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format-diagnostic:
@@ -20,10 +20,35 @@ jobs:
         with:
           node-version: 22
       - run: pnpm install --frozen-lockfile
-      - name: List formatting drift
+      - name: Format known drift files
         run: |
-          set +e
-          pnpm exec prettier --list-different .
-          status=$?
-          pnpm exec prettier --check .
-          exit $status
+          pnpm exec prettier --write \
+            docs/ACCEPTANCE_MATRIX_V2.md \
+            docs/LAUNCH_SCORECARD.md \
+            packages/core/src/knowledge/context.test.ts \
+            packages/core/src/next-actions/index.ts \
+            packages/core/src/policy-packs/index.test.ts \
+            packages/core/src/policy-packs/index.ts \
+            packages/core/src/replay/index.test.ts \
+            packages/core/src/replay/index.ts
+      - name: Commit formatted output
+        run: |
+          if git diff --quiet --; then
+            echo "No formatting changes required."
+            exit 0
+          fi
+          git config user.name "orbit-format-bot"
+          git config user.email "orbit-format-bot@users.noreply.github.com"
+          git add -- \
+            docs/ACCEPTANCE_MATRIX_V2.md \
+            docs/LAUNCH_SCORECARD.md \
+            packages/core/src/knowledge/context.test.ts \
+            packages/core/src/next-actions/index.ts \
+            packages/core/src/policy-packs/index.test.ts \
+            packages/core/src/policy-packs/index.ts \
+            packages/core/src/replay/index.test.ts \
+            packages/core/src/replay/index.ts
+          git commit -m "chore: apply repository Prettier formatting"
+          git push
+      - name: Verify repository formatting
+        run: pnpm exec prettier --check .
