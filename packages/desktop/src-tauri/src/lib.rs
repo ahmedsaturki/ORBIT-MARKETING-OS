@@ -1472,8 +1472,6 @@ WHEN NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'approval workspace/content mismatch');
 END;
-"#;
-
 CREATE TRIGGER IF NOT EXISTS orbit_opportunities_insert_workspace
 BEFORE INSERT ON opportunities
 WHEN NOT EXISTS (
@@ -1504,7 +1502,7 @@ BEGIN
 END;
 
 CREATE TRIGGER IF NOT EXISTS orbit_opportunities_update_workspace
-BEFORE UPDATE OF workspace_id, contact_id, campaign_id ON opportunities
+BEFORE UPDATE OF workspace_id, contact_id, campaign_id, owner_id ON opportunities
 WHEN NOT EXISTS (
   SELECT 1
   FROM contacts c
@@ -10942,6 +10940,9 @@ VALUES ('legacy-account', 'facebook', 'Legacy Account', 'connected', '2026-01-01
 INSERT INTO audit_events(id, timestamp, category, action, outcome, actor) VALUES ('legacy-audit', '2025-12-31T23:59:00Z', 'security', 'legacy', 'success', 'system');
 INSERT INTO tasks(id, campaign_id, account_id, platform, kind, priority, status, attempts, max_attempts, available_at, created_at)
 VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish', 0, 'pending', 0, 3, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+
+"#;
+
 "#;
 
         if let Err(error) = connection.execute_batch(legacy) {
