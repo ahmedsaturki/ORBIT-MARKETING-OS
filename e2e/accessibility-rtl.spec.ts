@@ -8,7 +8,9 @@ test.describe("ORBIT accessibility and RTL", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   });
 
-  test("navigation links have accessible names and targets", async ({ page }) => {
+  test("navigation links have accessible names and targets", async ({
+    page,
+  }) => {
     await page.goto("/");
     const links = page.getByRole("link");
     const count = await links.count();
