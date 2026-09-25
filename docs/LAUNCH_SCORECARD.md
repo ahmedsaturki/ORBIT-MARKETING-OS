@@ -1,3 +1,27 @@
+# ORBIT Marketing OS — Launch Scorecard
+
+> Current release evidence snapshot: 2026-09-26
+>
+> The repository is using the RC2 release cut plus the governed Operational Event Spine workstream. Older historical references below are retained as provenance; they are not treated as current exact-head evidence.
+
+## Current exact-head verification
+
+- RC2 head: `6dcd7df2f6500214d3c227de281cfca6219b1083`
+  - CI: PASS
+  - Mobile Validation: PASS
+  - Desktop Native Validation: still running at last check; four packaging jobs have passed, Windows native E2E remains active.
+- Operational Spine head: `776223186600606803e0c104583f36ab925631b7`
+  - CI / Desktop Native / Mobile are running or queued for the current exact head.
+  - Previous failures on older heads were traced to stale schema/test assertions and corrected; they are not copied forward as results.
+- Operational Event Spine: IMPLEMENTED at source level and persisted in SQLite schema v13; full release verification remains gated on exact-head CI/native evidence.
+- Command Registry: IMPLEMENTED and unit-tested; cross-surface runtime usage remains a later integration gate.
+- Vercel public web: live production output remains separately verified; project framework metadata cleanup is still external and not inferred as fixed.
+
+## Release rule
+
+No line above is a production-readiness claim while any required exact-head runtime gate remains pending or unverified.
+
+
 # ORBIT Launch Scorecard
 
 Updated: 2026-09-26
