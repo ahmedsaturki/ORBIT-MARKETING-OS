@@ -51,7 +51,7 @@ pass "crates.io HTTPS reachable"
 
 if [ -d ".git" ]; then
   branch="$(git branch --show-current)"
-  if [[ "$branch" == "rebuild/orbit-production" || "$branch" == "rebuild/orbit-production-consolidated" ]]; then
+  if [[ "$branch" == "rebuild/orbit-production" || "$branch" == "rebuild/orbit-production-consolidated" || "$branch" == "rebuild/orbit-production-final" ]]; then
     :
   else
     echo "SELF-HOSTED PREFLIGHT: WARN — current branch is '$branch'; workflows must run on an approved production rebuild branch."
