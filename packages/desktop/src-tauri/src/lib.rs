@@ -9785,6 +9785,50 @@ mod tests {
     }
 
     #[test]
+    fn operational_entity_lookup_supports_agent_runs() {
+        let connection = Connection::open_in_memory().expect("in-memory database");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        connection
+            .execute(
+                "INSERT INTO agent_definitions(
+                   id, workspace_id, name, role, goal, autonomy,
+                   tool_grants_json, knowledge_scope_json, max_steps, enabled,
+                   created_at, updated_at
+                 ) VALUES (
+                   'agent-a', 'workspace-a', 'Agent A', 'campaign',
+                   'test', 'execute_bounded', '[]', '[]', 3, 1, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'
+                 )",
+                [],
+            )
+            .expect("agent definition should insert");
+        connection
+            .execute(
+                "INSERT INTO agent_runs(
+                   id, agent_id, workspace_id, input, status, step_count
+                 ) VALUES ('run-a', 'agent-a', 'workspace-a', 'test', 'queued', 0)",
+                [],
+            )
+            .expect("agent run should insert");
+
+        assert!(operational_entity_exists(
+            &connection,
+            "workspace-a",
+            "agent_run",
+            "run-a",
+        ));
+        assert!(!operational_entity_exists(
+            &connection,
+            "workspace-b",
+            "agent_run",
+            "run-a",
+        ));
+    }
+
+    #[test]
     fn schema_v11_creates_governed_marketing_operating_model_tables() {
         let connection =
             Connection::open_in_memory().expect("in-memory SQLite should be available");
