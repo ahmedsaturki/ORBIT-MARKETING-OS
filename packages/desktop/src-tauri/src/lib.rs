@@ -10174,8 +10174,7 @@ mod tests {
         assert!(validate_work_dependency_kind("depends").is_err());
 
         let grants = validate_agent_tool_grants(Some(
-            r#"[{"tool":"publisher","scopes":["campaign.publish"],"requiresApproval":true}]"#
-                .to_string(),
+            r#"[{"tool":"publisher","scopes":["campaign.publish"],"requiresApproval":true}]"#.to_string(),
         ))
         .expect("tool grant should validate");
         assert!(grants.contains("publisher"));
