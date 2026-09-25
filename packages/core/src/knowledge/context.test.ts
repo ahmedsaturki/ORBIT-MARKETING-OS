@@ -58,9 +58,9 @@ describe("grounded knowledge context", () => {
   });
 
   it("rejects invalid context identity or timestamp", () => {
-    expect(() =>
-      buildGroundedKnowledgeContext("", [item], [source]),
-    ).toThrow("knowledge_context_workspace_required");
+    expect(() => buildGroundedKnowledgeContext("", [item], [source])).toThrow(
+      "knowledge_context_workspace_required",
+    );
 
     expect(() =>
       buildGroundedKnowledgeContext("ws-1", [item], [source], {
