@@ -10328,6 +10328,35 @@ mod tests {
     }
 
     #[test]
+    fn schema_v11_to_v12_migration_creates_outcome_tables() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("base schema should be creatable");
+        connection
+            .execute_batch("PRAGMA user_version = 11;")
+            .expect("schema version should be set");
+        migrate_schema(&connection).expect("v11 to v12 migration should succeed");
+
+        for table in ["opportunities", "insights"] {
+            let exists: i64 = connection
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+                    params![table],
+                    |row| row.get(0),
+                )
+                .expect("table existence query should work");
+            assert_eq!(exists, 1, "expected migrated table {table} to exist");
+        }
+
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("schema version should be readable");
+        assert_eq!(version, 12);
+    }
+
+    #[test]
     fn schema_v12_creates_governed_marketing_operating_model_and_outcome_tables() {
         let connection =
             Connection::open_in_memory().expect("in-memory SQLite should be available");
