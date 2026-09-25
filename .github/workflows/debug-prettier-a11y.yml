@@ -1,0 +1,24 @@
+name: Debug Prettier A11y
+
+on:
+  push:
+    branches: ["chore/release-evidence-a11y-20260925"]
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier e2e/accessibility-rtl.spec.ts --write
+      - run: cat e2e/accessibility-rtl.spec.ts
