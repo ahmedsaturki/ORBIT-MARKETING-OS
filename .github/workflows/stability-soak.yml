@@ -10,7 +10,7 @@ on:
       ref:
         description: "Production rebuild ref to verify"
         required: true
-        default: "rebuild/orbit-production-final"
+        default: "main"
 
 permissions:
   contents: read
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   soak:
-    if: github.actor == 'ahmedsaturki' && github.event.inputs.ref == 'rebuild/orbit-production-final'
+    if: github.actor == 'ahmedsaturki' && github.event.inputs.ref == 'main'
     runs-on: [self-hosted, x64, linux]
     timeout-minutes: 1500
     steps:
