@@ -96,6 +96,10 @@ Knowledge fabric, research, local AI routing, agents, learning loop, anomaly det
 
 The target control plane also includes Mission Control, simulation/dry-run, execution replay, policy packs, vertical operating packs, and a governed CLI/MCP/SDK boundary. These are platform extensions over the same local runtime and operating graph, not separate product silos.
 
+### Operational platform spine
+
+The Event Spine and Command Registry establish reusable contracts for future CLI, MCP, Agent, and extension surfaces without introducing a second execution system.
+
 ### Platform
 
 CLI, MCP, connector SDK, agent SDK, extension model, vertical packs.
