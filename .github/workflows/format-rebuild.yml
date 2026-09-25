@@ -30,11 +30,20 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
+        with:
+          toolchain: 1.98.1
+          components: rustfmt
+
       - name: Require committed lockfile
         run: test -s pnpm-lock.yaml
 
       - name: Install dependencies reproducibly
         run: pnpm install --frozen-lockfile
+
+      - name: Format Rust sources
+        working-directory: packages/desktop/src-tauri
+        run: cargo fmt --all
 
       - name: Format repository
         run: pnpm exec prettier --write .
