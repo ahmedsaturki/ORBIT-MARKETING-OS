@@ -6,11 +6,11 @@ Current real connector coverage: Telegram has a native API path and LinkedIn has
 
 ## Repository status
 
-The repository is converging the initial React/Vite/Express prototype into the production monorepo architecture through PR #10.
+The production monorepo architecture is consolidated on `main`; the historical rebuild PRs remain in GitHub only as implementation history.
 
-The current production rebuild branch is:
+The current production branch is:
 
-`rebuild/orbit-production-final`
+`main`
 
 The rebuild is acceptance-driven: implementation is not considered complete until it has automated tests, integration evidence, security checks, performance evidence, documentation, and a releasable artifact where applicable.
 
@@ -31,7 +31,6 @@ Requirements:
 Bootstrap:
 
 ```bash
-bash ./scripts/bootstrap-lockfile.sh
 pnpm install --frozen-lockfile
 ```
 
@@ -61,7 +60,7 @@ A feature is not release-complete merely because its source code exists. Release
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md](docs/ACCEPTANCE_MATRIX_V2.md), and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
 
-Launch control: `docs/LAUNCH_SCORECARD.md`
+Launch control: `docs/LAUNCH_SCORECARD.md`\n\nThe current web product is live on Vercel; desktop artifacts and Android validation artifacts are built by GitHub Actions. Commercial launch remains gated by signing, real connector E2E, soak/rollback, and billing evidence.
 
 Zero-cost technical verification fallback: `docs/SELF_HOSTED_VERIFICATION.md`
 
