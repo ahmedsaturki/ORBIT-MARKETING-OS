@@ -21,7 +21,6 @@
 
 No line above is a production-readiness claim while any required exact-head runtime gate remains pending or unverified.
 
-
 # ORBIT Launch Scorecard
 
 Updated: 2026-09-26
@@ -36,7 +35,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Telegram native path                            | IMPLEMENTED | Token validation, approval, daily/circuit budgets, rate-limit handling, ambiguous-delivery stop                                                                      |
 | Workspace isolation                             | IMPLEMENTED | Persisted active workspace, memberships, scoped vault                                                                                                                |
 | SQLite integrity                                | IMPLEMENTED | FK enforcement, busy timeout, workspace integrity triggers                                                                                                           |
-| Migration path                                  | IMPLEMENTED | Versioned schema through v13 with legacy backfill, outcome migration, durable operational events and transactional migrations                                                                    |
+| Migration path                                  | IMPLEMENTED | Versioned schema through v13 with legacy backfill, outcome migration, durable operational events and transactional migrations                                        |
 | Operating graph/outcomes                        | IMPLEMENTED | Strategy/work graph, persisted opportunities/insights, governed links and bounded agent context                                                                      |
 | Mission Control/control layer                   | IMPLEMENTED | Deterministic next actions, simulation, replay, policy packs, campaign-plan compilation and grounded knowledge context                                               |
 | Desktop UI                                      | IMPLEMENTED | Workspace, content, approvals, tasks, CRM, inbox, backup, license, audit                                                                                             |
@@ -86,3 +85,4 @@ Live checks returned HTTP 200 for the home page, pricing, privacy, terms, refund
 ## Release rule
 
 Do not call the product commercially final while applicable signing, real connector, accessibility, soak, rollback or billing gates remain open.
+
