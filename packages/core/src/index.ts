@@ -22,3 +22,4 @@ export * from "./policies/index.js";
 export * from "./operations/index.js";
 
 export * from "./runs/index.js";
+export * from "./control-plane/index.js";
