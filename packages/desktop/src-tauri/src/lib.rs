@@ -491,15 +491,21 @@ struct OpportunityView {
 }
 
 #[derive(Debug, Serialize)]
+struct OutcomeCurrencySummary {
+    currency: String,
+    pipeline_value: f64,
+    weighted_pipeline_value: f64,
+    won_value: f64,
+}
+
+#[derive(Debug, Serialize)]
 struct OutcomeAnalyticsView {
     opportunity_count: i64,
     open_opportunity_count: i64,
     won_opportunity_count: i64,
     lost_opportunity_count: i64,
-    pipeline_value: f64,
-    weighted_pipeline_value: f64,
-    won_value: f64,
     insight_count: i64,
+    by_currency: Vec<OutcomeCurrencySummary>,
 }
 
 #[derive(Debug, Serialize)]
@@ -5809,34 +5815,64 @@ fn outcome_analytics(app: tauri::AppHandle) -> Result<OutcomeAnalyticsView, Stri
     )
     .map_err(|error| error.to_string())?;
 
-    let row = connection
+    let totals = connection
         .query_row(
             "SELECT
                COUNT(*),
                COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN 1 ELSE 0 END), 0),
                COALESCE(SUM(CASE WHEN stage = 'won' THEN 1 ELSE 0 END), 0),
                COALESCE(SUM(CASE WHEN stage = 'lost' THEN 1 ELSE 0 END), 0),
-               COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value ELSE 0 END), 0),
-               COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value * probability / 100.0 ELSE 0 END), 0),
-               COALESCE(SUM(CASE WHEN stage = 'won' THEN value ELSE 0 END), 0),
-               (SELECT COUNT(*) FROM insights WHERE workspace_id=?1)",
+               (SELECT COUNT(*) FROM insights WHERE workspace_id=?1)
+             FROM opportunities
+             WHERE workspace_id=?1",
             params![&workspace_id],
             |row| {
-                Ok(OutcomeAnalyticsView {
-                    opportunity_count: row.get(0)?,
-                    open_opportunity_count: row.get(1)?,
-                    won_opportunity_count: row.get(2)?,
-                    lost_opportunity_count: row.get(3)?,
-                    pipeline_value: row.get(4)?,
-                    weighted_pipeline_value: row.get(5)?,
-                    won_value: row.get(6)?,
-                    insight_count: row.get(7)?,
-                })
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, i64>(4)?,
+                ))
             },
         )
         .map_err(|error| error.to_string())?;
 
-    Ok(row)
+    let mut statement = connection
+        .prepare(
+            "SELECT
+               currency,
+               COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value * probability / 100.0 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage = 'won' THEN value ELSE 0 END), 0)
+             FROM opportunities
+             WHERE workspace_id=?1
+             GROUP BY currency
+             ORDER BY currency ASC",
+        )
+        .map_err(|error| error.to_string())?;
+
+    let by_currency = statement
+        .query_map(params![&workspace_id], |row| {
+            Ok(OutcomeCurrencySummary {
+                currency: row.get(0)?,
+                pipeline_value: row.get(1)?,
+                weighted_pipeline_value: row.get(2)?,
+                won_value: row.get(3)?,
+            })
+        })
+        .map_err(|error| error.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())?;
+
+    Ok(OutcomeAnalyticsView {
+        opportunity_count: totals.0,
+        open_opportunity_count: totals.1,
+        won_opportunity_count: totals.2,
+        lost_opportunity_count: totals.3,
+        insight_count: totals.4,
+        by_currency,
+    })
 }
 
 #[tauri::command]
