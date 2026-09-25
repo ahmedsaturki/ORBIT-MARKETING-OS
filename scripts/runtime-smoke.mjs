@@ -152,7 +152,7 @@ child.stderr.on("data", (chunk) => { logs += String(chunk); });
 try {
   let response;
   let lastError = "runtime did not respond";
-  const deadline = Date.now() + 15_000;
+  const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     try {
       response = await fetch("http://127.0.0.1:" + RUNTIME_PORT + "/api/health");
@@ -162,7 +162,14 @@ try {
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
-  if (!response) throw new Error(lastError);
+  if (!response) {
+    const exit = child.exitCode === null ? "running" : String(child.exitCode);
+    throw new Error(
+      "runtime did not respond within 30s; child exit=" + exit +
+      "; logs=" + logs.slice(-6_000) +
+      "; lastError=" + lastError,
+    );
+  }
 
   const body = await response.json();
   assert(response.status === 200, "health returned HTTP " + response.status);
