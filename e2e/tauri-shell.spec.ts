@@ -1,7 +1,8 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { execSync, spawn, type ChildProcess } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const root = process.cwd();
 
@@ -25,6 +26,24 @@ let proc: ChildProcess | null = null;
 let browser: Browser | null = null;
 let page: Page | null = null;
 let processOutput = "";
+const webview2UserDataFolders = new Set<string>();
+
+function createWebView2UserDataFolder(): string {
+  const folder = mkdtempSync(join(tmpdir(), "orbit-webview2-e2e-"));
+  webview2UserDataFolders.add(folder);
+  return folder;
+}
+
+function cleanupWebView2UserDataFolders(): void {
+  for (const folder of webview2UserDataFolders) {
+    try {
+      rmSync(folder, { recursive: true, force: true });
+    } catch {
+      /* WebView2 may still have a file handle during runner cleanup. */
+    }
+  }
+  webview2UserDataFolders.clear();
+}
 
 async function killApp(): Promise<void> {
   if (browser) await browser.close().catch(() => {});
@@ -51,9 +70,11 @@ async function launchAndConnectTauri(): Promise<void> {
   }
 
   processOutput = "";
+  const webview2UserDataFolder = createWebView2UserDataFolder();
   const child = spawn(exe, [], {
     env: {
       ...process.env,
+      WEBVIEW2_USER_DATA_FOLDER: webview2UserDataFolder,
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -125,6 +146,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
   test.afterAll(async () => {
     await killApp();
+    cleanupWebView2UserDataFolders();
   });
 
   test("capability files are deny-by-default and least-privilege (capability review)", () => {
