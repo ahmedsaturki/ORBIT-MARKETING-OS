@@ -824,7 +824,10 @@ fn redact_event_json(value: &mut serde_json::Value) {
 fn normalize_operational_event_payload(
     payload_json: Option<&str>,
 ) -> Result<Option<String>, AppError> {
-    let Some(raw) = payload_json.map(str::trim).filter(|value| !value.is_empty()) else {
+    let Some(raw) = payload_json
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
         return Ok(None);
     };
 
@@ -8245,7 +8248,13 @@ fn operational_event_kind_for_audit(category: &str, action: &str) -> &'static st
         ("connector", _) => "connector.result",
         ("insight", _) | ("analytics", _) => "insight.recorded",
         (_, action) if action.contains("dispatch") => "connector.dispatched",
-        (_, action) if action.contains("execute") || action.contains("publish") || action.contains("send") => "connector.result",
+        (_, action)
+            if action.contains("execute")
+                || action.contains("publish")
+                || action.contains("send") =>
+        {
+            "connector.result"
+        }
         _ => "command.completed",
     }
 }
@@ -8797,17 +8806,44 @@ fn append_operational_event(
         return Err(AppError::InvalidPayload);
     }
 
-    let id = id.map(str::trim).filter(|value| !value.is_empty()).unwrap_or_else(|| "");
-    let id = if id.is_empty() { uuid_like() } else { id.to_string() };
+    let id = id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "");
+    let id = if id.is_empty() {
+        uuid_like()
+    } else {
+        id.to_string()
+    };
     let timestamp = normalize_rfc3339_utc(timestamp).map_err(|_| AppError::InvalidPayload)?;
     let kind = validate_operational_event_kind(kind)?.to_string();
     let outcome = validate_operational_event_outcome(outcome)?.to_string();
     let actor = validate_operational_event_actor(actor)?.to_string();
 
-    let entity_type = entity_type.map(str::trim).filter(|value| !value.is_empty()).map(validate_label).transpose().map_err(|_| AppError::InvalidPayload)?;
-    let entity_id = entity_id.map(str::trim).filter(|value| !value.is_empty()).map(validate_label).transpose().map_err(|_| AppError::InvalidPayload)?;
-    let trace_id = trace_id.map(str::trim).filter(|value| !value.is_empty()).map(validate_label).transpose().map_err(|_| AppError::InvalidPayload)?;
-    let parent_event_id = parent_event_id.map(str::trim).filter(|value| !value.is_empty()).map(validate_label).transpose().map_err(|_| AppError::InvalidPayload)?;
+    let entity_type = entity_type
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(validate_label)
+        .transpose()
+        .map_err(|_| AppError::InvalidPayload)?;
+    let entity_id = entity_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(validate_label)
+        .transpose()
+        .map_err(|_| AppError::InvalidPayload)?;
+    let trace_id = trace_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(validate_label)
+        .transpose()
+        .map_err(|_| AppError::InvalidPayload)?;
+    let parent_event_id = parent_event_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(validate_label)
+        .transpose()
+        .map_err(|_| AppError::InvalidPayload)?;
 
     if let (Some(entity_type), Some(entity_id)) = (&entity_type, &entity_id) {
         if entity_type.trim().is_empty() || entity_id.trim().is_empty() {
@@ -8817,7 +8853,8 @@ fn append_operational_event(
 
     let payload = normalize_operational_event_payload(payload_json)?;
 
-    let transaction = connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+    let transaction =
+        connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
     let next_sequence: i64 = transaction.query_row(
         "SELECT COALESCE(MAX(sequence), 0) + 1 FROM operational_events WHERE workspace_id=?1",
         params![workspace_id],
