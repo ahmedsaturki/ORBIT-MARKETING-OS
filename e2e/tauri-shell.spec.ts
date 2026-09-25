@@ -15,8 +15,8 @@ declare global {
 const EXE_CANDIDATES = [
   process.env.TAURI_EXE,
   "D:/orbit-cargo-target/x86_64-pc-windows-msvc/release/orbit-marketing-os.exe",
-  "src-tauri/target/x86_64-pc-windows-msvc/release/orbit-marketing-os.exe",
-  "src-tauri/target/release/orbit-marketing-os.exe",
+  "packages/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/orbit-marketing-os.exe",
+  "packages/desktop/src-tauri/target/release/orbit-marketing-os.exe",
 ].filter(Boolean) as string[];
 const exe = EXE_CANDIDATES.find((p) => existsSync(p));
 const CDP_PORT = 9340;
@@ -40,6 +40,7 @@ async function killApp(): Promise<void> {
 }
 
 test.describe("Tauri renderer capability isolation (SEC-03)", () => {
+  test.describe.configure({ mode: "serial" });
   test.skip(
     !exe,
     "Tauri binary not built — run node scripts/build-tauri.mjs --release first",
@@ -51,7 +52,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
   test("capability files are deny-by-default and least-privilege (capability review)", () => {
     const capability = JSON.parse(
-      readFileSync(join(root, "src-tauri/capabilities/default.json"), "utf8"),
+      readFileSync(
+        join(root, "packages/desktop/src-tauri/capabilities/default.json"),
+        "utf8",
+      ),
     );
     // Exactly one grant: core:default — no fs/shell/http/clipboard/dialog/updater.
     expect(capability.permissions).toEqual(["core:default"]);
@@ -66,7 +70,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     // The build must have resolved that capability to itself — nothing broader.
     const resolved = JSON.parse(
       readFileSync(
-        join(root, "src-tauri/gen/schemas/capabilities.json"),
+        join(root, "packages/desktop/src-tauri/gen/schemas/capabilities.json"),
         "utf8",
       ),
     );
@@ -74,7 +78,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(resolved.default.permissions).toEqual(["core:default"]);
 
     const conf = JSON.parse(
-      readFileSync(join(root, "src-tauri/tauri.conf.json"), "utf8"),
+      readFileSync(
+        join(root, "packages/desktop/src-tauri/tauri.conf.json"),
+        "utf8",
+      ),
     );
     const security = conf.app.security;
     // Strict CSP: no unsafe-eval, no remote script origins, framed embedding off.
@@ -151,6 +158,40 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       0,
     );
     expect(proc!.killed).toBe(false);
+  });
+
+  test("native runtime restart preserves workspace state", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+
+    const before = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+
+    await killApp();
+
+    proc = spawn(exe!, [], {
+      env: {
+        ...process.env,
+        WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
+      },
+      stdio: "ignore",
+    });
+
+    await new Promise((r) => setTimeout(r, 6000));
+
+    const { chromium } = await import("@playwright/test");
+    browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+    const ctx = browser.contexts()[0];
+    page = ctx.pages()[0] ?? (await ctx.waitForEvent("page"));
+    await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
+
+    const after = (await page.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+
+    expect(after.id).toBe(before.id);
+    expect(after.name).toBe(before.name);
+    await expect(page).toHaveTitle(/Orbit Marketing OS/);
   });
 
   test("CSP blocks remote script injection", async () => {
