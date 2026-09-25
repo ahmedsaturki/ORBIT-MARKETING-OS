@@ -1,56 +1,58 @@
 # ORBIT Launch Scorecard
 
-Updated: 2026-09-24 (latest evidence refresh)
+Updated: 2026-09-25
 
-Legend:
+Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evidence exists; UNVERIFIED = execution evidence is still missing; BLOCKED = an external/product prerequisite prevents completion.
 
-- **IMPLEMENTED** = source capability exists and is covered by code/tests where applicable.
-- **VERIFIED** = executed in a clean runtime environment with current evidence.
-- **UNVERIFIED** = implementation exists but execution evidence is missing.
-- **BLOCKED** = external/infrastructure prerequisite prevents execution.
+| Gate                                            | State       | Evidence / blocker                                                                              |
+| ----------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------- |
+| Core domain/security                            | IMPLEMENTED | Typed domain, queue, policy, RBAC, encryption/redaction, audit integrity                        |
+| Queue invariants                                | IMPLEMENTED | Workspace-scoped idempotency, UTC scheduling, bounded retries, defensive copies                 |
+| Execution orchestrator                          | IMPLEMENTED | Policy → confirmation → connector → audit → queue                                               |
+| Telegram native path                            | IMPLEMENTED | Token validation, approval, daily/circuit budgets, rate-limit handling, ambiguous-delivery stop |
+| Workspace isolation                             | IMPLEMENTED | Persisted active workspace, memberships, scoped vault                                           |
+| SQLite integrity                                | IMPLEMENTED | FK enforcement, busy timeout, workspace integrity triggers                                      |
+| Migration path                                  | IMPLEMENTED | Versioned schema through v10 with legacy backfill and transactional migrations                  |
+| Desktop UI                                      | IMPLEMENTED | Workspace, content, approvals, tasks, CRM, inbox, backup, license, audit                        |
+| Web product surface                             | VERIFIED    | Main CI build/E2E passed; production routes independently checked live                          |
+| Runtime perimeter                               | VERIFIED    | Auth, origin allowlist, rate limiting and fake-Ollama smoke passed                              |
+| Local AI defaults                               | VERIFIED    | Runtime smoke passed with bounded context and local model default                               |
+| Mobile monitoring                               | VERIFIED    | Main/mobile checks passed; Android debug artifact validation is tracked in PR #22               |
+| Clean install                                   | VERIFIED    | Main CI run 36126479828 passed frozen install with committed lockfiles                          |
+| Typecheck/lint/tests/coverage/build             | VERIFIED    | Main CI run 36126479828 passed all quality steps                                                |
+| Rust fmt/check/test/clippy                      | VERIFIED    | Main CI run 36126479828 passed all Rust gates                                                   |
+| Security/dependency audit                       | VERIFIED    | Secret scan and high-severity pnpm audit passed in main CI                                      |
+| Performance smoke                               | VERIFIED    | Main CI performance smoke passed                                                                |
+| Browser E2E                                     | VERIFIED    | Main CI Playwright E2E passed                                                                   |
+| Production web deployment                       | VERIFIED*   | Live Vercel production alias is READY and public routes/headers/404 were checked                |
+| Native desktop packaging                        | PARTIAL     | PR #22: Windows/Linux/macOS-arm64 passed; macOS-x64 still running at last poll                  |
+| Android debug validation                        | PARTIAL     | PR #22 quality passed; APK build still running at last poll                                     |
+| Native runtime restart/migration/crash recovery | UNVERIFIED  | Dedicated full desktop runtime acceptance evidence remains                                      |
+| Real connector E2E                              | UNVERIFIED  | Telegram/LinkedIn live authorization/delivery evidence remains                                  |
+| CRDT encrypted transport/convergence            | UNVERIFIED  | Multi-device transport/convergence evidence remains                                             |
+| Accessibility/RTL audit                         | UNVERIFIED  | Functional E2E is green; dedicated accessibility audit remains                                  |
+| 24h soak                                        | UNVERIFIED  | Performance smoke is green; 24-hour soak is not yet evidenced                                   |
+| Desktop signing/notarization                    | BLOCKED     | Signing identities/credentials are not configured                                               |
+| Mobile production signing/store distribution    | BLOCKED     | Current path is Android debug validation only                                                   |
+| Billing/payment                                 | BLOCKED     | No verified commercial payment provider is configured                                           |
+| Production/commercial launch                    | BLOCKED     | Release-critical evidence and distribution gates remain open                                    |
 
-| Gate                             | Current state | Evidence / blocker                                                                                                                                              |
-| -------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Core domain/security             | IMPLEMENTED   | Typed domain, queue, policy, RBAC, encryption/redaction, audit integrity                                                                                        |
-| Queue invariants                 | IMPLEMENTED   | Workspace-scoped idempotency, normalized scheduling timestamps, bounded retries, defensive copies, regression tests                                             |
-| Execution orchestrator           | IMPLEMENTED   | Policy → confirmation → connector → audit → queue                                                                                                               |
-| Connector contract               | IMPLEMENTED   | Capability checks, registry, authorization, fixture                                                                                                             |
-| Telegram native path             | IMPLEMENTED   | Token validation, approval, daily/circuit safety budgets, rate-limit handling, ambiguous/invalid-delivery stop                                                  |
-| Workspace isolation              | IMPLEMENTED   | Persisted active workspace, memberships, scoped vault                                                                                                           |
-| SQLite integrity                 | IMPLEMENTED   | FK enforcement, busy timeout, workspace integrity triggers                                                                                                      |
-| Migration path                   | IMPLEMENTED   | Migration chain through schema v10 with legacy backfill and transactional v8/v10 destructive changes                                                            |
-| Desktop UI                       | IMPLEMENTED   | Workspace switching, content, approvals, tasks, CRM, inbox, backup, license, audit                                                                              |
-| Web product surface              | IMPLEMENTED   | Next.js static app, pricing, legal, PWA                                                                                                                         |
-| Local AI Studio                  | IMPLEMENTED   | Typed local runtime client, chat/content/image UI, loopback-only boundary; execution evidence pending                                                           |
-| Mobile monitoring surface        | IMPLEMENTED   | Expo Router monitor + secure runtime token storage                                                                                                              |
-| Runtime perimeter                | IMPLEMENTED   | Loopback/local auth model, bearer token, origin allowlist, rate limit                                                                                           |
-| Media metadata persistence       | IMPLEMENTED   | Workspace-scoped SQLite metadata, MIME/hash validation, search                                                                                                  |
-| Automation rule-pack persistence | IMPLEMENTED   | Schema-versioned JSON, structural validation, confirmation invariant                                                                                            |
-| Campaign task analytics          | IMPLEMENTED   | Workspace/campaign scoped native aggregation                                                                                                                    |
-| Local AI defaults                | IMPLEMENTED   | llama3.2:3b default, bounded OLLAMA_NUM_CTX=4096                                                                                                                |
-| Runtime AI smoke                 | IMPLEMENTED   | Fake-Ollama contract added to runtime smoke                                                                                                                     |
-| Clean install                    | UNVERIFIED    | Requires clean checkout execution and lockfile evidence                                                                                                         |
-| Typecheck/lint/tests/build       | BLOCKED       | GitHub hosted runner currently fails before steps; zero-cost self-hosted verification workflow is available                                                     |
-| Rust fmt/test/clippy             | BLOCKED       | Same runner-allocation failure                                                                                                                                  |
-| Native SQLite integration        | UNVERIFIED    | Tests exist; no clean native runtime execution evidence yet                                                                                                     |
-| Connector real-platform E2E      | UNVERIFIED    | Telegram/LinkedIn paths exist; controlled live/API evidence still required                                                                                      |
-| Browser E2E/accessibility        | UNVERIFIED    | Tests are present; no successful clean browser run recorded                                                                                                     |
-| Security/dependency audit        | UNVERIFIED    | Static source scan clean for critical patterns; automated dependency analysis not completed                                                                     |
-| Performance/soak                 | UNVERIFIED    | Benchmarks and 24h soak not executed                                                                                                                            |
-| Desktop signing                  | BLOCKED       | Signing credentials are intentionally absent; validation builds only                                                                                            |
-| Mobile production signing        | BLOCKED       | Current workflow produces debug validation APK                                                                                                                  |
-| Vercel production deployment     | BLOCKED       | A READY production deployment exists for legacy `main`; rebuild deployment is still unverified. Repository-side rebuild config uses guarded prebuilt deployment |
-| Billing/payment                  | BLOCKED       | No commercial payment provider configuration is verified                                                                                                        |
-| Production launch                | BLOCKED       | Any applicable UNVERIFIED/BLOCKED runtime or distribution gate prevents release claim                                                                           |
+## Current verified main evidence
 
-## Current infrastructure blocker
+Main HEAD: ddc13f4edf516601a9fc038d97172a8037b30753
 
-The latest consolidation CI run `36053293828` created jobs `107813972668` and `107813973170`; both failed before any workflow step executed with no usable step records. Earlier runs in the same series also show the runner allocation pattern. This is execution-infrastructure evidence, not source-build evidence.
+Main CI run 36126479828 completed successfully and executed the lockfile, release sanity, security scan, dependency audit, workspace sanity, typecheck, IPC, lint, tests, coverage, runtime smoke, performance smoke, build, Playwright E2E, format check, Rust fmt/check/test/clippy gates.
 
-## Zero-cost verification fallback
+Main Web Deploy run 36126479836 passed the Web quality gate. Its actual Vercel deploy stage was skipped because the GitHub repository deployment secrets are not configured; this is not treated as a deployment failure.
 
-A manual self-hosted verification workflow is available at `.github/workflows/self-hosted-verify.yml`. A separate branch-restricted lockfile bootstrap workflow is available at `.github/workflows/bootstrap-lockfile.yml`; both are restricted to the consolidated production rebuild ref. The self-hosted verification workflow is manual-only; the hosted CI is the normal zero-cost execution path. Both require an actual `self-hosted, x64, linux` runner and the bootstrap flow generates the lockfiles reproducibly.
+## Production web evidence
+
+Vercel project orbit-marketing-os has a READY production deployment and orbit-marketing-os.vercel.app serves the current ORBIT web surface.
+
+Live checks returned HTTP 200 for the home page, pricing, privacy, terms, refunds, EULA, manifest and service worker. An unknown route returned HTTP 404. HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP and CORP were observed.
+
+*Vercel project metadata still reports framework vite even though the repository-side product contract is a Next.js static export. The live output is verified; exact project-setting alignment remains a cleanup item.
 
 ## Release rule
 
-The product must remain in development/validation state until all release-critical gates have current execution evidence. A source change, green-looking YAML, or an artifact that was not produced by a verified gate is not proof of production readiness.
+Do not call the product commercially final while applicable signing, real connector, accessibility, soak, rollback or billing gates remain open.

@@ -1,75 +1,46 @@
 # ORBIT Marketing OS — Release Readiness
 
-## Current rebuild
+## Current release line
 
-The active consolidation branch is `rebuild/orbit-production-consolidated`. PR #9 is open, draft, and unmerged while release evidence is collected.
+The consolidated production implementation is merged into main through PR #10. Current main HEAD is ddc13f4edf516601a9fc038d97172a8037b30753.
 
-## Implemented foundations
+Historical rebuild PR #2 is closed and unmerged. PR #22 is the current cleanup line removing the obsolete root Tauri/Vite surface.
 
-- strict TypeScript monorepo baseline with pnpm 10.17.1 + Turborepo;
-- `@orbit/core` typed domain contracts, queue logic, approval/execution policy, connector registry, content/media/analytics/automation rules, encryption, redaction, audit integrity, sync primitives, licensing and backup foundations;
-- Tauri v2 desktop runtime with native SQLite schema through v10, workspace-scoped persistence, encrypted vault/session storage, campaign/task/CRM/inbox/audit commands and safe startup recovery;
-- native Argon2id-derived AES-256-GCM encryption and encrypted local backup/restore;
-- Next.js 16 static web/PWA/legal/pricing surface;
-- Expo SDK 57 / React Native 0.86 mobile monitoring surface;
-- guarded CI, release workflows and zero-cost self-hosted verification fallback.
+## Verified execution
 
-## Hardening completed in this line
+Main CI run 36126479828 is a real hosted execution and passed reproducible install, release sanity, secret scan, dependency audit, workspace sanity, TypeScript typecheck, Desktop IPC verification, lint, tests, coverage, runtime smoke, performance smoke, monorepo build, Playwright E2E, formatting, Rust fmt/check/test/clippy.
 
-- workspace/RBAC checks are applied before protected mutations/reads;
-- approval actor identity is derived from the local runtime user rather than client-supplied actor fields;
-- approval mutations and their audit records are committed atomically;
-- audit integrity failure blocks external Telegram execution;
-- startup recovery runs once at application startup and is idempotent;
-- task scheduling uses normalized UTC timestamps;
-- task retry ceilings are bounded consistently at 10 across core queue, campaign task factory, native task persistence, and rule-pack execution;
-- task idempotency is workspace-scoped with v9→v10 migration support;
-- v8 vault migration and v10 task migration use transactional schema changes;
-- account authorization/session state remains synchronized after upsert and persisted session presence is reflected in the returned view;
-- media import authorizes before filesystem access;
-- Desktop consumes typed `@orbit/core` contracts and serializable IPC views;
-- IPC verification prevents client-supplied approval actor identity from returning;
-- all tracked TSX files use scoped React element types;
-- Vercel installer/ignore scripts fail closed without a reproducible lockfile.
+Main Web Deploy run 36126479836 passed the Web quality gate, including web build and Web E2E.
 
-## Current execution evidence
+## Verified production web
 
-Latest observed hosted GitHub Actions CI on the consolidation line:
+Vercel project orbit-marketing-os currently has a READY production deployment. The production alias orbit-marketing-os.vercel.app was independently checked for landing, pricing, privacy, terms, refund, EULA, manifest, service worker, 404 behavior and security headers.
 
-- run `36053293828`
-- jobs `107813972668` (quality) / `107813973170` (Rust quality)
-- conclusion: `failure`
-- runner_id: `0`
-- runner name: empty
-- steps: `[]`
-- no usable workflow step/log evidence was produced.
+The GitHub Vercel deployment job remains conditional on repository secrets and was skipped in the latest run. The live Vercel deployment itself is real and verified.
 
-The current execution environment cannot generate a reproducible lockfile because pnpm is not installed and the npm registry is unreachable. No fake lockfile is committed. The consolidation branch still requires both lockfiles before release execution.
+## Native validation
 
-The connected Vercel project has a verified READY production deployment, but it is the legacy `main` Vite surface, not PR #9. A fresh successful consolidation deployment remains unverified.
+PR #22 currently has successful main-style quality and Rust gates, successful Windows/Linux/macOS-arm64 desktop builds, and in-progress macOS-x64 and Android debug validation jobs at the latest poll.
 
 ## Remaining release gates
 
-- committed, validated `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock`;
-- clean typecheck/lint/tests/coverage/build;
-- clean Rust fmt/check/test/clippy;
-- native migration/restart/crash-recovery evidence;
-- real authorized connector/platform verification;
-- CRDT transport/convergence evidence;
-- local AI/resource/failure evidence;
-- browser/device E2E + accessibility;
-- security/dependency review;
-- performance and 24h soak;
-- Windows/Linux/macOS packaging plus signing;
-- Android/iOS production distribution/signing;
-- successful Vercel deployment + rollback verification;
+- dedicated native runtime restart/migration/crash-recovery acceptance;
+- controlled real-user Telegram/LinkedIn authorization and delivery evidence;
+- encrypted CRDT transport and multi-device convergence;
+- dedicated accessibility/RTL audit;
+- 24-hour soak;
+- signed/notarized desktop distribution;
+- production mobile signing/store distribution;
+- final Vercel rollback drill;
 - commercial payment/billing configuration;
-- legal/commercial publication review.
+- final legal/commercial publication review.
 
-## Release rule
+## Distribution
 
-No tag, merge, production deployment, or commercial launch claim should be made while required gates remain `UNVERIFIED` or `BLOCKED`.
+Desktop artifacts remain validation/unsigned until signing is configured. Mobile currently produces an Android debug validation artifact. Web is live on Vercel production.
 
-## Final consolidation checkpoint
+No commercial launch claim is made while release-critical gates remain open.
 
-The active consolidation head is `db9ffe662b34dbea0d3f8ef1e52a02f6f3b7ca33`. It is synchronized with current `main` history and includes the Linux owner-restricted runner probe. Runtime/release gates remain unverified until an actual runner executes the verification workflow.
+## Safety boundary
+
+ORBIT deliberately excludes fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion and concealed automation. External actions remain user-authorized, bounded, auditable and stopped when authentication or challenge state is ambiguous.
