@@ -24,7 +24,7 @@ const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
 const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
 const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
-const SCHEMA_VERSION: i64 = 12;
+const SCHEMA_VERSION: i64 = 13;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 static TELEGRAM_EXECUTION_IDS: OnceLock<Mutex<std::collections::HashSet<String>>> = OnceLock::new();
@@ -313,6 +313,34 @@ CREATE INDEX IF NOT EXISTS idx_messages_thread
 
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp
   ON audit_events(timestamp);
+
+CREATE TABLE IF NOT EXISTS operational_events (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  sequence INTEGER NOT NULL CHECK(sequence > 0),
+  timestamp TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id TEXT,
+  trace_id TEXT,
+  parent_event_id TEXT,
+  payload_json TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_operational_events_sequence
+  ON operational_events(workspace_id, sequence);
+
+CREATE INDEX IF NOT EXISTS idx_operational_events_workspace_time
+  ON operational_events(workspace_id, timestamp);
+
+CREATE INDEX IF NOT EXISTS idx_operational_events_entity
+  ON operational_events(workspace_id, entity_type, entity_id, timestamp);
+
+CREATE INDEX IF NOT EXISTS idx_operational_events_trace
+  ON operational_events(workspace_id, trace_id, sequence);
 "#;
 
 #[derive(Debug, Error)]
@@ -521,6 +549,22 @@ struct InsightView {
     observed_at: String,
     created_at: String,
     updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OperationalEventView {
+    id: String,
+    sequence: i64,
+    timestamp: String,
+    kind: String,
+    outcome: String,
+    actor: String,
+    actor_id: String,
+    entity_type: Option<String>,
+    entity_id: Option<String>,
+    trace_id: Option<String>,
+    parent_event_id: Option<String>,
+    payload_json: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -736,6 +780,99 @@ fn has_column(connection: &Connection, table: &str, column: &str) -> Result<bool
         }
     }
     Ok(false)
+}
+
+fn is_sensitive_event_key(key: &str) -> bool {
+    let key = key.to_ascii_lowercase();
+    [
+        "password",
+        "passwd",
+        "secret",
+        "token",
+        "cookie",
+        "session",
+        "authorization",
+        "api-key",
+        "api_key",
+        "private-key",
+        "private_key",
+    ]
+    .iter()
+    .any(|part| key.contains(part))
+}
+
+fn redact_event_json(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            for (key, entry) in map.iter_mut() {
+                if is_sensitive_event_key(key) {
+                    *entry = serde_json::Value::String("[REDACTED]".to_string());
+                } else {
+                    redact_event_json(entry);
+                }
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for entry in items {
+                redact_event_json(entry);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn normalize_operational_event_payload(
+    payload_json: Option<&str>,
+) -> Result<Option<String>, AppError> {
+    let Some(raw) = payload_json
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return Ok(None);
+    };
+
+    let mut value: serde_json::Value =
+        serde_json::from_str(raw).map_err(|_| AppError::InvalidPayload)?;
+    redact_event_json(&mut value);
+    let serialized = serde_json::to_string(&value).map_err(|_| AppError::InvalidPayload)?;
+
+    if serialized.len() > 64 * 1024 {
+        return Err(AppError::InvalidPayload);
+    }
+
+    Ok(Some(serialized))
+}
+
+fn validate_operational_event_kind(value: &str) -> Result<&str, AppError> {
+    match value.trim() {
+        "command.received"
+        | "command.authorized"
+        | "command.blocked"
+        | "command.completed"
+        | "work.created"
+        | "work.state_changed"
+        | "connector.dispatched"
+        | "connector.result"
+        | "human.intervention_required"
+        | "approval.requested"
+        | "approval.decided"
+        | "insight.recorded" => Ok(value.trim()),
+        _ => Err(AppError::InvalidPayload),
+    }
+}
+
+fn validate_operational_event_outcome(value: &str) -> Result<&str, AppError> {
+    match value.trim() {
+        "started" | "succeeded" | "failed" | "blocked" | "waiting" => Ok(value.trim()),
+        _ => Err(AppError::InvalidPayload),
+    }
+}
+
+fn validate_operational_event_actor(value: &str) -> Result<&str, AppError> {
+    match value.trim() {
+        "user" | "system" | "agent" | "connector" => Ok(value.trim()),
+        _ => Err(AppError::InvalidPayload),
+    }
 }
 
 fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
@@ -1310,6 +1447,42 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
               ON insights(workspace_id, updated_at);
 
             PRAGMA user_version = 12;
+            ",
+        )?;
+    }
+
+    if version < 13 {
+        connection.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS operational_events (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              sequence INTEGER NOT NULL CHECK(sequence > 0),
+              timestamp TEXT NOT NULL,
+              kind TEXT NOT NULL,
+              outcome TEXT NOT NULL,
+              actor TEXT NOT NULL,
+              actor_id TEXT NOT NULL,
+              entity_type TEXT,
+              entity_id TEXT,
+              trace_id TEXT,
+              parent_event_id TEXT,
+              payload_json TEXT
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_operational_events_sequence
+              ON operational_events(workspace_id, sequence);
+
+            CREATE INDEX IF NOT EXISTS idx_operational_events_workspace_time
+              ON operational_events(workspace_id, timestamp);
+
+            CREATE INDEX IF NOT EXISTS idx_operational_events_entity
+              ON operational_events(workspace_id, entity_type, entity_id, timestamp);
+
+            CREATE INDEX IF NOT EXISTS idx_operational_events_trace
+              ON operational_events(workspace_id, trace_id, sequence);
+
+            PRAGMA user_version = 13;
             ",
         )?;
     }
@@ -8066,6 +8239,92 @@ fn audit_hash(
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
+fn operational_event_kind_for_audit(category: &str, action: &str) -> &'static str {
+    match (category.trim(), action.trim()) {
+        ("content", "approval_request") => "approval.requested",
+        ("content", "approval_decide") => "approval.decided",
+        ("task", "enqueue") => "work.created",
+        ("task", _) => "work.state_changed",
+        ("connector", _) => "connector.result",
+        ("insight", _) | ("analytics", _) => "insight.recorded",
+        (_, action) if action.contains("dispatch") => "connector.dispatched",
+        (_, action)
+            if action.contains("execute")
+                || action.contains("publish")
+                || action.contains("send") =>
+        {
+            "connector.result"
+        }
+        _ => "command.completed",
+    }
+}
+
+fn operational_event_outcome_for_audit(outcome: &str) -> &'static str {
+    match outcome.trim().to_ascii_lowercase().as_str() {
+        "success" | "succeeded" => "succeeded",
+        "failure" | "failed" | "error" => "failed",
+        "blocked" => "blocked",
+        "pending" | "waiting" => "waiting",
+        _ => "started",
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn append_operational_event_from_audit(
+    connection: &Connection,
+    workspace_id: &str,
+    audit_id: &str,
+    timestamp: &str,
+    category: &str,
+    action: &str,
+    outcome: &str,
+    actor: &str,
+    entity_id: Option<&str>,
+) -> Result<(), rusqlite::Error> {
+    if workspace_id.trim().is_empty() || actor.trim().is_empty() {
+        return Ok(());
+    }
+
+    let next_sequence: i64 = connection.query_row(
+        "SELECT COALESCE(MAX(sequence), 0) + 1
+         FROM operational_events
+         WHERE workspace_id=?1",
+        params![workspace_id],
+        |row| row.get(0),
+    )?;
+
+    let payload_json = serde_json::json!({
+        "source": "audit_bridge",
+        "audit_id": audit_id,
+        "category": category,
+        "action": action,
+    })
+    .to_string();
+
+    connection.execute(
+        "INSERT INTO operational_events(
+          id, workspace_id, sequence, timestamp, kind, outcome, actor, actor_id,
+          entity_type, entity_id, trace_id, parent_event_id, payload_json
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL, ?12)",
+        params![
+            format!("op-{}", uuid_like()),
+            workspace_id,
+            next_sequence,
+            timestamp,
+            operational_event_kind_for_audit(category, action),
+            operational_event_outcome_for_audit(outcome),
+            actor.trim(),
+            actor.trim(),
+            Some(category.trim()),
+            entity_id,
+            audit_id,
+            payload_json,
+        ],
+    )?;
+
+    Ok(())
+}
+
 fn append_audit_event(
     connection: &Connection,
     workspace_id: &str,
@@ -8110,7 +8369,7 @@ fn append_audit_event(
          )
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, ?10)",
         params![
-            id,
+            &id,
             workspace_id,
             timestamp,
             category,
@@ -8122,6 +8381,19 @@ fn append_audit_event(
             hash
         ],
     )?;
+
+    append_operational_event_from_audit(
+        connection,
+        workspace_id,
+        &id,
+        &timestamp,
+        category,
+        action,
+        outcome,
+        actor,
+        entity_id,
+    )?;
+
     Ok(())
 }
 
@@ -8514,6 +8786,247 @@ fn analytics_summary(
             failed as f64 / attempted_f
         },
     })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn append_operational_event(
+    connection: &mut Connection,
+    workspace_id: &str,
+    id: Option<&str>,
+    timestamp: &str,
+    kind: &str,
+    outcome: &str,
+    actor: &str,
+    actor_id: &str,
+    entity_type: Option<&str>,
+    entity_id: Option<&str>,
+    trace_id: Option<&str>,
+    parent_event_id: Option<&str>,
+    payload_json: Option<&str>,
+) -> Result<OperationalEventView, AppError> {
+    if workspace_id.trim().is_empty() || actor_id.trim().is_empty() {
+        return Err(AppError::InvalidPayload);
+    }
+
+    let id = id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("");
+    let id = if id.is_empty() {
+        uuid_like()
+    } else {
+        id.to_string()
+    };
+    let timestamp = normalize_rfc3339_utc(timestamp).map_err(|_| AppError::InvalidPayload)?;
+    let kind = validate_operational_event_kind(kind)?.to_string();
+    let outcome = validate_operational_event_outcome(outcome)?.to_string();
+    let actor = validate_operational_event_actor(actor)?.to_string();
+
+    let entity_type = entity_type
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(validate_label)
+        .transpose()
+        .map_err(|_| AppError::InvalidPayload)?;
+    let entity_id = entity_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(validate_label)
+        .transpose()
+        .map_err(|_| AppError::InvalidPayload)?;
+    let trace_id = trace_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(validate_label)
+        .transpose()
+        .map_err(|_| AppError::InvalidPayload)?;
+    let parent_event_id = parent_event_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(validate_label)
+        .transpose()
+        .map_err(|_| AppError::InvalidPayload)?;
+
+    if let (Some(entity_type), Some(entity_id)) = (&entity_type, &entity_id) {
+        if entity_type.trim().is_empty() || entity_id.trim().is_empty() {
+            return Err(AppError::InvalidPayload);
+        }
+    }
+
+    let payload = normalize_operational_event_payload(payload_json)?;
+
+    let transaction =
+        connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+    let next_sequence: i64 = transaction.query_row(
+        "SELECT COALESCE(MAX(sequence), 0) + 1 FROM operational_events WHERE workspace_id=?1",
+        params![workspace_id],
+        |row| row.get(0),
+    )?;
+
+    if let Some(parent_event_id) = parent_event_id.as_deref() {
+        let exists: bool = transaction.query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM operational_events
+               WHERE workspace_id=?1 AND id=?2
+             )",
+            params![workspace_id, parent_event_id],
+            |row| row.get(0),
+        )?;
+        if !exists {
+            return Err(AppError::InvalidPayload);
+        }
+    }
+
+    transaction.execute(
+        "INSERT INTO operational_events(
+          id, workspace_id, sequence, timestamp, kind, outcome, actor, actor_id,
+          entity_type, entity_id, trace_id, parent_event_id, payload_json
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+        params![
+            id,
+            workspace_id,
+            next_sequence,
+            timestamp,
+            kind,
+            outcome,
+            actor,
+            actor_id.trim(),
+            entity_type.as_deref(),
+            entity_id.as_deref(),
+            trace_id.as_deref(),
+            parent_event_id.as_deref(),
+            payload.as_deref(),
+        ],
+    )?;
+
+    transaction.commit()?;
+
+    Ok(OperationalEventView {
+        id,
+        sequence: next_sequence,
+        timestamp,
+        kind,
+        outcome,
+        actor,
+        actor_id: actor_id.trim().to_string(),
+        entity_type,
+        entity_id,
+        trace_id,
+        parent_event_id,
+        payload_json: payload,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+fn operational_event_append(
+    app: tauri::AppHandle,
+    timestamp: String,
+    kind: String,
+    outcome: String,
+    actor: String,
+    actor_id: String,
+    entity_type: Option<String>,
+    entity_id: Option<String>,
+    trace_id: Option<String>,
+    parent_event_id: Option<String>,
+    payload_json: Option<String>,
+) -> Result<OperationalEventView, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let local_user = local_user_id(&connection).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "reviewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    if actor.trim() != "user" || actor_id.trim() != local_user {
+        return Err(AppError::Unauthorized.to_string());
+    }
+
+    let mut connection = connection;
+    append_operational_event(
+        &mut connection,
+        &workspace_id,
+        None,
+        &timestamp,
+        &kind,
+        &outcome,
+        &actor,
+        &actor_id,
+        entity_type.as_deref(),
+        entity_id.as_deref(),
+        trace_id.as_deref(),
+        parent_event_id.as_deref(),
+        payload_json.as_deref(),
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn operational_event_list(
+    app: tauri::AppHandle,
+    entity_type: Option<String>,
+    entity_id: Option<String>,
+    trace_id: Option<String>,
+    limit: Option<i64>,
+) -> Result<Vec<OperationalEventView>, String> {
+    let workspace_id = active_workspace_id();
+    let limit = limit.unwrap_or(200).clamp(1, 1000);
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "reviewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, sequence, timestamp, kind, outcome, actor, actor_id,
+                    entity_type, entity_id, trace_id, parent_event_id, payload_json
+             FROM operational_events
+             WHERE workspace_id=?1
+               AND (?2 IS NULL OR entity_type=?2)
+               AND (?3 IS NULL OR entity_id=?3)
+               AND (?4 IS NULL OR trace_id=?4)
+             ORDER BY sequence DESC
+             LIMIT ?5",
+        )
+        .map_err(|error| error.to_string())?;
+
+    let rows = statement
+        .query_map(
+            params![
+                workspace_id,
+                entity_type.as_deref(),
+                entity_id.as_deref(),
+                trace_id.as_deref(),
+                limit
+            ],
+            |row| {
+                Ok(OperationalEventView {
+                    id: row.get(0)?,
+                    sequence: row.get(1)?,
+                    timestamp: row.get(2)?,
+                    kind: row.get(3)?,
+                    outcome: row.get(4)?,
+                    actor: row.get(5)?,
+                    actor_id: row.get(6)?,
+                    entity_type: row.get(7)?,
+                    entity_id: row.get(8)?,
+                    trace_id: row.get(9)?,
+                    parent_event_id: row.get(10)?,
+                    payload_json: row.get(11)?,
+                })
+            },
+        )
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -9481,7 +9994,7 @@ mod tests {
                    metadata_json TEXT,
                    previous_hash TEXT NOT NULL,
                    hash TEXT NOT NULL
-                 );",
+                 );\n                CREATE TABLE operational_events(\n                  id TEXT PRIMARY KEY,\n                  workspace_id TEXT NOT NULL,\n                  sequence INTEGER NOT NULL,\n                  timestamp TEXT NOT NULL,\n                  kind TEXT NOT NULL,\n                  outcome TEXT NOT NULL,\n                  actor TEXT NOT NULL,\n                  actor_id TEXT NOT NULL,\n                  entity_type TEXT,\n                  entity_id TEXT,\n                  trace_id TEXT,\n                  parent_event_id TEXT,\n                  payload_json TEXT\n                );\n                CREATE UNIQUE INDEX ux_operational_events_sequence\n                  ON operational_events(workspace_id, sequence);",
             )
             .expect("audit table should be created");
         write_audit_for_workspace(
@@ -9526,7 +10039,7 @@ mod tests {
                metadata_json TEXT,
                previous_hash TEXT NOT NULL,
                hash TEXT NOT NULL
-             );",
+             );\n                CREATE TABLE operational_events(\n                  id TEXT PRIMARY KEY,\n                  workspace_id TEXT NOT NULL,\n                  sequence INTEGER NOT NULL,\n                  timestamp TEXT NOT NULL,\n                  kind TEXT NOT NULL,\n                  outcome TEXT NOT NULL,\n                  actor TEXT NOT NULL,\n                  actor_id TEXT NOT NULL,\n                  entity_type TEXT,\n                  entity_id TEXT,\n                  trace_id TEXT,\n                  parent_event_id TEXT,\n                  payload_json TEXT\n                );\n                CREATE UNIQUE INDEX ux_operational_events_sequence\n                  ON operational_events(workspace_id, sequence);",
             )
             .expect("audit table should be created");
 
@@ -10662,7 +11175,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 12);
+        assert_eq!(version, 13);
     }
 
     #[test]
@@ -10704,7 +11217,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 12);
+        assert_eq!(version, 13);
     }
 
     #[test]
@@ -10963,7 +11476,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 12);
+        assert_eq!(version, 13);
     }
 
     #[test]
@@ -11440,6 +11953,8 @@ pub fn run() {
             operational_link_upsert,
             operational_link_list,
             operational_link_delete,
+            operational_event_append,
+            operational_event_list,
             content_variant_list,
             campaign_attach_content,
             approval_request,
@@ -11474,6 +11989,98 @@ pub fn run() {
 }
 
 #[cfg(test)]
+mod operational_audit_bridge_tests {
+    use super::*;
+
+    #[test]
+    fn audit_append_creates_correlated_operational_event() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection
+            .execute_batch(
+                "
+                CREATE TABLE audit_events(
+                  id TEXT PRIMARY KEY,
+                  workspace_id TEXT NOT NULL,
+                  timestamp TEXT NOT NULL,
+                  category TEXT NOT NULL,
+                  action TEXT NOT NULL,
+                  outcome TEXT NOT NULL,
+                  actor TEXT NOT NULL,
+                  entity_id TEXT,
+                  metadata_json TEXT,
+                  previous_hash TEXT NOT NULL,
+                  hash TEXT NOT NULL
+                );
+                CREATE TABLE operational_events(
+                  id TEXT PRIMARY KEY,
+                  workspace_id TEXT NOT NULL,
+                  sequence INTEGER NOT NULL,
+                  timestamp TEXT NOT NULL,
+                  kind TEXT NOT NULL,
+                  outcome TEXT NOT NULL,
+                  actor TEXT NOT NULL,
+                  actor_id TEXT NOT NULL,
+                  entity_type TEXT,
+                  entity_id TEXT,
+                  trace_id TEXT,
+                  parent_event_id TEXT,
+                  payload_json TEXT
+                );
+                CREATE UNIQUE INDEX ux_operational_events_sequence
+                  ON operational_events(workspace_id, sequence);
+                ",
+            )
+            .expect("fixtures should exist");
+
+        append_audit_event(
+            &connection,
+            "workspace-1",
+            "content",
+            "approval_request",
+            "success",
+            "user",
+            Some("content-1"),
+        )
+        .expect("audit append should succeed");
+
+        let audit: (String, String, String) = connection
+            .query_row(
+                "SELECT id, action, outcome FROM audit_events LIMIT 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("audit row should exist");
+
+        let operational: (String, String, String, String, String, String) = connection
+            .query_row(
+                "SELECT id, kind, outcome, actor_id, entity_id, trace_id
+                 FROM operational_events
+                 LIMIT 1",
+                [],
+                |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                        row.get(5)?,
+                    ))
+                },
+            )
+            .expect("operational row should exist");
+
+        assert_eq!(audit.1, "approval_request");
+        assert_eq!(audit.2, "success");
+        assert_eq!(operational.1, "approval.requested");
+        assert_eq!(operational.2, "succeeded");
+        assert_eq!(operational.3, "user");
+        assert_eq!(operational.4, "content-1");
+        assert_eq!(operational.5, audit.0);
+    }
+}
+
+#[cfg(test)]
 mod interrupted_restore_recovery_tests {
     use super::*;
 
@@ -11498,6 +12105,36 @@ mod interrupted_restore_recovery_tests {
         assert!(!temporary.exists());
 
         fs::remove_dir_all(&root).expect("recovery fixture directory should be removed");
+    }
+
+    #[test]
+    fn operational_event_schema_upgrade_is_explicit_and_durable() {
+        let connection = Connection::open_in_memory().expect("in-memory sqlite should open");
+        connection
+            .execute_batch("PRAGMA foreign_keys = ON; PRAGMA user_version = 12;")
+            .expect("version fixture should initialize");
+
+        migrate_schema(&connection).expect("v13 migration should succeed");
+
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("schema version should be readable");
+        assert_eq!(version, 13);
+
+        let columns: Vec<String> = {
+            let mut statement = connection
+                .prepare("PRAGMA table_info(operational_events)")
+                .expect("event table should exist");
+            let rows = statement
+                .query_map([], |row| row.get::<_, String>(1))
+                .expect("event columns should be readable");
+            rows.collect::<Result<Vec<_>, _>>()
+                .expect("event columns should collect")
+        };
+
+        assert!(columns.contains(&"sequence".to_string()));
+        assert!(columns.contains(&"actor_id".to_string()));
+        assert!(columns.contains(&"payload_json".to_string()));
     }
 
     #[test]
