@@ -33,7 +33,9 @@ const WEBVIEW2_POLICY_KEY =
 function configureWebView2DebugPolicy(): void {
   if (!exe) return;
   const executableName = exe.split(/[\\/]/).pop();
-  if (!executableName) throw new Error("Unable to determine Tauri executable name");
+  if (!executableName) {
+    throw new Error("Unable to determine Tauri executable name");
+  }
   execSync(
     [
       "reg",
