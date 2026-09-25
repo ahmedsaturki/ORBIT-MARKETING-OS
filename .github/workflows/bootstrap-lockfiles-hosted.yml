@@ -2,8 +2,6 @@ name: Bootstrap lockfiles on hosted runner
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["rebuild/orbit-production-consolidated"]
 
 permissions:
   contents: write
