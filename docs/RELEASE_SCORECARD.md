@@ -71,7 +71,7 @@ Status meanings:
 | PERF-01 Startup budget         | UNVERIFIED               | Measurement pending                                                         |
 | PERF-02 Memory budget          | UNVERIFIED               | Measurement pending                                                         |
 | QA-01 Coverage threshold       | VERIFIED                 | Main CI coverage gate passed                                                |
-| QA-02 Critical E2E             | VERIFIED*                | Main browser E2E passed; native Windows E2E remains tied to PR #27          |
+| QA-02 Critical E2E             | VERIFIED*                | Main browser E2E passed; native Windows E2E remains tied to PR #35          |
 | DOC-01 Product docs match      | IMPLEMENTED / UNVERIFIED | Architecture/deployment/user/security/release docs updated                  |
 | DOC-02 Security model          | IMPLEMENTED / UNVERIFIED | Threat model + security gates present                                       |
 
@@ -83,14 +83,14 @@ Older Vercel ERROR deployments are historical evidence only. Current Vercel stat
 
 ### GitHub Actions
 
-Historical hosted runner failures on the earlier rebuild line failed before the first step. The current main line now has real hosted executions with successful quality/Rust/Web gates.
+Historical hosted runner failures on the earlier rebuild line are no longer current execution evidence. The current main line now has real hosted executions with successful quality/Rust/Web gates.
 
 - steps=[]
 - runner_id=0
 - empty runner name
 - failure within seconds
 
-A minimal diagnostic workflow reproduced the same signature before being removed. Current evidence therefore indicates runner provisioning/startup infrastructure, not a source-level ORBIT build error. The repository reproduced the same pre-step failure on both the rebuild line and main. The current main line already has trusted successful hosted-run evidence; self-hosted execution remains only a zero-cost fallback for native/manual gates.
+A minimal diagnostic workflow reproduced the same signature before being removed. Current evidence therefore indicates runner provisioning/startup infrastructure, not a source-level ORBIT build error. The repository previously reproduced the same pre-step failure on both the rebuild line and main. Current main/PR executions now produce real workflow steps; self-hosted execution remains a zero-cost fallback for manual/native work.
 
 ### Vercel
 
