@@ -102,6 +102,13 @@ Content variants are workspace-scoped through their parent content item. Analyti
 
 Media commands persist metadata only; local file bytes are not uploaded implicitly. Rule packs are schema-versioned JSON and external actions require confirmation.
 
+### Operating graph
+
+- `operational_link_upsert`
+- `operational_link_list`
+
+Operating links are strictly scoped to the active workspace and validate both endpoint entities before persistence. The runtime accepts only persisted operating entity types; self-links, unknown entities, and cross-workspace references are rejected. Relations use the same lowercase identifier contract as the core graph kernel.
+
 ### CRM and inbox
 
 - `contact_upsert`
