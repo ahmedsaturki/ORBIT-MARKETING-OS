@@ -345,7 +345,9 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
     const claimed = (await page!.evaluate(
       async (timestamp) =>
-        window.__TAURI_INTERNALS__.invoke("task_claim_next", { now: timestamp }),
+        window.__TAURI_INTERNALS__.invoke("task_claim_next", {
+          now: timestamp,
+        }),
       now,
     )) as { id: string; status: string };
     expect(claimed.id).toBe(task.id);
@@ -367,7 +369,9 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       campaign.id,
     )) as Array<{ id: string; status: string }>;
 
-    const recoveredTask = recovered.find((candidate) => candidate.id === task.id);
+    const recoveredTask = recovered.find(
+      (candidate) => candidate.id === task.id,
+    );
     expect(recoveredTask).toEqual({ id: task.id, status: "pending" });
   });
 
