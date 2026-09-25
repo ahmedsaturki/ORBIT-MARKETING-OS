@@ -58,7 +58,26 @@ async function assertFile(path) {
   }
 }
 
+async function assertAbsent(path) {
+  try {
+    await readFile(join(root, path));
+  } catch {
+    return;
+  }
+  throw new Error("Legacy/forbidden file is still present: " + path);
+}
+
 for (const file of requiredFiles) await assertFile(file);
+
+for (const file of [
+  "src-tauri/Cargo.toml",
+  "src-tauri/Cargo.lock",
+  "src-tauri/tauri.conf.json",
+  "src-tauri/src/main.rs",
+  "packages/mobile/package-lock.json",
+]) {
+  await assertAbsent(file);
+}
 
 const rootPackage = await readJson("package.json");
 for (const packagePath of [
