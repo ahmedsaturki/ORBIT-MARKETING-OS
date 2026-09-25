@@ -12,7 +12,7 @@ Status meanings:
 ## Security
 
 | Gate                             | Current status | Evidence                                                       |
-| --- | --- | --- |
+| -------------------------------- | -------------- | -------------------------------------------------------------- |
 | SEC-01 Secrets encrypted at rest | VERIFIED       | Native encryption plus current main security/Rust gates passed |
 | SEC-02 Secret redaction          | VERIFIED       | Secret scan and core tests passed in main CI                   |
 | SEC-03 Renderer isolation        | VERIFIED       | Tauri capability policy and E2E/quality gates passed           |
@@ -21,7 +21,7 @@ Status meanings:
 ## Data / Queue
 
 | Gate                             | Current status           | Evidence                                                                    |
-| --- | --- | --- |
+| -------------------------------- | ------------------------ | --------------------------------------------------------------------------- |
 | DATA-01 Local SQLite             | VERIFIED                 | Native runtime implementation and current Rust quality gates passed         |
 | DATA-02 Migration safety         | VERIFIED                 | Versioned migration chain through v10 is covered by current main validation |
 | QUE-01 Persistent queue recovery | IMPLEMENTED / UNVERIFIED | Native queue + migration/claim logic exists; restart test pending           |
@@ -31,7 +31,7 @@ Status meanings:
 ## Product workflows
 
 | Gate                                | Current status | Evidence                                                                                                          |
-| --- | --- | --- |
+| ----------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------- |
 | CAMP-01 Campaign → tasks            | VERIFIED       | Native commands and core tests passed                                                                             |
 | CAMP-02 Account membership          | VERIFIED       | Workspace checks/triggers validated by main gates                                                                 |
 | CAMP-03 Approval gates              | VERIFIED       | Approval policy/persistence tests passed                                                                          |
@@ -43,7 +43,7 @@ Status meanings:
 ## Connectors
 
 | Gate                                     | Current status           | Evidence                                                                                      |
-| --- | --- | --- |
+| ---------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------- |
 | CONN-01 Capability handshake             | VERIFIED                 | Connector registry/fixture/capability tests passed                                            |
 | CONN-02 Unsupported action rejection     | VERIFIED                 | Negative connector tests passed                                                               |
 | CONN-03 Challenge → human intervention   | VERIFIED                 | Challenge handling and human-intervention stop paths are covered                              |
@@ -54,7 +54,7 @@ Status meanings:
 ## Web / Mobile
 
 | Gate                          | Current status | Evidence                                                                                                                               |
-| --- | --- | --- |
+| ----------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | WEB-01 PWA                    | VERIFIED       | Main web build/E2E and live production checks                                                                                          |
 | MOB-01 Mobile control surface | VERIFIED*      | Main mobile checks and Android debug validation path pass; store release remains separate                                              |
 | Web production deployment     | VERIFIED*      | READY Vercel production deployment and live verification are recorded; effective project framework metadata still needs reconciliation |
@@ -62,7 +62,7 @@ Status meanings:
 ## Release / Operations
 
 | Gate                           | Current status           | Evidence                                                                    |
-| --- | --- | --- |
+| ------------------------------ | ------------------------ | --------------------------------------------------------------------------- |
 | REL-01 Reproducible install    | VERIFIED                 | Committed pnpm-lock.yaml and desktop Cargo.lock; main frozen install passed |
 | REL-02 Signed desktop artifact | UNVERIFIED               | Release workflow builds unsigned validation artifacts                       |
 | REL-03 Checksum verification   | IMPLEMENTED / UNVERIFIED | Release workflow generates and checks SHA-256 manifest                      |
