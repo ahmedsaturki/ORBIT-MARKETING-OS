@@ -26,6 +26,22 @@ describe("CommandRegistry", () => {
     ).toEqual({ allowed: false, reason: "scope_denied" });
   });
 
+  it("requires an identified actor", () => {
+    const registry = new CommandRegistry();
+    expect(
+      registry.decide(
+        {
+          commandId: "analytics.explain",
+          workspaceId: "ws-1",
+          actorId: " ",
+          grantedScopes: ["analytics:read"],
+          approvalGranted: false,
+        },
+        "desktop",
+      ),
+    ).toEqual({ allowed: false, reason: "scope_denied" });
+  });
+
   it("blocks externally visible commands until approval", () => {
     const registry = new CommandRegistry();
     const invocation = {
