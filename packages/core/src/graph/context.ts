@@ -72,7 +72,15 @@ export function projectGraphContext(
       const next = nodeMap.get(nextKey);
       if (!next) continue;
       if (seen.size >= maxNodes) {
-        return buildContext(graph, rootNode, seen, selectedDepth, maxDepth, true, allowedRelations);
+        return buildContext(
+          graph,
+          rootNode,
+          seen,
+          selectedDepth,
+          maxDepth,
+          true,
+          allowedRelations,
+        );
       }
 
       const depth = current.depth + 1;
@@ -82,7 +90,15 @@ export function projectGraphContext(
     }
   }
 
-  return buildContext(graph, rootNode, seen, selectedDepth, maxDepth, false, allowedRelations);
+  return buildContext(
+    graph,
+    rootNode,
+    seen,
+    selectedDepth,
+    maxDepth,
+    false,
+    allowedRelations,
+  );
 }
 
 function buildContext(

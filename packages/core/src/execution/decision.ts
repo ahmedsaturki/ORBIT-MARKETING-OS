@@ -11,11 +11,7 @@ import {
 } from "../policies/index.js";
 
 export type ExecutionDecisionBlock =
-  | "agent"
-  | "policy"
-  | "approval"
-  | "budget"
-  | "invalid_request";
+  "agent" | "policy" | "approval" | "budget" | "invalid_request";
 
 export interface GovernedExecutionRequest {
   readonly agent: AgentDefinition;
@@ -89,6 +85,8 @@ export function evaluateGovernedExecution(
 
   return {
     allowed: true,
-    reason: request.approvalGranted ? "governed_and_approved" : "governed_bounded",
+    reason: request.approvalGranted
+      ? "governed_and_approved"
+      : "governed_bounded",
   };
 }

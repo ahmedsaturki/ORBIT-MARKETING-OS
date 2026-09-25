@@ -1,4 +1,7 @@
-import type { OperationalEntityType, OperationalLink } from "../operations/index.js";
+import type {
+  OperationalEntityType,
+  OperationalLink,
+} from "../operations/index.js";
 
 export type OperatingGraphNodeType =
   | OperationalEntityType
@@ -16,7 +19,10 @@ export interface OperatingGraphNode {
   readonly type: OperatingGraphNodeType;
 }
 
-export interface OperatingGraphLink extends Omit<OperationalLink, "fromType" | "toType"> {
+export interface OperatingGraphLink extends Omit<
+  OperationalLink,
+  "fromType" | "toType"
+> {
   readonly fromType: OperatingGraphNodeType;
   readonly toType: OperatingGraphNodeType;
 }
@@ -131,7 +137,10 @@ export function validateOperatingGraph(
       continue;
     }
 
-    if (from.workspaceId !== graph.workspaceId || to.workspaceId !== graph.workspaceId) {
+    if (
+      from.workspaceId !== graph.workspaceId ||
+      to.workspaceId !== graph.workspaceId
+    ) {
       issues.push({
         code: "cross_workspace_link",
         message: `Graph link crosses the workspace boundary: ${fromKey} -> ${toKey}`,
@@ -182,10 +191,8 @@ export function getRelatedNodes(
   const keys = new Set<string>();
 
   for (const link of graph.links) {
-    const outbound =
-      link.fromType === node.type && link.fromId === node.id;
-    const inbound =
-      link.toType === node.type && link.toId === node.id;
+    const outbound = link.fromType === node.type && link.fromId === node.id;
+    const inbound = link.toType === node.type && link.toId === node.id;
 
     if ((direction === "outbound" || direction === "both") && outbound) {
       keys.add(link.toType + ":" + link.toId);

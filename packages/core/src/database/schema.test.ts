@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DATABASE_SCHEMA_SQL,
-  DATABASE_SCHEMA_VERSION,
-} from "./schema.js";
+import { DATABASE_SCHEMA_SQL, DATABASE_SCHEMA_VERSION } from "./schema.js";
 
 describe("canonical database schema contract", () => {
   it("tracks the current desktop schema version", () => {

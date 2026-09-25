@@ -93,9 +93,9 @@ export function OutcomesPanel({
   contacts,
   campaigns,
 }: OutcomesPanelProps) {
-  const [opportunities, setOpportunities] = useState<readonly OpportunityView[]>(
-    [],
-  );
+  const [opportunities, setOpportunities] = useState<
+    readonly OpportunityView[]
+  >([]);
   const [insights, setInsights] = useState<readonly InsightView[]>([]);
   const [analytics, setAnalytics] = useState<OutcomeAnalyticsView | null>(null);
   const [opportunityId, setOpportunityId] = useState("");
@@ -120,17 +120,20 @@ export function OutcomesPanel({
   const load = async (): Promise<void> => {
     try {
       setError("");
-      const [nextOpportunities, nextInsights, nextAnalytics] = await Promise.all([
-        native<OpportunityView[]>("opportunity_list"),
-        native<InsightView[]>("insight_list"),
-        native<OutcomeAnalyticsView>("outcome_analytics"),
-      ]);
+      const [nextOpportunities, nextInsights, nextAnalytics] =
+        await Promise.all([
+          native<OpportunityView[]>("opportunity_list"),
+          native<InsightView[]>("insight_list"),
+          native<OutcomeAnalyticsView>("outcome_analytics"),
+        ]);
       setOpportunities(nextOpportunities);
       setInsights(nextInsights);
       setAnalytics(nextAnalytics);
       setOpportunityContactId((current) => current || contacts[0]?.id || "");
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تحميل الـOutcomes");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تحميل الـOutcomes",
+      );
     }
   };
 
@@ -144,7 +147,11 @@ export function OutcomesPanel({
 
   const saveOpportunity = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!opportunityId.trim() || !opportunityName.trim() || !opportunityContactId) {
+    if (
+      !opportunityId.trim() ||
+      !opportunityName.trim() ||
+      !opportunityContactId
+    ) {
       setError("أدخل معرف الفرصة والاسم واختر العميل");
       return;
     }
@@ -218,14 +225,18 @@ export function OutcomesPanel({
             الدورة التسويقية التالية.
           </p>
         </div>
-        <button className="button secondary" type="button" onClick={() => void load()}>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={() => void load()}
+        >
           تحديث
         </button>
       </div>
 
       {error ? <div className="result">{error}</div> : null}
 
-            {analytics ? (
+      {analytics ? (
         <div className="grid">
           <div className="card">
             <strong>Open pipeline</strong>
@@ -262,7 +273,9 @@ export function OutcomesPanel({
           <div className="card">
             <strong>Opportunities</strong>
             <div className="price">{analytics.opportunity_count}</div>
-            <div className="account-meta">{analytics.open_opportunity_count} open</div>
+            <div className="account-meta">
+              {analytics.open_opportunity_count} open
+            </div>
           </div>
           <div className="card">
             <strong>Learning</strong>
@@ -296,7 +309,9 @@ export function OutcomesPanel({
               العميل
               <select
                 value={opportunityContactId}
-                onChange={(event) => setOpportunityContactId(event.target.value)}
+                onChange={(event) =>
+                  setOpportunityContactId(event.target.value)
+                }
               >
                 <option value="">اختر العميل</option>
                 {contacts.map((contact) => (
@@ -310,7 +325,9 @@ export function OutcomesPanel({
               الحملة (اختياري)
               <select
                 value={opportunityCampaignId}
-                onChange={(event) => setOpportunityCampaignId(event.target.value)}
+                onChange={(event) =>
+                  setOpportunityCampaignId(event.target.value)
+                }
               >
                 <option value="">بدون ربط</option>
                 {campaigns.map((campaign) => (
@@ -346,7 +363,9 @@ export function OutcomesPanel({
                 العملة
                 <input
                   value={opportunityCurrency}
-                  onChange={(event) => setOpportunityCurrency(event.target.value)}
+                  onChange={(event) =>
+                    setOpportunityCurrency(event.target.value)
+                  }
                   maxLength={3}
                 />
               </label>
@@ -456,9 +475,7 @@ export function OutcomesPanel({
                 <input
                   inputMode="decimal"
                   value={insightConfidence}
-                  onChange={(event) =>
-                    setInsightConfidence(event.target.value)
-                  }
+                  onChange={(event) => setInsightConfidence(event.target.value)}
                 />
               </label>
               <label>
@@ -481,7 +498,8 @@ export function OutcomesPanel({
                 <div>
                   <strong>{insight.title}</strong>
                   <div className="account-meta">
-                    {insight.kind} • ثقة {(insight.confidence * 100).toFixed(0)}%
+                    {insight.kind} • ثقة {(insight.confidence * 100).toFixed(0)}
+                    %
                   </div>
                   <div>{insight.summary}</div>
                 </div>

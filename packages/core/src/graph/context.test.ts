@@ -49,10 +49,14 @@ const graph: OperatingGraph = {
 
 describe("bounded operating graph context", () => {
   it("stops at the requested depth", () => {
-    const context = projectGraphContext(graph, {
-      type: "campaign",
-      id: "c-1",
-    }, { maxDepth: 1 });
+    const context = projectGraphContext(
+      graph,
+      {
+        type: "campaign",
+        id: "c-1",
+      },
+      { maxDepth: 1 },
+    );
 
     expect(context.depth).toBe(1);
     expect(context.nodes.map((node) => node.type)).toEqual([
@@ -63,25 +67,30 @@ describe("bounded operating graph context", () => {
   });
 
   it("stops at the node budget and reports truncation", () => {
-    const context: GraphContext = projectGraphContext(graph, {
-      type: "strategy",
-      id: "s-1",
-    }, { maxDepth: 4, maxNodes: 2 });
+    const context: GraphContext = projectGraphContext(
+      graph,
+      {
+        type: "strategy",
+        id: "s-1",
+      },
+      { maxDepth: 4, maxNodes: 2 },
+    );
 
     expect(context.nodes).toHaveLength(2);
     expect(context.truncated).toBe(true);
   });
 
   it("can scope context to a relation allowlist", () => {
-    const context = projectGraphContext(graph, {
-      type: "campaign",
-      id: "c-1",
-    }, { maxDepth: 4, relations: ["produces"] });
+    const context = projectGraphContext(
+      graph,
+      {
+        type: "campaign",
+        id: "c-1",
+      },
+      { maxDepth: 4, relations: ["produces"] },
+    );
 
-    expect(context.nodes.map((node) => node.id)).toEqual([
-      "c-1",
-      "content-1",
-    ]);
+    expect(context.nodes.map((node) => node.id)).toEqual(["c-1", "content-1"]);
     expect(context.links).toHaveLength(1);
   });
 

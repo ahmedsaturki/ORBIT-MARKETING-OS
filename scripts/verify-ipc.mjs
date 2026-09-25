@@ -112,9 +112,9 @@ function collectInvokeArgumentObjects(source) {
   let search = 0;
 
   while (search < source.length) {
-    const match = source.slice(search).match(
-      /(?:callNative|invoke)(?:<[^>]+>)?\s*\(/,
-    );
+    const match = source
+      .slice(search)
+      .match(/(?:callNative|invoke)(?:<[^>]+>)?\s*\(/);
     if (!match) break;
 
     const start = search + match.index;

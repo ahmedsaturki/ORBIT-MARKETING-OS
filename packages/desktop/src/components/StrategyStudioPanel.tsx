@@ -209,9 +209,15 @@ export function StrategyStudioPanel({ workspaceId }: StrategyStudioProps) {
       await native("strategy_upsert", {
         id: strategyId.trim(),
         version: Number(strategyVersion),
-        objectiveIdsJson: JSON.stringify(objectives.slice(0, 10).map((item) => item.id)),
-        audienceIdsJson: JSON.stringify(audiences.slice(0, 10).map((item) => item.id)),
-        offerIdsJson: JSON.stringify(offers.slice(0, 10).map((item) => item.id)),
+        objectiveIdsJson: JSON.stringify(
+          objectives.slice(0, 10).map((item) => item.id),
+        ),
+        audienceIdsJson: JSON.stringify(
+          audiences.slice(0, 10).map((item) => item.id),
+        ),
+        offerIdsJson: JSON.stringify(
+          offers.slice(0, 10).map((item) => item.id),
+        ),
         positioning: positioning.trim(),
         keyMessagesJson: JSON.stringify(first(keyMessages)),
         contentPillarsJson: JSON.stringify(first(contentPillars)),
@@ -234,8 +240,8 @@ export function StrategyStudioPanel({ workspaceId }: StrategyStudioProps) {
     <section className="card">
       <h2>Strategy Studio</h2>
       <p>
-        طبقة ORBIT Brain: أهداف، جماهير، عروض، ورسالة استراتيجية تتحول إلى
-        سياق قابل للتشغيل داخل الـOperating Graph.
+        طبقة ORBIT Brain: أهداف، جماهير، عروض، ورسالة استراتيجية تتحول إلى سياق
+        قابل للتشغيل داخل الـOperating Graph.
       </p>
 
       {error ? <div className="result">{error}</div> : null}
@@ -246,28 +252,45 @@ export function StrategyStudioPanel({ workspaceId }: StrategyStudioProps) {
           <form className="vault-form" onSubmit={saveObjective}>
             <label>
               ID
-              <input value={objectiveId} onChange={(e) => setObjectiveId(e.target.value)} />
+              <input
+                value={objectiveId}
+                onChange={(e) => setObjectiveId(e.target.value)}
+              />
             </label>
             <label>
               الاسم
-              <input value={objectiveName} onChange={(e) => setObjectiveName(e.target.value)} />
+              <input
+                value={objectiveName}
+                onChange={(e) => setObjectiveName(e.target.value)}
+              />
             </label>
             <label>
               Metric
-              <input value={objectiveMetric} onChange={(e) => setObjectiveMetric(e.target.value)} />
+              <input
+                value={objectiveMetric}
+                onChange={(e) => setObjectiveMetric(e.target.value)}
+              />
             </label>
             <label>
               Target
-              <input inputMode="decimal" value={objectiveTarget} onChange={(e) => setObjectiveTarget(e.target.value)} />
+              <input
+                inputMode="decimal"
+                value={objectiveTarget}
+                onChange={(e) => setObjectiveTarget(e.target.value)}
+              />
             </label>
-            <button className="button primary" type="submit">حفظ الهدف</button>
+            <button className="button primary" type="submit">
+              حفظ الهدف
+            </button>
           </form>
           <div className="account-list">
             {objectives.slice(0, 6).map((item) => (
               <div className="account-row" key={item.id}>
                 <div>
                   <strong>{item.name}</strong>
-                  <div className="account-meta">{item.metric} • {item.target} • {item.status}</div>
+                  <div className="account-meta">
+                    {item.metric} • {item.target} • {item.status}
+                  </div>
                 </div>
               </div>
             ))}
@@ -279,21 +302,37 @@ export function StrategyStudioPanel({ workspaceId }: StrategyStudioProps) {
           <form className="vault-form" onSubmit={saveAudience}>
             <label>
               ID
-              <input value={audienceId} onChange={(e) => setAudienceId(e.target.value)} />
+              <input
+                value={audienceId}
+                onChange={(e) => setAudienceId(e.target.value)}
+              />
             </label>
             <label>
               الاسم
-              <input value={audienceName} onChange={(e) => setAudienceName(e.target.value)} />
+              <input
+                value={audienceName}
+                onChange={(e) => setAudienceName(e.target.value)}
+              />
             </label>
             <label>
               الوصف
-              <textarea rows={3} value={audienceDescription} onChange={(e) => setAudienceDescription(e.target.value)} />
+              <textarea
+                rows={3}
+                value={audienceDescription}
+                onChange={(e) => setAudienceDescription(e.target.value)}
+              />
             </label>
             <label>
               Attributes JSON
-              <textarea rows={3} value={audienceAttributes} onChange={(e) => setAudienceAttributes(e.target.value)} />
+              <textarea
+                rows={3}
+                value={audienceAttributes}
+                onChange={(e) => setAudienceAttributes(e.target.value)}
+              />
             </label>
-            <button className="button primary" type="submit">حفظ الجمهور</button>
+            <button className="button primary" type="submit">
+              حفظ الجمهور
+            </button>
           </form>
           <div className="account-list">
             {audiences.slice(0, 6).map((item) => (
@@ -312,21 +351,37 @@ export function StrategyStudioPanel({ workspaceId }: StrategyStudioProps) {
           <form className="vault-form" onSubmit={saveOffer}>
             <label>
               ID
-              <input value={offerId} onChange={(e) => setOfferId(e.target.value)} />
+              <input
+                value={offerId}
+                onChange={(e) => setOfferId(e.target.value)}
+              />
             </label>
             <label>
               الاسم
-              <input value={offerName} onChange={(e) => setOfferName(e.target.value)} />
+              <input
+                value={offerName}
+                onChange={(e) => setOfferName(e.target.value)}
+              />
             </label>
             <label>
               الوعد
-              <textarea rows={3} value={offerPromise} onChange={(e) => setOfferPromise(e.target.value)} />
+              <textarea
+                rows={3}
+                value={offerPromise}
+                onChange={(e) => setOfferPromise(e.target.value)}
+              />
             </label>
             <label>
               Proof points
-              <input value={offerProof} onChange={(e) => setOfferProof(e.target.value)} placeholder="case-study, testimonial" />
+              <input
+                value={offerProof}
+                onChange={(e) => setOfferProof(e.target.value)}
+                placeholder="case-study, testimonial"
+              />
             </label>
-            <button className="button primary" type="submit">حفظ العرض</button>
+            <button className="button primary" type="submit">
+              حفظ العرض
+            </button>
           </form>
           <div className="account-list">
             {offers.slice(0, 6).map((item) => (
@@ -345,36 +400,64 @@ export function StrategyStudioPanel({ workspaceId }: StrategyStudioProps) {
           <form className="vault-form" onSubmit={saveStrategy}>
             <label>
               ID
-              <input value={strategyId} onChange={(e) => setStrategyId(e.target.value)} />
+              <input
+                value={strategyId}
+                onChange={(e) => setStrategyId(e.target.value)}
+              />
             </label>
             <label>
               Version
-              <input inputMode="numeric" value={strategyVersion} onChange={(e) => setStrategyVersion(e.target.value)} />
+              <input
+                inputMode="numeric"
+                value={strategyVersion}
+                onChange={(e) => setStrategyVersion(e.target.value)}
+              />
             </label>
             <label>
               Positioning
-              <textarea rows={4} value={positioning} onChange={(e) => setPositioning(e.target.value)} />
+              <textarea
+                rows={4}
+                value={positioning}
+                onChange={(e) => setPositioning(e.target.value)}
+              />
             </label>
             <label>
               Key messages
-              <input value={keyMessages} onChange={(e) => setKeyMessages(e.target.value)} placeholder="message 1, message 2" />
+              <input
+                value={keyMessages}
+                onChange={(e) => setKeyMessages(e.target.value)}
+                placeholder="message 1, message 2"
+              />
             </label>
             <label>
               Content pillars
-              <input value={contentPillars} onChange={(e) => setContentPillars(e.target.value)} placeholder="education, proof, offer" />
+              <input
+                value={contentPillars}
+                onChange={(e) => setContentPillars(e.target.value)}
+                placeholder="education, proof, offer"
+              />
             </label>
             <label>
               Channels
-              <input value={channels} onChange={(e) => setChannels(e.target.value)} />
+              <input
+                value={channels}
+                onChange={(e) => setChannels(e.target.value)}
+              />
             </label>
-            <button className="button primary" type="submit">حفظ الاستراتيجية</button>
+            <button className="button primary" type="submit">
+              حفظ الاستراتيجية
+            </button>
           </form>
           <div className="account-list">
             {strategies.slice(0, 6).map((item) => (
               <div className="account-row" key={item.id}>
                 <div>
-                  <strong>{item.id} • v{item.version}</strong>
-                  <div className="account-meta">{item.status} • {item.positioning}</div>
+                  <strong>
+                    {item.id} • v{item.version}
+                  </strong>
+                  <div className="account-meta">
+                    {item.status} • {item.positioning}
+                  </div>
                 </div>
               </div>
             ))}

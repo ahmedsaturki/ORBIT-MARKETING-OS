@@ -102,9 +102,7 @@ export function MissionControlPanel({
   const priorities: string[] = [];
   if (!runtimeOnline) priorities.push("Runtime الذكاء المحلي يحتاج مراجعة");
   if (pendingApprovals.length) {
-    priorities.push(
-      pendingApprovals.length + " موافقة تنتظر قراراً بشرياً",
-    );
+    priorities.push(pendingApprovals.length + " موافقة تنتظر قراراً بشرياً");
   }
   if (blocked.length) {
     priorities.push(blocked.length + " مهمة متوقفة وتحتاج تدخلاً");
@@ -134,13 +132,19 @@ export function MissionControlPanel({
 
       <div className="grid">
         <Metric label="الحملات النشطة" value={activeCampaigns.length} />
-        <Metric label="الموافقات" value={pendingApprovals.length} detail="تنتظر قراراً" />
+        <Metric
+          label="الموافقات"
+          value={pendingApprovals.length}
+          detail="تنتظر قراراً"
+        />
         <Metric label="المهام المتوقفة" value={blocked.length} />
         <Metric label="المحادثات المفتوحة" value={activeConversations.length} />
         <Metric label="الحسابات غير المتصلة" value={disconnected.length} />
         <Metric
           label="معدل النجاح"
-          value={analytics ? (analytics.success_rate * 100).toFixed(1) + "%" : "—"}
+          value={
+            analytics ? (analytics.success_rate * 100).toFixed(1) + "%" : "—"
+          }
           detail={
             analytics
               ? analytics.succeeded + " ناجح / " + analytics.failed + " فشل"

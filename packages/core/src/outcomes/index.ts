@@ -1,18 +1,8 @@
 export type OpportunityStage =
-  | "new"
-  | "qualified"
-  | "proposal"
-  | "negotiation"
-  | "won"
-  | "lost"
-  | "nurture";
+  "new" | "qualified" | "proposal" | "negotiation" | "won" | "lost" | "nurture";
 
 export type InsightKind =
-  | "performance"
-  | "anomaly"
-  | "learning"
-  | "trend"
-  | "recommendation";
+  "performance" | "anomaly" | "learning" | "trend" | "recommendation";
 
 export interface MarketingOpportunity {
   readonly id: string;
@@ -75,8 +65,7 @@ export function validateOpportunity(
     errors.push("invalid_stage");
   if (!Number.isFinite(opportunity.value) || opportunity.value < 0)
     errors.push("invalid_value");
-  if (!/^[A-Z]{3}$/.test(opportunity.currency))
-    errors.push("invalid_currency");
+  if (!/^[A-Z]{3}$/.test(opportunity.currency)) errors.push("invalid_currency");
   if (
     !Number.isFinite(opportunity.probability) ||
     opportunity.probability < 0 ||
@@ -94,7 +83,11 @@ export function validateInsight(insight: MarketingInsight): string[] {
   if (!INSIGHT_KINDS.includes(insight.kind)) errors.push("invalid_kind");
   if (!insight.title.trim()) errors.push("title_required");
   if (!insight.summary.trim()) errors.push("summary_required");
-  if (!Number.isFinite(insight.confidence) || insight.confidence < 0 || insight.confidence > 1)
+  if (
+    !Number.isFinite(insight.confidence) ||
+    insight.confidence < 0 ||
+    insight.confidence > 1
+  )
     errors.push("invalid_confidence");
   if (insight.sourceIds.length === 0) errors.push("source_required");
   if (insight.value !== undefined && !Number.isFinite(insight.value))

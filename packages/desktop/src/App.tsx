@@ -1437,7 +1437,6 @@ export function App(): ReactElement {
         />
       ) : null}
 
-
       <header className="hero">
         <div>
           <div className="eyebrow">LOCAL-FIRST • TAURI V2</div>

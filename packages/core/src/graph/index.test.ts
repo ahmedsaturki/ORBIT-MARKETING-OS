@@ -73,8 +73,12 @@ describe("operating graph kernel", () => {
     };
 
     const result = validateOperatingGraph(graph);
-    expect(result.issues.map((issue) => issue.code)).toContain("duplicate_node");
-    expect(result.issues.map((issue) => issue.code)).toContain("duplicate_link");
+    expect(result.issues.map((issue) => issue.code)).toContain(
+      "duplicate_node",
+    );
+    expect(result.issues.map((issue) => issue.code)).toContain(
+      "duplicate_link",
+    );
   });
 
   it("rejects links whose declared workspace differs from the graph workspace", () => {
@@ -148,10 +152,16 @@ describe("operating graph kernel", () => {
       ],
     };
 
-    expect(getRelatedNodes(graph, node("campaign", "c-1"), "inbound").map((x) => x.type))
-      .toEqual(["strategy"]);
-    expect(getRelatedNodes(graph, node("campaign", "c-1"), "outbound").map((x) => x.type))
-      .toEqual(["content"]);
+    expect(
+      getRelatedNodes(graph, node("campaign", "c-1"), "inbound").map(
+        (x) => x.type,
+      ),
+    ).toEqual(["strategy"]);
+    expect(
+      getRelatedNodes(graph, node("campaign", "c-1"), "outbound").map(
+        (x) => x.type,
+      ),
+    ).toEqual(["content"]);
   });
 
   it("finds orphan nodes without guessing how to repair them", () => {
