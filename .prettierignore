@@ -1,0 +1,5 @@
+# Managed/generated files are validated by their own tools.
+.github/workflows/
+src-tauri/gen/
+pnpm-lock.yaml
+**/package-lock.json
