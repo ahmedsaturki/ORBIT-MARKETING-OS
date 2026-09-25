@@ -106,6 +106,7 @@ Media commands persist metadata only; local file bytes are not uploaded implicit
 
 - `operational_link_upsert`
 - `operational_link_list`
+- `operational_link_delete`
 
 Operating links are strictly scoped to the active workspace and validate both endpoint entities before persistence. The runtime accepts only persisted operating entity types; self-links, unknown entities, and cross-workspace references are rejected. Relations use the same lowercase identifier contract as the core graph kernel.
 
