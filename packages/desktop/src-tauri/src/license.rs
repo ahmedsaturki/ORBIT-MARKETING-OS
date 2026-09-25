@@ -7,8 +7,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
-const LICENSE_PUBLIC_KEY_B64: &str =
-    "TM9dnIPSgNRBrd9JnGiVsCgPYA3/ttjdPpn1y64AjUA=";
+const LICENSE_PUBLIC_KEY_B64: &str = "TM9dnIPSgNRBrd9JnGiVsCgPYA3/ttjdPpn1y64AjUA=";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct LicensePayload {
@@ -125,8 +124,12 @@ fn validate_payload(payload: &LicensePayload) -> Result<(), String> {
 
 fn decode_token(token: &str) -> Result<LicensePayload, String> {
     let mut parts = token.split('.');
-    let payload_part = parts.next().ok_or_else(|| "invalid license token".to_string())?;
-    let signature_part = parts.next().ok_or_else(|| "invalid license token".to_string())?;
+    let payload_part = parts
+        .next()
+        .ok_or_else(|| "invalid license token".to_string())?;
+    let signature_part = parts
+        .next()
+        .ok_or_else(|| "invalid license token".to_string())?;
     if parts.next().is_some() || payload_part.is_empty() || signature_part.is_empty() {
         return Err("invalid license token".to_string());
     }
@@ -147,10 +150,10 @@ fn decode_token(token: &str) -> Result<LicensePayload, String> {
     let public_array: [u8; 32] = public_bytes
         .try_into()
         .map_err(|_| "invalid embedded license public key length".to_string())?;
-    let verifying_key =
-        VerifyingKey::from_bytes(&public_array).map_err(|_| "invalid license public key".to_string())?;
-    let signature =
-        Signature::from_slice(&signature_bytes).map_err(|_| "invalid license signature".to_string())?;
+    let verifying_key = VerifyingKey::from_bytes(&public_array)
+        .map_err(|_| "invalid license public key".to_string())?;
+    let signature = Signature::from_slice(&signature_bytes)
+        .map_err(|_| "invalid license signature".to_string())?;
 
     let canonical = serde_json::to_vec(&canonical_message(&payload))
         .map_err(|_| "failed to serialize license".to_string())?;
@@ -161,10 +164,7 @@ fn decode_token(token: &str) -> Result<LicensePayload, String> {
     Ok(payload)
 }
 
-fn evaluate_payload(
-    payload: &LicensePayload,
-    account_count: u64,
-) -> Result<(), String> {
+fn evaluate_payload(payload: &LicensePayload, account_count: u64) -> Result<(), String> {
     let now = OffsetDateTime::now_utc();
     let issued_at = OffsetDateTime::parse(&payload.issued_at, &Rfc3339)
         .map_err(|_| "invalid license issuedAt".to_string())?;
@@ -193,31 +193,24 @@ fn evaluate_payload(
 
 fn load_token(connection: &Connection) -> Result<Option<String>, String> {
     connection
-        .query_row(
-            "SELECT token FROM license_records WHERE id=1",
-            [],
-            |row| row.get(0),
-        )
+        .query_row("SELECT token FROM license_records WHERE id=1", [], |row| {
+            row.get(0)
+        })
         .optional()
         .map_err(|error| error.to_string())
 }
 
 fn account_count(connection: &Connection) -> Result<u64, String> {
     connection
-        .query_row(
-            "SELECT COUNT(*) FROM accounts",
-            [],
-            |row| row.get::<_, i64>(0),
-        )
+        .query_row("SELECT COUNT(*) FROM accounts", [], |row| {
+            row.get::<_, i64>(0)
+        })
         .map(|value| value.max(0) as u64)
         .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-pub fn license_install(
-    app: tauri::AppHandle,
-    token: String,
-) -> Result<LicenseStatus, String> {
+pub fn license_install(app: tauri::AppHandle, token: String) -> Result<LicenseStatus, String> {
     let token = token.trim().to_string();
     if token.is_empty() || token.len() > 20_000 {
         return Err("invalid license token".to_string());
@@ -396,7 +389,9 @@ mod tests {
 
     #[test]
     fn public_key_decodes_to_32_bytes() {
-        let bytes = B64.decode(LICENSE_PUBLIC_KEY_B64).expect("public key base64");
+        let bytes = B64
+            .decode(LICENSE_PUBLIC_KEY_B64)
+            .expect("public key base64");
         assert_eq!(bytes.len(), 32);
     }
 }

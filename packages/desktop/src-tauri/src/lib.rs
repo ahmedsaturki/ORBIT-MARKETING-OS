@@ -17,8 +17,8 @@ use std::{
     sync::{Mutex, OnceLock, RwLock},
 };
 use tauri::Manager;
-use time::{format_description::well_known::Rfc3339, Duration, OffsetDateTime};
 use thiserror::Error;
+use time::{format_description::well_known::Rfc3339, Duration, OffsetDateTime};
 use zeroize::Zeroizing;
 
 const DEFAULT_WORKSPACE_ID: &str = "default";
@@ -362,7 +362,6 @@ struct VaultWriteResult {
     payload_version: u8,
 }
 
-
 #[derive(Debug, Serialize)]
 struct CampaignView {
     id: String,
@@ -550,9 +549,9 @@ fn validate_telegram_token(token: &str) -> Result<String, AppError> {
         || bot_id.len() > 32
         || secret.len() > 256
         || !bot_id.chars().all(|character| character.is_ascii_digit())
-        || !secret
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || character == '_' || character == '-')
+        || !secret.chars().all(|character| {
+            character.is_ascii_alphanumeric() || character == '_' || character == '-'
+        })
     {
         return Err(AppError::InvalidPayload);
     }
@@ -566,13 +565,17 @@ fn telegram_delivery_status_is_ambiguous(status_code: u16) -> bool {
 fn parse_retry_timestamp(retry_after_seconds: u64) -> String {
     let seconds = retry_after_seconds.clamp(1, 86_400);
     let retry_at = OffsetDateTime::now_utc() + Duration::seconds(seconds as i64);
-    retry_at
-        .format(&Rfc3339)
-        .unwrap_or_else(|_| OffsetDateTime::UNIX_EPOCH.format(&Rfc3339).unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string()))
+    retry_at.format(&Rfc3339).unwrap_or_else(|_| {
+        OffsetDateTime::UNIX_EPOCH
+            .format(&Rfc3339)
+            .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
+    })
 }
 
 fn execution_day_key() -> i64 {
-    OffsetDateTime::now_utc().unix_timestamp().div_euclid(86_400)
+    OffsetDateTime::now_utc()
+        .unix_timestamp()
+        .div_euclid(86_400)
 }
 
 fn next_utc_midnight_timestamp() -> String {
@@ -732,10 +735,9 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
 
         let transaction = connection.unchecked_transaction()?;
         let workspace_ids: Vec<String> = {
-            let mut workspace_statement =
-                transaction.prepare("SELECT DISTINCT workspace_id FROM audit_events ORDER BY workspace_id")?;
-            let rows = workspace_statement
-                .query_map([], |row| row.get::<_, String>(0))?;
+            let mut workspace_statement = transaction
+                .prepare("SELECT DISTINCT workspace_id FROM audit_events ORDER BY workspace_id")?;
+            let rows = workspace_statement.query_map([], |row| row.get::<_, String>(0))?;
             rows.collect::<Result<Vec<_>, _>>()?
         };
 
@@ -763,7 +765,18 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
 
             let mut previous_hash = "GENESIS".to_string();
             for row in rows {
-                let (rowid, id, workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json) = row?;
+                let (
+                    rowid,
+                    id,
+                    workspace_id,
+                    timestamp,
+                    category,
+                    action,
+                    outcome,
+                    actor,
+                    entity_id,
+                    metadata_json,
+                ) = row?;
                 let hash = audit_hash(
                     &previous_hash,
                     &id,
@@ -837,9 +850,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
             )?;
         }
         if !has_column(connection, "messages", "external_message_id")? {
-            connection.execute_batch(
-                "ALTER TABLE messages ADD COLUMN external_message_id TEXT",
-            )?;
+            connection.execute_batch("ALTER TABLE messages ADD COLUMN external_message_id TEXT")?;
         }
         connection.execute_batch(
             "CREATE UNIQUE INDEX IF NOT EXISTS ux_messages_external
@@ -849,9 +860,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
 
     if version < 5 {
         if !has_column(connection, "conversations", "account_id")? {
-            connection.execute_batch(
-                "ALTER TABLE conversations ADD COLUMN account_id TEXT",
-            )?;
+            connection.execute_batch("ALTER TABLE conversations ADD COLUMN account_id TEXT")?;
         }
         connection.execute_batch(
             "CREATE INDEX IF NOT EXISTS idx_conversations_account
@@ -861,9 +870,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
 
     if version < 6 {
         if !has_column(connection, "tasks", "destination_id")? {
-            connection.execute_batch(
-                "ALTER TABLE tasks ADD COLUMN destination_id TEXT",
-            )?;
+            connection.execute_batch("ALTER TABLE tasks ADD COLUMN destination_id TEXT")?;
         }
         connection.execute_batch(
             "CREATE INDEX IF NOT EXISTS idx_tasks_destination
@@ -919,7 +926,6 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
             transaction.commit()?;
         }
     }
-
 
     if version < 10 {
         let transaction = connection.unchecked_transaction()?;
@@ -998,7 +1004,6 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
 
         transaction.commit()?;
     }
-
 }
 
 const INTEGRITY_TRIGGERS: &str = r#"
@@ -1183,7 +1188,11 @@ fn recover_interrupted_tasks(connection: &Connection) -> Result<usize, AppError>
     };
 
     for (task_id, workspace_id, kind) in &interrupted {
-        let next_status = if kind == "sync" { "pending" } else { "awaiting_user_action" };
+        let next_status = if kind == "sync" {
+            "pending"
+        } else {
+            "awaiting_user_action"
+        };
 
         connection.execute_batch("BEGIN IMMEDIATE")?;
         let result = (|| -> Result<(), rusqlite::Error> {
@@ -1360,7 +1369,6 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, AppError> {
     Ok(connection)
 }
 
-
 pub(crate) fn open_db_for_module(app: &tauri::AppHandle) -> Result<Connection, String> {
     open_db(app).map_err(|error| error.to_string())
 }
@@ -1371,8 +1379,7 @@ fn derive_key(password: &str, salt: &[u8]) -> Result<Zeroizing<[u8; 32]>, AppErr
     }
 
     let mut output = Zeroizing::new([0u8; 32]);
-    let params = Params::new(64 * 1024, 3, 1, Some(32))
-        .map_err(|_| AppError::InvalidPassword)?;
+    let params = Params::new(64 * 1024, 3, 1, Some(32)).map_err(|_| AppError::InvalidPassword)?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     argon2
         .hash_password_into(password.as_bytes(), salt, &mut output[..])
@@ -1406,9 +1413,15 @@ fn open_payload(password: &str, payload: &EncryptedPayload) -> Result<String, Ap
         return Err(AppError::InvalidPayload);
     }
 
-    let salt = B64.decode(payload.salt.as_bytes()).map_err(|_| AppError::InvalidPayload)?;
-    let nonce = B64.decode(payload.nonce.as_bytes()).map_err(|_| AppError::InvalidPayload)?;
-    let ciphertext = B64.decode(payload.ciphertext.as_bytes()).map_err(|_| AppError::InvalidPayload)?;
+    let salt = B64
+        .decode(payload.salt.as_bytes())
+        .map_err(|_| AppError::InvalidPayload)?;
+    let nonce = B64
+        .decode(payload.nonce.as_bytes())
+        .map_err(|_| AppError::InvalidPayload)?;
+    let ciphertext = B64
+        .decode(payload.ciphertext.as_bytes())
+        .map_err(|_| AppError::InvalidPayload)?;
     if salt.len() < 16 || nonce.len() != 12 || ciphertext.len() < 16 {
         return Err(AppError::InvalidPayload);
     }
@@ -1507,8 +1520,16 @@ pub(crate) fn append_audit_event_for_module(
     actor: &str,
     entity_id: Option<&str>,
 ) -> Result<(), String> {
-    append_audit_event(connection, workspace_id, category, action, outcome, actor, entity_id)
-        .map_err(|error| error.to_string())
+    append_audit_event(
+        connection,
+        workspace_id,
+        category,
+        action,
+        outcome,
+        actor,
+        entity_id,
+    )
+    .map_err(|error| error.to_string())
 }
 
 pub(crate) fn active_workspace_id_for_module() -> String {
@@ -1558,7 +1579,13 @@ async fn telegram_execute_task(
             ) {
                 return Err(error.to_string());
             }
-            telegram_task_audit(&connection, &workspace_id, &task_id, "confirmation_required", "blocked")?;
+            telegram_task_audit(
+                &connection,
+                &workspace_id,
+                &task_id,
+                "confirmation_required",
+                "blocked",
+            )?;
         }
         return Ok(TelegramExecutionView {
             task_id,
@@ -1596,7 +1623,17 @@ async fn telegram_execute_task(
         .optional()
         .map_err(|error| error.to_string())?;
 
-    let Some((account_id, platform, kind, content_id, destination_id, status, attempts, max_attempts)) = task else {
+    let Some((
+        account_id,
+        platform,
+        kind,
+        content_id,
+        destination_id,
+        status,
+        attempts,
+        max_attempts,
+    )) = task
+    else {
         return Err(AppError::NotFound.to_string());
     };
 
@@ -1607,10 +1644,13 @@ async fn telegram_execute_task(
         return Err("telegram executor requires a telegram task".to_string());
     }
     if kind != "publish" && kind != "message" {
-        return Err("telegram native executor supports publish/message text tasks only".to_string());
+        return Err(
+            "telegram native executor supports publish/message text tasks only".to_string(),
+        );
     }
     let content_id = content_id.ok_or_else(|| "task has no linked content".to_string())?;
-    let destination_id = destination_id.ok_or_else(|| "task has no Telegram destination".to_string())?;
+    let destination_id =
+        destination_id.ok_or_else(|| "task has no Telegram destination".to_string())?;
 
     if !verify_audit_chain(&connection, &workspace_id)? {
         connection
@@ -1642,7 +1682,13 @@ async fn telegram_execute_task(
                 params![&task_id, &workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &workspace_id, &task_id, "circuit_breaker_open", "blocked")?;
+        telegram_task_audit(
+            &connection,
+            &workspace_id,
+            &task_id,
+            "circuit_breaker_open",
+            "blocked",
+        )?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_user_action".to_string(),
@@ -1662,12 +1708,20 @@ async fn telegram_execute_task(
                 params![&retry_at, &task_id, &workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &workspace_id, &task_id, "daily_limit_reached", "blocked")?;
+        telegram_task_audit(
+            &connection,
+            &workspace_id,
+            &task_id,
+            "daily_limit_reached",
+            "blocked",
+        )?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "pending".to_string(),
             external_message_id: None,
-            message: "Local daily execution budget is exhausted; task deferred until the next UTC day.".to_string(),
+            message:
+                "Local daily execution budget is exhausted; task deferred until the next UTC day."
+                    .to_string(),
             retry_at: Some(retry_at),
         });
     }
@@ -1687,7 +1741,13 @@ async fn telegram_execute_task(
                 params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &workspace_id, &task_id, "account_not_connected", "blocked")?;
+        telegram_task_audit(
+            &connection,
+            &workspace_id,
+            &task_id,
+            "account_not_connected",
+            "blocked",
+        )?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_user_action".to_string(),
@@ -1697,7 +1757,8 @@ async fn telegram_execute_task(
         });
     }
 
-    let session_payload_json = session_payload_json.ok_or_else(|| AppError::NotFound.to_string())?;
+    let session_payload_json =
+        session_payload_json.ok_or_else(|| AppError::NotFound.to_string())?;
     let payload: EncryptedPayload =
         serde_json::from_str(&session_payload_json).map_err(|error| error.to_string())?;
     let token = validate_telegram_token(
@@ -1743,7 +1804,13 @@ async fn telegram_execute_task(
                 params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &workspace_id, &task_id, "approval_required", "blocked")?;
+        telegram_task_audit(
+            &connection,
+            &workspace_id,
+            &task_id,
+            "approval_required",
+            "blocked",
+        )?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_approval".to_string(),
@@ -1872,7 +1939,13 @@ async fn telegram_execute_task(
                 params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &workspace_id, &task_id, "send_message", "success")?;
+        telegram_task_audit(
+            &connection,
+            &workspace_id,
+            &task_id,
+            "send_message",
+            "success",
+        )?;
         record_execution_success(&connection, &workspace_id, &account_id)
             .map_err(|error| error.to_string())?;
         return Ok(TelegramExecutionView {
@@ -1897,9 +1970,15 @@ async fn telegram_execute_task(
                 params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &workspace_id, &task_id, "authorization_failed", "blocked")?;
-    record_execution_failure(&connection, &workspace_id, &account_id)
-        .map_err(|error| error.to_string())?;
+        telegram_task_audit(
+            &connection,
+            &workspace_id,
+            &task_id,
+            "authorization_failed",
+            "blocked",
+        )?;
+        record_execution_failure(&connection, &workspace_id, &account_id)
+            .map_err(|error| error.to_string())?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_user_action".to_string(),
@@ -1918,9 +1997,15 @@ async fn telegram_execute_task(
                 params![&task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &workspace_id, &task_id, "delivery_status_unknown", "blocked")?;
-    record_execution_failure(&connection, &workspace_id, &account_id)
-        .map_err(|error| error.to_string())?;
+        telegram_task_audit(
+            &connection,
+            &workspace_id,
+            &task_id,
+            "delivery_status_unknown",
+            "blocked",
+        )?;
+        record_execution_failure(&connection, &workspace_id, &account_id)
+            .map_err(|error| error.to_string())?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "awaiting_user_action".to_string(),
@@ -1943,12 +2028,20 @@ async fn telegram_execute_task(
                 params![retry_at, &task_id, workspace_id],
             )
             .map_err(|error| error.to_string())?;
-        telegram_task_audit(&connection, &workspace_id, &task_id, "rate_limited", "blocked")?;
+        telegram_task_audit(
+            &connection,
+            &workspace_id,
+            &task_id,
+            "rate_limited",
+            "blocked",
+        )?;
         return Ok(TelegramExecutionView {
             task_id,
             status: "pending".to_string(),
             external_message_id: None,
-            message: parsed.description.unwrap_or_else(|| "Telegram rate limit reached.".to_string()),
+            message: parsed
+                .description
+                .unwrap_or_else(|| "Telegram rate limit reached.".to_string()),
             retry_at: Some(retry_at),
         });
     }
@@ -1968,7 +2061,13 @@ async fn telegram_execute_task(
             params![next_status, next_attempt, next_available, &task_id, workspace_id],
         )
         .map_err(|error| error.to_string())?;
-    telegram_task_audit(&connection, &workspace_id, &task_id, "send_failed", "failure")?;
+    telegram_task_audit(
+        &connection,
+        &workspace_id,
+        &task_id,
+        "send_failed",
+        "failure",
+    )?;
     record_execution_failure(&connection, &workspace_id, &account_id)
         .map_err(|error| error.to_string())?;
 
@@ -1976,7 +2075,9 @@ async fn telegram_execute_task(
         task_id,
         status: next_status.to_string(),
         external_message_id: None,
-        message: parsed.description.unwrap_or_else(|| "Telegram delivery failed.".to_string()),
+        message: parsed
+            .description
+            .unwrap_or_else(|| "Telegram delivery failed.".to_string()),
         retry_at: if terminal { None } else { Some(next_available) },
     })
 }
@@ -2008,7 +2109,8 @@ fn workspace_list(app: tauri::AppHandle) -> Result<Vec<WorkspaceView>, String> {
             })
         })
         .map_err(|error| error.to_string())?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -2082,9 +2184,7 @@ fn workspace_create(
     )
     .map_err(|error| error.to_string())?;
 
-    transaction
-        .commit()
-        .map_err(|error| error.to_string())?;
+    transaction.commit().map_err(|error| error.to_string())?;
 
     Ok(WorkspaceView {
         id: workspace_id,
@@ -2143,9 +2243,7 @@ fn workspace_select(app: tauri::AppHandle, id: String) -> Result<WorkspaceView, 
     )
     .map_err(|error| error.to_string())?;
 
-    transaction
-        .commit()
-        .map_err(|error| error.to_string())?;
+    transaction.commit().map_err(|error| error.to_string())?;
 
     set_active_workspace_id(&workspace.id).map_err(|error| error.to_string())?;
     Ok(workspace)
@@ -2174,7 +2272,8 @@ fn vault_put(
     let payload = seal(&password, &plaintext).map_err(|error| error.to_string())?;
     let payload_json = serde_json::to_string(&payload).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"])
+        .map_err(|error| error.to_string())?;
 
     let timestamp = chrono_like_timestamp();
     connection
@@ -2186,8 +2285,15 @@ fn vault_put(
         )
         .map_err(|error| error.to_string())?;
 
-    write_audit(&connection, "security", "vault.write", "success", "user", Some(&label))
-        .map_err(|error| error.to_string())?;
+    write_audit(
+        &connection,
+        "security",
+        "vault.write",
+        "success",
+        "user",
+        Some(&label),
+    )
+    .map_err(|error| error.to_string())?;
 
     Ok(VaultWriteResult {
         label,
@@ -2200,7 +2306,8 @@ fn vault_get(app: tauri::AppHandle, label: String, password: String) -> Result<S
     let workspace_id = active_workspace_id();
     let label = validate_label(&label).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"])
+        .map_err(|error| error.to_string())?;
     let payload_json: String = connection
         .query_row(
             "SELECT payload_json FROM vault_records WHERE workspace_id = ?1 AND label = ?2",
@@ -2232,7 +2339,8 @@ fn vault_delete(app: tauri::AppHandle, label: String) -> Result<bool, String> {
     let workspace_id = active_workspace_id();
     let label = validate_label(&label).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"])
+        .map_err(|error| error.to_string())?;
     let changed = connection
         .execute(
             "DELETE FROM vault_records WHERE workspace_id = ?1 AND label = ?2",
@@ -2253,8 +2361,6 @@ fn vault_delete(app: tauri::AppHandle, label: String) -> Result<bool, String> {
     Ok(changed > 0)
 }
 
-
-
 fn validate_task_kind(kind: &str) -> Result<String, AppError> {
     let value = kind.trim().to_lowercase();
     let allowed = ["publish", "message", "comment", "sync", "engage"];
@@ -2267,7 +2373,14 @@ fn validate_task_kind(kind: &str) -> Result<String, AppError> {
 
 fn validate_platform(platform: &str) -> Result<String, AppError> {
     let value = platform.trim().to_lowercase();
-    let allowed = ["facebook", "instagram", "telegram", "whatsapp", "linkedin", "tiktok"];
+    let allowed = [
+        "facebook",
+        "instagram",
+        "telegram",
+        "whatsapp",
+        "linkedin",
+        "tiktok",
+    ];
     if allowed.contains(&value.as_str()) {
         Ok(value)
     } else {
@@ -2304,9 +2417,14 @@ fn account_upsert(
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
     let display_name = validate_label(&display_name).map_err(|error| error.to_string())?;
-    let username = username.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
+    let username = username
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
 
-    let session_payload_json = match (session.filter(|value| !value.is_empty()), password.filter(|value| !value.is_empty())) {
+    let session_payload_json = match (
+        session.filter(|value| !value.is_empty()),
+        password.filter(|value| !value.is_empty()),
+    ) {
         (Some(value), Some(secret)) => {
             let payload = seal(&secret, &value).map_err(|error| error.to_string())?;
             Some(serde_json::to_string(&payload).map_err(|error| error.to_string())?)
@@ -2316,7 +2434,8 @@ fn account_upsert(
     };
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"])
+        .map_err(|error| error.to_string())?;
 
     let existing_platform: Option<String> = connection
         .query_row(
@@ -2332,12 +2451,18 @@ fn account_upsert(
         session_payload_json.is_some(),
     )
     .map_err(|error| match error {
-        AppError::InvalidPayload => "changing an account platform requires a new authorized session".to_string(),
+        AppError::InvalidPayload => {
+            "changing an account platform requires a new authorized session".to_string()
+        }
         other => other.to_string(),
     })?;
 
     let timestamp = chrono_like_timestamp();
-    let status = if session_payload_json.is_some() { "connected" } else { "needs_refresh" };
+    let status = if session_payload_json.is_some() {
+        "connected"
+    } else {
+        "needs_refresh"
+    };
     let changed = connection
         .execute(
             "INSERT INTO accounts(id, workspace_id, platform, display_name, username, status, session_payload_json, created_at, updated_at)
@@ -2372,8 +2497,15 @@ fn account_upsert(
         .map_err(|error| error.to_string())?;
     let has_encrypted_session = persisted.1;
 
-    write_audit(&connection, "account", "upsert", "success", "user", Some(&id))
-        .map_err(|error| error.to_string())?;
+    write_audit(
+        &connection,
+        "account",
+        "upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
 
     Ok(AccountView {
         id,
@@ -2389,7 +2521,12 @@ fn account_upsert(
 fn account_list(app: tauri::AppHandle) -> Result<Vec<AccountView>, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare("SELECT id, platform, display_name, username, status, session_payload_json FROM accounts WHERE workspace_id=?1 ORDER BY created_at DESC")
         .map_err(|error| error.to_string())?;
@@ -2424,7 +2561,8 @@ fn account_get_session(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"])
+        .map_err(|error| error.to_string())?;
     let payload_json: Option<String> = connection
         .query_row(
             "SELECT session_payload_json FROM accounts WHERE id = ?1 AND workspace_id = ?2",
@@ -2457,7 +2595,8 @@ fn account_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
     let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"])
+        .map_err(|error| error.to_string())?;
     let transaction = connection
         .unchecked_transaction()
         .map_err(|error| error.to_string())?;
@@ -2491,12 +2630,9 @@ fn account_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
         .map_err(|error| error.to_string())?;
     }
 
-    transaction
-        .commit()
-        .map_err(|error| error.to_string())?;
+    transaction.commit().map_err(|error| error.to_string())?;
     Ok(changed > 0)
 }
-
 
 #[tauri::command]
 fn campaign_create(
@@ -2511,7 +2647,8 @@ fn campaign_create(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
     let campaign_id = format!("camp-{}", uuid_like());
     let timestamp = chrono_like_timestamp();
     let transaction = connection
@@ -2536,8 +2673,15 @@ fn campaign_create(
 
     transaction.commit().map_err(|error| error.to_string())?;
 
-    write_audit(&connection, "campaign", "create", "success", "user", Some(&campaign_id))
-        .map_err(|error| error.to_string())?;
+    write_audit(
+        &connection,
+        "campaign",
+        "create",
+        "success",
+        "user",
+        Some(&campaign_id),
+    )
+    .map_err(|error| error.to_string())?;
 
     Ok(CampaignView {
         id: campaign_id,
@@ -2552,7 +2696,12 @@ fn campaign_create(
 fn campaign_list(app: tauri::AppHandle) -> Result<Vec<CampaignView>, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT c.id, c.name, c.status, COUNT(t.id), c.created_at
@@ -2576,12 +2725,13 @@ fn campaign_list(app: tauri::AppHandle) -> Result<Vec<CampaignView>, String> {
         })
         .map_err(|error| error.to_string())?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 fn parse_reviewer_ids(value: &str) -> Result<Vec<String>, String> {
-    let reviewers: Vec<String> =
-        serde_json::from_str(value).map_err(|_| "reviewer list must be a JSON array".to_string())?;
+    let reviewers: Vec<String> = serde_json::from_str(value)
+        .map_err(|_| "reviewer list must be a JSON array".to_string())?;
     if reviewers.is_empty() || reviewers.len() > 100 {
         return Err("approval requires at least one reviewer".to_string());
     }
@@ -2596,7 +2746,13 @@ fn parse_reviewer_ids(value: &str) -> Result<Vec<String>, String> {
 
 fn validate_content_status(status: &str) -> Result<String, AppError> {
     let value = status.trim().to_lowercase();
-    let allowed = ["draft", "pending", "approved", "rejected", "changes_requested"];
+    let allowed = [
+        "draft",
+        "pending",
+        "approved",
+        "rejected",
+        "changes_requested",
+    ];
     if allowed.contains(&value.as_str()) {
         Ok(value)
     } else {
@@ -2630,7 +2786,8 @@ fn content_upsert(
     if body.is_empty() || body.len() > 100_000 {
         return Err("invalid content body".to_string());
     }
-    let approval_status = validate_content_edit_status(&approval_status).map_err(|error| error.to_string())?;
+    let approval_status =
+        validate_content_edit_status(&approval_status).map_err(|error| error.to_string())?;
     let tags_json = tags_json.unwrap_or_else(|| "[]".to_string());
     let tags: Vec<String> = serde_json::from_str(&tags_json)
         .map_err(|_| "tags_json must be a JSON array of strings".to_string())?;
@@ -2638,12 +2795,16 @@ fn content_upsert(
         return Err("too many content tags".to_string());
     }
     let tags_json = serde_json::to_string(
-        &tags.into_iter().map(|tag| tag.trim().to_string()).collect::<Vec<_>>(),
+        &tags
+            .into_iter()
+            .map(|tag| tag.trim().to_string())
+            .collect::<Vec<_>>(),
     )
     .map_err(|error| error.to_string())?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
     let changed = connection
         .execute(
@@ -2662,8 +2823,15 @@ fn content_upsert(
     if changed != 1 {
         return Err("content id already belongs to another workspace".to_string());
     }
-    write_audit(&connection, "content", "upsert", "success", "user", Some(&id))
-        .map_err(|error| error.to_string())?;
+    write_audit(
+        &connection,
+        "content",
+        "upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
     Ok(ContentView {
         id,
         title,
@@ -2678,7 +2846,12 @@ fn content_upsert(
 fn content_list(app: tauri::AppHandle) -> Result<Vec<ContentView>, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT id, title, body, approval_status, tags_json, updated_at
@@ -2713,7 +2886,9 @@ fn validate_media_kind(kind: &str) -> Result<String, AppError> {
 }
 
 fn validate_media_sha256(value: Option<&str>) -> Result<Option<String>, AppError> {
-    let Some(value) = value else { return Ok(None); };
+    let Some(value) = value else {
+        return Ok(None);
+    };
     let value = value.trim().to_lowercase();
     if !value.is_empty() && !value.chars().all(|c| c.is_ascii_hexdigit()) {
         return Err(AppError::InvalidLabel);
@@ -2750,13 +2925,18 @@ fn infer_media_mime(path: &std::path::Path) -> Option<&'static str> {
     }
 }
 
-
 fn media_kind_from_mime(mime: &str) -> Option<&'static str> {
-    if mime.starts_with("image/") { Some("image") }
-    else if mime.starts_with("video/") { Some("video") }
-    else if mime.starts_with("audio/") { Some("audio") }
-    else if mime == "application/pdf" || mime.starts_with("text/") || mime == "application/zip" { Some("document") }
-    else { None }
+    if mime.starts_with("image/") {
+        Some("image")
+    } else if mime.starts_with("video/") {
+        Some("video")
+    } else if mime.starts_with("audio/") {
+        Some("audio")
+    } else if mime == "application/pdf" || mime.starts_with("text/") || mime == "application/zip" {
+        Some("document")
+    } else {
+        None
+    }
 }
 
 fn sha256_file(path: &std::path::Path) -> Result<String, String> {
@@ -2765,11 +2945,19 @@ fn sha256_file(path: &std::path::Path) -> Result<String, String> {
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; 1024 * 1024];
     loop {
-        let read = reader.read(&mut buffer).map_err(|_| "unable to read media file".to_string())?;
-        if read == 0 { break; }
+        let read = reader
+            .read(&mut buffer)
+            .map_err(|_| "unable to read media file".to_string())?;
+        if read == 0 {
+            break;
+        }
         hasher.update(&buffer[..read]);
     }
-    Ok(hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect())
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
 }
 
 fn validate_media_mime(kind: &str, mime_type: &str) -> Result<(), AppError> {
@@ -2777,20 +2965,23 @@ fn validate_media_mime(kind: &str, mime_type: &str) -> Result<(), AppError> {
         "image" => mime_type.starts_with("image/"),
         "video" => mime_type.starts_with("video/"),
         "audio" => mime_type.starts_with("audio/"),
-        "document" => mime_type == "application/pdf"
-            || mime_type.starts_with("text/")
-            || mime_type == "application/zip",
+        "document" => {
+            mime_type == "application/pdf"
+                || mime_type.starts_with("text/")
+                || mime_type == "application/zip"
+        }
         _ => false,
     };
-    if valid { Ok(()) } else { Err(AppError::InvalidLabel) }
+    if valid {
+        Ok(())
+    } else {
+        Err(AppError::InvalidLabel)
+    }
 }
 
-fn validate_rule_pack_json(
-    platform: &str,
-    rules_json: &str,
-) -> Result<serde_json::Value, String> {
-    let parsed: serde_json::Value =
-        serde_json::from_str(rules_json).map_err(|_| "rules_json must be valid JSON".to_string())?;
+fn validate_rule_pack_json(platform: &str, rules_json: &str) -> Result<serde_json::Value, String> {
+    let parsed: serde_json::Value = serde_json::from_str(rules_json)
+        .map_err(|_| "rules_json must be valid JSON".to_string())?;
     let Some(rules) = parsed.as_array() else {
         return Err("rules_json must be an array".to_string());
     };
@@ -2822,7 +3013,10 @@ fn validate_rule_pack_json(
             return Err("rule platform must match rule pack platform".to_string());
         }
 
-        let Some(task_kinds) = object.get("taskKinds").and_then(serde_json::Value::as_array) else {
+        let Some(task_kinds) = object
+            .get("taskKinds")
+            .and_then(serde_json::Value::as_array)
+        else {
             return Err("rule taskKinds must be an array".to_string());
         };
         if task_kinds.is_empty() {
@@ -2870,7 +3064,6 @@ fn validate_rule_pack_json(
     Ok(parsed)
 }
 
-
 #[tauri::command]
 fn media_asset_upsert(
     app: tauri::AppHandle,
@@ -2897,21 +3090,24 @@ fn media_asset_upsert(
     let tags_json = tags_json.unwrap_or_else(|| "[]".to_string());
     let tags: Vec<String> = serde_json::from_str(&tags_json)
         .map_err(|_| "tags_json must be a JSON array".to_string())?;
-    if tags.len() > 100 || tags.iter().any(|tag: &String| tag.trim().is_empty() || tag.len() > 100) {
+    if tags.len() > 100
+        || tags
+            .iter()
+            .any(|tag: &String| tag.trim().is_empty() || tag.len() > 100)
+    {
         return Err("invalid media tags".to_string());
     }
     let tags_json = serde_json::to_string(
-        &tags.into_iter().map(|tag| tag.trim().to_string()).collect::<Vec<_>>(),
+        &tags
+            .into_iter()
+            .map(|tag| tag.trim().to_string())
+            .collect::<Vec<_>>(),
     )
     .map_err(|error| error.to_string())?;
 
     let mut connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(
-        &connection,
-        &workspace_id,
-        &["owner", "admin", "editor"],
-    )
-    .map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
 
     connection
@@ -2981,12 +3177,8 @@ fn media_asset_import(
     let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(
-        &connection,
-        &workspace_id,
-        &["owner", "admin", "editor"],
-    )
-    .map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
 
     let path_string = validate_label(&path).map_err(|error| error.to_string())?;
     let path = std::path::PathBuf::from(&path_string);
@@ -2994,9 +3186,9 @@ fn media_asset_import(
         return Err("media path must point to a regular file".to_string());
     }
 
-    let mime = infer_media_mime(&path)
-        .ok_or_else(|| "unsupported media file type".to_string())?;
-    let kind = media_kind_from_mime(mime).ok_or_else(|| "unsupported media file type".to_string())?;
+    let mime = infer_media_mime(&path).ok_or_else(|| "unsupported media file type".to_string())?;
+    let kind =
+        media_kind_from_mime(mime).ok_or_else(|| "unsupported media file type".to_string())?;
     let filename = path
         .file_name()
         .and_then(|value| value.to_str())
@@ -3013,7 +3205,11 @@ fn media_asset_import(
     let tags_json = tags_json.unwrap_or_else(|| "[]".to_string());
     let tags: Vec<String> = serde_json::from_str(&tags_json)
         .map_err(|_| "tags_json must be a JSON array".to_string())?;
-    if tags.len() > 100 || tags.iter().any(|tag: &String| tag.trim().is_empty() || tag.len() > 100) {
+    if tags.len() > 100
+        || tags
+            .iter()
+            .any(|tag: &String| tag.trim().is_empty() || tag.len() > 100)
+    {
         return Err("invalid media tags".to_string());
     }
 
@@ -3076,19 +3272,12 @@ fn media_asset_import(
 }
 
 #[tauri::command]
-fn media_asset_delete(
-    app: tauri::AppHandle,
-    id: String,
-) -> Result<bool, String> {
+fn media_asset_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
     let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(
-        &connection,
-        &workspace_id,
-        &["owner", "admin", "editor"],
-    )
-    .map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
     let changed = connection
         .execute(
             "DELETE FROM media_assets WHERE id=?1 AND workspace_id=?2",
@@ -3124,8 +3313,7 @@ fn media_asset_list(
         &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
     )
     .map_err(|error| error.to_string())?;
-    let pattern = search
-        .map(|value| "%".to_string() + value.trim() + "%");
+    let pattern = search.map(|value| "%".to_string() + value.trim() + "%");
     let kind = kind
         .map(|value| validate_media_kind(&value))
         .transpose()
@@ -3193,7 +3381,9 @@ fn load_rule_config(
         .ok_or_else(|| "rules_json must be an array".to_string())?;
 
     for rule in rules {
-        let Some(object) = rule.as_object() else { continue; };
+        let Some(object) = rule.as_object() else {
+            continue;
+        };
         let kinds = object
             .get("taskKinds")
             .and_then(serde_json::Value::as_array)
@@ -3239,12 +3429,8 @@ fn automation_rule_pack_upsert(
     validate_rule_pack_json(&platform, &rules_json)?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(
-        &connection,
-        &workspace_id,
-        &["owner", "admin", "editor"],
-    )
-    .map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
     connection
         .execute(
@@ -3306,12 +3492,8 @@ fn automation_rule_pack_set_enabled(
     let workspace_id = active_workspace_id();
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(
-        &connection,
-        &workspace_id,
-        &["owner", "admin", "editor"],
-    )
-    .map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
 
     if enabled {
         let existing: Option<(String, i64, String)> = connection
@@ -3339,7 +3521,12 @@ fn automation_rule_pack_set_enabled(
             "UPDATE automation_rule_packs
              SET enabled=?1, updated_at=?2
              WHERE id=?3 AND workspace_id=?4",
-            params![if enabled { 1 } else { 0 }, chrono_like_timestamp(), &id, &workspace_id],
+            params![
+                if enabled { 1 } else { 0 },
+                chrono_like_timestamp(),
+                &id,
+                &workspace_id
+            ],
         )
         .map_err(|error| error.to_string())?;
 
@@ -3513,7 +3700,8 @@ fn campaign_attach_content(
     let campaign_id = validate_label(&campaign_id).map_err(|error| error.to_string())?;
     let content_id = validate_label(&content_id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
 
     let compatible: bool = connection
         .query_row(
@@ -3538,8 +3726,15 @@ fn campaign_attach_content(
             params![workspace_id, campaign_id, content_id],
         )
         .map_err(|error| error.to_string())?;
-    write_audit(&connection, "campaign", "attach_content", "success", "user", Some(&campaign_id))
-        .map_err(|error| error.to_string())?;
+    write_audit(
+        &connection,
+        "campaign",
+        "attach_content",
+        "success",
+        "user",
+        Some(&campaign_id),
+    )
+    .map_err(|error| error.to_string())?;
     Ok(true)
 }
 
@@ -3557,14 +3752,20 @@ fn approval_request(
     let reviewer_ids_json = reviewer_ids_json.unwrap_or_else(|| "[]".to_string());
     let reviewer_ids: Vec<String> = serde_json::from_str(&reviewer_ids_json)
         .map_err(|_| "reviewer_ids_json must be a JSON array".to_string())?;
-    if reviewer_ids.is_empty() || reviewer_ids.len() > 100 || reviewer_ids.iter().any(|value| value.trim().is_empty() || value.len() > 200) {
+    if reviewer_ids.is_empty()
+        || reviewer_ids.len() > 100
+        || reviewer_ids
+            .iter()
+            .any(|value| value.trim().is_empty() || value.len() > 200)
+    {
         return Err("approval requires at least one valid reviewer".to_string());
     }
-    let reviewer_ids_json = serde_json::to_string(&reviewer_ids)
-        .map_err(|error| error.to_string())?;
+    let reviewer_ids_json =
+        serde_json::to_string(&reviewer_ids).map_err(|error| error.to_string())?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
     let requested_by = local_user_id(&connection).map_err(|error| error.to_string())?;
     require_active_workspace_reviewers(&connection, &workspace_id, &reviewer_ids)
         .map_err(|error| error.to_string())?;
@@ -3592,7 +3793,14 @@ fn approval_request(
             "INSERT INTO approvals(
                id, workspace_id, content_id, requested_by, reviewer_ids_json, status, note
              ) VALUES (?1, ?2, ?3, ?4, ?5, 'pending', ?6)",
-            params![id, workspace_id, content_id, requested_by, reviewer_ids_json, note],
+            params![
+                id,
+                workspace_id,
+                content_id,
+                requested_by,
+                reviewer_ids_json,
+                note
+            ],
         )
         .map_err(|error| error.to_string())?;
     transaction
@@ -3638,24 +3846,29 @@ fn approval_decide(
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let status = validate_content_status(&status).map_err(|error| error.to_string())?;
     if status == "draft" || status == "pending" {
-        return Err("approval decision must be approved, rejected, or changes_requested".to_string());
+        return Err(
+            "approval decision must be approved, rejected, or changes_requested".to_string(),
+        );
     }
 
     let mut connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"])
+        .map_err(|error| error.to_string())?;
     let decided_by = local_user_id(&connection).map_err(|error| error.to_string())?;
     let current: Option<(String, String, String, String, Option<String>)> = connection
         .query_row(
             "SELECT content_id, requested_by, status, reviewer_ids_json, note
              FROM approvals WHERE id=?1 AND workspace_id=?2",
             params![id, workspace_id],
-            |row| Ok((
-                row.get(0)?,
-                row.get(1)?,
-                row.get(2)?,
-                row.get(3)?,
-                row.get(4)?,
-            )),
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                ))
+            },
         )
         .optional()
         .map_err(|error| error.to_string())?;
@@ -3720,7 +3933,12 @@ fn approval_decide(
 fn approval_list(app: tauri::AppHandle) -> Result<Vec<ApprovalView>, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT id, content_id, requested_by, status, decided_by, decided_at, note
@@ -3798,7 +4016,8 @@ fn task_enqueue(
     let available_at = normalize_rfc3339_utc(&available_at)?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
     let associated: bool = connection
         .query_row(
             "SELECT EXISTS(
@@ -3895,7 +4114,8 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
     let workspace_id = active_workspace_id();
     let now = normalize_rfc3339_utc(&now)?;
     let mut connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"])
+        .map_err(|error| error.to_string())?;
     let transaction = connection
         .transaction()
         .map_err(|error| error.to_string())?;
@@ -3955,25 +4175,38 @@ fn task_claim_next(app: tauri::AppHandle, now: String) -> Result<Option<TaskView
     }
 
     transaction.commit().map_err(|error| error.to_string())?;
-    write_audit(&connection, "task", "claim", "success", "system", Some(&task.id))
-        .map_err(|error| error.to_string())?;
+    write_audit(
+        &connection,
+        "task",
+        "claim",
+        "success",
+        "system",
+        Some(&task.id),
+    )
+    .map_err(|error| error.to_string())?;
     Ok(Some(task))
 }
 
 #[tauri::command]
-fn task_set_status(
-    app: tauri::AppHandle,
-    id: String,
-    status: String,
-) -> Result<bool, String> {
+fn task_set_status(app: tauri::AppHandle, id: String, status: String) -> Result<bool, String> {
     let workspace_id = active_workspace_id();
-    let allowed = ["pending", "awaiting_approval", "awaiting_user_action", "running", "succeeded", "failed", "blocked", "cancelled"];
+    let allowed = [
+        "pending",
+        "awaiting_approval",
+        "awaiting_user_action",
+        "running",
+        "succeeded",
+        "failed",
+        "blocked",
+        "cancelled",
+    ];
     if !allowed.contains(&status.as_str()) {
         return Err("unsupported task status".to_string());
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"])
+        .map_err(|error| error.to_string())?;
     let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
     let current: Option<String> = connection
         .query_row(
@@ -3989,9 +4222,15 @@ fn task_set_status(
     };
 
     let valid_transition = match current.as_str() {
-        "pending" => matches!(status.as_str(), "awaiting_approval" | "awaiting_user_action" | "blocked" | "cancelled"),
+        "pending" => matches!(
+            status.as_str(),
+            "awaiting_approval" | "awaiting_user_action" | "blocked" | "cancelled"
+        ),
         "awaiting_approval" | "awaiting_user_action" => status == "pending",
-        "running" => matches!(status.as_str(), "awaiting_approval" | "awaiting_user_action" | "blocked" | "cancelled"),
+        "running" => matches!(
+            status.as_str(),
+            "awaiting_approval" | "awaiting_user_action" | "blocked" | "cancelled"
+        ),
         "succeeded" | "failed" | "blocked" | "cancelled" => false,
         _ => false,
     };
@@ -4008,8 +4247,15 @@ fn task_set_status(
         .map_err(|error| error.to_string())?;
 
     if changed > 0 {
-        write_audit(&connection, "task", "status", "success", "user", Some(&entity_id))
-            .map_err(|error| error.to_string())?;
+        write_audit(
+            &connection,
+            "task",
+            "status",
+            "success",
+            "user",
+            Some(&entity_id),
+        )
+        .map_err(|error| error.to_string())?;
     }
 
     Ok(changed > 0)
@@ -4041,18 +4287,15 @@ fn retry_delay_ms(next_attempt: i64) -> i64 {
 }
 
 #[tauri::command]
-fn task_fail(
-    app: tauri::AppHandle,
-    id: String,
-    now: String,
-) -> Result<TaskView, String> {
+fn task_fail(app: tauri::AppHandle, id: String, now: String) -> Result<TaskView, String> {
     let workspace_id = active_workspace_id();
     let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
     let failed_at = OffsetDateTime::parse(now.trim(), &Rfc3339)
         .map_err(|_| "failure timestamp must be an RFC3339 ISO timestamp".to_string())?;
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"])
+        .map_err(|error| error.to_string())?;
     let current: Option<(i64, i64, String, Option<String>, Option<String>, String, String, String, i64, String, String, String, String)> = connection
         .query_row(
             "SELECT attempts, max_attempts, campaign_id, content_id, destination_id, account_id, platform, kind, priority,
@@ -4081,7 +4324,22 @@ fn task_fail(
         .optional()
         .map_err(|error| error.to_string())?;
 
-    let Some((attempts, max_attempts, campaign_id, content_id, destination_id, account_id, platform, kind, priority, status, idempotency_key, available_at, created_at)) = current else {
+    let Some((
+        attempts,
+        max_attempts,
+        campaign_id,
+        content_id,
+        destination_id,
+        account_id,
+        platform,
+        kind,
+        priority,
+        status,
+        idempotency_key,
+        available_at,
+        created_at,
+    )) = current
+    else {
         return Err(AppError::NotFound.to_string());
     };
 
@@ -4106,7 +4364,13 @@ fn task_fail(
             "UPDATE tasks
              SET status=?1, attempts=?2, available_at=?3
              WHERE id=?4 AND workspace_id=?5 AND status='running'",
-            params![next_status, next_attempt, next_available, &entity_id, workspace_id],
+            params![
+                next_status,
+                next_attempt,
+                next_available,
+                &entity_id,
+                workspace_id
+            ],
         )
         .map_err(|error| error.to_string())?;
 
@@ -4142,12 +4406,16 @@ fn task_fail(
     })
 }
 
-
 #[tauri::command]
 fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<TaskView>, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT id, campaign_id, content_id, destination_id, account_id, platform, kind, priority,
@@ -4180,7 +4448,8 @@ fn task_list(app: tauri::AppHandle, campaign_id: Option<String>) -> Result<Vec<T
         })
         .map_err(|error| error.to_string())?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -4204,7 +4473,12 @@ fn contact_upsert(
     let timestamp = chrono_like_timestamp();
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
     let changed = connection
         .execute(
             "INSERT INTO contacts(
@@ -4238,8 +4512,15 @@ fn contact_upsert(
         return Err("contact id already belongs to another workspace".to_string());
     }
 
-    write_audit(&connection, "contact", "upsert", "success", "user", Some(&id))
-        .map_err(|error| error.to_string())?;
+    write_audit(
+        &connection,
+        "contact",
+        "upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
 
     Ok(ContactView {
         id,
@@ -4257,7 +4538,12 @@ fn contact_upsert(
 fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<ContactView>, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
     let pattern = search.map(|value| "%".to_string() + value.trim() + "%");
     let mut statement = connection
         .prepare(
@@ -4284,13 +4570,17 @@ fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<Con
         })
         .map_err(|error| error.to_string())?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 fn uuid_like() -> String {
     let mut bytes = [0u8; 16];
     rand::rng().fill_bytes(&mut bytes);
-    B64.encode(bytes).replace('/', "_").replace('+', "-").replace('=', "")
+    B64.encode(bytes)
+        .replace('/', "_")
+        .replace('+', "-")
+        .replace('=', "")
 }
 
 fn backup_directory(app: &tauri::AppHandle) -> Result<PathBuf, AppError> {
@@ -4329,10 +4619,12 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin"])
-        .map_err(|error| error.to_string())?;
+    require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
     drop(connection);
-    let app_data = app.path().app_data_dir().map_err(|_| AppError::Path.to_string())?;
+    let app_data = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| AppError::Path.to_string())?;
     let database_path = app_data.join("orbit.sqlite3");
     let backups = backup_directory(&app).map_err(|error| error.to_string())?;
     let temp_path = backups.join("orbit-backup-source.sqlite3");
@@ -4343,7 +4635,10 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
 
     let connection = Connection::open(&database_path).map_err(|error| error.to_string())?;
     connection
-        .execute("VACUUM INTO ?1", params![temp_path.to_string_lossy().to_string()])
+        .execute(
+            "VACUUM INTO ?1",
+            params![temp_path.to_string_lossy().to_string()],
+        )
         .map_err(|error| error.to_string())?;
     drop(connection);
     restrict_private_file(&temp_path).map_err(|error| error.to_string())?;
@@ -4353,11 +4648,22 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
 
     let payload = seal(&password, &B64.encode(bytes)).map_err(|error| error.to_string())?;
     let payload_json = serde_json::to_string(&payload).map_err(|error| error.to_string())?;
-    let filename = format!("orbit-{}-{}.orbitbackup", backup_filename_timestamp(), uuid_like());
+    let filename = format!(
+        "orbit-{}-{}.orbitbackup",
+        backup_filename_timestamp(),
+        uuid_like()
+    );
     let destination = backups.join(&filename);
     write_private_file(&destination, &payload_json).map_err(|error| error.to_string())?;
-    write_audit(&open_db(&app).map_err(|error| error.to_string())?, "backup", "create", "success", "user", Some(&filename))
-        .map_err(|error| error.to_string())?;
+    write_audit(
+        &open_db(&app).map_err(|error| error.to_string())?,
+        "backup",
+        "create",
+        "success",
+        "user",
+        Some(&filename),
+    )
+    .map_err(|error| error.to_string())?;
 
     Ok(filename)
 }
@@ -4365,8 +4671,7 @@ fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, Stri
 #[tauri::command]
 fn backup_list(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin"])
-        .map_err(|error| error.to_string())?;
+    require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
     drop(connection);
     let backups = backup_directory(&app).map_err(|error| error.to_string())?;
     let mut names = fs::read_dir(backups)
@@ -4374,7 +4679,11 @@ fn backup_list(app: tauri::AppHandle) -> Result<Vec<String>, String> {
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| path.is_file())
-        .filter_map(|path| path.file_name().and_then(|name| name.to_str()).map(ToOwned::to_owned))
+        .filter_map(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .map(ToOwned::to_owned)
+        })
         .filter(|name| name.ends_with(".orbitbackup"))
         .collect::<Vec<_>>();
     names.sort();
@@ -4393,8 +4702,7 @@ fn backup_restore(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role(&connection, &["owner", "admin"])
-        .map_err(|error| error.to_string())?;
+    require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
     drop(connection);
 
     let filename = validate_backup_name(&filename).map_err(|error| error.to_string())?;
@@ -4412,9 +4720,14 @@ fn backup_restore(
     let payload: EncryptedPayload =
         serde_json::from_str(&payload_json).map_err(|error| error.to_string())?;
     let encoded_database = open_payload(&password, &payload).map_err(|error| error.to_string())?;
-    let database_bytes = B64.decode(encoded_database.as_bytes()).map_err(|_| AppError::InvalidPayload.to_string())?;
+    let database_bytes = B64
+        .decode(encoded_database.as_bytes())
+        .map_err(|_| AppError::InvalidPayload.to_string())?;
 
-    let app_data = app.path().app_data_dir().map_err(|_| AppError::Path.to_string())?;
+    let app_data = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| AppError::Path.to_string())?;
     let target = app_data.join("orbit.sqlite3");
     let temporary = app_data.join("orbit.restore.sqlite3");
     let previous = app_data.join("orbit.previous.sqlite3");
@@ -4422,10 +4735,8 @@ fn backup_restore(
     fs::write(&temporary, database_bytes).map_err(|error| error.to_string())?;
     restrict_private_file(&temporary).map_err(|error| error.to_string())?;
 
-    let integrity_connection = Connection::open(&temporary)
-        .map_err(|error| error.to_string())?;
+    let integrity_connection = Connection::open(&temporary).map_err(|error| error.to_string())?;
     prepare_backup_database_for_restore(&integrity_connection)?;
-
 
     drop(integrity_connection);
 
@@ -4671,8 +4982,6 @@ fn write_audit(
     )
 }
 
-
-
 fn count_conversation_messages(
     connection: &Connection,
     conversation_id: &str,
@@ -4698,13 +5007,24 @@ fn conversation_upsert(
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
-    let allowed_status = ["new", "interested", "potential_customer", "complaint", "closed"];
+    let allowed_status = [
+        "new",
+        "interested",
+        "potential_customer",
+        "complaint",
+        "closed",
+    ];
     if !allowed_status.contains(&status.as_str()) {
         return Err("unsupported conversation status".to_string());
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
     let account_platform: Option<String> = connection
         .query_row(
             "SELECT platform FROM accounts WHERE id=?1 AND workspace_id=?2",
@@ -4766,11 +5086,18 @@ fn conversation_upsert(
         return Err("conversation id already belongs to another workspace".to_string());
     }
 
-    let message_count = count_conversation_messages(&connection, &id)
-        .map_err(|error| error.to_string())?;
+    let message_count =
+        count_conversation_messages(&connection, &id).map_err(|error| error.to_string())?;
 
-    write_audit(&connection, "conversation", "upsert", "success", "user", Some(&id))
-        .map_err(|error| error.to_string())?;
+    write_audit(
+        &connection,
+        "conversation",
+        "upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
 
     Ok(ConversationView {
         id,
@@ -4804,7 +5131,8 @@ fn message_add(
     }
 
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"])
+        .map_err(|error| error.to_string())?;
     let conversation_exists: bool = connection
         .query_row(
             "SELECT EXISTS(
@@ -4849,7 +5177,12 @@ fn message_add(
 fn inbox_list(app: tauri::AppHandle) -> Result<Vec<ConversationView>, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT c.id, c.account_id, c.contact_id, c.platform, c.external_thread_id, c.status, COUNT(m.id), c.updated_at
@@ -4876,7 +5209,8 @@ fn inbox_list(app: tauri::AppHandle) -> Result<Vec<ConversationView>, String> {
         })
         .map_err(|error| error.to_string())?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -4887,7 +5221,12 @@ fn message_list(
     let workspace_id = active_workspace_id();
     let conversation_id = validate_label(&conversation_id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT m.id, m.conversation_id, m.direction, m.body, m.sent_at
@@ -4909,7 +5248,8 @@ fn message_list(
         })
         .map_err(|error| error.to_string())?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -4989,7 +5329,8 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
     let workspace_id = active_workspace_id();
     let limit = limit.unwrap_or(100).clamp(1, 500);
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"])
+        .map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT id, timestamp, category, action, outcome, actor, entity_id, metadata_json, previous_hash, hash
@@ -5015,7 +5356,8 @@ fn audit_list(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<AuditView
         })
         .map_err(|error| error.to_string())?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 fn verify_audit_chain(connection: &Connection, workspace_id: &str) -> Result<bool, String> {
@@ -5047,8 +5389,19 @@ fn verify_audit_chain(connection: &Connection, workspace_id: &str) -> Result<boo
 
     let mut previous_hash = "GENESIS".to_string();
     for row in rows {
-        let (id, row_workspace_id, timestamp, category, action, outcome, actor, entity_id, metadata_json, stored_previous, stored_hash) =
-            row.map_err(|error| error.to_string())?;
+        let (
+            id,
+            row_workspace_id,
+            timestamp,
+            category,
+            action,
+            outcome,
+            actor,
+            entity_id,
+            metadata_json,
+            stored_previous,
+            stored_hash,
+        ) = row.map_err(|error| error.to_string())?;
         if row_workspace_id != workspace_id || stored_previous != previous_hash {
             return Ok(false);
         }
@@ -5077,7 +5430,8 @@ fn verify_audit_chain(connection: &Connection, workspace_id: &str) -> Result<boo
 fn audit_verify(app: tauri::AppHandle) -> Result<bool, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"]).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "reviewer"])
+        .map_err(|error| error.to_string())?;
     verify_audit_chain(&connection, &workspace_id)
 }
 
@@ -5136,8 +5490,9 @@ mod tests {
     #[test]
     fn account_upsert_status_tracks_session_presence() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
-        connection.execute_batch(
-            "CREATE TABLE accounts(
+        connection
+            .execute_batch(
+                "CREATE TABLE accounts(
                id TEXT PRIMARY KEY,
                workspace_id TEXT NOT NULL,
                platform TEXT NOT NULL,
@@ -5155,8 +5510,8 @@ mod tests {
                'account-1', 'workspace-1', 'telegram', 'Telegram', 'orbit',
                'needs_refresh', NULL, '1', '1'
              );",
-        )
-        .expect("account fixture should be created");
+            )
+            .expect("account fixture should be created");
 
         connection
             .execute(
@@ -5258,7 +5613,8 @@ mod tests {
     #[test]
     fn telegram_execution_guard_prevents_concurrent_duplicate_send() {
         let task_id = format!("guard-{}", uuid_like());
-        let first = try_claim_telegram_execution(&task_id).expect("first execution claim should succeed");
+        let first =
+            try_claim_telegram_execution(&task_id).expect("first execution claim should succeed");
         assert!(try_claim_telegram_execution(&task_id).is_err());
         drop(first);
         assert!(try_claim_telegram_execution(&task_id).is_ok());
@@ -5315,8 +5671,8 @@ mod tests {
 
     #[test]
     fn approval_reviewer_role_gate_rejects_non_reviewer_members() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
             .execute_batch(
                 "CREATE TABLE workspace_memberships(
@@ -5356,7 +5712,9 @@ mod tests {
     #[test]
     fn fresh_schema_scopes_task_idempotency_by_workspace() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
-        connection.execute_batch(SCHEMA).expect("fresh schema should be creatable");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
 
         connection
             .execute_batch(
@@ -5429,7 +5787,9 @@ mod tests {
         migrate_schema(&connection).expect("v10 schema should remain unchanged");
 
         let task_count: i64 = connection
-            .query_row("SELECT COUNT(*) FROM tasks WHERE id='task-1'", [], |row| row.get(0))
+            .query_row("SELECT COUNT(*) FROM tasks WHERE id='task-1'", [], |row| {
+                row.get(0)
+            })
             .expect("task should remain available");
         assert_eq!(task_count, 1);
 
@@ -5445,8 +5805,8 @@ mod tests {
 
     #[test]
     fn task_timestamp_is_normalized_to_utc() {
-        let normalized = normalize_rfc3339_utc("2026-09-24T18:00:00+03:00")
-            .expect("timestamp should parse");
+        let normalized =
+            normalize_rfc3339_utc("2026-09-24T18:00:00+03:00").expect("timestamp should parse");
         assert_eq!(normalized, "2026-09-24T15:00:00Z");
         assert!(normalize_rfc3339_utc("not-a-timestamp").is_err());
     }
@@ -5476,7 +5836,14 @@ mod tests {
 
     #[test]
     fn analytics_attempted_excludes_pending_and_running_work() {
-        let statuses = ["pending", "running", "succeeded", "failed", "blocked", "cancelled"];
+        let statuses = [
+            "pending",
+            "running",
+            "succeeded",
+            "failed",
+            "blocked",
+            "cancelled",
+        ];
         let attempted = statuses
             .iter()
             .filter(|status| matches!(**status, "succeeded" | "failed" | "blocked"))
@@ -5495,8 +5862,13 @@ mod tests {
     #[test]
     fn account_platform_change_requires_new_session() {
         assert!(ensure_account_platform_session_consistency(None, "telegram", false).is_ok());
-        assert!(ensure_account_platform_session_consistency(Some("telegram"), "telegram", false).is_ok());
-        assert!(ensure_account_platform_session_consistency(Some("telegram"), "linkedin", true).is_ok());
+        assert!(
+            ensure_account_platform_session_consistency(Some("telegram"), "telegram", false)
+                .is_ok()
+        );
+        assert!(
+            ensure_account_platform_session_consistency(Some("telegram"), "linkedin", true).is_ok()
+        );
         assert!(matches!(
             ensure_account_platform_session_consistency(Some("telegram"), "linkedin", false),
             Err(AppError::InvalidPayload)
@@ -5552,7 +5924,9 @@ mod tests {
                  LIMIT 50",
             )
             .expect("search query should prepare")
-            .query_map(params!["workspace-search", "%Contact 0999%"], |row| row.get(0))
+            .query_map(params!["workspace-search", "%Contact 0999%"], |row| {
+                row.get(0)
+            })
             .expect("search query should execute")
             .collect::<Result<Vec<_>, _>>()
             .expect("search results should decode");
@@ -5740,7 +6114,12 @@ mod tests {
             )
             .expect("migrated audit hash should exist");
         assert_ne!(hash, "");
-        assert_eq!(connection.query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0)).unwrap(), SCHEMA_VERSION);
+        assert_eq!(
+            connection
+                .query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0))
+                .unwrap(),
+            SCHEMA_VERSION
+        );
     }
 
     #[test]
@@ -5818,7 +6197,10 @@ mod tests {
         connection
             .execute_batch("PRAGMA user_version = 999;")
             .expect("schema version should be writable");
-        assert!(matches!(migrate_schema(&connection), Err(AppError::InvalidPayload)));
+        assert!(matches!(
+            migrate_schema(&connection),
+            Err(AppError::InvalidPayload)
+        ));
     }
 
     #[test]
@@ -5922,7 +6304,9 @@ mod tests {
             Some("entity-1"),
         )
         .expect("audit write should succeed");
-        assert!(verify_audit_chain(&connection, "workspace-1").expect("audit verification should work"));
+        assert!(
+            verify_audit_chain(&connection, "workspace-1").expect("audit verification should work")
+        );
 
         connection
             .execute(
@@ -5931,14 +6315,16 @@ mod tests {
             )
             .expect("audit tamper fixture should update");
 
-        assert!(!verify_audit_chain(&connection, "workspace-1").expect("audit verification should work"));
+        assert!(!verify_audit_chain(&connection, "workspace-1")
+            .expect("audit verification should work"));
     }
 
     #[test]
     fn audit_write_creates_a_verifiable_chain() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
-        connection.execute_batch(
-            "CREATE TABLE audit_events(
+        connection
+            .execute_batch(
+                "CREATE TABLE audit_events(
                id TEXT PRIMARY KEY,
                workspace_id TEXT NOT NULL,
                timestamp TEXT NOT NULL,
@@ -5951,7 +6337,8 @@ mod tests {
                previous_hash TEXT NOT NULL,
                hash TEXT NOT NULL
              );",
-        ).expect("audit table should be created");
+            )
+            .expect("audit table should be created");
 
         write_audit(&connection, "security", "one", "success", "system", None)
             .expect("first audit write should work");
@@ -5984,7 +6371,8 @@ mod tests {
             })
             .expect("query should execute");
 
-        let collected: Vec<_> = rows.collect::<Result<Vec<_>, _>>()
+        let collected: Vec<_> = rows
+            .collect::<Result<Vec<_>, _>>()
             .expect("audit rows should decode");
         assert_eq!(collected.len(), 2);
 
@@ -6081,8 +6469,8 @@ mod tests {
 
     #[test]
     fn sqlite_connection_defaults_enable_integrity_and_busy_timeout() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
             .execute_batch("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;")
             .expect("SQLite pragmas should apply");
@@ -6100,8 +6488,8 @@ mod tests {
 
     #[test]
     fn audit_migration_rebuilds_each_workspace_chain_independently() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
             .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
@@ -6163,8 +6551,8 @@ mod tests {
 
     #[test]
     fn sqlite_integrity_triggers_reject_cross_workspace_relationships() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
             .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
@@ -6204,12 +6592,12 @@ mod tests {
 
     #[test]
     fn audit_integrity_gate_is_fail_closed_for_external_execution() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
-        connection.execute_batch(SCHEMA)
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
-        migrate_schema(&connection)
-            .expect("schema migration should succeed");
+        migrate_schema(&connection).expect("schema migration should succeed");
 
         connection
             .execute(
@@ -6240,15 +6628,16 @@ mod tests {
 
     #[test]
     fn interrupted_external_tasks_require_human_recovery_but_sync_tasks_requeue() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
-        connection.execute_batch(SCHEMA)
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
-        migrate_schema(&connection)
-            .expect("schema migration should succeed");
+        migrate_schema(&connection).expect("schema migration should succeed");
 
-        connection.execute_batch(
-            "INSERT INTO workspaces(id, name, created_at)
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
              VALUES ('workspace-1', 'Workspace', '1');
              INSERT INTO accounts(
                id, workspace_id, platform, display_name, status, created_at, updated_at
@@ -6263,15 +6652,16 @@ mod tests {
                ('task-sync', 'workspace-1', 'campaign-1', 'account-1', 'telegram', 'sync',
                 'running', '2026-01-01T00:00:00Z', 'recovery-sync', '2026-01-01T00:00:00Z'),
                ('task-publish', 'workspace-1', 'campaign-1', 'account-1', 'telegram', 'publish',
-                'running', '2026-01-01T00:00:00Z', 'recovery-publish', '2026-01-01T00:00:00Z');"
-        ).expect("interrupted task fixtures should be inserted");
+                'running', '2026-01-01T00:00:00Z', 'recovery-publish', '2026-01-01T00:00:00Z');",
+            )
+            .expect("interrupted task fixtures should be inserted");
 
-        let recovered = recover_interrupted_tasks(&connection)
-            .expect("interrupted tasks should recover");
+        let recovered =
+            recover_interrupted_tasks(&connection).expect("interrupted tasks should recover");
         assert_eq!(recovered, 2);
 
-        let recovered_again = recover_interrupted_tasks(&connection)
-            .expect("second recovery should be idempotent");
+        let recovered_again =
+            recover_interrupted_tasks(&connection).expect("second recovery should be idempotent");
         assert_eq!(recovered_again, 0);
 
         let statuses: Vec<(String, String)> = connection
@@ -6290,7 +6680,10 @@ mod tests {
         assert_eq!(
             statuses,
             vec![
-                ("task-publish".to_string(), "awaiting_user_action".to_string()),
+                (
+                    "task-publish".to_string(),
+                    "awaiting_user_action".to_string()
+                ),
                 ("task-sync".to_string(), "pending".to_string()),
             ]
         );
@@ -6309,8 +6702,8 @@ mod tests {
 
     #[test]
     fn workspace_context_falls_back_from_inaccessible_saved_workspace() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
             .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
@@ -6350,8 +6743,8 @@ mod tests {
 
     #[test]
     fn workspace_context_does_not_auto_grant_membership_to_unassigned_workspaces() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
             .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
@@ -6382,8 +6775,8 @@ mod tests {
 
     #[test]
     fn workspace_context_creates_local_owner_membership() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
             .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
@@ -6409,12 +6802,12 @@ mod tests {
 
     #[test]
     fn task_idempotency_key_is_scoped_to_workspace() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
-        connection.execute_batch(SCHEMA)
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
-        migrate_schema(&connection)
-            .expect("schema migration should succeed");
+        migrate_schema(&connection).expect("schema migration should succeed");
         connection.execute_batch(
             "INSERT INTO workspaces(id, name, created_at)
              VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
@@ -6450,8 +6843,8 @@ mod tests {
 
     #[test]
     fn vault_schema_is_workspace_scoped_and_supports_same_label_per_workspace() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
             .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
@@ -6493,8 +6886,8 @@ mod tests {
 
     #[test]
     fn workspace_role_gate_rejects_insufficient_role() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
             .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
@@ -6511,25 +6904,19 @@ mod tests {
             .expect("role update should work");
 
         assert!(matches!(
-            require_workspace_role_for(
-                &connection,
-                DEFAULT_WORKSPACE_ID,
-                &["owner", "admin"]
-            ),
+            require_workspace_role_for(&connection, DEFAULT_WORKSPACE_ID, &["owner", "admin"]),
             Err(AppError::Unauthorized)
         ));
-        assert!(require_workspace_role(
-            &connection,
-            &["viewer", "owner", "admin"]
-        )
-        .is_ok());
+        assert!(require_workspace_role(&connection, &["viewer", "owner", "admin"]).is_ok());
     }
 
     #[test]
     fn concurrent_audit_writes_preserve_a_hash_chain() {
         let path = std::env::temp_dir().join(format!("orbit-audit-{}.sqlite3", uuid_like()));
         let setup = Connection::open(&path).expect("SQLite database should open");
-        setup.execute_batch(SCHEMA).expect("schema should be created");
+        setup
+            .execute_batch(SCHEMA)
+            .expect("schema should be created");
         migrate_schema(&setup).expect("schema migration should succeed");
         ensure_workspace_context(&setup).expect("workspace context should initialize");
         drop(setup);
@@ -6612,20 +6999,19 @@ mod tests {
 
     #[test]
     fn schema_migration_reaches_v10_and_is_idempotent_afterwards() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
-        connection.execute_batch(SCHEMA)
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
-        migrate_schema(&connection)
-            .expect("initial migration should succeed");
+        migrate_schema(&connection).expect("initial migration should succeed");
 
         let first: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
         assert_eq!(first, SCHEMA_VERSION);
 
-        migrate_schema(&connection)
-            .expect("second migration should be a no-op");
+        migrate_schema(&connection).expect("second migration should be a no-op");
         let second: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should still be readable");
@@ -6634,8 +7020,8 @@ mod tests {
 
     #[test]
     fn migrates_global_task_idempotency_constraint_to_workspace_scoped_constraint() {
-        let connection = Connection::open_in_memory()
-            .expect("in-memory SQLite should be available");
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection.execute_batch(
             "CREATE TABLE workspaces(id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL);
              CREATE TABLE campaigns(id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, name TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
@@ -6659,12 +7045,11 @@ mod tests {
                created_at TEXT NOT NULL
              );"
         ).expect("legacy tasks schema should be created");
-        connection.execute_batch(
-            "PRAGMA user_version = 9;"
-        ).expect("legacy version should be set");
+        connection
+            .execute_batch("PRAGMA user_version = 9;")
+            .expect("legacy version should be set");
 
-        migrate_schema(&connection)
-            .expect("legacy task migration should succeed");
+        migrate_schema(&connection).expect("legacy task migration should succeed");
 
         connection.execute_batch(
             "INSERT INTO workspaces(id, name, created_at)
@@ -6731,9 +7116,13 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
         assert_eq!(version, SCHEMA_VERSION);
 
         assert!(has_column(&connection, "tasks", "workspace_id").expect("workspace column check"));
-        assert!(has_column(&connection, "tasks", "idempotency_key").expect("idempotency column check"));
-        assert!(has_column(&connection, "messages", "external_message_id").expect("message external id column check"));
-        assert!(has_column(&connection, "conversations", "account_id").expect("conversation account column check"));
+        assert!(
+            has_column(&connection, "tasks", "idempotency_key").expect("idempotency column check")
+        );
+        assert!(has_column(&connection, "messages", "external_message_id")
+            .expect("message external id column check"));
+        assert!(has_column(&connection, "conversations", "account_id")
+            .expect("conversation account column check"));
 
         let values: (String, String) = connection
             .query_row(
@@ -6754,18 +7143,19 @@ mod conversation_count_tests {
     #[test]
     fn conversation_message_count_reflects_existing_messages() {
         let connection = Connection::open_in_memory().expect("sqlite");
-        connection.execute_batch(
-            "CREATE TABLE messages(
+        connection
+            .execute_batch(
+                "CREATE TABLE messages(
                id TEXT PRIMARY KEY,
                conversation_id TEXT NOT NULL
              );
              INSERT INTO messages(id, conversation_id)
              VALUES ('message-1', 'conversation-1'), ('message-2', 'conversation-1');",
-        ).expect("schema");
+            )
+            .expect("schema");
 
         assert_eq!(
-            count_conversation_messages(&connection, "conversation-1")
-                .expect("message count"),
+            count_conversation_messages(&connection, "conversation-1").expect("message count"),
             2
         );
     }
@@ -6778,8 +7168,9 @@ mod content_variant_tests {
     #[test]
     fn telegram_variant_overrides_base_content() {
         let connection = Connection::open_in_memory().expect("sqlite");
-        connection.execute_batch(
-            "CREATE TABLE content_items(
+        connection
+            .execute_batch(
+                "CREATE TABLE content_items(
                id TEXT PRIMARY KEY,
                workspace_id TEXT NOT NULL,
                body TEXT NOT NULL,
@@ -6795,7 +7186,8 @@ mod content_variant_tests {
              VALUES ('content-1', 'workspace-1', 'base text', 'approved');
              INSERT INTO content_variants(content_id, platform, body)
              VALUES ('content-1', 'telegram', 'Telegram text');",
-        ).expect("schema");
+            )
+            .expect("schema");
 
         let body: String = connection
             .query_row(
@@ -6817,8 +7209,9 @@ mod content_variant_tests {
     #[test]
     fn missing_variant_falls_back_to_base_content() {
         let connection = Connection::open_in_memory().expect("sqlite");
-        connection.execute_batch(
-            "CREATE TABLE content_items(
+        connection
+            .execute_batch(
+                "CREATE TABLE content_items(
                id TEXT PRIMARY KEY,
                workspace_id TEXT NOT NULL,
                body TEXT NOT NULL,
@@ -6832,7 +7225,8 @@ mod content_variant_tests {
              );
              INSERT INTO content_items(id, workspace_id, body, approval_status)
              VALUES ('content-1', 'workspace-1', 'base text', 'approved');",
-        ).expect("schema");
+            )
+            .expect("schema");
 
         let body: String = connection
             .query_row(
@@ -6967,8 +7361,9 @@ mod rule_pack_runtime_limits_tests {
     #[test]
     fn latest_enabled_pack_provides_bounded_runtime_limits() {
         let connection = Connection::open_in_memory().expect("sqlite");
-        connection.execute_batch(
-            r#"CREATE TABLE automation_rule_packs(
+        connection
+            .execute_batch(
+                r#"CREATE TABLE automation_rule_packs(
                id TEXT PRIMARY KEY,
                workspace_id TEXT NOT NULL,
                platform TEXT NOT NULL,
@@ -6989,15 +7384,11 @@ mod rule_pack_runtime_limits_tests {
                  "maxAttempts":5,"timeoutMs":45000}]',
                1, '1', '2'
              );"#,
-        ).expect("schema");
+            )
+            .expect("schema");
 
-        let result = load_rule_config(
-            &connection,
-            "workspace-1",
-            "telegram",
-            "publish",
-        )
-        .expect("rule config");
+        let result = load_rule_config(&connection, "workspace-1", "telegram", "publish")
+            .expect("rule config");
         assert_eq!(result, Some((45_000, 5)));
     }
 }
@@ -7009,8 +7400,9 @@ mod execution_counter_tests {
     #[test]
     fn execution_counter_rolls_over_and_resets_failures() {
         let connection = Connection::open_in_memory().expect("sqlite");
-        connection.execute_batch(
-            "CREATE TABLE workspaces(id TEXT PRIMARY KEY);
+        connection
+            .execute_batch(
+                "CREATE TABLE workspaces(id TEXT PRIMARY KEY);
              CREATE TABLE accounts(id TEXT PRIMARY KEY);
              CREATE TABLE execution_counters(
                workspace_id TEXT NOT NULL,
@@ -7020,7 +7412,8 @@ mod execution_counter_tests {
                consecutive_failures INTEGER NOT NULL,
                PRIMARY KEY(workspace_id, account_id)
              );",
-        ).expect("schema");
+            )
+            .expect("schema");
 
         connection.execute(
             "INSERT INTO execution_counters(workspace_id, account_id, day_key, completed_today, consecutive_failures)
@@ -7036,8 +7429,9 @@ mod execution_counter_tests {
     #[test]
     fn execution_counter_records_success_and_failure() {
         let connection = Connection::open_in_memory().expect("sqlite");
-        connection.execute_batch(
-            "CREATE TABLE execution_counters(
+        connection
+            .execute_batch(
+                "CREATE TABLE execution_counters(
                workspace_id TEXT NOT NULL,
                account_id TEXT NOT NULL,
                day_key INTEGER NOT NULL,
@@ -7045,7 +7439,8 @@ mod execution_counter_tests {
                consecutive_failures INTEGER NOT NULL,
                PRIMARY KEY(workspace_id, account_id)
              );",
-        ).expect("schema");
+            )
+            .expect("schema");
 
         connection.execute(
             "INSERT INTO execution_counters(workspace_id, account_id, day_key, completed_today, consecutive_failures)
@@ -7054,11 +7449,13 @@ mod execution_counter_tests {
         ).expect("seed");
 
         record_execution_failure(&connection, "workspace-1", "account-1").expect("failure");
-        let after_failure = load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        let after_failure =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
         assert_eq!(after_failure.1, 1);
 
         record_execution_success(&connection, "workspace-1", "account-1").expect("success");
-        let after_success = load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        let after_success =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
         assert_eq!(after_success, (1, 0));
     }
 }
@@ -7067,8 +7464,10 @@ mod execution_counter_tests {
 pub fn run() {
     let result = tauri::Builder::default()
         .setup(|app| {
-            let connection = open_db(app).map_err(|error| Box::<dyn std::error::Error>::from(error))?;
-            recover_interrupted_tasks(&connection).map_err(|error| Box::<dyn std::error::Error>::from(error))?;
+            let connection =
+                open_db(app).map_err(|error| Box::<dyn std::error::Error>::from(error))?;
+            recover_interrupted_tasks(&connection)
+                .map_err(|error| Box::<dyn std::error::Error>::from(error))?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -7130,7 +7529,6 @@ pub fn run() {
     }
 }
 
-
 #[cfg(test)]
 mod interrupted_restore_recovery_tests {
     use super::*;
@@ -7148,7 +7546,10 @@ mod interrupted_restore_recovery_tests {
 
         recover_database_before_open(&root, &db).expect("recovery should succeed");
 
-        assert_eq!(fs::read(&db).expect("database should be restored"), b"known-good");
+        assert_eq!(
+            fs::read(&db).expect("database should be restored"),
+            b"known-good"
+        );
         assert!(!previous.exists());
         assert!(!temporary.exists());
 
@@ -7167,7 +7568,10 @@ mod interrupted_restore_recovery_tests {
 
         recover_database_before_open(&root, &db).expect("pre-open recovery should succeed");
 
-        assert_eq!(fs::read(&db).expect("active database should remain"), b"active");
+        assert_eq!(
+            fs::read(&db).expect("active database should remain"),
+            b"active"
+        );
         assert!(previous.exists());
 
         cleanup_stale_database_artifacts(&root).expect("post-open cleanup should succeed");
