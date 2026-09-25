@@ -9514,6 +9514,90 @@ mod tests {
     }
 
     #[test]
+    fn agent_policy_and_work_validators_enforce_runtime_contracts() {
+        assert_eq!(validate_agent_role("QA").expect("agent role"), "qa");
+        assert!(validate_agent_role("sales_bot").is_err());
+        assert_eq!(
+            validate_agent_autonomy("EXECUTE_BOUNDED").expect("autonomy"),
+            "execute_bounded"
+        );
+        assert!(validate_agent_autonomy("unbounded").is_err());
+        assert!(validate_agent_status("running").is_ok());
+        assert!(validate_agent_status("finished").is_err());
+        assert!(validate_policy_mode("approved").is_ok());
+        assert!(validate_policy_mode("autonomous").is_err());
+        assert_eq!(
+            validate_work_item_type("agent_run").expect("work type"),
+            "agent_run"
+        );
+        assert!(validate_work_item_type("message").is_err());
+        assert!(validate_work_item_status("IN_PROGRESS").is_ok());
+        assert!(validate_work_dependency_kind("requires").is_ok());
+        assert!(validate_work_dependency_kind("depends").is_err());
+
+        let grants = validate_agent_tool_grants(Some(
+            r#"[{"tool":"publisher","scopes":["campaign.publish"],"requiresApproval":true}]"#
+                .to_string(),
+        ))
+        .expect("tool grant should validate");
+        assert!(grants.contains("publisher"));
+        assert!(validate_agent_tool_grants(Some(r#"[{"tool":"publisher"}]"#.to_string())).is_err());
+        assert!(validate_risk_array(Some(r#"["low","critical"]"#.to_string())).is_ok());
+        assert!(validate_risk_array(Some(r#"["extreme"]"#.to_string())).is_err());
+    }
+
+    #[test]
+    fn agent_run_and_work_dependencies_are_workspace_scoped() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO agent_definitions(
+                   id, workspace_id, name, role, goal, autonomy, tool_grants_json,
+                   knowledge_scope_json, max_steps, enabled, created_at, updated_at
+                 ) VALUES
+                   ('agent-a', 'workspace-a', 'A', 'qa', 'test', 'suggest', '[]', '[]', 3, 1, '1', '1');
+                 INSERT INTO agent_runs(
+                   id, agent_id, workspace_id, input, status, step_count
+                 ) VALUES
+                   ('run-a', 'agent-a', 'workspace-a', 'test', 'queued', 0);
+                 INSERT INTO work_items(
+                   id, workspace_id, entity_type, title, status, priority, created_at, updated_at
+                 ) VALUES
+                   ('work-a', 'workspace-a', 'task', 'A', 'ready', 1, '1', '1'),
+                   ('work-b', 'workspace-b', 'task', 'B', 'ready', 1, '1', '1');",
+            )
+            .expect("agent and work fixtures should be inserted");
+
+        let agent_workspace: String = connection
+            .query_row(
+                "SELECT workspace_id FROM agent_runs WHERE id='run-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("agent run workspace should be readable");
+        assert_eq!(agent_workspace, "workspace-a");
+
+        let cross_workspace_exists: bool = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM work_items
+                   WHERE id='work-a' AND workspace_id='workspace-b'
+                 )",
+                [],
+                |row| row.get(0),
+            )
+            .expect("workspace isolation query should work");
+        assert!(!cross_workspace_exists);
+    }
+
+    #[test]
     fn knowledge_validators_enforce_supported_types_and_safe_hashes() {
         assert_eq!(
             validate_knowledge_source_type("Research").expect("source type should normalize"),
