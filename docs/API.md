@@ -142,6 +142,15 @@ These commands persist the strategy model locally. Writes are role-gated to the 
 
 Agent definitions are workspace-scoped and explicitly bounded by autonomy, tool grants, knowledge scope, and maximum steps. Agent runs cannot be created for disabled agents or agents outside the active workspace. Policy writes are owner/admin gated. Work dependencies require both referenced work items to belong to the active workspace and reject self-dependencies.
 
+### Outcomes and learning
+
+- `opportunity_upsert`
+- `opportunity_list`
+- `insight_upsert`
+- `insight_list`
+
+Opportunities are workspace-scoped CRM outcomes linked to a contact and optionally a campaign. Values are non-negative, probability is bounded to 0–100, and currency uses a three-letter uppercase code. Insights are workspace-scoped, evidence-oriented records with explicit kind, confidence, source IDs, and UTC-normalized observation time.
+
 ### Operating graph
 
 - `operational_link_upsert`
