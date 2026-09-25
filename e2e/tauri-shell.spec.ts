@@ -19,11 +19,12 @@ const EXE_CANDIDATES = [
   "packages/desktop/src-tauri/target/release/orbit-marketing-os.exe",
 ].filter(Boolean) as string[];
 const exe = EXE_CANDIDATES.find((p) => existsSync(p));
-const CDP_PORT = 9340;
+const CDP_PORT = 9340 + Number(process.env.PLAYWRIGHT_WORKER_INDEX ?? "0");
 
 let proc: ChildProcess | null = null;
 let browser: Browser | null = null;
 let page: Page | null = null;
+let processOutput = "";
 
 async function killApp(): Promise<void> {
   if (browser) await browser.close().catch(() => {});
@@ -37,6 +38,80 @@ async function killApp(): Promise<void> {
     }
   }
   proc = null;
+  processOutput = "";
+}
+
+async function launchAndConnectTauri(): Promise<void> {
+  if (!exe) throw new Error("Tauri executable is missing");
+
+  try {
+    execSync("taskkill /im orbit-marketing-os.exe /F", { stdio: "ignore" });
+  } catch {
+    /* no leftover instance */
+  }
+
+  processOutput = "";
+  proc = spawn(exe, [], {
+    env: {
+      ...process.env,
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
+
+  const capture = (chunk: Buffer | string): void => {
+    processOutput = (processOutput + String(chunk)).slice(-12_000);
+  };
+  proc.stdout?.on("data", capture);
+  proc.stderr?.on("data", capture);
+
+  const { chromium } = await import("@playwright/test");
+  const deadline = Date.now() + 30_000;
+  let lastError = "CDP endpoint did not become available";
+
+  while (Date.now() < deadline) {
+    if (proc.exitCode !== null) {
+      throw new Error(
+        `Tauri process exited with code ${proc.exitCode} before WebView2 CDP became ready. Output:\n${processOutput}`,
+      );
+    }
+
+    try {
+      browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+      return;
+    } catch (error: unknown) {
+      lastError = error instanceof Error ? error.message : String(error);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
+  throw new Error(
+    `Timed out waiting for WebView2 CDP on 127.0.0.1:${CDP_PORT}. Last error: ${lastError}. Process output:\n${processOutput}`,
+  );
+}
+
+async function connectToCurrentTauri(): Promise<void> {
+  const { chromium } = await import("@playwright/test");
+  if (proc?.exitCode !== null) {
+    throw new Error(
+      `Tauri process is not running (exit ${proc.exitCode}). Output:\n${processOutput}`,
+    );
+  }
+  const deadline = Date.now() + 15_000;
+  let lastError = "CDP endpoint unavailable";
+  while (Date.now() < deadline) {
+    try {
+      browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+      return;
+    } catch (error: unknown) {
+      lastError = error instanceof Error ? error.message : String(error);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  throw new Error(
+    `Timed out reconnecting to WebView2 CDP on 127.0.0.1:${CDP_PORT}. Last error: ${lastError}. Output:\n${processOutput}`,
+  );
 }
 
 test.describe("Tauri renderer capability isolation (SEC-03)", () => {
@@ -101,17 +176,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     } catch {
       /* no leftover instance */
     }
-    proc = spawn(exe!, [], {
-      env: {
-        ...process.env,
-        WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
-      },
-      stdio: "ignore",
-    });
-    await new Promise((r) => setTimeout(r, 6000));
-
-    const { chromium } = await import("@playwright/test");
-    browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+    await launchAndConnectTauri();
     const ctx = browser.contexts()[0];
     page = ctx.pages()[0] ?? (await ctx.waitForEvent("page"));
     await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
@@ -169,18 +234,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
     await killApp();
 
-    proc = spawn(exe!, [], {
-      env: {
-        ...process.env,
-        WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
-      },
-      stdio: "ignore",
-    });
-
-    await new Promise((r) => setTimeout(r, 6000));
-
-    const { chromium } = await import("@playwright/test");
-    browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+    await launchAndConnectTauri();
     const ctx = browser.contexts()[0];
     page = ctx.pages()[0] ?? (await ctx.waitForEvent("page"));
     await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
