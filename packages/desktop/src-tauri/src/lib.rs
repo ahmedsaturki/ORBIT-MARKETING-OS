@@ -10173,21 +10173,24 @@ mod tests {
         assert!(validate_work_dependency_kind("requires").is_ok());
         assert!(validate_work_dependency_kind("depends").is_err());
 
-        let grants_input = Some(
-            r#"[{"tool":"publisher","scopes":["campaign.publish"],"requiresApproval":true}]"#
-                .to_string(),
-        );
+        let grants_json =
+            r#"[{"tool":"publisher","scopes":["campaign.publish"],"requiresApproval":true}]"#;
+        let grants_input: Option<String> = Some(grants_json.to_string());
         let grants = validate_agent_tool_grants(grants_input)
             .expect("tool grant should validate");
         assert!(grants.contains("publisher"));
 
-        let missing_scopes = Some(r#"[{"tool":"publisher"}]"#.to_string());
-        assert!(validate_agent_tool_grants(missing_scopes).is_err());
+        let missing_scopes_json = r#"[{"tool":"publisher"}]"#;
+        let missing_scopes: Option<String> = Some(missing_scopes_json.to_string());
+        let missing_result = validate_agent_tool_grants(missing_scopes);
+        assert!(missing_result.is_err());
 
-        let safe_risks = Some(r#"["low","critical"]"#.to_string());
+        let safe_risks_json = r#"["low","critical"]"#;
+        let safe_risks: Option<String> = Some(safe_risks_json.to_string());
         assert!(validate_risk_array(safe_risks).is_ok());
 
-        let unsafe_risks = Some(r#"["extreme"]"#.to_string());
+        let unsafe_risks_json = r#"["extreme"]"#;
+        let unsafe_risks: Option<String> = Some(unsafe_risks_json.to_string());
         assert!(validate_risk_array(unsafe_risks).is_err());
     }
 
