@@ -115,6 +115,14 @@ export interface ConnectorHealth {
   readonly checkedAt: string;
 }
 
+export type ConnectorResult<T = unknown> =
+  | { readonly ok: true; readonly data: T }
+  | {
+      readonly ok: false;
+      readonly error: string;
+      readonly requiresIntervention: boolean;
+    };
+
 export interface AuditEvent {
   readonly id: string;
   readonly timestamp: string;
