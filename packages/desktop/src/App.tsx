@@ -1,3 +1,4 @@
+/* Native validation retrigger marker: source-only comment; no runtime behavior change. */
 import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
