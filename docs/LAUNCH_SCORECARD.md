@@ -85,4 +85,3 @@ Live checks returned HTTP 200 for the home page, pricing, privacy, terms, refund
 ## Release rule
 
 Do not call the product commercially final while applicable signing, real connector, accessibility, soak, rollback or billing gates remain open.
-
