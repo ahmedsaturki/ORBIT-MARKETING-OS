@@ -143,7 +143,7 @@ for (const fragment of [
 const selfHosted = await text(".github/workflows/self-hosted-verify.yml");
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
-  "(github.ref_name == 'rebuild/orbit-production' || github.ref_name == 'rebuild/orbit-production-consolidated') && github.actor == 'ahmedsaturki'",
+  "(github.ref_name == 'rebuild/orbit-production' || github.ref_name == 'rebuild/orbit-production-consolidated' || github.ref_name == 'rebuild/orbit-production-final') && github.actor == 'ahmedsaturki'",
   "run: bash scripts/self-hosted-preflight.sh",
   "pnpm install --frozen-lockfile",
   "pnpm --filter @orbit/core test:coverage",
@@ -172,16 +172,17 @@ for (const fragment of [
 }
 
 const commitLockfiles = await text("scripts/commit-lockfiles.mjs");
-for (const fragment of [
-  "GITHUB_REF_NAME",
-  "rebuild/orbit-production",
-  "rebuild/orbit-production-consolidated",
-  'execFileSync("git", ["add"',
-  'execFileSync("git", ["commit"',
-  'execFileSync("git", ["push"',
-]) {
+for (const fragment of ["GITHUB_REF_NAME", "rebuild/orbit-production", "rebuild/orbit-production-consolidated", "rebuild/orbit-production-final"]) {
   if (!commitLockfiles.includes(fragment))
     throw new Error("Canonical lockfile commit contract missing: " + fragment);
+}
+for (const [name, pattern] of [
+  ["git add", /execFileSync\(\s*"git"\s*,\s*\[\s*"add"/],
+  ["git commit", /execFileSync\(\s*"git"\s*,\s*\[\s*"commit"/],
+  ["git push", /execFileSync\(\s*"git"\s*,\s*\[\s*"push"/],
+]) {
+  if (!pattern.test(commitLockfiles))
+    throw new Error("Canonical lockfile commit contract missing: " + name);
 }
 
 console.log("ORBIT release sanity passed for version " + expectedVersion);
