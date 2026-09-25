@@ -80,7 +80,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
   test("capability files are deny-by-default and least-privilege (capability review)", () => {
     const capability = JSON.parse(
-      readFileSync(join(root, "packages/desktop/src-tauri/capabilities/default.json"), "utf8"),
+      readFileSync(
+        join(root, "packages/desktop/src-tauri/capabilities/default.json"),
+        "utf8",
+      ),
     );
     // Exactly one grant: core:default — no fs/shell/http/clipboard/dialog/updater.
     expect(capability.permissions).toEqual(["core:default"]);
@@ -148,7 +151,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     });
 
     for (const cmd of ["plugin:window|destroy", "plugin:fs|read_text_file"]) {
-      expect(denied[cmd].ok, `${cmd} must be denied by the ACL`).toBe(false);
+      expect(
+        denied[cmd].ok,
+        `${cmd} must be denied by the ACL`,
+      ).toBe(false);
       expect(denied[cmd].error).toContain("not allowed by ACL");
     }
 
@@ -162,12 +168,15 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
   test("workspace selection persists after application restart", async () => {
     expect(page, "boot test must run first").not.toBeNull();
 
-    const workspace = (await page!.evaluate(async (workspaceId) => {
-      return (await window.__TAURI_INTERNALS__.invoke("workspace_create", {
-        id: workspaceId,
-        name: "Restart Persistence Workspace",
-      })) as { id: string };
-    }, "e2e-restart-" + Date.now())) as { id: string };
+    const workspace = (await page!.evaluate(
+      async (workspaceId) => {
+        return (await window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id: workspaceId,
+          name: "Restart Persistence Workspace",
+        })) as { id: string };
+      },
+      "e2e-restart-" + Date.now(),
+    )) as { id: string };
 
     await page!.evaluate(async (id) => {
       await window.__TAURI_INTERNALS__.invoke("workspace_select", { id });
