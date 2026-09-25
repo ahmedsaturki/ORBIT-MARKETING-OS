@@ -8174,6 +8174,87 @@ mod tests {
     }
 
     #[test]
+    fn strategy_brain_validators_reject_malformed_payloads() {
+        assert_eq!(
+            validate_json_string_array(
+                Some(r#"["one"," two "]"#.to_string()),
+                "values",
+                10
+            )
+            .expect("array should normalize"),
+            r#"["one","two"]"#
+        );
+        assert!(validate_json_string_array(
+            Some(r#"{"not":"array"}"#.to_string()),
+            "values",
+            10
+        )
+        .is_err());
+        assert!(validate_json_string_array(
+            Some(r#"[""]"#.to_string()),
+            "values",
+            10
+        )
+        .is_err());
+        assert_eq!(
+            validate_json_object(Some(r#"{"region":"Cairo"}"#.to_string()), "attributes")
+                .expect("object should normalize"),
+            r#"{"region":"Cairo"}"#
+        );
+        assert!(validate_json_object(
+            Some(r#"["not-object"]"#.to_string()),
+            "attributes"
+        )
+        .is_err());
+        assert_eq!(
+            validate_strategy_metric("LEADS").expect("metric should normalize"),
+            "leads"
+        );
+        assert!(validate_strategy_metric("followers").is_err());
+        assert!(validate_strategy_status("LIVE").is_err());
+        assert_eq!(
+            validate_strategy_status("ACTIVE").expect("status should normalize"),
+            "active"
+        );
+    }
+
+    #[test]
+    fn strategy_reference_validation_blocks_cross_workspace_references() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO marketing_objectives(
+                   id, workspace_id, name, metric, target, period_start, period_end, status, created_at, updated_at
+                 ) VALUES
+                   ('objective-a', 'workspace-a', 'A', 'leads', 1, '2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z', 'active', '1', '1'),
+                   ('objective-b', 'workspace-b', 'B', 'leads', 1, '2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z', 'active', '1', '1');",
+            )
+            .expect("objective fixtures should be inserted");
+
+        assert!(validate_strategy_reference_ids(
+            &connection,
+            "workspace-a",
+            "marketing_objectives",
+            r#"["objective-a"]"#,
+        )
+        .is_ok());
+        assert!(validate_strategy_reference_ids(
+            &connection,
+            "workspace-a",
+            "marketing_objectives",
+            r#"["objective-b"]"#,
+        )
+        .is_err());
+    }
+
+    #[test]
     fn operational_relation_validation_matches_graph_relation_contract() {
         assert_eq!(
             validate_operational_relation("supports").expect("valid relation"),
