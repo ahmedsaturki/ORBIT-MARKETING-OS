@@ -1,46 +1,55 @@
 # ORBIT Marketing OS — Release Readiness
 
+Updated: 2026-09-26
+
 ## Current release line
 
-The consolidated production implementation is merged into main through PR #10. The current cleanup/native validation cut is PR #38 on top of current main.
+The consolidated production implementation is merged into main through the RC2.1 line and PR #47. The authoritative current main commit is `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
 
-Historical rebuild PR #2 is closed and unmerged. PR #38 is the current cleanup/native validation line removing the obsolete root Tauri/Vite surface.
+PR #45 established the RC2.1 native/release baseline. PR #47 added the governed Command Registry and Operational Event Spine on top of the current main lineage and passed all exact-head CI/native/mobile gates before merge.
 
-## Verified execution
+The current validation branch adds the Command Dispatcher on top of that verified lineage and is not considered releasable until its exact-head gates pass.
 
-Main CI run 36144303102 is a real hosted execution and passed reproducible install, release sanity, secret scan, dependency audit, workspace sanity, TypeScript typecheck, Desktop IPC verification, lint, tests, coverage, runtime smoke, performance smoke, monorepo build, Playwright E2E, formatting, Rust fmt/check/test/clippy.
+## Verified execution baseline
 
-Main Web Deploy run 36144303202 passed the Web quality gate, including web build and Web E2E.
+PR #47 exact head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed:
+
+- CI run 36198100587;
+- Desktop Native Validation run 36198100491;
+- Mobile Validation run 36198100618.
+
+The merged main tree therefore has fresh exact-head evidence for the governed control-plane merge.
 
 ## Verified production web
 
-Vercel project orbit-marketing-os currently has a READY production deployment. The production alias orbit-marketing-os.vercel.app was independently checked for landing, pricing, privacy, terms, refund, EULA, manifest, service worker, 404 behavior and security headers.
+Vercel project `orbit-marketing-os` has a READY production deployment and the live public web surface remains available. Current project metadata reports `framework: vite`, while the repository release contract expects a Next.js static export to `packages/web/out`. The latest READY deployment has empty Git metadata, so repository provenance is not treated as verified.
 
-The GitHub Vercel deployment job remains conditional on repository secrets and was skipped in the latest run. The live Vercel deployment itself is real and verified.
-
-## Native validation
-
-PR #38 head `b0ee492275b9cd56353a3bcfcb6e2499820da7af` has exact-head CI and Rust runs active. The CI quality and Rust quality gates passed on the immediately preceding exact head before the documentation-only cleanup commit; the new exact-head CI/native runs must settle before those results are treated as final for `b0ee492...`.
+Current runtime error aggregation for the selected 7-day period reports no runtime error clusters.
 
 ## Remaining release gates
 
+- current Command Dispatcher exact-head verification;
 - dedicated native runtime restart/migration/crash-recovery acceptance;
-- controlled real-user Telegram/LinkedIn authorization and delivery evidence;
-- live multi-device CRDT network verification beyond the encrypted reconnect/convergence simulation;
+- controlled real Telegram authorization/delivery evidence;
+- controlled real LinkedIn authorization/delivery evidence;
+- live multi-device CRDT network verification;
 - dedicated accessibility/RTL audit;
-- 24-hour soak;
-- signed/notarized desktop distribution;
-- production mobile signing/store distribution;
-- final Vercel rollback drill;
+- 24-hour stability soak;
+- release-tag checksum/provenance verification;
+- desktop signing/notarization;
+- production Android/iOS signing and store distribution;
+- Vercel project-setting reconciliation and guarded deployment provenance;
+- Vercel rollback drill;
+- main branch-protection/ruleset verification;
 - commercial payment/billing configuration;
 - final legal/commercial publication review.
 
 ## Distribution
 
-Desktop artifacts remain validation/unsigned until signing is configured. Mobile currently produces an Android debug validation artifact. Web is live on Vercel production.
+Desktop artifacts are technically buildable and validated but remain unsigned. Mobile produces a validated Android debug artifact. Web is live in Vercel production.
 
 No commercial launch claim is made while release-critical gates remain open.
 
 ## Safety boundary
 
-ORBIT deliberately excludes fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion and concealed automation. External actions remain user-authorized, bounded, auditable and stopped when authentication or challenge state is ambiguous.
+ORBIT deliberately excludes fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion, and concealed automation. External actions remain user-authorized, bounded, auditable, and stopped when authentication or challenge state is ambiguous.
