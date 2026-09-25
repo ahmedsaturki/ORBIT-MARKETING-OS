@@ -23,7 +23,7 @@ describe("CommandRegistry", () => {
         },
         "desktop",
       ),
-    ).toEqual({ allowed: false, reason: "scope_denied" });
+    ).toEqual({ allowed: false, reason: "actor_required" });
   });
 
   it("requires an identified actor", () => {
