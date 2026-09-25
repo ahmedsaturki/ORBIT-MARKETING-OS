@@ -8,9 +8,9 @@ import {
 describe("policy packs", () => {
   it("provides named governed presets with explicit safety blocks", () => {
     expect(BUILT_IN_POLICY_PACKS).toHaveLength(5);
-    expect(
-      getPolicyPack("regulated").policy.blockedActions,
-    ).toContain("captcha_bypass");
+    expect(getPolicyPack("regulated").policy.blockedActions).toContain(
+      "captcha_bypass",
+    );
   });
 
   it("materializes a workspace-bound policy", () => {
@@ -25,9 +25,9 @@ describe("policy packs", () => {
   });
 
   it("rejects missing identities", () => {
-    expect(() =>
-      materializePolicyPack("balanced", "", "policy-1"),
-    ).toThrow("policy_pack_identity_required");
+    expect(() => materializePolicyPack("balanced", "", "policy-1")).toThrow(
+      "policy_pack_identity_required",
+    );
   });
 
   it("rejects unknown packs", () => {
