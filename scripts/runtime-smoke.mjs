@@ -1,5 +1,7 @@
 import { createServer } from "node:http";
+import { existsSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
+import path from "node:path";
 
 const OLLAMA_PORT = 3110;
 const RUNTIME_PORT = 3101;
@@ -47,9 +49,42 @@ async function terminateChild(child) {
   }
 }
 
+function resolvePnpmExecutable() {
+  const pnpmHome = process.env.PNPM_HOME?.trim();
+  if (pnpmHome) {
+    const candidate = path.join(
+      pnpmHome,
+      process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+    );
+    if (existsSync(candidate)) return candidate;
+  }
+
+  const pathEntries = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+  const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+  for (const entry of pathEntries) {
+    const candidate = path.join(entry, executable);
+    if (existsSync(candidate)) return candidate;
+  }
+
+  return executable;
+}
+
+const PNPM_EXECUTABLE = resolvePnpmExecutable();
+
 function spawnRuntime(env) {
-  return spawn("pnpm", ["runtime:start"], {
-    env,
+  const childEnv = {
+    ...env,
+    ...(process.env.PNPM_HOME
+      ? {
+          PATH:
+            process.env.PNPM_HOME +
+            path.delimiter +
+            (env.PATH ?? process.env.PATH ?? ""),
+        }
+      : {}),
+  };
+  return spawn(PNPM_EXECUTABLE, ["runtime:start"], {
+    env: childEnv,
     stdio: ["ignore", "pipe", "pipe"],
     shell: process.platform === "win32",
     detached: process.platform !== "win32",
@@ -103,7 +138,7 @@ for (const url of [
   "http://example.com:11434",
   "https://example.com:11434",
 ]) {
-  const probe = spawnSync("pnpm", ["exec", "tsx", "server.ts"], {
+  const probe = spawnSync(PNPM_EXECUTABLE, ["exec", "tsx", "server.ts"], {
     env: { ...process.env, OLLAMA_BASE_URL: url, PORT: "3199" },
     encoding: "utf8",
   });
