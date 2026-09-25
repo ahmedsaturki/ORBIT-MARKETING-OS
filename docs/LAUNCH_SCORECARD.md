@@ -17,7 +17,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Web product surface                             | VERIFIED    | Main CI build/E2E passed; production routes independently checked live                                                                                               |
 | Runtime perimeter                               | VERIFIED    | Auth, origin allowlist, rate limiting and fake-Ollama smoke passed                                                                                                   |
 | Local AI defaults                               | VERIFIED    | Runtime smoke passed with bounded context and local model default                                                                                                    |
-| Mobile monitoring                               | VERIFIED    | Main/mobile checks passed; Android debug artifact validation is tracked in PR #35                                                                                    |
+| Mobile monitoring                               | VERIFIED    | Main/mobile checks passed; Android debug artifact validation is tracked in PR #38                                                                                    |
 | Clean install                                   | VERIFIED    | Main CI run 36144303102 passed frozen install with committed lockfiles                                                                                               |
 | Typecheck/lint/tests/coverage/build             | VERIFIED    | Main CI run 36144303102 passed all quality steps                                                                                                                     |
 | Rust fmt/check/test/clippy                      | VERIFIED    | Main CI run 36144303102 passed all Rust gates                                                                                                                        |
@@ -25,8 +25,8 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Performance smoke                               | VERIFIED    | Main CI performance smoke passed                                                                                                                                     |
 | Browser E2E                                     | VERIFIED    | Main CI Playwright E2E passed                                                                                                                                        |
 | Production web deployment                       | VERIFIED*   | Live Vercel production alias is READY and public routes/headers/404 were checked                                                                                     |
-| Native desktop packaging                        | PARTIAL     | PR #35: exact-head native bundle validation is active; no final bundle PASS is recorded until the current run settles                                                |
-| Android debug validation                        | PARTIAL     | PR #35 inherited a passing mobile preparation path, but no Android artifact PASS is claimed for the current exact head until its current-head validation is recorded |
+| Native desktop packaging                        | PARTIAL     | PR #38: exact-head native bundle validation is active; no final bundle PASS is recorded until the current run settles                                                |
+| Android debug validation                        | PARTIAL     | PR #38 inherited a passing mobile preparation path, but no Android artifact PASS is claimed for the current exact head until its current-head validation is recorded |
 | Native runtime restart/migration/crash recovery | UNVERIFIED  | Dedicated full desktop runtime acceptance evidence remains                                                                                                           |
 | Real connector E2E                              | UNVERIFIED  | Telegram/LinkedIn live authorization/delivery evidence remains                                                                                                       |
 | CRDT encrypted transport/convergence            | VERIFIED*   | PR #29 merged encrypted disconnect/reconnect convergence + wrong-key replay regression; live multi-device network evidence remains                                   |
@@ -47,7 +47,7 @@ Main Web Deploy run 36144303202 passed the Web quality gate. Its deploy stage wa
 
 ## Current native cut evidence
 
-PR #35 (`b0ee492275b9cd56353a3bcfcb6e2499820da7af`) is the current exact-head validation cut. The authoritative CI/Rust/native result for this head is still being collected; prior parent-commit artifact results are not copied forward as exact-head PASS evidence.
+PR #38 (`b0ee492275b9cd56353a3bcfcb6e2499820da7af`) is the current exact-head validation cut. The authoritative CI/Rust/native result for this head is still being collected; prior parent-commit artifact results are not copied forward as exact-head PASS evidence.
 
 ## Production web evidence
 
