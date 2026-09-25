@@ -23,7 +23,7 @@ A deliberately minimal runner probe was also tested earlier and failed before an
 
 The current source environment cannot resolve GitHub/npm through shell networking, so a second independent clean checkout could not be created locally. A real `pnpm-lock.yaml` has not been fabricated.
 
-The repository now provides:
+The primary zero-cost path is GitHub-hosted Actions. The repository also provides the self-hosted fallback:
 
 - `scripts/bootstrap-lockfile.ps1` for Windows.
 - `scripts/bootstrap-lockfile.sh` for Linux/WSL/macOS.
