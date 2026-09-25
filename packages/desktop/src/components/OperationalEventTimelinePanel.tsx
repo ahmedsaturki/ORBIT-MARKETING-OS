@@ -69,7 +69,11 @@ export function OperationalEventTimelinePanel({
             إجراء خارجي.
           </p>
         </div>
-        <button className="button secondary" type="button" onClick={() => void load()}>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={() => void load()}
+        >
           {loading ? "جاري التحديث…" : "تحديث"}
         </button>
       </div>
@@ -91,7 +95,11 @@ export function OperationalEventTimelinePanel({
             placeholder="trace-001"
           />
         </label>
-        <button className="button primary" type="button" onClick={() => void load()}>
+        <button
+          className="button primary"
+          type="button"
+          onClick={() => void load()}
+        >
           بحث
         </button>
       </div>
