@@ -1,0 +1,70 @@
+name: ORBIT Stability Soak
+
+on:
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: "Soak duration in hours"
+        required: true
+        default: "24"
+      ref:
+        description: "Production rebuild ref to verify"
+        required: true
+        default: "rebuild/orbit-production-final"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orbit-stability-soak
+  cancel-in-progress: false
+
+jobs:
+  soak:
+    if: github.actor == 'ahmedsaturki' && github.event.inputs.ref == 'rebuild/orbit-production-final'
+    runs-on: [self-hosted, x64, linux]
+    timeout-minutes: 1500
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.inputs.ref }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          version: 10.17.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+
+      - name: Require committed lockfiles
+        run: |
+          test -s pnpm-lock.yaml
+          test -s packages/desktop/src-tauri/Cargo.lock
+
+      - name: Verify reproducible install
+        run: pnpm install --frozen-lockfile
+
+      - name: Workspace sanity
+        run: pnpm verify:workspace
+
+      - name: Security scan
+        run: pnpm security:scan
+
+      - name: Build web/runtime
+        run: pnpm build
+
+      - name: Run stability soak
+        run: pnpm exec tsx scripts/soak.ts --hours "${{ github.event.inputs.hours }}"
+
+      - name: Upload soak evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: orbit-soak-evidence-${{ github.run_id }}
+          path: |
+            logs/soak-*.jsonl
+            logs/soak-summary.json
+          if-no-files-found: warn
+          retention-days: 30
