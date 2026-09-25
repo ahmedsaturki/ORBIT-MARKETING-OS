@@ -33,6 +33,8 @@ describe("Yjs sync", () => {
       const key = await generateAes256Key();
 
       // Opaque transport queue: ciphertext may be buffered during disconnect,
+      // and formatted output remains opaque to the transport.
+
       // then delivered and applied only after the link is restored.
       const offlineQueue: string[] = [];
       let connected = false;
