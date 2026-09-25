@@ -120,6 +120,7 @@ async function launchAndConnectTauri(): Promise<void> {
   const child = spawn(exe, [], {
     env: {
       ...process.env,
+      ORBIT_E2E_CDP_PORT: String(CDP_PORT),
       WEBVIEW2_USER_DATA_FOLDER: webview2UserDataFolder,
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
     },
