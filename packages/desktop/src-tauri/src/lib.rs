@@ -10417,6 +10417,68 @@ mod tests {
     }
 
     #[test]
+    fn outcome_analytics_is_grouped_by_currency() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1');
+                INSERT INTO contacts(id, workspace_id, display_name, status, created_at, updated_at)
+                VALUES ('contact-a', 'workspace-a', 'A', 'new', '1', '1');
+                INSERT INTO opportunities(
+                  id, workspace_id, contact_id, name, stage, value, currency,
+                  probability, created_at, updated_at
+                ) VALUES
+                  ('opp-egp', 'workspace-a', 'contact-a', 'EGP deal', 'qualified', 1000, 'EGP', 50, '1', '1'),
+                  ('opp-usd', 'workspace-a', 'contact-a', 'USD deal', 'qualified', 100, 'USD', 25, '1', '1'),
+                  ('opp-egp-won', 'workspace-a', 'contact-a', 'EGP won', 'won', 500, 'EGP', 100, '1', '1');
+                "#,
+            )
+            .expect("currency-diverse opportunities should insert");
+
+        let mut statement = connection
+            .prepare(
+                "SELECT currency,
+                        SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value ELSE 0 END),
+                        SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value * probability / 100.0 ELSE 0 END),
+                        SUM(CASE WHEN stage = 'won' THEN value ELSE 0 END)
+                 FROM opportunities
+                 WHERE workspace_id='workspace-a'
+                 GROUP BY currency
+                 ORDER BY currency",
+            )
+            .expect("analytics query should prepare");
+
+        let rows = statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, f64>(1)?,
+                    row.get::<_, f64>(2)?,
+                    row.get::<_, f64>(3)?,
+                ))
+            })
+            .expect("analytics query should execute")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("analytics rows should decode");
+
+        assert_eq!(
+            rows,
+            vec![
+                ("EGP".to_string(), 1000.0, 500.0, 500.0),
+                ("USD".to_string(), 100.0, 25.0, 0.0),
+            ],
+        );
+    }
+
+    #[test]
     fn schema_v11_to_v12_migration_creates_outcome_tables() {
         let connection =
             Connection::open_in_memory().expect("in-memory SQLite should be available");
