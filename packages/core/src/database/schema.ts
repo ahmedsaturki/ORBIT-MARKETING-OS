@@ -1,6 +1,7 @@
 export const DATABASE_SCHEMA_VERSION = 11;
 
 export const DATABASE_SCHEMA_SQL = `
+PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS workspaces (
   id TEXT PRIMARY KEY,
