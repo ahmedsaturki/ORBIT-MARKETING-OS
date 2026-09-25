@@ -5198,6 +5198,8 @@ fn validate_strategy_reference_ids(
 }
 
 #[tauri::command]
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[allow(clippy::too_many_arguments)]
 fn objective_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -5541,6 +5543,8 @@ fn offer_list(app: tauri::AppHandle) -> Result<Vec<OfferView>, String> {
 }
 
 #[tauri::command]
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[allow(clippy::too_many_arguments)]
 fn opportunity_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -5745,6 +5749,8 @@ fn opportunity_list(app: tauri::AppHandle) -> Result<Vec<OpportunityView>, Strin
 }
 
 #[tauri::command]
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[allow(clippy::too_many_arguments)]
 fn insight_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -5977,6 +5983,8 @@ fn insight_list(app: tauri::AppHandle) -> Result<Vec<InsightView>, String> {
 }
 
 #[tauri::command]
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[allow(clippy::too_many_arguments)]
 fn strategy_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -6802,6 +6810,8 @@ fn validate_work_dependency_kind(value: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[allow(clippy::too_many_arguments)]
 fn agent_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -7132,6 +7142,8 @@ fn agent_run_list(app: tauri::AppHandle) -> Result<Vec<AgentRunView>, String> {
 }
 
 #[tauri::command]
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[allow(clippy::too_many_arguments)]
 fn policy_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -7151,7 +7163,7 @@ fn policy_upsert(
     let blocked_actions_json =
         validate_json_string_array(blocked_actions_json, "blocked_actions_json", 500)?;
     let require_approval_for_json = validate_risk_array(require_approval_for_json)?;
-    if max_daily_external_actions < 0 || max_daily_external_actions > 1_000_000 {
+    if !(0..=1_000_000).contains(&max_daily_external_actions) {
         return Err("max_daily_external_actions is invalid".to_string());
     }
 
@@ -7257,6 +7269,8 @@ fn policy_list(app: tauri::AppHandle) -> Result<Vec<MarketingPolicyView>, String
 }
 
 #[tauri::command]
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[allow(clippy::too_many_arguments)]
 fn work_item_upsert(
     app: tauri::AppHandle,
     id: String,
