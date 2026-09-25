@@ -27,6 +27,6 @@ command.received -> command.authorized -> work.created -> connector.dispatched -
 
 A blocked path is explicit: command.received -> command.blocked, while human intervention is represented with human.intervention_required and can later be followed by a resumed command trace.
 
-## Persistence direction
+## Persistence
 
-SQLite remains the source of truth. A future persisted event table should preserve the exact logical contract (workspace_id, sequence, trace_id, parent_event_id, kind, outcome, redacted payload) and support indexes for workspace, entity, trace, and timestamp without placing secrets into the graph or synchronization layer.
+SQLite remains the source of truth. The desktop runtime now persists the exact logical contract (`workspace_id`, `sequence`, `trace_id`, `parent_event_id`, kind, outcome, actor identity, and redacted payload) in schema v13, with workspace/time, entity, and trace indexes. The event table contains no raw secrets by design.
