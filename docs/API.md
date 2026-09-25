@@ -126,6 +126,22 @@ Knowledge records are local and workspace-scoped. A knowledge item must referenc
 
 These commands persist the strategy model locally. Writes are role-gated to the active workspace. Strategy reference IDs are verified against the same workspace before persistence, so an Objective/Audience/Offer from another workspace cannot be attached silently.
 
+### Agents, policies and work graph
+
+- `agent_upsert`
+- `agent_list`
+- `agent_run_create`
+- `agent_run_set_status`
+- `agent_run_list`
+- `policy_upsert`
+- `policy_list`
+- `work_item_upsert`
+- `work_item_list`
+- `work_dependency_upsert`
+- `work_dependency_list`
+
+Agent definitions are workspace-scoped and explicitly bounded by autonomy, tool grants, knowledge scope, and maximum steps. Agent runs cannot be created for disabled agents or agents outside the active workspace. Policy writes are owner/admin gated. Work dependencies require both referenced work items to belong to the active workspace and reject self-dependencies.
+
 ### Operating graph
 
 - `operational_link_upsert`
