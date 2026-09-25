@@ -1,5 +1,10 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_process";
+import {
+  execFileSync,
+  execSync,
+  spawn,
+  type ChildProcess,
+} from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
