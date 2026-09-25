@@ -4823,9 +4823,9 @@ fn prepare_backup_database_for_restore(connection: &Connection) -> Result<(), St
         return Err("backup integrity check failed".to_string());
     }
 
-    let foreign_key_error: Option<String> = connection
+    let foreign_key_error: Option<i64> = connection
         .query_row(
-            "SELECT message FROM pragma_foreign_key_check LIMIT 1",
+            "SELECT 1 FROM pragma_foreign_key_check LIMIT 1",
             [],
             |row| row.get(0),
         )
@@ -5650,11 +5650,12 @@ mod tests {
                 "CREATE TABLE workspace_memberships(
                    workspace_id TEXT NOT NULL,
                    user_id TEXT NOT NULL,
+                   role TEXT NOT NULL,
                    active INTEGER NOT NULL
                  );
-                 INSERT INTO workspace_memberships(workspace_id, user_id, active)
-                 VALUES ('workspace-1', 'reviewer-1', 1),
-                        ('workspace-1', 'reviewer-2', 0);",
+                 INSERT INTO workspace_memberships(workspace_id, user_id, role, active)
+                 VALUES ('workspace-1', 'reviewer-1', 'reviewer', 1),
+                        ('workspace-1', 'reviewer-2', 'reviewer', 0);",
             )
             .expect("membership fixture should be created");
 
@@ -5827,10 +5828,10 @@ mod tests {
 
     #[test]
     fn task_attempt_limit_is_bounded() {
-        assert!(!(0i64..=10i64).contains(&0));
-        assert!((1i64..=10i64).contains(&1));
-        assert!((1i64..=10i64).contains(&10));
-        assert!(!(1i64..=10i64).contains(&11));
+        assert_eq!(effective_max_attempts(3, 10), 3);
+        assert_eq!(effective_max_attempts(10, 3), 3);
+        assert_eq!(effective_max_attempts(100, 100), 10);
+        assert_eq!(effective_max_attempts(0, 3), 1);
     }
 
     #[test]
@@ -5921,7 +5922,7 @@ mod tests {
                      ) VALUES (?1, 'workspace-search', ?2, 'lead', '2026-09-24T00:00:00Z', '2026-09-24T00:00:00Z')",
                     params![
                         format!("contact-{index}"),
-                        format!("Contact {index}")
+                        format!("Contact {index:04}")
                     ],
                 )
                 .expect("contact should insert");
@@ -6865,6 +6866,15 @@ mod tests {
         migrate_schema(&connection).expect("schema migration should succeed");
 
         connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES
+                   ('workspace-a', 'A', '1'),
+                   ('workspace-b', 'B', '1');",
+            )
+            .expect("vault workspaces should exist");
+
+        connection
             .execute(
                 "INSERT INTO vault_records(workspace_id, label, payload_json, updated_at)
                  VALUES
@@ -7109,6 +7119,10 @@ CREATE TABLE tasks (id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL, account_id T
 CREATE TABLE contacts (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, phone TEXT, email TEXT, source_platform TEXT, status TEXT NOT NULL, notes TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE conversations (id TEXT PRIMARY KEY, contact_id TEXT, platform TEXT NOT NULL, external_thread_id TEXT, status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE audit_events (id TEXT PRIMARY KEY, timestamp TEXT NOT NULL, category TEXT NOT NULL, action TEXT NOT NULL, outcome TEXT NOT NULL, actor TEXT NOT NULL, entity_id TEXT, metadata_json TEXT);
+INSERT INTO campaigns(id, name, status, created_at)
+VALUES ('legacy-campaign', 'Legacy Campaign', 'scheduled', '1000');
+INSERT INTO accounts(id, platform, display_name, status, created_at, updated_at)
+VALUES ('legacy-account', 'facebook', 'Legacy Account', 'connected', '1000', '1000');
 INSERT INTO audit_events(id, timestamp, category, action, outcome, actor) VALUES ('legacy-audit', '900', 'security', 'legacy', 'success', 'system');
 INSERT INTO tasks(id, campaign_id, account_id, platform, kind, priority, status, attempts, max_attempts, available_at, created_at)
 VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish', 0, 'pending', 0, 3, '1000', '1000');
