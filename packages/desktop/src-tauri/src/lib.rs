@@ -9991,7 +9991,7 @@ mod tests {
                    metadata_json TEXT,
                    previous_hash TEXT NOT NULL,
                    hash TEXT NOT NULL
-                 );",
+                 );\n                CREATE TABLE operational_events(\n                  id TEXT PRIMARY KEY,\n                  workspace_id TEXT NOT NULL,\n                  sequence INTEGER NOT NULL,\n                  timestamp TEXT NOT NULL,\n                  kind TEXT NOT NULL,\n                  outcome TEXT NOT NULL,\n                  actor TEXT NOT NULL,\n                  actor_id TEXT NOT NULL,\n                  entity_type TEXT,\n                  entity_id TEXT,\n                  trace_id TEXT,\n                  parent_event_id TEXT,\n                  payload_json TEXT\n                );\n                CREATE UNIQUE INDEX ux_operational_events_sequence\n                  ON operational_events(workspace_id, sequence);",
             )
             .expect("audit table should be created");
         write_audit_for_workspace(
@@ -10036,7 +10036,7 @@ mod tests {
                metadata_json TEXT,
                previous_hash TEXT NOT NULL,
                hash TEXT NOT NULL
-             );",
+             );\n                CREATE TABLE operational_events(\n                  id TEXT PRIMARY KEY,\n                  workspace_id TEXT NOT NULL,\n                  sequence INTEGER NOT NULL,\n                  timestamp TEXT NOT NULL,\n                  kind TEXT NOT NULL,\n                  outcome TEXT NOT NULL,\n                  actor TEXT NOT NULL,\n                  actor_id TEXT NOT NULL,\n                  entity_type TEXT,\n                  entity_id TEXT,\n                  trace_id TEXT,\n                  parent_event_id TEXT,\n                  payload_json TEXT\n                );\n                CREATE UNIQUE INDEX ux_operational_events_sequence\n                  ON operational_events(workspace_id, sequence);",
             )
             .expect("audit table should be created");
 
@@ -11172,7 +11172,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 12);
+        assert_eq!(version, 13);
     }
 
     #[test]
@@ -11214,7 +11214,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 12);
+        assert_eq!(version, 13);
     }
 
     #[test]
@@ -11473,7 +11473,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 12);
+        assert_eq!(version, 13);
     }
 
     #[test]
