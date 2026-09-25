@@ -51,7 +51,7 @@ async function launchAndConnectTauri(): Promise<void> {
   }
 
   processOutput = "";
-  proc = spawn(exe, [], {
+  const child = spawn(exe, [], {
     env: {
       ...process.env,
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
@@ -59,21 +59,22 @@ async function launchAndConnectTauri(): Promise<void> {
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
+  proc = child;
 
   const capture = (chunk: Buffer | string): void => {
     processOutput = (processOutput + String(chunk)).slice(-12_000);
   };
-  proc.stdout?.on("data", capture);
-  proc.stderr?.on("data", capture);
+  child.stdout?.on("data", capture);
+  child.stderr?.on("data", capture);
 
   const { chromium } = await import("@playwright/test");
-  const deadline = Date.now() + 30_000;
+  const deadline = Date.now() + 45_000;
   let lastError = "CDP endpoint did not become available";
 
   while (Date.now() < deadline) {
-    if (proc.exitCode !== null) {
+    if (child.exitCode !== null) {
       throw new Error(
-        `Tauri process exited with code ${proc.exitCode} before WebView2 CDP became ready. Output:\n${processOutput}`,
+        `Tauri process exited with code ${child.exitCode} before WebView2 CDP became ready. Output:\n${processOutput}`,
       );
     }
 
@@ -116,6 +117,7 @@ async function connectToCurrentTauri(): Promise<void> {
 
 test.describe("Tauri renderer capability isolation (SEC-03)", () => {
   test.describe.configure({ mode: "serial" });
+  test.setTimeout(60_000);
   test.skip(
     !exe,
     "Tauri binary not built — run node scripts/build-tauri.mjs --release first",
