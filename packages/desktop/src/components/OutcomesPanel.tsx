@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 interface ContactOption {
@@ -118,7 +119,11 @@ export function OutcomesPanel({
     if (workspaceId) void load();
   }, [workspaceId]);
 
-  const saveOpportunity = async (event: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    setOpportunityContactId((current) => current || contacts[0]?.id || "");
+  }, [contacts]);
+
+  const saveOpportunity = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!opportunityId.trim() || !opportunityName.trim() || !opportunityContactId) {
       setError("أدخل معرف الفرصة والاسم واختر العميل");
