@@ -24,7 +24,7 @@ const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
 const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
 const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
-const SCHEMA_VERSION: i64 = 11;
+const SCHEMA_VERSION: i64 = 12;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 static TELEGRAM_EXECUTION_IDS: OnceLock<Mutex<std::collections::HashSet<String>>> = OnceLock::new();
@@ -1211,6 +1211,57 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
               ON operational_links(workspace_id, to_type, to_id);
 
             PRAGMA user_version = 11;
+            ",
+        )?;
+    }
+
+    if version < 12 {
+        connection.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS opportunities (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE RESTRICT,
+              campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
+              name TEXT NOT NULL,
+              stage TEXT NOT NULL,
+              value REAL NOT NULL CHECK(value >= 0),
+              currency TEXT NOT NULL,
+              probability REAL NOT NULL CHECK(probability >= 0 AND probability <= 100),
+              source TEXT,
+              owner_id TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_opportunities_workspace_stage
+              ON opportunities(workspace_id, stage, updated_at);
+
+            CREATE INDEX IF NOT EXISTS idx_opportunities_workspace_contact
+              ON opportunities(workspace_id, contact_id, updated_at);
+
+            CREATE TABLE IF NOT EXISTS insights (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              kind TEXT NOT NULL,
+              title TEXT NOT NULL,
+              summary TEXT NOT NULL,
+              metric TEXT,
+              value REAL,
+              confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+              source_ids_json TEXT NOT NULL DEFAULT '[]',
+              observed_at TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_insights_workspace_kind
+              ON insights(workspace_id, kind, observed_at);
+
+            CREATE INDEX IF NOT EXISTS idx_insights_workspace_updated
+              ON insights(workspace_id, updated_at);
+
+            PRAGMA user_version = 12;
             ",
         )?;
     }
