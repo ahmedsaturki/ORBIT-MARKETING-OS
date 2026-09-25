@@ -17,7 +17,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Web product surface                             | VERIFIED    | Main CI build/E2E passed; production routes independently checked live                                                             |
 | Runtime perimeter                               | VERIFIED    | Auth, origin allowlist, rate limiting and fake-Ollama smoke passed                                                                 |
 | Local AI defaults                               | VERIFIED    | Runtime smoke passed with bounded context and local model default                                                                  |
-| Mobile monitoring                               | VERIFIED    | Main/mobile checks passed; Android debug artifact validation is tracked in PR #32                                                  |
+| Mobile monitoring                               | VERIFIED    | Main/mobile checks passed; Android debug artifact validation is tracked in PR #35                                                  |
 | Clean install                                   | VERIFIED    | Main CI run 36144303102 passed frozen install with committed lockfiles                                                             |
 | Typecheck/lint/tests/coverage/build             | VERIFIED    | Main CI run 36144303102 passed all quality steps                                                                                   |
 | Rust fmt/check/test/clippy                      | VERIFIED    | Main CI run 36144303102 passed all Rust gates                                                                                      |
@@ -25,8 +25,8 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Performance smoke                               | VERIFIED    | Main CI performance smoke passed                                                                                                   |
 | Browser E2E                                     | VERIFIED    | Main CI Playwright E2E passed                                                                                                      |
 | Production web deployment                       | VERIFIED*   | Live Vercel production alias is READY and public routes/headers/404 were checked                                                   |
-| Native desktop packaging                        | PARTIAL     | PR #32: Windows/Linux/macOS-arm64/macOS-x64 bundles passed; Windows native E2E remains in progress                                 |
-| Android debug validation                        | PARTIAL     | PR #32 quality and native preparation passed; Android debug build remains in progress                                              |
+| Native desktop packaging                        | PARTIAL     | PR #35: Windows/Linux/macOS-arm64/macOS-x64 bundles passed; Windows native E2E remains in progress                                 |
+| Android debug validation                        | PARTIAL     | PR #35 quality and native preparation passed; Android debug build remains in progress                                              |
 | Native runtime restart/migration/crash recovery | UNVERIFIED  | Dedicated full desktop runtime acceptance evidence remains                                                                         |
 | Real connector E2E                              | UNVERIFIED  | Telegram/LinkedIn live authorization/delivery evidence remains                                                                     |
 | CRDT encrypted transport/convergence            | VERIFIED*   | PR #29 merged encrypted disconnect/reconnect convergence + wrong-key replay regression; live multi-device network evidence remains |
@@ -39,11 +39,15 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 
 ## Current verified main evidence
 
-Main HEAD at the latest verified code baseline: 88c160344d5dd509617867e9d9518f80f332543b
+Latest fully passing main CI baseline: 88c160344d5dd509617867e9d9518f80f332543b
 
 Main CI run 36144303102 completed successfully and executed the lockfile, release sanity, security scan, dependency audit, workspace sanity, typecheck, IPC, lint, tests, coverage, runtime smoke, performance smoke, build, Playwright E2E, format check, Rust fmt/check/test/clippy gates.
 
-Main Web Deploy run 36144303202 passed the Web quality gate. Its actual Vercel deploy stage was skipped because the GitHub repository deployment secrets are not configured; this is not treated as a deployment failure.
+Main Web Deploy run 36144303202 passed the Web quality gate. Its deploy stage was skipped because repository Vercel secrets are not configured; live Vercel production is separately verified.
+
+## Current native cut evidence
+
+PR #35 (`8ac75e9537fa220967eb31b5cfaca67ced6ab614`) has an exact-head CI quality PASS and Rust quality PASS. Its four desktop package jobs (Windows x64, Linux x64, macOS x64, macOS arm64) have passed; Windows native E2E and Android debug validation are the remaining active jobs in that cut.
 
 ## Production web evidence
 
