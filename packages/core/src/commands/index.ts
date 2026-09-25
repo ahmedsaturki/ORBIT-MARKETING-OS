@@ -1,11 +1,6 @@
 export type CommandRisk = "low" | "medium" | "high" | "critical";
 export type CommandSurface =
-  | "desktop"
-  | "web"
-  | "mobile"
-  | "cli"
-  | "mcp"
-  | "agent";
+  "desktop" | "web" | "mobile" | "cli" | "mcp" | "agent";
 
 export interface CommandDefinition {
   readonly id: string;
@@ -136,7 +131,9 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
 export class CommandRegistry {
   private readonly commands = new Map<string, CommandDefinition>();
 
-  public constructor(commands: readonly CommandDefinition[] = BUILTIN_COMMANDS) {
+  public constructor(
+    commands: readonly CommandDefinition[] = BUILTIN_COMMANDS,
+  ) {
     for (const command of commands) this.register(command);
   }
 

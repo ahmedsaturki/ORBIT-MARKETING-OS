@@ -90,11 +90,6 @@ jobs:
 
       - name: Format check
         run: pnpm format:check
-      - name: Format diagnostic
-        if: always()
-        run: |
-          pnpm exec prettier packages/core/src/commands/index.ts > /tmp/orbit-prettier.ts
-          diff -u packages/core/src/commands/index.ts /tmp/orbit-prettier.ts || true
 
   rust:
     name: Rust quality
