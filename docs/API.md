@@ -161,6 +161,13 @@ Opportunities are workspace-scoped CRM outcomes linked to a contact and optional
 - `operational_link_list`
 - `operational_link_delete`
 
+### Operational Event Spine
+
+- `operational_event_append`
+- `operational_event_list`
+
+Operational events are append-only, workspace-bound records persisted in SQLite v13. The native append command is restricted to the active local user identity; event kinds, outcomes, actors, timestamps, parent references, and JSON payload size are validated. Credential-like payload keys are redacted before persistence. Listing supports workspace-safe entity and trace filters and does not execute or replay external actions.
+
 Operating links are strictly scoped to the active workspace and validate both endpoint entities before persistence. The runtime accepts only persisted operating entity types; self-links, unknown entities, and cross-workspace references are rejected. Relations use the same lowercase identifier contract as the core graph kernel.
 
 ### CRM and inbox
