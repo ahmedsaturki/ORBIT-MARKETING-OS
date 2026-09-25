@@ -2,7 +2,7 @@ name: Format Rebuild Branch
 
 on:
   push:
-    branches: ["rebuild/orbit-production-final", "feat/orbit-command-dispatcher-main-20260926"]
+    branches: ["rebuild/orbit-production-final"]
 
 permissions:
   contents: write
