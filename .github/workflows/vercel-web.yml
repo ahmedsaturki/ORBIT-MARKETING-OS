@@ -92,7 +92,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           pnpm dlx vercel@59.23.1 deploy --dry --format=json --token="$VERCEL_TOKEN" > vercel-dry-run.json
-          node -e "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('vercel-dry-run.json','utf8')); const text=JSON.stringify(data); if (!/nextjs/i.test(text)) { console.error('Vercel dry-run did not detect Next.js'); process.exit(1); } console.log('Vercel dry-run detected Next.js');"
+          node -e "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('vercel-dry-run.json','utf8')); const text=JSON.stringify(data); if (/nextjs/i.test(text) || !/out/i.test(text)) { console.error('Vercel dry-run does not match the ORBIT static-export contract'); process.exit(1); } console.log('Vercel dry-run matches the ORBIT static-export contract');"
 
       - name: Build Vercel output
         if: steps.gate.outputs.enabled == 'true'
