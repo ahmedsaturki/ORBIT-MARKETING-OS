@@ -1,6 +1,11 @@
 import { redactRecord } from "../security/redaction.js";
 
-export type OperationalEventOutcome = "started" | "succeeded" | "failed" | "blocked" | "waiting";
+export type OperationalEventOutcome =
+  | "started"
+  | "succeeded"
+  | "failed"
+  | "blocked"
+  | "waiting";
 export type OperationalEventKind =
   | "command.received"
   | "command.authorized"
@@ -65,9 +70,13 @@ function cloneEvent(event: OperationalEvent): OperationalEvent {
   };
 }
 
-export function createOperationalEvent(input: OperationalEventInput): OperationalEvent {
-  if (!input.workspaceId.trim()) throw new Error("operational_event_workspace_required");
-  if (!input.actorId.trim()) throw new Error("operational_event_actor_required");
+export function createOperationalEvent(
+  input: OperationalEventInput,
+): OperationalEvent {
+  if (!input.workspaceId.trim())
+    throw new Error("operational_event_workspace_required");
+  if (!input.actorId.trim())
+    throw new Error("operational_event_actor_required");
   assertTimestamp(input.timestamp);
 
   const sequence = input.sequence ?? 0;
@@ -75,9 +84,7 @@ export function createOperationalEvent(input: OperationalEventInput): Operationa
     throw new Error("operational_event_invalid_sequence");
   }
 
-  const payload = input.payload
-    ? redactRecord(input.payload)
-    : undefined;
+  const payload = input.payload ? redactRecord(input.payload) : undefined;
 
   return {
     ...input,
@@ -100,7 +107,8 @@ export class OperationalEventLog {
   private nextSequence = 1;
 
   public constructor(private readonly workspaceId: string) {
-    if (!workspaceId.trim()) throw new Error("operational_event_workspace_required");
+    if (!workspaceId.trim())
+      throw new Error("operational_event_workspace_required");
   }
 
   public append(input: OperationalEventInput): OperationalEvent {
@@ -109,7 +117,10 @@ export class OperationalEventLog {
     }
 
     const requestedSequence = input.sequence;
-    if (requestedSequence !== undefined && requestedSequence !== this.nextSequence) {
+    if (
+      requestedSequence !== undefined &&
+      requestedSequence !== this.nextSequence
+    ) {
       throw new Error("operational_event_sequence_mismatch");
     }
 
@@ -138,7 +149,10 @@ export class OperationalEventLog {
     entityId: string,
   ): readonly OperationalEvent[] {
     return this.events
-      .filter((event) => event.entityType === entityType && event.entityId === entityId)
+      .filter(
+        (event) =>
+          event.entityType === entityType && event.entityId === entityId,
+      )
       .map(cloneEvent);
   }
 
@@ -146,7 +160,11 @@ export class OperationalEventLog {
     return this.events.filter((event) => event.traceId === traceId).map(cloneEvent);
   }
 
-  public snapshot(): { readonly workspaceId: string; readonly nextSequence: number; readonly events: readonly OperationalEvent[] } {
+  public snapshot(): {
+    readonly workspaceId: string;
+    readonly nextSequence: number;
+    readonly events: readonly OperationalEvent[];
+  } {
     return {
       workspaceId: this.workspaceId,
       nextSequence: this.nextSequence,
