@@ -44,6 +44,14 @@ export function evaluateGovernedExecution(
     };
   }
 
+  if (request.policy.workspaceId !== request.run.workspaceId) {
+    return {
+      allowed: false,
+      block: "invalid_request",
+      reason: "policy_workspace_mismatch",
+    };
+  }
+
   const agentDecision = authorizeAgentAction(
     request.agent,
     request.run,
