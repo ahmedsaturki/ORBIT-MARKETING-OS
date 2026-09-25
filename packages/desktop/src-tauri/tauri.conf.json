@@ -4,14 +4,16 @@
   "version": "0.2.0",
   "identifier": "com.orbitmarketing.os",
   "build": {
-    "beforeDevCommand": "pnpm --dir .. dev",
-    "beforeBuildCommand": "pnpm --dir .. build",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
     "devUrl": "http://127.0.0.1:1420",
     "frontendDist": "../dist"
   },
   "app": {
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; connect-src 'self' http://127.0.0.1:3000"
+      "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; connect-src 'self' http://127.0.0.1:3000",
+      "freezePrototype": true,
+      "dangerousDisableAssetCspModification": false
     },
     "windows": [
       {
