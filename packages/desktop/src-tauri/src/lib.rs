@@ -10328,7 +10328,7 @@ mod tests {
     }
 
     #[test]
-    fn schema_v11_creates_governed_marketing_operating_model_tables() {
+    fn schema_v12_creates_governed_marketing_operating_model_and_outcome_tables() {
         let connection =
             Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
@@ -10350,6 +10350,8 @@ mod tests {
             "work_items",
             "work_dependencies",
             "operational_links",
+            "opportunities",
+            "insights",
         ] {
             let exists: i64 = connection
                 .query_row(
@@ -10364,7 +10366,79 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 11);
+        assert_eq!(version, 12);
+    }
+
+    #[test]
+    fn schema_v12_outcomes_are_workspace_scoped_and_linkable() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+
+                INSERT INTO contacts(id, workspace_id, display_name, status, created_at, updated_at)
+                VALUES ('contact-a', 'workspace-a', 'A', 'new', '1', '1');
+
+                INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                VALUES ('campaign-a', 'workspace-a', 'A', 'active', '1');
+
+                INSERT INTO opportunities(
+                  id, workspace_id, contact_id, campaign_id, name, stage, value,
+                  currency, probability, source, created_at, updated_at
+                ) VALUES (
+                  'opp-a', 'workspace-a', 'contact-a', 'campaign-a', 'Deal', 'qualified',
+                  1000, 'USD', 50, 'campaign', '1', '1'
+                );
+
+                INSERT INTO insights(
+                  id, workspace_id, kind, title, summary, confidence,
+                  source_ids_json, observed_at, created_at, updated_at
+                ) VALUES (
+                  'insight-a', 'workspace-a', 'learning', 'Insight', 'Grounded', 0.9,
+                  '["analytics-a"]', '2026-09-25T00:00:00Z', '1', '1'
+                );
+                "#,
+            )
+            .expect("outcomes should persist inside their workspace");
+
+        let opportunity_exists: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM opportunities WHERE workspace_id='workspace-a' AND id='opp-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("opportunity should be queryable");
+        assert_eq!(opportunity_exists, 1);
+
+        assert!(!operational_entity_exists(
+            &connection,
+            "workspace-b",
+            "opportunity",
+            "opp-a",
+        ));
+        assert!(operational_entity_exists(
+            &connection,
+            "workspace-a",
+            "insight",
+            "insight-a",
+        ));
+
+        connection
+            .execute(
+                "INSERT INTO operational_links(
+                   workspace_id, from_type, from_id, to_type, to_id, relation, created_at
+                 ) VALUES ('workspace-a', 'opportunity', 'opp-a', 'insight', 'insight-a', 'informed_by', '1')",
+                [],
+            )
+            .expect("outcome entities should participate in the operating graph");
     }
 
     #[test]
