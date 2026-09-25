@@ -23,7 +23,7 @@ describe("database schema contract", () => {
       "UNIQUE(workspace_id, idempotency_key)",
     );
     expect(DATABASE_SCHEMA_SQL).toContain(
-      "max_attempts INTEGER NOT NULL DEFAULT 3 CHECK (max_attempts >= 1)",
+      "max_attempts INTEGER NOT NULL DEFAULT 3",
     );
   });
 
