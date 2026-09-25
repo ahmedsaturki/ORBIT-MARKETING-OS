@@ -75,9 +75,7 @@ export function buildGroundedKnowledgeContext(
     characters = nextCharacters;
   }
 
-  const selectedSourceIds = new Set(
-    selected.flatMap((item) => item.sourceIds),
-  );
+  const selectedSourceIds = new Set(selected.flatMap((item) => item.sourceIds));
   const selectedSources = sources.filter(
     (source) =>
       source.workspaceId === workspaceId && selectedSourceIds.has(source.id),
