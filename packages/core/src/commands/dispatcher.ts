@@ -4,10 +4,7 @@ import {
   type CommandInvocation,
   type CommandSurface,
 } from "./index.js";
-import {
-  OperationalEventLog,
-  type OperationalEvent,
-} from "../events/index.js";
+import { OperationalEventLog, type OperationalEvent } from "../events/index.js";
 
 export interface CommandExecutionRequest {
   readonly invocation: CommandInvocation;
@@ -47,7 +44,9 @@ function resolveTraceId(request: CommandExecutionRequest): string {
   return candidate || crypto.randomUUID();
 }
 
-function eventPayload(request: CommandExecutionRequest): Record<string, unknown> {
+function eventPayload(
+  request: CommandExecutionRequest,
+): Record<string, unknown> {
   return {
     surface: request.surface,
     inputPresent: request.input !== undefined,
@@ -103,10 +102,7 @@ export class CommandDispatcher {
       payload: eventPayload(request),
     });
 
-    const decision = this.registry.decide(
-      request.invocation,
-      request.surface,
-    );
+    const decision = this.registry.decide(request.invocation, request.surface);
 
     if (!decision.allowed) {
       const blockedEvent = eventLog.append({
@@ -207,8 +203,7 @@ export class CommandDispatcher {
         events: [receivedEvent, authorizedEvent, completedEvent],
       };
     } catch (caught: unknown) {
-      const message =
-        caught instanceof Error ? caught.message : String(caught);
+      const message = caught instanceof Error ? caught.message : String(caught);
       const errorType =
         caught instanceof Error && caught.name.trim()
           ? caught.name.trim()

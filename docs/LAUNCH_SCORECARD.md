@@ -4,48 +4,49 @@ Updated: 2026-09-26
 
 Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evidence exists; UNVERIFIED = execution evidence is still missing; BLOCKED = an external/product prerequisite prevents completion.
 
-| Gate | State | Evidence / blocker |
-| --- | --- | --- |
-| Core domain/security | IMPLEMENTED | Typed domain, queue, policy, RBAC, encryption/redaction, audit integrity |
-| Queue invariants | IMPLEMENTED | Workspace-scoped idempotency, UTC scheduling, bounded retries, defensive copies |
-| Execution orchestrator | IMPLEMENTED | Policy → confirmation → connector → audit → queue |
-| Telegram native path | IMPLEMENTED | Token validation, approval, daily/circuit budgets, rate-limit handling, ambiguous-delivery stop |
-| Workspace isolation | IMPLEMENTED | Persisted active workspace, memberships, scoped vault |
-| SQLite integrity | IMPLEMENTED | FK enforcement, busy timeout, workspace integrity triggers |
-| Migration path | IMPLEMENTED | Versioned schema through v13 with legacy backfill, outcome/operating-model migration and transactional migrations |
-| Operating graph/outcomes | IMPLEMENTED | Strategy/work graph, persisted opportunities/insights, governed links and bounded agent context |
-| Mission Control/control layer | IMPLEMENTED | Deterministic next actions, simulation, replay, policy packs, campaign-plan compilation and grounded knowledge context |
-| Command/Event control spine | IMPLEMENTED | Governed Command Registry + Operational Event Spine merged through PR #47; dispatcher implementation now on validation branch |
-| Desktop UI | IMPLEMENTED | Workspace, content, approvals, tasks, CRM, inbox, backup, license, audit |
-| Web product surface | VERIFIED | Main CI build/E2E passed; production routes independently checked live |
-| Runtime perimeter | VERIFIED | Auth, origin allowlist, rate limiting and fake-Ollama smoke passed |
-| Local AI defaults | VERIFIED | Runtime smoke passed with bounded context and local model default |
-| Mobile monitoring | VERIFIED | PR #47 exact-head Mobile Validation passed before merge |
-| Clean install | VERIFIED | Hosted CI passes frozen-install with committed lockfiles |
-| Typecheck/lint/tests/coverage/build | VERIFIED | PR #47 exact-head CI passed |
-| Rust fmt/check/test/clippy | VERIFIED | PR #47 exact-head CI and native validation passed |
-| Security/dependency audit | VERIFIED | Hosted CI passed secret scan and dependency audit |
-| Performance smoke | VERIFIED | Hosted CI performance smoke passed |
-| Browser E2E | VERIFIED | Hosted CI Playwright E2E passed |
-| Production web deployment | VERIFIED* | Current Vercel production deployment is READY and the public web surface is live |
-| Native desktop packaging | VERIFIED | PR #47 exact-head Desktop Native Validation passed |
-| Android debug validation | VERIFIED | PR #47 exact-head Mobile Validation passed |
-| Native runtime restart/migration/crash recovery | UNVERIFIED | Dedicated full desktop runtime acceptance evidence remains |
-| Real connector E2E | UNVERIFIED | Telegram/LinkedIn live authorization/delivery evidence remains |
-| CRDT encrypted transport/convergence | VERIFIED* | Encrypted reconnect/convergence tests passed; live multi-device network evidence remains |
-| Accessibility/RTL audit | UNVERIFIED | Dedicated accessibility audit remains |
-| 24h soak | UNVERIFIED | No completed 24-hour soak evidence yet |
-| Desktop signing/notarization | BLOCKED | Signing identities/credentials are not configured |
-| Mobile production signing/store distribution | BLOCKED | Current production-store prerequisite is not configured |
-| Vercel project/provenance reconciliation | PARTIAL | Project metadata reports framework vite while repository contract is Next.js static export; latest READY production deployment has empty Git metadata |
-| Vercel rollback drill | UNVERIFIED | Rollback procedure is documented/available but a fresh drill is not evidenced |
-| Billing/payment | BLOCKED | No verified commercial payment provider is configured |
-| Governance/main branch protection | UNVERIFIED | GitHub branch/ruleset enforcement has not been verified as active |
-| Production/commercial launch | BLOCKED | Release-critical runtime, connector, distribution, provenance, governance, and commercial evidence remains open |
+| Gate                                            | State       | Evidence / blocker                                                                                                                                    |
+| ----------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core domain/security                            | IMPLEMENTED | Typed domain, queue, policy, RBAC, encryption/redaction, audit integrity                                                                              |
+| Queue invariants                                | IMPLEMENTED | Workspace-scoped idempotency, UTC scheduling, bounded retries, defensive copies                                                                       |
+| Execution orchestrator                          | IMPLEMENTED | Policy → confirmation → connector → audit → queue                                                                                                     |
+| Telegram native path                            | IMPLEMENTED | Token validation, approval, daily/circuit budgets, rate-limit handling, ambiguous-delivery stop                                                       |
+| Workspace isolation                             | IMPLEMENTED | Persisted active workspace, memberships, scoped vault                                                                                                 |
+| SQLite integrity                                | IMPLEMENTED | FK enforcement, busy timeout, workspace integrity triggers                                                                                            |
+| Migration path                                  | IMPLEMENTED | Versioned schema through v13 with legacy backfill, outcome/operating-model migration and transactional migrations                                     |
+| Operating graph/outcomes                        | IMPLEMENTED | Strategy/work graph, persisted opportunities/insights, governed links and bounded agent context                                                       |
+| Mission Control/control layer                   | IMPLEMENTED | Deterministic next actions, simulation, replay, policy packs, campaign-plan compilation and grounded knowledge context                                |
+| Command/Event control spine                     | IMPLEMENTED | Governed Command Registry + Operational Event Spine merged through PR #47; dispatcher implementation now on validation branch                         |
+| Desktop UI                                      | IMPLEMENTED | Workspace, content, approvals, tasks, CRM, inbox, backup, license, audit                                                                              |
+| Web product surface                             | VERIFIED    | Main CI build/E2E passed; production routes independently checked live                                                                                |
+| Runtime perimeter                               | VERIFIED    | Auth, origin allowlist, rate limiting and fake-Ollama smoke passed                                                                                    |
+| Local AI defaults                               | VERIFIED    | Runtime smoke passed with bounded context and local model default                                                                                     |
+| Mobile monitoring                               | VERIFIED    | PR #47 exact-head Mobile Validation passed before merge                                                                                               |
+| Clean install                                   | VERIFIED    | Hosted CI passes frozen-install with committed lockfiles                                                                                              |
+| Typecheck/lint/tests/coverage/build             | VERIFIED    | PR #47 exact-head CI passed                                                                                                                           |
+| Rust fmt/check/test/clippy                      | VERIFIED    | PR #47 exact-head CI and native validation passed                                                                                                     |
+| Security/dependency audit                       | VERIFIED    | Hosted CI passed secret scan and dependency audit                                                                                                     |
+| Performance smoke                               | VERIFIED    | Hosted CI performance smoke passed                                                                                                                    |
+| Browser E2E                                     | VERIFIED    | Hosted CI Playwright E2E passed                                                                                                                       |
+| Production web deployment                       | VERIFIED*   | Current Vercel production deployment is READY and the public web surface is live                                                                      |
+| Native desktop packaging                        | VERIFIED    | PR #47 exact-head Desktop Native Validation passed                                                                                                    |
+| Android debug validation                        | VERIFIED    | PR #47 exact-head Mobile Validation passed                                                                                                            |
+| Native runtime restart/migration/crash recovery | UNVERIFIED  | Dedicated full desktop runtime acceptance evidence remains                                                                                            |
+| Real connector E2E                              | UNVERIFIED  | Telegram/LinkedIn live authorization/delivery evidence remains                                                                                        |
+| CRDT encrypted transport/convergence            | VERIFIED*   | Encrypted reconnect/convergence tests passed; live multi-device network evidence remains                                                              |
+| Accessibility/RTL audit                         | UNVERIFIED  | Dedicated accessibility audit remains                                                                                                                 |
+| 24h soak                                        | UNVERIFIED  | No completed 24-hour soak evidence yet                                                                                                                |
+| Desktop signing/notarization                    | BLOCKED     | Signing identities/credentials are not configured                                                                                                     |
+| Mobile production signing/store distribution    | BLOCKED     | Current production-store prerequisite is not configured                                                                                               |
+| Vercel project/provenance reconciliation        | PARTIAL     | Project metadata reports framework vite while repository contract is Next.js static export; latest READY production deployment has empty Git metadata |
+| Vercel rollback drill                           | UNVERIFIED  | Rollback procedure is documented/available but a fresh drill is not evidenced                                                                         |
+| Billing/payment                                 | BLOCKED     | No verified commercial payment provider is configured                                                                                                 |
+| Governance/main branch protection               | UNVERIFIED  | GitHub branch/ruleset enforcement has not been verified as active                                                                                     |
+| Production/commercial launch                    | BLOCKED     | Release-critical runtime, connector, distribution, provenance, governance, and commercial evidence remains open                                       |
 
 ## Current verified main evidence
 
 PR #47 head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed:
+
 - CI run 36198100587
 - Desktop Native Validation run 36198100491
 - Mobile Validation run 36198100618
