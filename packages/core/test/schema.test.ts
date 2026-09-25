@@ -6,7 +6,7 @@ import {
 
 describe("database schema contract", () => {
   it("uses the current schema version", () => {
-    expect(DATABASE_SCHEMA_VERSION).toBe(5);
+    expect(DATABASE_SCHEMA_VERSION).toBe(12);
   });
 
   it("enforces tenant ownership on core records", () => {
@@ -20,7 +20,7 @@ describe("database schema contract", () => {
 
   it("enforces task idempotency and bounded retry counts", () => {
     expect(DATABASE_SCHEMA_SQL).toContain(
-      "idempotency_key TEXT NOT NULL UNIQUE",
+      "UNIQUE(workspace_id, idempotency_key)",
     );
     expect(DATABASE_SCHEMA_SQL).toContain(
       "max_attempts INTEGER NOT NULL DEFAULT 3 CHECK (max_attempts >= 1)",
