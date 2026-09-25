@@ -58,7 +58,30 @@ async function assertFile(path) {
   }
 }
 
+async function assertAbsent(path) {
+  try {
+    await readFile(join(root, path));
+  } catch {
+    return;
+  }
+  throw new Error("Legacy/forbidden file is still present: " + path);
+}
+
 for (const file of requiredFiles) await assertFile(file);
+
+for (const file of [
+  "src-tauri/Cargo.toml",
+  "src-tauri/Cargo.lock",
+  "src-tauri/tauri.conf.json",
+  "src-tauri/src/main.rs",
+  "index.html",
+  "vite.config.ts",
+  "src/App.tsx",
+  "src/main.tsx",
+  "packages/mobile/package-lock.json",
+]) {
+  await assertAbsent(file);
+}
 
 const rootPackage = await readJson("package.json");
 for (const packagePath of [
@@ -231,7 +254,10 @@ for (const path of rustSourcePaths) {
   });
 }
 
-const rust = rustSources.map((entry) => entry.content).join("\n");
+// Normalize checkout line endings so source-contract regexes behave identically on Linux and Windows.
+const rust = rustSources
+  .map((entry) => entry.content.replace(/\r\n?/g, "\n"))
+  .join("\n");
 
 const duplicateDerivePattern = /#\[derive\(([^\n]+)\)\]\s*#\[derive\(\1\)\]/;
 if (duplicateDerivePattern.test(rust)) {
@@ -495,7 +521,11 @@ async function scanProductionSource(dir) {
       continue;
     }
     if (!/\.(?:ts|tsx|mjs)$/.test(entry.name)) continue;
-    if (relative(root, full) === "scripts/verify-workspace.mjs") continue;
+    if (
+      relative(root, full).replace(/\\/g, "/") ===
+      "scripts/verify-workspace.mjs"
+    )
+      continue;
     const content = await readFile(full, "utf8");
     if (/\b(TODO|FIXME|HACK|XXX)\b/i.test(content)) {
       throw new Error(
@@ -828,7 +858,11 @@ async function scan(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (ignored.has(entry.name)) continue;
     const full = join(dir, entry.name);
-    if (relative(root, full) === "scripts/verify-workspace.mjs") continue;
+    if (
+      relative(root, full).replace(/\\/g, "/") ===
+      "scripts/verify-workspace.mjs"
+    )
+      continue;
     if (entry.isDirectory()) {
       await scan(full);
       continue;
