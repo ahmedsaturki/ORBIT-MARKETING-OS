@@ -1530,7 +1530,9 @@ BEGIN
   SELECT RAISE(ABORT, 'opportunity workspace/reference mismatch');
 END;
 
-"#;\n\nfn create_integrity_triggers(connection: &Connection) -> Result<(), AppError> {
+"#;
+
+fn create_integrity_triggers(connection: &Connection) -> Result<(), AppError> {
     connection.execute_batch(INTEGRITY_TRIGGERS)?;
     Ok(())
 }
