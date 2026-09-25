@@ -161,7 +161,7 @@ for (const fragment of [
 const bootstrap = await text(".github/workflows/bootstrap-lockfile.yml");
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
-  "(github.ref_name == 'rebuild/orbit-production' || github.ref_name == 'rebuild/orbit-production-consolidated') && github.actor == 'ahmedsaturki'",
+  "(github.ref_name == 'rebuild/orbit-production' || github.ref_name == 'rebuild/orbit-production-consolidated' || github.ref_name == 'rebuild/orbit-production-final') && github.actor == 'ahmedsaturki'",
   "run: bash scripts/self-hosted-preflight.sh",
   "pnpm install --lockfile-only --ignore-scripts",
   "cargo generate-lockfile",
