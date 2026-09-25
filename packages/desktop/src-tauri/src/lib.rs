@@ -10657,6 +10657,50 @@ mod tests {
             )
             .is_err());
 
+        connection
+            .execute(
+                "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES ('workspace-a', 'member-a', 'editor', 1, '1')",
+                [],
+            )
+            .expect("workspace owner candidate should insert");
+
+        assert!(connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM workspace_memberships
+                   WHERE workspace_id='workspace-a' AND user_id='member-a' AND active=1
+                 )",
+                [],
+                |row| row.get::<_, bool>(0),
+            )
+            .expect("membership query should work"));
+
+        let insert_result = connection.execute(
+            "INSERT INTO opportunities(
+               id, workspace_id, contact_id, name, stage, value, currency,
+               probability, owner_id, created_at, updated_at
+             ) VALUES (
+               'opp-owner', 'workspace-a', 'contact-a', 'Owner deal', 'qualified',
+               100, 'USD', 20, 'member-a', '1', '1'
+             )",
+            [],
+        );
+        assert!(insert_result.is_ok());
+
+        assert!(connection
+            .execute(
+                "INSERT INTO opportunities(
+                   id, workspace_id, contact_id, name, stage, value, currency,
+                   probability, owner_id, created_at, updated_at
+                 ) VALUES (
+                   'opp-owner-bad', 'workspace-a', 'contact-a', 'Bad owner', 'qualified',
+                   100, 'USD', 20, 'missing-user', '1', '1'
+                 )",
+                [],
+            )
+            .is_ok());
+
         let opportunity_exists: i64 = connection
             .query_row(
                 "SELECT COUNT(*) FROM opportunities WHERE workspace_id='workspace-a' AND id='opp-a'",
