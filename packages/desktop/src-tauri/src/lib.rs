@@ -6975,7 +6975,6 @@ fn agent_run_create(
         return Err("agent must exist, be enabled, and belong to the active workspace".to_string());
     }
 
-    let timestamp = chrono_like_timestamp();
     connection
         .execute(
             "INSERT INTO agent_runs(
@@ -10487,18 +10486,14 @@ mod tests {
             )
             .expect("agent run should insert");
 
-        assert!(operational_entity_exists(
-            &connection,
-            "workspace-a",
-            "agent_run",
-            "run-a",
-        ));
-        assert!(!operational_entity_exists(
-            &connection,
-            "workspace-b",
-            "agent_run",
-            "run-a",
-        ));
+        assert!(
+            operational_entity_exists(&connection, "workspace-a", "agent_run", "run-a")
+                .expect("same-workspace agent run should exist")
+        );
+        assert!(
+            !operational_entity_exists(&connection, "workspace-b", "agent_run", "run-a")
+                .expect("cross-workspace agent run lookup should succeed")
+        );
     }
 
     #[test]
@@ -10836,18 +10831,14 @@ mod tests {
             .expect("opportunity should be queryable");
         assert_eq!(opportunity_exists, 1);
 
-        assert!(!operational_entity_exists(
-            &connection,
-            "workspace-b",
-            "opportunity",
-            "opp-a",
-        ));
-        assert!(operational_entity_exists(
-            &connection,
-            "workspace-a",
-            "insight",
-            "insight-a",
-        ));
+        assert!(
+            !operational_entity_exists(&connection, "workspace-b", "opportunity", "opp-a")
+                .expect("cross-workspace opportunity lookup should succeed")
+        );
+        assert!(
+            operational_entity_exists(&connection, "workspace-a", "insight", "insight-a")
+                .expect("same-workspace insight should exist")
+        );
 
         connection
             .execute(
