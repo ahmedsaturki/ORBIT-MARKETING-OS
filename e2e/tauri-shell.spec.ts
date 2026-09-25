@@ -362,6 +362,25 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(page, "boot test must run first").not.toBeNull();
 
     const suffix = Date.now();
+    const beforeWorkspace = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+
+    const recoveryWorkspace = (await page!.evaluate(async (id) =>
+      window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Recovery Isolation",
+      }),
+    `e2e-recovery-workspace-${suffix}`)) as { id: string; name: string };
+
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
+      recoveryWorkspace.id,
+    );
+
     const account = (await page!.evaluate(
       async (id) =>
         window.__TAURI_INTERNALS__.invoke("account_upsert", {
@@ -442,9 +461,17 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     const recoveredTask = recovered.find(
       (candidate) => candidate.id === task.id,
     );
-    expect(recoveredTask).toEqual({ id: task.id, status: "pending" });
-  });
+    expect(recoveredTask?.id).toBe(task.id);
+    expect(recoveredTask?.status).toBe("pending");
 
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
+      beforeWorkspace.id,
+    );
+  });
   test("CSP blocks remote script injection", async () => {
     expect(page, "boot test must run first").not.toBeNull();
 
