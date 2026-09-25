@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   verify:
-    if: (github.ref_name == 'rebuild/orbit-production' || github.ref_name == 'rebuild/orbit-production-consolidated') && github.actor == 'ahmedsaturki'
+    if: (github.ref_name == 'rebuild/orbit-production' || github.ref_name == 'rebuild/orbit-production-consolidated' || github.ref_name == 'rebuild/orbit-production-final') && github.actor == 'ahmedsaturki'
     name: Full verification on owned runner
     runs-on: [self-hosted, x64, linux]
     timeout-minutes: 90
