@@ -1,5 +1,10 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { execSync, spawn, type ChildProcess } from "node:child_process";
+import {
+  execFileSync,
+  execSync,
+  spawn,
+  type ChildProcess,
+} from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -27,6 +32,47 @@ let browser: Browser | null = null;
 let page: Page | null = null;
 let processOutput = "";
 const webview2UserDataFolders = new Set<string>();
+const WEBVIEW2_POLICY_KEY =
+  "HKCU\\Software\\Policies\\Microsoft\\Edge\\WebView2\\AdditionalBrowserArguments";
+
+function configureWebView2DebugPolicy(): void {
+  if (!exe) return;
+  const executableName = exe.split(/[\\/]/).pop();
+  if (!executableName) {
+    throw new Error("Unable to determine Tauri executable name");
+  }
+  execFileSync(
+    "reg",
+    [
+      "add",
+      WEBVIEW2_POLICY_KEY,
+      "/v",
+      executableName,
+      "/t",
+      "REG_SZ",
+      "/d",
+      "--remote-debugging-port=" + CDP_PORT,
+      "/f",
+    ],
+    { stdio: "ignore" },
+  );
+}
+
+function cleanupWebView2DebugPolicy(): void {
+  if (!exe) return;
+  const executableName = exe.split(/[\\/]/).pop();
+  if (!executableName) return;
+  try {
+    execFileSync(
+      "reg",
+      ["delete", WEBVIEW2_POLICY_KEY, "/v", executableName, "/f"],
+      { stdio: "ignore" },
+    );
+  } catch {
+    /* policy value did not exist or was already removed */
+  }
+}
+
 function createWebView2UserDataFolder(): string {
   const folder = mkdtempSync(join(tmpdir(), "orbit-webview2-e2e-"));
   webview2UserDataFolders.add(folder);
@@ -69,12 +115,13 @@ async function launchAndConnectTauri(): Promise<void> {
   }
 
   processOutput = "";
+  configureWebView2DebugPolicy();
   const webview2UserDataFolder = createWebView2UserDataFolder();
   const child = spawn(exe, [], {
     env: {
       ...process.env,
       WEBVIEW2_USER_DATA_FOLDER: webview2UserDataFolder,
-      ORBIT_E2E_CDP_PORT: String(CDP_PORT),
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
@@ -146,6 +193,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
   test.afterAll(async () => {
     await killApp();
     cleanupWebView2UserDataFolders();
+    cleanupWebView2DebugPolicy();
   });
 
   test("capability files are deny-by-default and least-privilege (capability review)", () => {
