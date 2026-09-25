@@ -1,50 +1,55 @@
 # Implementation Status
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 
-## Implemented in the rebuild branch
+## Current state
 
-- Production work is consolidated on `rebuild/orbit-production-consolidated`; PR #9 remains open, draft, and unmerged pending release evidence.
-- pnpm workspace + Turborepo with a strict TypeScript baseline.
-- `@orbit/core` domain model, queue contracts, approval/execution policy, connector contract/registry, sync primitives, audit/redaction, encryption, licensing and backup foundations.
-- Tauri v2 desktop backend with native SQLite, Argon2id + AES-256-GCM, encrypted sessions/vault, campaigns/tasks, CRM/inbox, analytics, media metadata, automation rule packs, backup/restore, audit commands and persisted workspaces.
-- Native SQLite schema is versioned through v10. Task idempotency is scoped by `(workspace_id, idempotency_key)`; legacy v9 databases are migrated to the v10 table shape transactionally.
-- Startup recovery is wired once in Tauri startup, not in every database-open call. Interrupted sync tasks return to `pending`; interrupted external tasks stop in `awaiting_user_action`.
-- Approval request/decision paths derive the acting user from local runtime state, validate reviewer roles, and use immediate transactions that include the audit event.
-- External Telegram execution now fail-closes when the local audit hash chain is invalid and stops safely on invalid/ambiguous delivery responses.
-- Media import checks workspace authorization before touching/hash-reading the requested local file.
-- Core and native task scheduling normalize RFC3339 timestamps to UTC and bound retry attempts consistently to a maximum of 10.
-- LinkedIn Posts connector defaults to API version `202609`.
-- Desktop now consumes typed platform contracts from `@orbit/core` and serializable IPC view types.
-- React 19 JSX type drift was removed from all tracked `.tsx` files; the repository verifier now prevents `JSX.Element` from returning.
-- PWA service-worker fallback was hardened so failed static asset fetches do not incorrectly return the home document.
-- Branch-restricted bootstrap/full-verification workflows are exposed from the default branch for manual execution on an owned runner.
+Production implementation is consolidated on main. Current main HEAD: ddc13f4edf516601a9fc038d97172a8037b30753.
 
-## Verification improvements
+The repository has committed pnpm and Cargo lockfiles and a green full main CI run.
 
-- Workspace sanity checks cover duplicate Rust derives, schema v10, workspace-scoped idempotency, transactional migration invariants, startup recovery wiring, forbidden production placeholders, and stale React JSX types.
-- IPC verification compares Desktop UI native calls against Tauri commands and rejects client-supplied approval actor identity.
-- CI/release workflows require committed `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` and use frozen installs.
+## Product surface
+
+- pnpm/Turborepo monorepo;
+- typed @orbit/core contracts;
+- deterministic queue and execution-policy layers;
+- workspace/RBAC model;
+- Tauri v2 desktop runtime with SQLite;
+- encrypted Argon2id/AES-256-GCM vault and session storage;
+- encrypted backup/restore;
+- content, media, CRM, inbox, campaigns and analytics;
+- approval workflow and audit integrity;
+- Telegram native API path;
+- LinkedIn text publishing connector;
+- local Ollama runtime;
+- Next.js static Web/PWA surface;
+- Expo mobile monitoring surface.
+
+## Main execution evidence
+
+Run 36126479828 passed committed-lockfile/frozen-install, release sanity, secret scan, dependency audit, workspace sanity, typecheck, IPC contract, lint, tests, core coverage, runtime smoke, performance smoke, build, Playwright E2E, format check, Rust fmt/check/test/clippy.
+
+Run 36126479836 passed the Web quality gate.
+
+## Production web evidence
+
+orbit-marketing-os.vercel.app is serving a READY production deployment. Live checks passed for all current public/legal routes, manifest, service worker, 404 handling and the expected security headers.
+
+## Native validation evidence
+
+PR #22: Windows desktop build passed; Linux desktop build passed; macOS arm64 build passed; macOS x64 remained in progress at the last poll; Android debug APK remained in progress at the last poll.
 
 ## Evidence still required
 
-The following remain `UNVERIFIED` or `BLOCKED` until a real execution environment produces current evidence:
+- native runtime restart/migration/crash-recovery;
+- real connector authorization/delivery tests;
+- encrypted multi-device sync transport/convergence;
+- dedicated accessibility audit;
+- 24-hour soak;
+- signed/notarized desktop distribution;
+- production mobile signing/store distribution;
+- Vercel rollback drill;
+- commercial billing/payment;
+- final release publication verification.
 
-- dependency resolution and committed lockfiles;
-- complete TypeScript typecheck, lint, tests, coverage and build;
-- Rust fmt/check/test/clippy;
-- native SQLite restart/migration integration under a real desktop runtime;
-- controlled real-user connector tests and platform authorization/challenge handling;
-- CRDT encrypted transport and multi-device convergence;
-- local-AI/Ollama execution, resource and failure tests;
-- browser/device E2E and accessibility checks;
-- release packaging, signing, notarization and store distribution;
-- production Vercel deployment and rollback verification;
-- security/dependency audit, performance benchmarks and soak testing;
-- commercial billing/payment configuration.
-
-## Platform safety
-
-The product deliberately excludes fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion and concealed automation. External actions remain user-authorized, auditable and subject to conservative limits and human intervention.
-
-**Release rule:** implementation is not evidence. No production-release claim is valid until the applicable acceptance and release gates have current execution evidence.
+Implementation and green CI are substantial evidence, but they do not by themselves establish commercial release readiness.
