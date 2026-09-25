@@ -4844,6 +4844,208 @@ fn backup_filename_timestamp() -> String {
     chrono_like_timestamp().replace(':', "-")
 }
 
+
+#[derive(Debug, Serialize)]
+struct OperationalLinkView {
+    workspace_id: String,
+    from_type: String,
+    from_id: String,
+    to_type: String,
+    to_id: String,
+    relation: String,
+    created_at: String,
+}
+
+fn validate_operational_entity_type(value: &str) -> Result<&'static str, String> {
+    match value.trim() {
+        "objective" => Ok("marketing_objectives"),
+        "strategy" => Ok("strategy_documents"),
+        "audience" => Ok("audiences"),
+        "offer" => Ok("offers"),
+        "knowledge_item" => Ok("knowledge_items"),
+        "agent" => Ok("agent_definitions"),
+        "policy" => Ok("marketing_policies"),
+        "work_item" => Ok("work_items"),
+        "campaign" => Ok("campaigns"),
+        "content" => Ok("content_items"),
+        "task" => Ok("tasks"),
+        "conversation" => Ok("conversations"),
+        "contact" => Ok("contacts"),
+        "media_asset" => Ok("media_assets"),
+        _ => Err("unsupported operational entity type".to_string()),
+    }
+}
+
+fn operational_entity_exists(
+    connection: &Connection,
+    workspace_id: &str,
+    entity_type: &str,
+    entity_id: &str,
+) -> Result<bool, String> {
+    let table = validate_operational_entity_type(entity_type)?;
+    let sql = match table {
+        "marketing_objectives" => "SELECT EXISTS(SELECT 1 FROM marketing_objectives WHERE id=?1 AND workspace_id=?2)",
+        "strategy_documents" => "SELECT EXISTS(SELECT 1 FROM strategy_documents WHERE id=?1 AND workspace_id=?2)",
+        "audiences" => "SELECT EXISTS(SELECT 1 FROM audiences WHERE id=?1 AND workspace_id=?2)",
+        "offers" => "SELECT EXISTS(SELECT 1 FROM offers WHERE id=?1 AND workspace_id=?2)",
+        "knowledge_items" => "SELECT EXISTS(SELECT 1 FROM knowledge_items WHERE id=?1 AND workspace_id=?2)",
+        "agent_definitions" => "SELECT EXISTS(SELECT 1 FROM agent_definitions WHERE id=?1 AND workspace_id=?2)",
+        "marketing_policies" => "SELECT EXISTS(SELECT 1 FROM marketing_policies WHERE id=?1 AND workspace_id=?2)",
+        "work_items" => "SELECT EXISTS(SELECT 1 FROM work_items WHERE id=?1 AND workspace_id=?2)",
+        "campaigns" => "SELECT EXISTS(SELECT 1 FROM campaigns WHERE id=?1 AND workspace_id=?2)",
+        "content_items" => "SELECT EXISTS(SELECT 1 FROM content_items WHERE id=?1 AND workspace_id=?2)",
+        "tasks" => "SELECT EXISTS(SELECT 1 FROM tasks WHERE id=?1 AND workspace_id=?2)",
+        "conversations" => "SELECT EXISTS(SELECT 1 FROM conversations WHERE id=?1 AND workspace_id=?2)",
+        "contacts" => "SELECT EXISTS(SELECT 1 FROM contacts WHERE id=?1 AND workspace_id=?2)",
+        "media_assets" => "SELECT EXISTS(SELECT 1 FROM media_assets WHERE id=?1 AND workspace_id=?2)",
+        _ => return Err("unsupported operational entity type".to_string()),
+    };
+    connection
+        .query_row(sql, params![entity_id, workspace_id], |row| row.get(0))
+        .map_err(|error| error.to_string())
+}
+
+fn validate_operational_relation(value: &str) -> Result<String, String> {
+    let relation = value.trim();
+    if relation.is_empty()
+        || relation.len() > 80
+        || !relation
+            .chars()
+            .enumerate()
+            .all(|(index, c)| c.is_ascii_lowercase() || c.is_ascii_digit() && index > 0 || matches!(c, '_' | '-' | '.'))
+        || !relation.chars().next().is_some_and(|c| c.is_ascii_lowercase())
+    {
+        return Err("invalid operational relation".to_string());
+    }
+    Ok(relation.to_string())
+}
+
+#[tauri::command]
+fn operational_link_upsert(
+    app: tauri::AppHandle,
+    from_type: String,
+    from_id: String,
+    to_type: String,
+    to_id: String,
+    relation: String,
+) -> Result<OperationalLinkView, String> {
+    let workspace_id = active_workspace_id();
+    let from_id = validate_label(&from_id).map_err(|error| error.to_string())?;
+    let to_id = validate_label(&to_id).map_err(|error| error.to_string())?;
+    let from_type = from_type.trim().to_string();
+    let to_type = to_type.trim().to_string();
+    let relation = validate_operational_relation(&relation)?;
+
+    if from_type == to_type && from_id == to_id {
+        return Err("self-link is not allowed".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    if !operational_entity_exists(&connection, &workspace_id, &from_type, &from_id)? {
+        return Err("source entity does not exist in active workspace".to_string());
+    }
+    if !operational_entity_exists(&connection, &workspace_id, &to_type, &to_id)? {
+        return Err("target entity does not exist in active workspace".to_string());
+    }
+
+    let created_at = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO operational_links(
+               workspace_id, from_type, from_id, to_type, to_id, relation, created_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(workspace_id, from_type, from_id, to_type, to_id, relation)
+             DO UPDATE SET created_at=excluded.created_at",
+            params![
+                workspace_id,
+                from_type,
+                from_id,
+                to_type,
+                to_id,
+                relation,
+                created_at
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+
+    let link_id = format!("{from_type}:{from_id}->{to_type}:{to_id}:{relation}");
+    write_audit(
+        &connection,
+        "operations",
+        "link_upsert",
+        "success",
+        "user",
+        Some(&link_id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(OperationalLinkView {
+        workspace_id: active_workspace_id(),
+        from_type,
+        from_id,
+        to_type,
+        to_id,
+        relation,
+        created_at,
+    })
+}
+
+#[tauri::command]
+fn operational_link_list(
+    app: tauri::AppHandle,
+    entity_type: Option<String>,
+    entity_id: Option<String>,
+) -> Result<Vec<OperationalLinkView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let normalized_type = entity_type.map(|value| value.trim().to_string());
+    if let Some(ref value) = normalized_type {
+        validate_operational_entity_type(value)?;
+    }
+    let normalized_id = entity_id
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT workspace_id, from_type, from_id, to_type, to_id, relation, created_at
+             FROM operational_links
+             WHERE workspace_id=?1
+               AND (?2 IS NULL OR from_type=?2 OR to_type=?2)
+               AND (?3 IS NULL OR from_id=?3 OR to_id=?3)
+             ORDER BY created_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+
+    let rows = statement
+        .query_map(params![workspace_id, normalized_type, normalized_id], |row| {
+            Ok(OperationalLinkView {
+                workspace_id: row.get(0)?,
+                from_type: row.get(1)?,
+                from_id: row.get(2)?,
+                to_type: row.get(3)?,
+                to_id: row.get(4)?,
+                relation: row.get(5)?,
+                created_at: row.get(6)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, String> {
     if password.is_empty() {
@@ -7832,6 +8034,8 @@ pub fn run() {
             automation_rule_pack_upsert,
             automation_rule_pack_set_enabled,
             automation_rule_pack_list,
+            operational_link_upsert,
+            operational_link_list,
             content_variant_list,
             campaign_attach_content,
             approval_request,
