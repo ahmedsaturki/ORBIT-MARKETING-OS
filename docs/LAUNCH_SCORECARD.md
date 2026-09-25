@@ -5,7 +5,7 @@ Updated: 2026-09-25
 Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evidence exists; UNVERIFIED = execution evidence is still missing; BLOCKED = an external/product prerequisite prevents completion.
 
 | Gate                                            | State       | Evidence / blocker                                                                                                                 |
-| --- | --- | --- |
+| ----------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Core domain/security                            | IMPLEMENTED | Typed domain, queue, policy, RBAC, encryption/redaction, audit integrity                                                           |
 | Queue invariants                                | IMPLEMENTED | Workspace-scoped idempotency, UTC scheduling, bounded retries, defensive copies                                                    |
 | Execution orchestrator                          | IMPLEMENTED | Policy → confirmation → connector → audit → queue                                                                                  |
