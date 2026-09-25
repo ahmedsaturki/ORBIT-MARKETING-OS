@@ -5,11 +5,11 @@ Updated: 2026-09-25
 | Surface                           | Implemented        | Verified runtime                                                                  | Release state   |
 | --------------------------------- | ------------------ | --------------------------------------------------------------------------------- | --------------- |
 | Core domain                       | yes                | Main CI typecheck/tests/coverage passed                                           | VERIFIED        |
-| Desktop Tauri shell               | yes                | Native packaging + native E2E validation is running in PR #27                     | PARTIAL         |
+| Desktop Tauri shell               | yes                | Native packaging + native E2E validation is running in PR #35                     | PARTIAL         |
 | Desktop SQLite/vault/backup       | yes                | Rust test suite passed; dedicated real-instance recovery drill remains            | PARTIAL         |
 | Desktop campaigns/tasks/CRM/inbox | yes                | Main unit/integration coverage passed; full real-instance scenario remains        | PARTIAL         |
 | Web public/PWA                    | yes                | Main CI + live Vercel route/header/404 verification passed                        | VERIFIED        |
-| Mobile Expo control surface       | yes                | Main mobile checks passed; Android debug artifact validation is running in PR #27 | PARTIAL         |
+| Mobile Expo control surface       | yes                | Main mobile checks passed; Android debug artifact validation is running in PR #35 | PARTIAL         |
 | Telegram connector                | yes                | Controlled live authorization/delivery evidence remains                           | UNVERIFIED      |
 | Facebook connector                | contract + fixture | No real connector                                                                 | NOT_IMPLEMENTED |
 | Instagram connector               | contract + fixture | No real connector                                                                 | NOT_IMPLEMENTED |
