@@ -55,11 +55,14 @@ const jsonl = createWriteStream(logPath, { flags: "w" });
 
 let server: ChildProcess | undefined;
 let healthOk = 0;
-let healthFails = 0;
+let healthFailures = 0;
+let consecutiveHealthFailures = 0;
 let staticOk = 0;
-let staticFails = 0;
+let staticFailures = 0;
+let consecutiveStaticFailures = 0;
 let chatChecks = 0;
 let chatFailures = 0;
+let consecutiveChatFailures = 0;
 let cycles = 0;
 let rssMin = Infinity;
 let rssMax = 0;
@@ -395,10 +398,12 @@ async function main(): Promise<void> {
         signal: AbortSignal.timeout(5_000),
       });
       if (!health.ok) {
-        healthFails += 1;
-        log({ cycle: cycles, health: health.status });
+        healthFailures += 1;
+        consecutiveHealthFailures += 1;
+        log({ cycle: cycles, health: health.status, consecutiveHealthFailures });
       } else {
         healthOk += 1;
+        consecutiveHealthFailures = 0;
         const body: unknown = await health.json();
         if (
           typeof body !== "object" ||
@@ -409,21 +414,35 @@ async function main(): Promise<void> {
         }
       }
     } catch (error) {
-      healthFails += 1;
-      log({ cycle: cycles, health: "network_error", error: error instanceof Error ? error.message : String(error) });
+      healthFailures += 1;
+      consecutiveHealthFailures += 1;
+      log({
+        cycle: cycles,
+        health: "network_error",
+        error: error instanceof Error ? error.message : String(error),
+        consecutiveHealthFailures,
+      });
     }
-    if (healthFails >= 3) fail("three consecutive health failures");
+    if (consecutiveHealthFailures >= 3) fail("three consecutive health failures");
 
     try {
       const response = await fetch(`http://127.0.0.1:${port}/`, {
         signal: AbortSignal.timeout(5_000),
       });
-      if (!response.ok) staticFails += 1;
-      else staticOk += 1;
+      if (!response.ok) {
+        staticFailures += 1;
+        consecutiveStaticFailures += 1;
+      } else {
+        staticOk += 1;
+        consecutiveStaticFailures = 0;
+      }
+      log({ cycle: cycles, staticOk, staticFailures, consecutiveStaticFailures });
     } catch {
-      staticFails += 1;
+      staticFailures += 1;
+      consecutiveStaticFailures += 1;
+      log({ cycle: cycles, static: "network_error", consecutiveStaticFailures });
     }
-    if (staticFails >= 3) fail("three consecutive static delivery failures");
+    if (consecutiveStaticFailures >= 3) fail("three consecutive static delivery failures");
 
     if (cycles % 4 === 0) {
       chatChecks += 1;
@@ -436,14 +455,23 @@ async function main(): Promise<void> {
         });
         if (chat.status !== 502) {
           chatFailures += 1;
-          log({ cycle: cycles, chat: chat.status });
+          consecutiveChatFailures += 1;
+          log({ cycle: cycles, chat: chat.status, consecutiveChatFailures });
+        } else {
+          consecutiveChatFailures = 0;
         }
         await chat.arrayBuffer();
       } catch (error) {
         chatFailures += 1;
-        log({ cycle: cycles, chat: "network_error", error: error instanceof Error ? error.message : String(error) });
+        consecutiveChatFailures += 1;
+        log({
+          cycle: cycles,
+          chat: "network_error",
+          error: error instanceof Error ? error.message : String(error),
+          consecutiveChatFailures,
+        });
       }
-      if (chatFailures >= 3) fail("three consecutive AI error-path failures");
+      if (consecutiveChatFailures >= 3) fail("three consecutive AI error-path failures");
     }
 
     runCoreInvariantWorkload(cycles);
@@ -483,11 +511,14 @@ main()
       minutes,
       cycles,
       healthOk,
-      healthFails,
+      healthFailures,
+      consecutiveHealthFailures,
       staticOk,
-      staticFails,
+      staticFailures,
+      consecutiveStaticFailures,
       chatChecks,
       chatFailures,
+      consecutiveChatFailures,
       rssMinMb: Number.isFinite(rssMin) ? Math.round(rssMin) : null,
       rssMaxMb: rssMax ? Math.round(rssMax) : null,
       rssFirstMb: rssFirst ? Math.round(rssFirst) : null,
