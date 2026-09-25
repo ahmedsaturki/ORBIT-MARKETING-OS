@@ -63,4 +63,23 @@ describe("OperationalEventLog", () => {
 
     expect(event.payload).toEqual({ accessToken: "[REDACTED]", result: "ok" });
   });
+
+  it("returns defensive deep copies", () => {
+    const log = new OperationalEventLog("ws-1");
+    const appended = log.append({
+      workspaceId: "ws-1",
+      timestamp: "2026-09-26T00:00:00Z",
+      kind: "work.created",
+      outcome: "started",
+      actor: "system",
+      payload: { nested: { labels: ["a"] } },
+    });
+
+    const snapshot = log.list() as OperationalEvent[];
+    const nested = snapshot[0]?.payload as { nested: { labels: string[] } };
+    nested.nested.labels.push("mutated");
+
+    expect(appended.payload).toEqual({ nested: { labels: ["a"] } });
+    expect(log.list()[0]?.payload).toEqual({ nested: { labels: ["a"] } });
+  });
 });
