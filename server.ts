@@ -517,14 +517,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 async function startServer(): Promise<void> {
-  if (process.env.NODE_ENV !== "production") {
-    const { createServer } = await import("vite");
-    const vite = await createServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
+  if (process.env.NODE_ENV === "production") {
     const webDistPath = path.join(__dirname, "packages", "web", "out");
     const webIndex = path.join(webDistPath, "index.html");
     if (!path.isAbsolute(webDistPath)) {
@@ -539,6 +532,14 @@ async function startServer(): Promise<void> {
               "Web build output is not available. Run the workspace web build first.",
           });
         }
+      });
+    });
+  } else {
+    app.get("/", (_req, res) => {
+      res.json({
+        service: "Orbit Marketing OS Local Runtime",
+        status: "ok",
+        mode: "api-only-development",
       });
     });
   }
