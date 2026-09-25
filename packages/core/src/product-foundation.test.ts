@@ -132,6 +132,34 @@ describe("ORBIT product foundation", () => {
 
     expect(
       authorizeAgentAction(
+        { ...agent, autonomy: "execute_with_approval" },
+        run,
+        {
+          action: "publish",
+          scope: "campaign.publish",
+          externallyVisible: true,
+          requiresApproval: false,
+        },
+        false,
+      ),
+    ).toEqual({ allowed: false, reason: "approval_required" });
+
+    expect(
+      authorizeAgentAction(
+        { ...agent, workspaceId: "ws-2" },
+        run,
+        {
+          action: "publish",
+          scope: "campaign.publish",
+          externallyVisible: true,
+          requiresApproval: false,
+        },
+        true,
+      ),
+    ).toEqual({ allowed: false, reason: "workspace_mismatch" });
+
+    expect(
+      authorizeAgentAction(
         agent,
         { ...run, stepCount: 3 },
         {
