@@ -18,6 +18,7 @@ if (
   ![
     "rebuild/orbit-production",
     "rebuild/orbit-production-consolidated",
+    "rebuild/orbit-production-final",
   ].includes(branch)
 ) {
   throw new Error(
