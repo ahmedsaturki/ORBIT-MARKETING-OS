@@ -16,7 +16,7 @@ test("pricing page renders all license plans without fake checkout links", async
   await expect(page.getByRole("heading", { name: "Pro" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Agency" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Lifetime" })).toBeVisible();
-  await expect(page.getByText("رابط الشراء غير مضبوط").count()).toBeGreaterThan(0);
+  await expect(page.getByText("رابط الشراء غير مضبوط")).toHaveCount(4);
 });
 
 test("legal pages are reachable from navigation", async ({ page }) => {
