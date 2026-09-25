@@ -7461,6 +7461,57 @@ mod tests {
     }
 
     #[test]
+    fn operational_relation_validation_matches_graph_relation_contract() {
+        assert_eq!(
+            validate_operational_relation("supports").expect("valid relation"),
+            "supports"
+        );
+        assert_eq!(
+            validate_operational_relation("campaign.produces").expect("valid relation"),
+            "campaign.produces"
+        );
+        assert!(validate_operational_relation("").is_err());
+        assert!(validate_operational_relation("Supports").is_err());
+        assert!(validate_operational_relation(".supports").is_err());
+        assert!(validate_operational_relation("supports relation").is_err());
+    }
+
+    #[test]
+    fn operational_entity_lookup_is_workspace_scoped() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                 VALUES ('campaign-a', 'workspace-a', 'A', 'draft', '1');",
+            )
+            .expect("workspace fixtures should be inserted");
+
+        assert!(
+            operational_entity_exists(&connection, "workspace-a", "campaign", "campaign-a")
+                .expect("same-workspace entity should be found")
+        );
+        assert!(
+            !operational_entity_exists(&connection, "workspace-b", "campaign", "campaign-a")
+                .expect("cross-workspace entity must not be found")
+        );
+        assert!(operational_entity_exists(
+            &connection,
+            "workspace-a",
+            "campaign",
+            "missing"
+        )
+        .is_ok_and(|value| !value));
+    }
+
+    #[test]
     fn schema_v11_creates_governed_marketing_operating_model_tables() {
         let connection =
             Connection::open_in_memory().expect("in-memory SQLite should be available");
