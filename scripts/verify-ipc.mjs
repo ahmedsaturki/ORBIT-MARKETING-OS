@@ -85,6 +85,71 @@ if (/approval_decide[\s\S]{0,800}decided_by:\s*"local-user"/.test(app)) {
   );
 }
 
+function collectInvokeArgumentObjects(source) {
+  const segments = [];
+  let search = 0;
+
+  while (search < source.length) {
+    const match = source.slice(search).match(/(?:callNative|invoke)(?:<[^>]+>)?\\s*\\(/);
+    if (!match) break;
+
+    const start = search + match.index;
+    const open = source.indexOf("(", start);
+    const brace = source.indexOf("{", open);
+    if (brace < 0) break;
+
+    let depth = 0;
+    let end = -1;
+    let inString = false;
+    let escaped = false;
+
+    for (let index = brace; index < source.length; index += 1) {
+      const character = source[index];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (character === "\\") {
+          escaped = true;
+        } else if (character === '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (character === '"') {
+        inString = true;
+        continue;
+      }
+      if (character === "{") depth += 1;
+      if (character === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          end = index;
+          break;
+        }
+      }
+    }
+
+    if (end < 0) break;
+    segments.push(source.slice(brace, end + 1));
+    search = end + 1;
+  }
+
+  return segments;
+}
+
+for (const argumentObject of collectInvokeArgumentObjects(app)) {
+  const snakeCaseKeys = [
+    ...argumentObject.matchAll(/\\b([A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+)\\s*:/g),
+  ].map((match) => match[1]);
+
+  if (snakeCaseKeys.length > 0) {
+    throw new Error(
+      "Desktop Tauri invoke args must use camelCase at the JS boundary: " +
+        [...new Set(snakeCaseKeys)].join(", "),
+    );
+  }
+}
+
 const uiCommands = new Set(
   [
     ...app.matchAll(
