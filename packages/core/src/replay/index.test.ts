@@ -8,9 +8,21 @@ const base = {
 
 const event = (
   sequence: number,
-  kind: "decision" | "dispatch" | "result" | "state_transition" | "human_intervention",
+  kind:
+    | "decision"
+    | "dispatch"
+    | "result"
+    | "state_transition"
+    | "human_intervention",
   outcome: "allowed" | "blocked" | "success" | "failure" | "waiting",
-  state?: "created" | "running" | "awaiting_approval" | "awaiting_user_action" | "succeeded" | "failed" | "cancelled",
+  state?:
+    | "created"
+    | "running"
+    | "awaiting_approval"
+    | "awaiting_user_action"
+    | "succeeded"
+    | "failed"
+    | "cancelled",
 ) => ({
   ...base,
   sequence,
