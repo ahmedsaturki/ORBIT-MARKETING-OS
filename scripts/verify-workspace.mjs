@@ -521,7 +521,11 @@ async function scanProductionSource(dir) {
       continue;
     }
     if (!/\.(?:ts|tsx|mjs)$/.test(entry.name)) continue;
-    if (relative(root, full).replace(/\\/g, "/") === "scripts/verify-workspace.mjs") continue;
+    if (
+      relative(root, full).replace(/\\/g, "/") ===
+      "scripts/verify-workspace.mjs"
+    )
+      continue;
     const content = await readFile(full, "utf8");
     if (/\b(TODO|FIXME|HACK|XXX)\b/i.test(content)) {
       throw new Error(
@@ -854,7 +858,11 @@ async function scan(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (ignored.has(entry.name)) continue;
     const full = join(dir, entry.name);
-    if (relative(root, full).replace(/\\/g, "/") === "scripts/verify-workspace.mjs") continue;
+    if (
+      relative(root, full).replace(/\\/g, "/") ===
+      "scripts/verify-workspace.mjs"
+    )
+      continue;
     if (entry.isDirectory()) {
       await scan(full);
       continue;
