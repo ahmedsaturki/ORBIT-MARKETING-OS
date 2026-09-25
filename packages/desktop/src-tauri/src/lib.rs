@@ -10458,6 +10458,7 @@ mod tests {
             .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
         migrate_schema(&connection).expect("schema migration should succeed");
+        create_integrity_triggers(&connection).expect("integrity triggers should be creatable");
 
         connection
             .execute_batch(
@@ -10520,8 +10521,14 @@ mod tests {
             .execute_batch(SCHEMA)
             .expect("base schema should be creatable");
         connection
-            .execute_batch("PRAGMA user_version = 11;")
-            .expect("schema version should be set");
+            .execute_batch(
+                "DROP TRIGGER IF EXISTS orbit_opportunities_insert_workspace;
+                 DROP TRIGGER IF EXISTS orbit_opportunities_update_workspace;
+                 DROP TABLE IF EXISTS insights;
+                 DROP TABLE IF EXISTS opportunities;
+                 PRAGMA user_version = 11;",
+            )
+            .expect("v11 state should be prepared");
         migrate_schema(&connection).expect("v11 to v12 migration should succeed");
 
         for table in ["opportunities", "insights"] {
