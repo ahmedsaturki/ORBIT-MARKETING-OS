@@ -58,7 +58,9 @@ export interface StrategyValidationResult {
   readonly errors: readonly string[];
 }
 
-export function validateStrategy(strategy: StrategyDocument): StrategyValidationResult {
+export function validateStrategy(
+  strategy: StrategyDocument,
+): StrategyValidationResult {
   const errors: string[] = [];
 
   if (!strategy.positioning.trim()) errors.push("positioning_required");
