@@ -1,14 +1,19 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("ORBIT public accessibility and RTL baseline", () => {
-  test("document declares Arabic RTL and exactly one primary heading", async ({ page }) => {
+  test(
+    "document declares Arabic RTL and exactly one primary heading",
+    async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-  });
+    },
+  );
 
-  test("primary navigation links have accessible names and valid targets", async ({ page }) => {
+  test(
+    "primary navigation links have accessible names and valid targets",
+    async ({ page }) => {
     await page.goto("/");
     const links = page.getByRole("link");
     const count = await links.count();
@@ -19,9 +24,12 @@ test.describe("ORBIT public accessibility and RTL baseline", () => {
       await expect(link).toHaveAccessibleName(/.+/);
       await expect(link).toHaveAttribute("href", /.+/);
     }
-  });
+    },
+  );
 
-  test("public form controls are label-associated", async ({ page }) => {
+  test(
+    "public form controls are label-associated",
+    async ({ page }) => {
     await page.goto("/pricing/");
     const controls = page.locator("input, textarea, select");
     const count = await controls.count();
@@ -40,9 +48,12 @@ test.describe("ORBIT public accessibility and RTL baseline", () => {
         `control ${index} must have an accessible label`,
       ).toBe(true);
     }
-  });
+    },
+  );
 
-  test("interactive elements receive keyboard focus", async ({ page }) => {
+  test(
+    "interactive elements receive keyboard focus",
+    async ({ page }) => {
     await page.goto("/");
     const interactive = page.locator("a, button, input, textarea, select");
     const count = await interactive.count();
@@ -53,9 +64,12 @@ test.describe("ORBIT public accessibility and RTL baseline", () => {
       await element.focus();
       await expect(element).toBeFocused();
     }
-  });
+    },
+  );
 
-  test("page does not contain duplicate element ids", async ({ page }) => {
+  test(
+    "page does not contain duplicate element ids",
+    async ({ page }) => {
     await page.goto("/");
     const duplicateIds = await page.evaluate(() => {
       const seen = new Map<string, number>();
@@ -68,5 +82,6 @@ test.describe("ORBIT public accessibility and RTL baseline", () => {
     });
 
     expect(duplicateIds).toEqual([]);
-  });
+    },
+  );
 });
