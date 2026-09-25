@@ -23,6 +23,7 @@ describe("canonical database schema contract", () => {
       "operational_links",
       "opportunities",
       "insights",
+      "operational_events",
     ]) {
       expect(DATABASE_SCHEMA_SQL).toContain(
         `CREATE TABLE IF NOT EXISTS ${table}`,
