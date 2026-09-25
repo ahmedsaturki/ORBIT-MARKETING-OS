@@ -19,10 +19,7 @@ export type AgentRunStatus =
   | "cancelled";
 
 export type AgentAutonomy =
-  | "suggest"
-  | "draft"
-  | "execute_bounded"
-  | "execute_with_approval";
+  "suggest" | "draft" | "execute_bounded" | "execute_with_approval";
 
 export interface AgentToolGrant {
   readonly tool: string;
@@ -97,9 +94,7 @@ export function authorizeAgentAction(
   );
   if (grants.length === 0) return { allowed: false, reason: "scope_denied" };
 
-  const grantRequiresApproval = grants.some(
-    (grant) => grant.requiresApproval,
-  );
+  const grantRequiresApproval = grants.some((grant) => grant.requiresApproval);
   const autonomyRequiresApproval =
     request.externallyVisible &&
     (agent.autonomy === "suggest" ||
@@ -107,9 +102,7 @@ export function authorizeAgentAction(
       agent.autonomy === "execute_with_approval");
 
   if (
-    (request.requiresApproval ||
-      grantRequiresApproval ||
-      autonomyRequiresApproval) &&
+    (request.requiresApproval || grantRequiresApproval || autonomyRequiresApproval) &&
     !approved
   ) {
     return { allowed: false, reason: "approval_required" };
