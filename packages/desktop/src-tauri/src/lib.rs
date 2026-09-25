@@ -7478,8 +7478,8 @@ mod execution_counter_tests {
 pub fn run() {
     let result = tauri::Builder::default()
         .setup(|app| {
-            let connection =
-                open_db(&app.handle()).map_err(|error| Box::<dyn std::error::Error>::from(error))?;
+            let connection = open_db(&app.handle())
+                .map_err(|error| Box::<dyn std::error::Error>::from(error))?;
             recover_interrupted_tasks(&connection)
                 .map_err(|error| Box::<dyn std::error::Error>::from(error))?;
             Ok(())
