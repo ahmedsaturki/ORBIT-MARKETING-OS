@@ -92,6 +92,10 @@ Strategy, content, campaigns, approvals, CRM, inbox, tasks, analytics, backups.
 
 Knowledge fabric, research, local AI routing, agents, learning loop, anomaly detection.
 
+### Operational control extensions
+
+The target control plane also includes Mission Control, simulation/dry-run, execution replay, policy packs, vertical operating packs, and a governed CLI/MCP/SDK boundary. These are platform extensions over the same local runtime and operating graph, not separate product silos.
+
 ### Platform
 
 CLI, MCP, connector SDK, agent SDK, extension model, vertical packs.
