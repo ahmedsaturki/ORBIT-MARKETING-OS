@@ -717,6 +717,7 @@ for (const command of Object.keys(sensitiveDesktopCommands)) {
 const rootVercel = JSON.parse(
   await readFile(join(root, "vercel.json"), "utf8"),
 );
+await assertFile("scripts/verify-vercel-dry-run.mjs");
 if (rootVercel.framework !== null)
   throw new Error(
     "Root Vercel framework must be null/Other for the static export",
