@@ -1,5 +1,5 @@
 /**
- * Generate src-tauri/icons/icon.ico from the existing PWA SVG brand icon.
+ * Generate packages/desktop/src-tauri/icons/icon.ico from the production desktop SVG brand icon.
  * Rasterizes via headless Chromium (Playwright), packs PNG frames into ICO.
  * Usage: node scripts/build-icon.mjs
  */
@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const svg = readFileSync(join(root, "public/icons/icon-512.svg"), "utf8");
-const outDir = join(root, "src-tauri/icons");
+const svg = readFileSync(join(root, "packages/desktop/src-tauri/icon-source.svg"), "utf8");
+const outDir = join(root, "packages/desktop/src-tauri/icons");
 mkdirSync(outDir, { recursive: true });
 
 const sizes = [256, 48, 32];
