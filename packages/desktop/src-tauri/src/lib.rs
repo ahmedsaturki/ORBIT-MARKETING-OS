@@ -5498,6 +5498,435 @@ fn strategy_list(app: tauri::AppHandle) -> Result<Vec<StrategyDocumentView>, Str
 }
 
 #[derive(Debug, Serialize)]
+struct KnowledgeSourceView {
+    id: String,
+    source_type: String,
+    title: String,
+    locator: Option<String>,
+    collected_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct KnowledgeItemView {
+    id: String,
+    statement: String,
+    source_ids_json: String,
+    trust: String,
+    tags_json: String,
+    expires_at: Option<String>,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct KnowledgeEvidenceView {
+    item_id: String,
+    source_id: String,
+    excerpt_hash: String,
+    collected_at: String,
+}
+
+fn validate_knowledge_source_type(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "document",
+        "website",
+        "crm",
+        "campaign",
+        "analytics",
+        "research",
+        "user",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported knowledge source type".to_string())
+    }
+}
+
+fn validate_knowledge_trust(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if ["verified", "approved", "observed", "unverified"].contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err("unsupported knowledge trust level".to_string())
+    }
+}
+
+fn validate_hash_64(value: &str, field: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if value.len() != 64 || !value.chars().all(|character| character.is_ascii_hexdigit()) {
+        return Err(format!("{field} must be a 64-character hexadecimal hash"));
+    }
+    Ok(value)
+}
+
+fn validate_workspace_source_ids(
+    connection: &Connection,
+    workspace_id: &str,
+    ids_json: &str,
+) -> Result<(), String> {
+    let ids: Vec<String> = serde_json::from_str(ids_json)
+        .map_err(|_| "source_ids_json must be a JSON array of strings".to_string())?;
+    for id in ids {
+        let id = validate_label(&id).map_err(|error| error.to_string())?;
+        let found: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_sources WHERE id=?1 AND workspace_id=?2",
+                params![id, workspace_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if found != 1 {
+            return Err(format!("knowledge source does not belong to active workspace: {id}"));
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn knowledge_source_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    source_type: String,
+    title: String,
+    locator: Option<String>,
+) -> Result<KnowledgeSourceView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let source_type = validate_knowledge_source_type(&source_type)?;
+    let title = validate_label(&title).map_err(|error| error.to_string())?;
+    let locator = locator
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .filter(|value| value.len() <= 2_000);
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let collected_at = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO knowledge_sources(
+               id, workspace_id, type, title, locator, collected_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(id) DO UPDATE SET
+               type=excluded.type,
+               title=excluded.title,
+               locator=excluded.locator,
+               collected_at=excluded.collected_at
+             WHERE knowledge_sources.workspace_id=excluded.workspace_id",
+            params![id, workspace_id, source_type, title, locator, collected_at],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("knowledge source id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "knowledge",
+        "source_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(KnowledgeSourceView {
+        id,
+        source_type,
+        title,
+        locator,
+        collected_at,
+    })
+}
+
+#[tauri::command]
+fn knowledge_source_list(app: tauri::AppHandle) -> Result<Vec<KnowledgeSourceView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, type, title, locator, collected_at
+             FROM knowledge_sources
+             WHERE workspace_id=?1
+             ORDER BY collected_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(KnowledgeSourceView {
+                id: row.get(0)?,
+                source_type: row.get(1)?,
+                title: row.get(2)?,
+                locator: row.get(3)?,
+                collected_at: row.get(4)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn knowledge_item_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    statement: String,
+    source_ids_json: Option<String>,
+    trust: String,
+    tags_json: Option<String>,
+    expires_at: Option<String>,
+) -> Result<KnowledgeItemView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let statement = statement.trim().to_string();
+    if statement.is_empty() || statement.len() > 20_000 {
+        return Err("knowledge statement is invalid".to_string());
+    }
+    let source_ids_json =
+        validate_json_string_array(source_ids_json, "source_ids_json", 100)?;
+    if source_ids_json == "[]" {
+        return Err("knowledge item requires at least one source".to_string());
+    }
+    let trust = validate_knowledge_trust(&trust)?;
+    let tags_json = validate_json_string_array(tags_json, "tags_json", 100)?;
+    let expires_at = expires_at
+        .map(|value| normalize_rfc3339_utc(&value))
+        .transpose()?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+    validate_workspace_source_ids(&connection, &workspace_id, &source_ids_json)?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO knowledge_items(
+               id, workspace_id, statement, source_ids_json, trust, tags_json, expires_at,
+               created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+             ON CONFLICT(id) DO UPDATE SET
+               statement=excluded.statement,
+               source_ids_json=excluded.source_ids_json,
+               trust=excluded.trust,
+               tags_json=excluded.tags_json,
+               expires_at=excluded.expires_at,
+               updated_at=excluded.updated_at
+             WHERE knowledge_items.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                statement,
+                source_ids_json,
+                trust,
+                tags_json,
+                expires_at,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("knowledge item id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "knowledge",
+        "item_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(KnowledgeItemView {
+        id,
+        statement,
+        source_ids_json,
+        trust,
+        tags_json,
+        expires_at,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn knowledge_item_list(app: tauri::AppHandle) -> Result<Vec<KnowledgeItemView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, statement, source_ids_json, trust, tags_json, expires_at, created_at, updated_at
+             FROM knowledge_items
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(KnowledgeItemView {
+                id: row.get(0)?,
+                statement: row.get(1)?,
+                source_ids_json: row.get(2)?,
+                trust: row.get(3)?,
+                tags_json: row.get(4)?,
+                expires_at: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn knowledge_evidence_add(
+    app: tauri::AppHandle,
+    item_id: String,
+    source_id: String,
+    excerpt_hash: String,
+) -> Result<KnowledgeEvidenceView, String> {
+    let workspace_id = active_workspace_id();
+    let item_id = validate_label(&item_id).map_err(|error| error.to_string())?;
+    let source_id = validate_label(&source_id).map_err(|error| error.to_string())?;
+    let excerpt_hash = validate_hash_64(&excerpt_hash, "excerpt_hash")?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let item_workspace: Option<String> = connection
+        .query_row(
+            "SELECT workspace_id FROM knowledge_items WHERE id=?1",
+            params![&item_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    if item_workspace.as_deref() != Some(workspace_id.as_str()) {
+        return Err("knowledge item is not in active workspace".to_string());
+    }
+
+    let source_workspace: Option<String> = connection
+        .query_row(
+            "SELECT workspace_id FROM knowledge_sources WHERE id=?1",
+            params![&source_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    if source_workspace.as_deref() != Some(workspace_id.as_str()) {
+        return Err("knowledge source is not in active workspace".to_string());
+    }
+
+    let collected_at = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO knowledge_evidence(
+               item_id, source_id, excerpt_hash, collected_at
+             )
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(item_id, source_id, excerpt_hash)
+             DO UPDATE SET collected_at=excluded.collected_at",
+            params![item_id, source_id, excerpt_hash, collected_at],
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit(
+        &connection,
+        "knowledge",
+        "evidence_add",
+        "success",
+        "user",
+        Some(&format!("{item_id}:{source_id}:{excerpt_hash}")),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(KnowledgeEvidenceView {
+        item_id,
+        source_id,
+        excerpt_hash,
+        collected_at,
+    })
+}
+
+#[tauri::command]
+fn knowledge_evidence_list(
+    app: tauri::AppHandle,
+    item_id: String,
+) -> Result<Vec<KnowledgeEvidenceView>, String> {
+    let workspace_id = active_workspace_id();
+    let item_id = validate_label(&item_id).map_err(|error| error.to_string())?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let exists: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM knowledge_items
+               WHERE id=?1 AND workspace_id=?2
+             )",
+            params![item_id, workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !exists {
+        return Err(AppError::NotFound.to_string());
+    }
+
+    let mut statement = connection
+        .prepare(
+            "SELECT e.item_id, e.source_id, e.excerpt_hash, e.collected_at
+             FROM knowledge_evidence e
+             JOIN knowledge_sources s ON s.id=e.source_id AND s.workspace_id=?1
+             WHERE e.item_id=?2
+             ORDER BY e.collected_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id, item_id], |row| {
+            Ok(KnowledgeEvidenceView {
+                item_id: row.get(0)?,
+                source_id: row.get(1)?,
+                excerpt_hash: row.get(2)?,
+                collected_at: row.get(3)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[derive(Debug, Serialize)]
 struct OperationalLinkView {
     workspace_id: String,
     from_type: String,
@@ -8879,6 +9308,12 @@ pub fn run() {
             automation_rule_pack_upsert,
             automation_rule_pack_set_enabled,
             automation_rule_pack_list,
+            knowledge_source_upsert,
+            knowledge_source_list,
+            knowledge_item_upsert,
+            knowledge_item_list,
+            knowledge_evidence_add,
+            knowledge_evidence_list,
             objective_upsert,
             objective_list,
             audience_upsert,
