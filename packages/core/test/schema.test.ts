@@ -51,7 +51,7 @@ describe("database schema contract", () => {
       "account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT",
     );
     expect(DATABASE_SCHEMA_SQL).toContain(
-      "UNIQUE(account_id, external_thread_id)",
+      "UNIQUE(workspace_id, account_id, external_thread_id)",
     );
   });
 });
