@@ -53,9 +53,10 @@ function assertReplayEvent(event: ReplayEvent): void {
   }
 }
 
-export function validateReplayTrace(
-  events: readonly ReplayEvent[],
-): { readonly valid: boolean; readonly reason?: string } {
+export function validateReplayTrace(events: readonly ReplayEvent[]): {
+  readonly valid: boolean;
+  readonly reason?: string;
+} {
   if (events.length === 0) return { valid: false, reason: "replay_empty" };
 
   const first = events[0];
