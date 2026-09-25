@@ -62,6 +62,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md]
 
 Product north star: [docs/TARGET_PRODUCT_BLUEPRINT.md](docs/TARGET_PRODUCT_BLUEPRINT.md) defines the Strategy → Campaign → Content → Execution → CRM/Inbox → Analytics → Learning operating graph and the staged platform roadmap. The Desktop currently exposes Mission Control, Strategy Studio, Outcomes/Learning, and the Operating Graph as governed local workspace surfaces.
 
+Operating control: [docs/OPERATING_CONTROL.md](docs/OPERATING_CONTROL.md) defines the deterministic Simulation, Replay, and Policy Pack layer used to preview, explain, and govern execution without creating a second execution system.
+
 Launch control: `docs/LAUNCH_SCORECARD.md`
 
 The current web product is live on Vercel; desktop artifacts and Android validation artifacts are built by GitHub Actions. Commercial launch remains gated by signing, real connector E2E, soak/rollback, and billing evidence.
