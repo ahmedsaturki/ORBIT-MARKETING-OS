@@ -46,6 +46,8 @@ Request:
 
 Requires `OLLAMA_VISION_MODEL`. Accepts `imageBase64` plus an `analysisType`.
 
+At the Tauri JavaScript boundary, command arguments use `camelCase` (for example `displayName`, `campaignId`, `sourceIdsJson`). Rust handler parameters may remain `snake_case`; Tauri's generated command contract is the boundary. The repository IPC verification guard rejects snake_case argument keys in Desktop invoke payloads.
+
 ## Desktop IPC
 
 ### Health and vault
