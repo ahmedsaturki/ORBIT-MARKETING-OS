@@ -1271,11 +1271,11 @@ fn cleanup_stale_database_artifacts(app_data: &Path) -> Result<(), AppError> {
     Ok(())
 }
 
-fn restrict_private_file(path: &PathBuf) -> Result<(), AppError> {
+fn restrict_private_file(_path: &PathBuf) -> Result<(), AppError> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+        fs::set_permissions(_path, fs::Permissions::from_mode(0o600))?;
     }
     Ok(())
 }
@@ -7501,6 +7501,28 @@ mod execution_counter_tests {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+
+    // Windows WebView2 Runtime 150+ ignores user-level debugging flags for
+    // elevated hosts. Keep the CDP override behind a build-only E2E feature so
+    // production binaries never gain a debug port from runtime environment input.
+    #[cfg(all(windows, feature = "e2e-cdp"))]
+    let context = {
+        let mut context = context;
+        if let Ok(raw_port) = std::env::var("ORBIT_E2E_CDP_PORT") {
+            if let Ok(port) = raw_port.trim().parse::<u16>() {
+                if port != 0 {
+                    if let Some(window) = context.config_mut().app.windows.get_mut(0) {
+                        window.additional_browser_args = Some(format!(
+                            "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port={port}"
+                        ));
+                    }
+                }
+            }
+        }
+        context
+    };
+
     let result = tauri::Builder::default()
         .setup(|app| {
             let connection = open_db(app.handle()).map_err(Box::<dyn std::error::Error>::from)?;
@@ -7559,7 +7581,7 @@ pub fn run() {
             license::license_status,
             license::license_delete
         ])
-        .run(tauri::generate_context!());
+        .run(context);
 
     if let Err(error) = result {
         eprintln!("failed to run ORBIT Marketing OS: {error}");
