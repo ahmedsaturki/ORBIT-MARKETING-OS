@@ -22,6 +22,7 @@ describe("Yjs sync", () => {
     expect(right.getMap("records").toJSON()).toEqual({ left: "A", right: "B" });
   });
 
+  // Simulates ciphertext buffering across a disconnected transport.
   it(
     "survives encrypted transport disconnect/reconnect and converges across two devices",
     async () => {
