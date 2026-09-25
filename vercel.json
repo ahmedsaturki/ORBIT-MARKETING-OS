@@ -2,7 +2,7 @@
   "installCommand": "bash scripts/vercel-install.sh",
   "buildCommand": "pnpm --dir packages/web build",
   "outputDirectory": "packages/web/out",
-  "framework": "nextjs",
+  "framework": null,
   "ignoreCommand": "bash scripts/vercel-ignore.sh",
   "headers": [
     {
