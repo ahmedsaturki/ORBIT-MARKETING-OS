@@ -1406,9 +1406,11 @@ fn seal(password: &str, plaintext: &str) -> Result<EncryptedPayload, AppError> {
     rand::rng().fill_bytes(&mut nonce_bytes);
 
     let key = derive_key(password, &salt)?;
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key[..]));
+    let cipher = Aes256Gcm::new_from_slice(&key[..]).map_err(|_| AppError::Encryption)?;
+    let nonce = Nonce::<Aes256Gcm>::try_from(nonce_bytes.as_slice())
+        .map_err(|_| AppError::Encryption)?;
     let ciphertext = cipher
-        .encrypt(Nonce::from_slice(&nonce_bytes), plaintext.as_bytes())
+        .encrypt(&nonce, plaintext.as_bytes())
         .map_err(|_| AppError::Encryption)?;
 
     Ok(EncryptedPayload {
@@ -1439,9 +1441,11 @@ fn open_payload(password: &str, payload: &EncryptedPayload) -> Result<String, Ap
     }
 
     let key = derive_key(password, &salt)?;
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key[..]));
+    let cipher = Aes256Gcm::new_from_slice(&key[..]).map_err(|_| AppError::Encryption)?;
+    let nonce = Nonce::<Aes256Gcm>::try_from(nonce.as_slice())
+        .map_err(|_| AppError::InvalidPayload)?;
     let plaintext = cipher
-        .decrypt(Nonce::from_slice(&nonce), ciphertext.as_ref())
+        .decrypt(&nonce, ciphertext.as_ref())
         .map_err(|_| AppError::Decryption)?;
 
     String::from_utf8(plaintext).map_err(|_| AppError::Decryption)
