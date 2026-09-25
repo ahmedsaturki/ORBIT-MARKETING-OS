@@ -114,12 +114,10 @@ function authorizeRuntime(
   }
 
   if (!RUNTIME_AUTH_TOKEN) {
-    res
-      .status(503)
-      .json({
-        error:
-          "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback.",
-      });
+    res.status(503).json({
+      error:
+        "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback.",
+    });
     return false;
   }
 
