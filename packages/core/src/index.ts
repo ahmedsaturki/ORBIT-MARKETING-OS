@@ -15,3 +15,8 @@ export * from "./content/index.js";
 export * from "./media/index.js";
 export * from "./analytics/index.js";
 export * from "./automation/index.js";
+export * from "./strategy/index.js";
+export * from "./knowledge/index.js";
+export * from "./agents/index.js";
+export * from "./policies/index.js";
+export * from "./operations/index.js";
