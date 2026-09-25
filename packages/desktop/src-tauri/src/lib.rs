@@ -10943,8 +10943,6 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
 
 "#;
 
-"#;
-
         if let Err(error) = connection.execute_batch(legacy) {
             panic!("legacy schema setup failed: {error}");
         }
