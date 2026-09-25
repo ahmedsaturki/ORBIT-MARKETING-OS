@@ -15,7 +15,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Migration path                                  | IMPLEMENTED | Versioned schema through v13 with legacy backfill, outcome/operating-model migration and transactional migrations                                     |
 | Operating graph/outcomes                        | IMPLEMENTED | Strategy/work graph, persisted opportunities/insights, governed links and bounded agent context                                                       |
 | Mission Control/control layer                   | IMPLEMENTED | Deterministic next actions, simulation, replay, policy packs, campaign-plan compilation and grounded knowledge context                                |
-| Command/Event control spine                     | IMPLEMENTED | Governed Command Registry + Operational Event Spine merged through PR #47; dispatcher implementation now on validation branch                         |
+| Command/Event control spine                     | IMPLEMENTED | Governed Command Registry + Operational Event Spine + Command Dispatcher merged through PR #47 and PR #48; exact-head CI/native/mobile evidence passed |
 | Desktop UI                                      | IMPLEMENTED | Workspace, content, approvals, tasks, CRM, inbox, backup, license, audit                                                                              |
 | Web product surface                             | VERIFIED    | Main CI build/E2E passed; production routes independently checked live                                                                                |
 | Runtime perimeter                               | VERIFIED    | Auth, origin allowlist, rate limiting and fake-Ollama smoke passed                                                                                    |
@@ -45,15 +45,10 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 
 ## Current verified main evidence
 
-PR #47 head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed:
+PR #47 head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed exact-head CI/native/mobile validation and merged to main as `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
 
-- CI run 36198100587
-- Desktop Native Validation run 36198100491
-- Mobile Validation run 36198100618
-
-It was then merged to main as `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
-
-The current validation branch adds the governed Command Dispatcher on top of that verified main lineage; its own exact-head CI/native/mobile gates are required before merge.
+PR #48 head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed exact-head CI/native/mobile validation and merged to main as `cea2873db9817d4930662747441b55e1660dd67d`.
+PR #48 head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed exact-head CI, Desktop Native Validation, and Mobile Validation, then merged to main as `cea2873db9817d4930662747441b55e1660dd67d`.
 
 ## Current Vercel evidence
 
