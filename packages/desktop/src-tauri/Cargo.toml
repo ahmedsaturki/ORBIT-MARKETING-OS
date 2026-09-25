@@ -18,6 +18,9 @@ tauri-build = { version = "2", features = [] }
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
+# Build-only switch used by controlled Windows native E2E to expose CDP.
+# Production builds never enable this feature.
+e2e-cdp = []
 e2e-cdp = []
 
 [dependencies]
