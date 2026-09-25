@@ -16,6 +16,9 @@ path = "src/main.rs"
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
 [dependencies]
 aes-gcm = "0.10"
 argon2 = "0.5"
