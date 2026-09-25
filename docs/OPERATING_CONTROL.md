@@ -54,3 +54,15 @@ External work remains subject to:
 - human intervention
 - auditability
 - platform-compliant behavior
+
+## Mission Control
+
+Mission Control derives deterministic, explainable next actions from current workspace operational state. It ranks intervention, approval, failed work, overdue work, follow-up, and blocked work without mutating execution state.
+
+## Campaign planning
+
+The campaign plan compiler turns a valid workspace-bound strategy into dependency-ordered work stages from strategy alignment through content, approval, execution, engagement, outcomes, and learning. It is a compiler for work definitions, not an external dispatcher.
+
+## Grounded AI context
+
+The knowledge context builder filters unverified, expired, or cross-workspace knowledge and excludes evidence whose sources do not belong to the active workspace. Context is bounded by item and character budgets before it is exposed to AI/agent consumers.
