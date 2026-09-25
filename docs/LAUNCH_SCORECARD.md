@@ -1,6 +1,6 @@
 # ORBIT Launch Scorecard
 
-Updated: 2026-09-25
+Updated: 2026-09-26
 
 Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evidence exists; UNVERIFIED = execution evidence is still missing; BLOCKED = an external/product prerequisite prevents completion.
 
@@ -12,7 +12,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Telegram native path                            | IMPLEMENTED | Token validation, approval, daily/circuit budgets, rate-limit handling, ambiguous-delivery stop                                                                      |
 | Workspace isolation                             | IMPLEMENTED | Persisted active workspace, memberships, scoped vault                                                                                                                |
 | SQLite integrity                                | IMPLEMENTED | FK enforcement, busy timeout, workspace integrity triggers                                                                                                           |
-| Migration path                                  | IMPLEMENTED | Versioned schema through v12 with legacy backfill, outcome migration and transactional migrations                                                                    |
+| Migration path                                  | IMPLEMENTED | Versioned schema through v13 with legacy backfill, outcome migration, durable operational events and transactional migrations                                                                    |
 | Operating graph/outcomes                        | IMPLEMENTED | Strategy/work graph, persisted opportunities/insights, governed links and bounded agent context                                                                      |
 | Mission Control/control layer                   | IMPLEMENTED | Deterministic next actions, simulation, replay, policy packs, campaign-plan compilation and grounded knowledge context                                               |
 | Desktop UI                                      | IMPLEMENTED | Workspace, content, approvals, tasks, CRM, inbox, backup, license, audit                                                                                             |
