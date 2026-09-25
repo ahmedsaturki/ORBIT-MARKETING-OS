@@ -687,8 +687,8 @@ for (const command of Object.keys(sensitiveDesktopCommands)) {
 const rootVercel = JSON.parse(
   await readFile(join(root, "vercel.json"), "utf8"),
 );
-if (rootVercel.framework !== "nextjs")
-  throw new Error("Root Vercel framework must be nextjs");
+if (rootVercel.framework !== null)
+  throw new Error("Root Vercel framework must be null/Other for the static export");
 if (rootVercel.outputDirectory !== "packages/web/out")
   throw new Error("Root Vercel output directory must be packages/web/out");
 if (rootVercel.installCommand !== "bash scripts/vercel-install.sh")
