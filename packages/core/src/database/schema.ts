@@ -230,4 +230,200 @@ CREATE INDEX IF NOT EXISTS idx_messages_thread
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp
   ON audit_events(timestamp);
 
+
+CREATE TABLE IF NOT EXISTS marketing_objectives (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  metric TEXT NOT NULL,
+  target REAL NOT NULL,
+  period_start TEXT NOT NULL,
+  period_end TEXT NOT NULL,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketing_objectives_workspace
+  ON marketing_objectives(workspace_id, status, period_end);
+
+CREATE TABLE IF NOT EXISTS strategy_documents (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  version INTEGER NOT NULL CHECK(version >= 1),
+  objective_ids_json TEXT NOT NULL DEFAULT '[]',
+  audience_ids_json TEXT NOT NULL DEFAULT '[]',
+  offer_ids_json TEXT NOT NULL DEFAULT '[]',
+  positioning TEXT NOT NULL,
+  key_messages_json TEXT NOT NULL DEFAULT '[]',
+  content_pillars_json TEXT NOT NULL DEFAULT '[]',
+  channels_json TEXT NOT NULL DEFAULT '[]',
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_strategy_documents_workspace
+  ON strategy_documents(workspace_id, status, updated_at);
+
+CREATE TABLE IF NOT EXISTS audiences (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  attributes_json TEXT NOT NULL DEFAULT '{}',
+  exclusions_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audiences_workspace
+  ON audiences(workspace_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS offers (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  promise TEXT NOT NULL,
+  proof_points_json TEXT NOT NULL DEFAULT '[]',
+  constraints_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_offers_workspace
+  ON offers(workspace_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS knowledge_sources (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  locator TEXT,
+  collected_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_sources_workspace
+  ON knowledge_sources(workspace_id, collected_at);
+
+CREATE TABLE IF NOT EXISTS knowledge_items (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  statement TEXT NOT NULL,
+  source_ids_json TEXT NOT NULL DEFAULT '[]',
+  trust TEXT NOT NULL,
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  expires_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_items_workspace_trust
+  ON knowledge_items(workspace_id, trust, updated_at);
+
+CREATE TABLE IF NOT EXISTS knowledge_evidence (
+  item_id TEXT NOT NULL REFERENCES knowledge_items(id) ON DELETE CASCADE,
+  source_id TEXT NOT NULL REFERENCES knowledge_sources(id) ON DELETE CASCADE,
+  excerpt_hash TEXT NOT NULL,
+  collected_at TEXT NOT NULL,
+  PRIMARY KEY(item_id, source_id, excerpt_hash)
+);
+
+CREATE TABLE IF NOT EXISTS agent_definitions (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL,
+  goal TEXT NOT NULL,
+  autonomy TEXT NOT NULL,
+  tool_grants_json TEXT NOT NULL DEFAULT '[]',
+  knowledge_scope_json TEXT NOT NULL DEFAULT '[]',
+  max_steps INTEGER NOT NULL CHECK(max_steps > 0),
+  enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0, 1)),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_definitions_workspace
+  ON agent_definitions(workspace_id, enabled, role);
+
+CREATE TABLE IF NOT EXISTS agent_runs (
+  id TEXT PRIMARY KEY,
+  agent_id TEXT NOT NULL REFERENCES agent_definitions(id) ON DELETE CASCADE,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  input TEXT NOT NULL,
+  status TEXT NOT NULL,
+  step_count INTEGER NOT NULL DEFAULT 0 CHECK(step_count >= 0),
+  started_at TEXT,
+  completed_at TEXT,
+  blocked_reason TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_runs_workspace_status
+  ON agent_runs(workspace_id, status, started_at);
+
+CREATE TABLE IF NOT EXISTS marketing_policies (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  allowed_actions_json TEXT NOT NULL DEFAULT '[]',
+  blocked_actions_json TEXT NOT NULL DEFAULT '[]',
+  max_daily_external_actions INTEGER NOT NULL CHECK(max_daily_external_actions >= 0),
+  require_approval_for_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketing_policies_workspace
+  ON marketing_policies(workspace_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS work_items (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  entity_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL,
+  owner_id TEXT,
+  priority INTEGER NOT NULL DEFAULT 0,
+  due_at TEXT,
+  source_id TEXT,
+  target_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_work_items_workspace_status
+  ON work_items(workspace_id, status, priority, due_at);
+
+CREATE TABLE IF NOT EXISTS work_dependencies (
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  predecessor_id TEXT NOT NULL,
+  successor_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  PRIMARY KEY(workspace_id, predecessor_id, successor_id, kind)
+);
+
+CREATE INDEX IF NOT EXISTS idx_work_dependencies_successor
+  ON work_dependencies(workspace_id, successor_id, kind);
+
+CREATE TABLE IF NOT EXISTS operational_links (
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  from_type TEXT NOT NULL,
+  from_id TEXT NOT NULL,
+  to_type TEXT NOT NULL,
+  to_id TEXT NOT NULL,
+  relation TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(workspace_id, from_type, from_id, to_type, to_id, relation)
+);
+
+CREATE INDEX IF NOT EXISTS idx_operational_links_from
+  ON operational_links(workspace_id, from_type, from_id);
+
+CREATE INDEX IF NOT EXISTS idx_operational_links_to
+  ON operational_links(workspace_id, to_type, to_id);
+
+PRAGMA user_version = 11;
+
 `;
