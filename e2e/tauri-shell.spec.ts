@@ -253,7 +253,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     page = ctx.pages()[0] ?? (await ctx.waitForEvent("page"));
     await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
 
-    await expect(page).toHaveTitle(/Orbit Marketing OS/);
+    await expect(page).toHaveTitle(/ORBIT Marketing OS/);
     expect(await page.evaluate(() => typeof window.__TAURI_INTERNALS__)).toBe(
       "object",
     );
@@ -355,7 +355,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     )) as { id: string; name: string };
     expect(restored.id).toBe(before.id);
     expect(restored.name).toBe(before.name);
-    await expect(page).toHaveTitle(/Orbit Marketing OS/);
+    await expect(page).toHaveTitle(/ORBIT Marketing OS/);
   });
 
   test("native queue recovery returns interrupted sync work to pending", async () => {
