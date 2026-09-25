@@ -5,7 +5,7 @@ on:
     branches: ["test/crdt-transport-integration-20260925"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   format:
@@ -23,15 +23,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Format target
         run: pnpm exec prettier --write packages/core/test/sync.test.ts
-      - name: Commit formatted target
+      - name: Emit formatted target
         shell: bash
         run: |
-          if git diff --quiet -- packages/core/test/sync.test.ts; then
-            echo "Target already formatted."
-            exit 0
-          fi
-          git config user.name "ORBIT Automation"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packages/core/test/sync.test.ts
-          git commit -m "style(sync): apply Prettier canonical formatting"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          echo "----- BEGIN FORMATTED FILE -----"
+          cat packages/core/test/sync.test.ts
+          echo "----- END FORMATTED FILE -----"
