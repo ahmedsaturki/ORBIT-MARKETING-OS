@@ -23,7 +23,7 @@ describe("CommandRegistry", () => {
         },
         "desktop",
       ),
-    ).toEqual({ allowed: false, reason: "actor_required" });
+    ).toEqual({ allowed: false, reason: "scope_denied" });
   });
 
   it("requires an identified actor", () => {
@@ -39,7 +39,7 @@ describe("CommandRegistry", () => {
         },
         "desktop",
       ),
-    ).toEqual({ allowed: false, reason: "scope_denied" });
+    ).toEqual({ allowed: false, reason: "actor_required" });
   });
 
   it("blocks externally visible commands until approval", () => {
