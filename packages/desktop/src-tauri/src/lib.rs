@@ -6968,7 +6968,7 @@ mod rule_pack_runtime_limits_tests {
     fn latest_enabled_pack_provides_bounded_runtime_limits() {
         let connection = Connection::open_in_memory().expect("sqlite");
         connection.execute_batch(
-            "CREATE TABLE automation_rule_packs(
+            r#"CREATE TABLE automation_rule_packs(
                id TEXT PRIMARY KEY,
                workspace_id TEXT NOT NULL,
                platform TEXT NOT NULL,
@@ -6988,7 +6988,7 @@ mod rule_pack_runtime_limits_tests {
                  "enabled":true,"requiresConfirmation":true,
                  "maxAttempts":5,"timeoutMs":45000}]',
                1, '1', '2'
-             );",
+             );"#,
         ).expect("schema");
 
         let result = load_rule_config(
