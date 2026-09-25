@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { OutcomesPanel } from "./components/OutcomesPanel";
+import { OperatingGraphPanel } from "./components/OperatingGraphPanel";
 import {
   analyzeLocalImage,
   DEFAULT_RUNTIME_URL,
@@ -2536,6 +2537,10 @@ export function App(): ReactElement {
           contacts={contacts}
           campaigns={campaigns}
         />
+      ) : null}
+
+      {activeWorkspace ? (
+        <OperatingGraphPanel workspaceId={activeWorkspace.id} />
       ) : null}
 
       <section className="card">
