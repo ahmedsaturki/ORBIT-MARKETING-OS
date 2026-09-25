@@ -30,3 +30,7 @@ A blocked path is explicit: command.received -> command.blocked, while human int
 ## Persistence
 
 SQLite remains the source of truth. The desktop runtime now persists the exact logical contract (`workspace_id`, `sequence`, `trace_id`, `parent_event_id`, kind, outcome, actor identity, and redacted payload) in schema v13, with workspace/time, entity, and trace indexes. The event table contains no raw secrets by design.
+
+## Verification contract
+
+The v13 event table, native append/list commands, schema migration, workspace checks, payload redaction, and deep-copy tests are release-gated. No operational event capability is considered verified until exact-head CI and native validation pass.
