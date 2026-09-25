@@ -1,15 +1,8 @@
 # ORBIT Marketing OS — Release Readiness
 
-## Current production line
+## Current rebuild
 
-The production line is now merged into `main` via PR #10.
-
-- Merge commit: `f52a0d2ec13a639ec760d8bc08a15e1df5b93970`.
-- Release branch used for consolidation: `rebuild/orbit-production-final`.
-- The repository now carries reproducible `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock`.
-- Full technical evidence exists for the release-line parent commit; current `main` is being re-verified after the merge.
-- No production launch claim is made until current-main deployment/distribution gates are verified.
-
+The active consolidation branch is `rebuild/orbit-production-consolidated`. PR #9 is open, draft, and unmerged while release evidence is collected.
 
 ## Implemented foundations
 
@@ -41,30 +34,37 @@ The production line is now merged into `main` via PR #10.
 
 ## Current execution evidence
 
-The release-line parent passed the documented hosted technical gate, including reproducible install, dependency audit, workspace sanity, TypeScript, IPC, lint, tests/coverage, runtime smoke, performance smoke, production build, browser E2E, format, and Rust fmt/check/test/clippy.
+Latest observed hosted GitHub Actions CI on the consolidation line:
 
-After consolidation, the Web Deploy workflow on merge commit `f52a0d2ec13a639ec760d8bc08a15e1df5b93970` also passed its Web quality gate. Its deploy stage was credential-gated and skipped the actual deployment because the required Vercel deployment credentials were not available to the workflow.
+- run `36053293828`
+- jobs `107813972668` (quality) / `107813973170` (Rust quality)
+- conclusion: `failure`
+- runner_id: `0`
+- runner name: empty
+- steps: `[]`
+- no usable workflow step/log evidence was produced.
 
-A dedicated CI change now runs the full production CI on `main` as well as the release branch so the exact default-branch state receives fresh evidence.
+The current execution environment cannot generate a reproducible lockfile because pnpm is not installed and the npm registry is unreachable. No fake lockfile is committed. The consolidation branch still requires both lockfiles before release execution.
 
+The connected Vercel project has a verified READY production deployment, but it is the legacy `main` Vite surface, not PR #9. A fresh successful consolidation deployment remains unverified.
 
 ## Remaining release gates
 
-- Fresh post-merge `main` full CI evidence.
-- Native runtime restart/crash-recovery and persistent queue recovery evidence.
-- Full workspace/RBAC negative matrix across all protected IPC surfaces.
-- Backup/restore corruption and newer-schema drills.
-- Full desktop campaign → content → approval → task scenario.
-- Inbox/CRM linkage and encrypted sync convergence across control surfaces.
-- Controlled live authorization/runtime evidence for Telegram/LinkedIn.
-- Live challenge/human-intervention evidence.
-- Desktop validation artifacts for Windows/Linux/macOS.
-- Android validation artifact and iOS production distribution/signing.
-- Final checksum/provenance verification for distributed artifacts.
-- Vercel effective project settings confirmation, guarded production deployment, live verification, and rollback verification.
-- Production code signing/notarization where credentials exist.
-- Commercial billing/payment configuration and legal/commercial publication review.
-
+- committed, validated `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock`;
+- clean typecheck/lint/tests/coverage/build;
+- clean Rust fmt/check/test/clippy;
+- native migration/restart/crash-recovery evidence;
+- real authorized connector/platform verification;
+- CRDT transport/convergence evidence;
+- local AI/resource/failure evidence;
+- browser/device E2E + accessibility;
+- security/dependency review;
+- performance and 24h soak;
+- Windows/Linux/macOS packaging plus signing;
+- Android/iOS production distribution/signing;
+- successful Vercel deployment + rollback verification;
+- commercial payment/billing configuration;
+- legal/commercial publication review.
 
 ## Release rule
 
