@@ -73,7 +73,9 @@ export type AgentActionDecision =
         | "disabled"
         | "step_limit"
         | "scope_denied"
-        | "approval_required";
+        | "approval_required"
+        | "workspace_mismatch"
+        | "agent_mismatch";
     };
 
 export function authorizeAgentAction(
@@ -83,19 +85,31 @@ export function authorizeAgentAction(
   approved: boolean,
 ): AgentActionDecision {
   if (!agent.enabled) return { allowed: false, reason: "disabled" };
+  if (run.workspaceId !== agent.workspaceId)
+    return { allowed: false, reason: "workspace_mismatch" };
+  if (run.agentId !== agent.id)
+    return { allowed: false, reason: "agent_mismatch" };
   if (run.stepCount >= agent.maxSteps)
     return { allowed: false, reason: "step_limit" };
 
-  const scopeAllowed = agent.toolGrants.some((grant) =>
+  const grants = agent.toolGrants.filter((grant) =>
     grant.scopes.includes(request.scope),
   );
-  if (!scopeAllowed) return { allowed: false, reason: "scope_denied" };
+  if (grants.length === 0) return { allowed: false, reason: "scope_denied" };
 
-  if (request.requiresApproval && !approved) {
-    return { allowed: false, reason: "approval_required" };
-  }
+  const grantRequiresApproval = grants.some(
+    (grant) => grant.requiresApproval,
+  );
+  const autonomyRequiresApproval =
+    request.externallyVisible &&
+    (agent.autonomy === "suggest" ||
+      agent.autonomy === "draft" ||
+      agent.autonomy === "execute_with_approval");
 
-  if (request.externallyVisible && agent.autonomy === "suggest") {
+  if (
+    (request.requiresApproval || grantRequiresApproval || autonomyRequiresApproval) &&
+    !approved
+  ) {
     return { allowed: false, reason: "approval_required" };
   }
 
