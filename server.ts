@@ -1,17 +1,8 @@
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
-import { redactText } from './packages/core/src/security/redaction.js';
-
-// Redact secrets (API keys, tokens, passwords) before anything reaches the logs.
-function describeError(error: unknown): string {
-  if (error instanceof Error) {
-    return redactText(error.stack ?? `${error.name}: ${error.message}`);
-  }
-  return redactText(String(error));
-}
+import express from "express";
+import { timingSafeEqual } from "node:crypto";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -19,309 +10,480 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
+const RUNTIME_HOST = process.env.RUNTIME_HOST ?? "127.0.0.1";
+const RUNTIME_AUTH_TOKEN = (process.env.RUNTIME_AUTH_TOKEN ?? "").trim();
+const DEFAULT_RUNTIME_ALLOWED_ORIGINS = [
+  "http://tauri.localhost",
+  "https://tauri.localhost",
+  "http://127.0.0.1:1420",
+  "http://localhost:1420",
+] as const;
 
-// High payload limit for image analysis (base64)
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+const RUNTIME_ALLOWED_ORIGINS = new Set([
+  ...DEFAULT_RUNTIME_ALLOWED_ORIGINS,
+  ...(process.env.RUNTIME_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+]);
+const RUNTIME_RATE_WINDOW_MS = 60_000;
+const parsedRuntimeRateLimit = Number.parseInt(process.env.RUNTIME_RATE_LIMIT ?? "120", 10);
+const RUNTIME_RATE_LIMIT =
+  Number.isFinite(parsedRuntimeRateLimit) && parsedRuntimeRateLimit >= 1
+    ? parsedRuntimeRateLimit
+    : 120;
+const runtimeRate = new Map<string, { windowStart: number; count: number }>();
 
-// Initialize GoogleGenAI SDK with required telemetry User-Agent
-const apiKey = process.env.GEMINI_API_KEY || '';
-const ai = new GoogleGenAI({
-  apiKey,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    },
-  },
+function clientAddress(req: express.Request): string {
+  return req.socket.remoteAddress ?? "unknown";
+}
+
+function isRateLimited(req: express.Request): boolean {
+  const now = Date.now();
+  const key = clientAddress(req);
+  const current = runtimeRate.get(key);
+  if (!current || now - current.windowStart >= RUNTIME_RATE_WINDOW_MS) {
+    runtimeRate.set(key, { windowStart: now, count: 1 });
+    if (runtimeRate.size > 1024) {
+      for (const [entryKey, entry] of runtimeRate) {
+        if (now - entry.windowStart >= RUNTIME_RATE_WINDOW_MS) runtimeRate.delete(entryKey);
+      }
+    }
+    return false;
+  }
+  current.count += 1;
+  return current.count > RUNTIME_RATE_LIMIT;
+}
+
+function tokensEqual(expected: string, supplied: string): boolean {
+  const expectedBytes = Buffer.from(expected);
+  const suppliedBytes = Buffer.from(supplied);
+  return (
+    expectedBytes.length === suppliedBytes.length &&
+    timingSafeEqual(expectedBytes, suppliedBytes)
+  );
+}
+
+function requestOrigin(req: express.Request): string | undefined {
+  return req.header("origin")?.trim() || undefined;
+}
+
+function originAllowed(req: express.Request): boolean {
+  const origin = requestOrigin(req);
+  if (!origin) return true;
+  return RUNTIME_ALLOWED_ORIGINS.has(origin);
+}
+
+function applyCors(req: express.Request, res: express.Response): void {
+  const origin = requestOrigin(req);
+  if (!origin || !originAllowed(req)) return;
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept");
+}
+
+function isLoopbackHost(host: string): boolean {
+  return host === "127.0.0.1" || host === "::1" || host === "localhost";
+}
+
+function runtimeAuthRequired(): boolean {
+  return !isLoopbackHost(RUNTIME_HOST);
+}
+
+function authorizeRuntime(req: express.Request, res: express.Response): boolean {
+  const origin = requestOrigin(req);
+  if (origin && !originAllowed(req)) {
+    res.status(403).json({ error: "Origin is not allowed for this runtime." });
+    return false;
+  }
+
+  if (!runtimeAuthRequired()) {
+    return true;
+  }
+
+  if (!RUNTIME_AUTH_TOKEN) {
+    res.status(503).json({ error: "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback." });
+    return false;
+  }
+
+  if (isRateLimited(req)) {
+    res.status(429).json({
+      error: "Runtime request limit reached. Try again later.",
+      retryAfterSeconds: 60,
+    });
+    return false;
+  }
+
+  const supplied = req.header("authorization") ?? "";
+  const prefix = "Bearer ";
+  const credential = supplied.startsWith(prefix) ? supplied.slice(prefix.length) : "";
+  if (credential.length > 1024 || !supplied.startsWith(prefix) || !tokensEqual(RUNTIME_AUTH_TOKEN, credential)) {
+    res.status(401).json({ error: "Unauthorized runtime request" });
+    return false;
+  }
+
+  if (!originAllowed(req)) {
+    res.status(403).json({ error: "Origin is not allowed for this runtime." });
+    return false;
+  }
+
+  return true;
+}
+
+app.use("/api", (req, res, next) => {
+  applyCors(req, res);
+
+  if (req.method === "OPTIONS") {
+    if (!originAllowed(req)) {
+      return res.status(403).json({ error: "Origin is not allowed for this runtime." });
+    }
+    return res.sendStatus(204);
+  }
+
+  if (authorizeRuntime(req, res)) next();
 });
+function normalizeOllamaBaseUrl(value: string): string {
+  const url = new URL(value);
+  const loopback = new Set(["localhost", "127.0.0.1", "::1"]);
+  if (url.username || url.password) {
+    throw new Error("OLLAMA_BASE_URL must not contain embedded credentials");
+  }
+  if (url.protocol !== "http:" || !loopback.has(url.hostname)) {
+    throw new Error("OLLAMA_BASE_URL must use loopback HTTP only");
+  }
+  return url.toString().replace(/\/$/, "");
+}
 
-// System instructions for specific roles
-const ROLE_SYSTEM_INSTRUCTIONS: Record<string, string> = {
-  marketing_strategist: `أنت خبير استراتيجي أول في التسويق الرقمي ونمو الشركات (Senior Growth & Marketing Strategist) متخصص في السوق العربي والخليجي والشرق الأوسط، وخبير في أدوات التشغيل والأتمتة الاجتماعية بدون قيود.
-مهمتك:
-1. تقديم خطط تسويقية واضحة، حملات إعلانية فعالة، واستراتيجيات نمو بدون تكاليف إعلانية مبالغ فيها.
-2. فهم طبيعة كل منصة (Facebook, Instagram, WhatsApp, TikTok, Telegram, LinkedIn).
-3. تقديم نصائح قابلة للتطبيق مباشرة مع خطوات محددة وأرقام وتوقيتات.
-4. الرد بلغة عربية احترافية راقية وواضحة تناسب رواد الأعمال والمسوقين.`,
+const OLLAMA_BASE_URL = normalizeOllamaBaseUrl(
+  process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434",
+);
 
-  copywriter: `أنت كاتب إعلانات ونصوص تسويقية محترف (Direct-Response Arabic Copywriter).
-مهمتك:
-1. صياغة نصوص إعلانية ذات معدل تحويل عالٍ (High-Converting Copy) بمختلف اللهجات (المصرية، الخليجية، الشامية، أو الفصحى المبسطة).
-2. استخدام صيغ تسويقية مثبتة (AIDA, PAS, BAB, Hook-Story-Offer).
-3. كتابة رسائل واتساب جذابة، ومنشورات فيسبوك تفاعلية، وسيناريوهات فيديو قصيرة (Reels/TikTok).
-4. إضافة دعوات واضحة لاتخاذ إجراء (Call To Action - CTA) ورموز تعبيرية متوازنة.`,
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.2:3b";
+const OLLAMA_FAST_MODEL = process.env.OLLAMA_FAST_MODEL ?? OLLAMA_MODEL;
+const OLLAMA_REASONING_MODEL = process.env.OLLAMA_REASONING_MODEL ?? OLLAMA_MODEL;
+const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL ?? "";
+const parsedOllamaContext = Number.parseInt(process.env.OLLAMA_NUM_CTX ?? "4096", 10);
+const OLLAMA_NUM_CTX = Number.isFinite(parsedOllamaContext) && parsedOllamaContext >= 1024 && parsedOllamaContext <= 32768
+  ? parsedOllamaContext
+  : 4096;
 
-  antiban_specialist: `أنت كبير مهندسي أمان الحسابات والتخفي الرقمي (Anti-Ban & Stealth Automation Architect).
-مهمتك:
-1. تقديم استشارات تقنية لحماية الحسابات من الحظر والتقييد (Facebook Groups, WhatsApp, Telegram, Instagram).
-2. شرح بروتوكولات محاكاة السلوك البشري (Random Delays, Circuit Breakers, Warm-up Cycles, Session Encryption).
-3. تقديم حلول هندسية للمشاكل الشائعة مثل تحديات CAPTCHA وتغييرات DOM في المنصات.
-4. توضيح معايير التشغيل الآمن وقاعدة 80% نشاط طبيعي مقابل 20% نشاط تسويقي.`,
+interface ChatMessageInput {
+  readonly role: "user" | "assistant" | "model";
+  readonly text: string;
+}
 
-  crm_closer: `أنت خبير في إدارة علاقات العملاء وإغلاق الصفقات (Customer Success & High-Ticket Closer).
-مهمتك:
-1. مساعدة الفرق في إدارة صندوق المحادثات والرد على استفسارات العملاء المترددين وإغلاق المبيعات بسرعة.
-2. تحويل الشكاوى أو الاعتراضات إلى فرص بيع حقيقية.
-3. صياغة ردود سريعة ومقنعة للواتساب والمحادثات المباشرة.
-4. تصنيف مراحل العملاء (Lead Scoring) ومتابعة العربات المتروكة.`,
+interface OllamaTextMessage {
+  readonly role: "system" | "user" | "assistant";
+  readonly content: string;
+  readonly images?: readonly string[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function sanitizeModelName(value: unknown, fallback: string): string {
+  const candidate = getString(value, fallback).trim();
+  if (!/^[a-zA-Z0-9._:@/-]{1,100}$/.test(candidate)) return fallback;
+  return candidate;
+}
+
+function mapRole(role: ChatMessageInput["role"]): "user" | "assistant" {
+  return role === "user" ? "user" : "assistant";
+}
+
+function extractOllamaText(payload: unknown): string {
+  if (!isRecord(payload)) return "";
+  const message = isRecord(payload.message) ? payload.message : undefined;
+  const messageContent = message ? getString(message.content) : "";
+  return messageContent || getString(payload.response);
+}
+
+async function ollamaRequest(
+  body: Readonly<Record<string, unknown>>,
+): Promise<{ readonly model: string; readonly text: string }> {
+  const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      stream: false,
+      ...body,
+      options: {
+        ...(isRecord(body.options) ? body.options : {}),
+        num_ctx: OLLAMA_NUM_CTX,
+      },
+    }),
+    signal: AbortSignal.timeout(120_000),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Ollama request failed (${response.status})${errorText ? `: ${errorText.slice(0, 300)}` : ""}`);
+  }
+
+  const payload: unknown = await response.json();
+  const model = isRecord(payload) ? getString(payload.model, OLLAMA_MODEL) : OLLAMA_MODEL;
+  const text = extractOllamaText(payload);
+
+  if (!text.trim()) {
+    throw new Error("Ollama returned an empty response");
+  }
+
+  return { model, text };
+}
+
+const ROLE_SYSTEM_INSTRUCTIONS: Readonly<Record<string, string>> = {
+  marketing_strategist:
+    "أنت استراتيجي تسويق رقمي. قدّم خططاً عملية، قابلة للقياس، ومناسبة للسوق العربي. لا تخترع أرقاماً أو نتائج غير موثقة.",
+  copywriter:
+    "أنت كاتب محتوى وتسويق عربي. اكتب بصياغة واضحة وملائمة للمنصة، وتجنب الادعاءات غير المثبتة.",
+  safety_specialist:
+    "أنت مستشار سلامة وتشغيل للمنصات. اشرح حدود المنصة، معدلات التشغيل المحافظة، وإيقاف التنفيذ عند التحديات. لا تقدّم طرقاً لتجاوز أنظمة مكافحة الإساءة أو كشف الأتمتة.",
+  crm_closer:
+    "أنت مستشار نجاح عملاء ومبيعات. صنّف العملاء، اقترح أسئلة متابعة، وصغ ردوداً واضحة دون تضليل أو ضغط غير مناسب.",
 };
 
-// 1. Multi-turn Chat API
-app.post('/api/chat', async (req, res) => {
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
+
+const MAX_CHAT_TOTAL_CHARS = 120_000;
+
+app.post("/api/chat", async (req, res) => {
   try {
-    const {
-      messages = [],
-      roleId = 'marketing_strategist',
-      customSystemInstruction = '',
-      model = 'gemini-3.5-flash',
-    } = req.body;
-
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: 'قائمة الرسائل فارغة أو غير صحيحة' });
+    const body: unknown = req.body;
+    if (!isRecord(body)) {
+      return res.status(400).json({ error: "Invalid request body" });
     }
 
-    // Role system prompt
-    const baseInstruction = ROLE_SYSTEM_INSTRUCTIONS[roleId] || ROLE_SYSTEM_INSTRUCTIONS.marketing_strategist;
-    const systemInstruction = customSystemInstruction
-      ? `${baseInstruction}\n\nتعليمات إضافية مخصصة من المستخدم:\n${customSystemInstruction}`
-      : baseInstruction;
-
-    // Supported models per user request specification:
-    // gemini-3.1-pro-preview for complex tasks
-    // gemini-3.5-flash for general tasks
-    // gemini-3.1-flash-lite for tasks that should happen fast
-    const validModels = ['gemini-3.1-pro-preview', 'gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
-    const chosenModel = validModels.includes(model) ? model : 'gemini-3.5-flash';
-
-    // Format contents into GoogleGenAI format
-    const contents = messages.map((m: { role: string; text: string }) => ({
-      role: m.role === 'model' || m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.text || '' }],
-    }));
-
-    try {
-      const response = await ai.models.generateContent({
-        model: chosenModel,
-        contents,
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-        },
-      });
-
-      return res.json({
-        text: response.text || '',
-        modelUsed: chosenModel,
-      });
-    } catch (modelErr: any) {
-      // If gemini-3.1-pro-preview fails due to key tier/quota, fall back to gemini-3.5-flash
-      if (chosenModel === 'gemini-3.1-pro-preview') {
-        console.warn('Fallback from gemini-3.1-pro-preview to gemini-3.5-flash:', redactText(String(modelErr?.message ?? modelErr)));
-        const fallbackResponse = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents,
-          config: {
-            systemInstruction,
-            temperature: 0.7,
-          },
-        });
-        return res.json({
-          text: fallbackResponse.text || '',
-          modelUsed: 'gemini-3.5-flash',
-          fallbackNotice: 'تم التبديل تلقائياً إلى نموذج gemini-3.5-flash لضمان استمرار الاستجابة.',
-        });
-      }
-      throw modelErr;
+    const rawMessages = Array.isArray(body.messages) ? body.messages : [];
+    if (rawMessages.length > 100) {
+      return res.status(400).json({ error: "عدد الرسائل يتجاوز الحد المحلي المسموح." });
     }
-  } catch (error: any) {
-    console.error('Chat API Error:', describeError(error));
-    return res.status(500).json({
-      error: error?.message || 'حدث خطأ أثناء معالجة المحادثة مع الذكاء الاصطناعي',
-    });
+
+    const messages: ChatMessageInput[] = rawMessages
+      .filter(isRecord)
+      .map((message) => ({
+        role:
+          message.role === "model" || message.role === "assistant"
+            ? message.role
+            : "user",
+        text: getString(message.text).trim().slice(0, 20_000),
+      }))
+      .filter((message) => message.text.length > 0);
+
+    if (messages.length === 0) {
+      return res.status(400).json({ error: "قائمة الرسائل فارغة أو غير صحيحة" });
+    }
+
+    const totalChatChars = messages.reduce((sum, message) => sum + message.text.length, 0);
+    if (totalChatChars > MAX_CHAT_TOTAL_CHARS) {
+      return res.status(400).json({
+        error: `حجم المحادثة يتجاوز الحد المحلي المسموح (${MAX_CHAT_TOTAL_CHARS} حرفًا).`,
+      });
+    }
+
+    const roleId = getString(body.roleId, "marketing_strategist");
+    const customInstruction = getString(body.customSystemInstruction).trim().slice(0, 10_000);
+    const profile = getString(body.profile, "balanced");
+    const requestedModel = sanitizeModelName(body.model, OLLAMA_MODEL);
+    const selectedModel =
+      profile === "reasoning"
+        ? OLLAMA_REASONING_MODEL
+        : profile === "fast"
+          ? OLLAMA_FAST_MODEL
+          : profile === "balanced" || profile === "default"
+            ? OLLAMA_MODEL
+            : requestedModel;
+
+    const instruction = ROLE_SYSTEM_INSTRUCTIONS[roleId] ?? ROLE_SYSTEM_INSTRUCTIONS.marketing_strategist;
+    const systemContent = customInstruction
+      ? `${instruction}\n\nتعليمات إضافية:\n${customInstruction}`
+      : instruction;
+
+    const contents: OllamaTextMessage[] = [
+      { role: "system", content: systemContent },
+      ...messages.map((message) => ({
+        role: mapRole(message.role),
+        content: message.text,
+      })),
+    ];
+
+    const result = await ollamaRequest({ model: selectedModel, messages: contents });
+    return res.json({ text: result.text, modelUsed: result.model, provider: "ollama-local" });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "حدث خطأ أثناء معالجة الطلب";
+    return res.status(502).json({ error: message });
   }
 });
 
-// 2. Image Analysis API using gemini-3.1-pro-preview (Mandated by user prompt)
-app.post('/api/analyze-image', async (req, res) => {
+app.post("/api/generate-content", async (req, res) => {
   try {
-    const { imageBase64, mimeType = 'image/jpeg', prompt = '', analysisType = 'comprehensive' } = req.body;
+    const body: unknown = req.body;
+    if (!isRecord(body)) return res.status(400).json({ error: "Invalid request body" });
 
-    if (!imageBase64) {
-      return res.status(400).json({ error: 'لم يتم إرسال بيانات الصورة (Base64)' });
-    }
+    const topic = getString(body.topic).trim().slice(0, 2_000);
+    if (!topic) return res.status(400).json({ error: "يرجى كتابة فكرة أو موضوع المحتوى" });
 
-    // Clean base64 string if data url header was included
-    const cleanBase64 = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+    const dialect = getString(body.dialect, "فصحى مبسطة").trim().slice(0, 200);
+    const tone = getString(body.tone, "احترافي").trim().slice(0, 200);
+    const audience = getString(body.targetAudience, "الجمهور العام").trim().slice(0, 500);
 
-    let defaultPrompt = '';
-    switch (analysisType) {
-      case 'ad_critique':
-        defaultPrompt = `حلل هذا البوستر/الإعلان التسويقي تحليلاً دقيقاً:
-1. تقييم التسلسل البصري (Visual Hierarchy) والخطاف الإعلاني (Hook).
-2. استخراج وفحص النصوص والرسائل الرئيسية والعرض المقدم (Offer).
-3. تقييم وضوح زر أو دعوة الإجراء (CTA).
-4. نقاط القوة ونقاط الضعف الجوهرية.
-5. 3 نصائح عملية فورية لرفع معدل التحويل (CTR & Conversion Rate) لهذا الإعلان.`;
-        break;
-
-      case 'ocr_copy':
-        defaultPrompt = `استخرج بدقة جميع النصوص المكتوبة في هذه الصورة وصنفها:
-1. العنوان الرئيسي (Headline)
-2. العروض والأسعار (Pricing / Offers)
-3. بيانات التواصل وحسابات التواصل الاجتماعي
-4. إعادة صياغة للنصوص بأسلوب إعلاني عربي أكثر جاذبية وقوة.`;
-        break;
-
-      case 'platform_fit':
-        defaultPrompt = `قيم مدى ملائمة هذا التصميم للمنصات الرقمية المختلفة (Instagram Feed/Stories, Facebook Feed, TikTok, WhatsApp Catalog):
-1. أبعاد التصميم ومدى مناسبتها لكل منصة.
-2. هل كمية النصوص تتوافق مع معايير إعلانات Meta؟
-3. كيف يمكن تعديل هذا المحتوى ليناسب ستوري إنستغرام أو رسالة واتساب مباشرة؟`;
-        break;
-
-      default:
-        defaultPrompt = `أنت خبير تسويق وتحليل إعلانات بصري بالذكاء الاصطناعي.
-حلل هذه الصورة الإعلانية/التسويقية بدقة شاملة:
-- الفكرة والرسالة الأساسية
-- نقد التصميم والألوان والخطوط
-- الجمهور المستهدف المحتمل
-- تقييم الجاذبية البصرية ومعدل التحويل المتوقع (من 1 إلى 10) مع التعليل
-- مقترحات تحسين ملموسة وعينات نصوص بديلة (A/B Testing Variants)`;
-        break;
-    }
-
-    const finalPrompt = prompt ? `${defaultPrompt}\n\nطلب خاص إضافي من المستخدم:\n${prompt}` : defaultPrompt;
-
-    // Use model gemini-3.1-pro-preview as explicitly required
-    const primaryModel = 'gemini-3.1-pro-preview';
-
-    const imagePart = {
-      inlineData: {
-        mimeType: mimeType || 'image/jpeg',
-        data: cleanBase64,
-      },
-    };
-
-    try {
-      const response = await ai.models.generateContent({
-        model: primaryModel,
-        contents: {
-          parts: [imagePart, { text: finalPrompt }],
-        },
-      });
-
-      return res.json({
-        analysis: response.text || '',
-        modelUsed: primaryModel,
-      });
-    } catch (proErr: any) {
-      console.warn('gemini-3.1-pro-preview vision error, falling back to gemini-3.5-flash:', redactText(String(proErr?.message ?? proErr)));
-      // Fallback to gemini-3.5-flash if pro preview requires billing activation
-      const fallbackResponse = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: {
-          parts: [imagePart, { text: finalPrompt }],
-        },
-      });
-
-      return res.json({
-        analysis: fallbackResponse.text || '',
-        modelUsed: 'gemini-3.5-flash',
-        fallbackNotice: 'تم إتمام التحليل بنجاح عبر نموذج gemini-3.5-flash.',
-      });
-    }
-  } catch (error: any) {
-    console.error('Image Analysis API Error:', describeError(error));
-    return res.status(500).json({
-      error: error?.message || 'فشل في تحليل الصورة بالذكاء الاصطناعي',
-    });
-  }
-});
-
-// 3. Multi-Format Content Studio Generator API
-app.post('/api/generate-content', async (req, res) => {
-  try {
-    const {
-      topic = '',
-      dialect = 'فصحى مبسطة',
-      tone = 'حماسي وجذاب',
-      targetAudience = 'الجمهور العام',
-      platforms = ['facebook', 'instagram', 'whatsapp', 'telegram'],
-    } = req.body;
-
-    if (!topic) {
-      return res.status(400).json({ error: 'يرجى كتابة فكرة أو موضوع المحتوى' });
-    }
-
-    const prompt = `أنت أفضل كاتب محتوى تسويقي عربي متعدد المنصات.
-الموضوع: "${topic}"
-اللهجة المطلوبة: ${dialect}
+    const prompt = `أنشئ حزمة محتوى تسويقية عربية متعددة المنصات بناءً على:
+الموضوع: ${topic}
+اللهجة: ${dialect}
 النبرة: ${tone}
-الجمهور المستهدف: ${targetAudience}
+الجمهور: ${audience}
 
-المطلوب: قم بإنشاء محتوى مخصص لكل منصة من المنصات التالية بشكل احترافي مع الحفاظ على روح كل منصة:
-1. منشور فيسبوك طويل (Facebook Post): مع عنوان قوي، قصة أو شرح للقيمة، دعوة للتفاعل والتعليق، وهاشتاجات مناسبة.
-2. منشور إنستغرام (Instagram Caption): نص بصري جذاب، خطاف أول 3 كلمات، تنسيق مريح، وهاشتاجات قوية.
-3. رسالة واتساب تسويقية (WhatsApp Broadcast): رسالة مختصرة ومباشرة، تستخدم التنسيق (*عريض*، _مائل_)، مع عرض واضح ورابط أو زر إجراء (CTA).
-4. نص فيديو قصير (Reels / TikTok Script): خطاف بصري وصوتي في أول 3 ثوانٍ، 3 نقاط سريعة، وخاتمة سريعة تدعو للمتابعة أو الشراء.
-5. رسالة تليجرام أو تغريدة إكس (Telegram / Twitter-X): نص فوري ومكثف مع روابط واضحة ورموز تعبيرية.
+اكتب أقساماً منفصلة لـ:
+1) Facebook
+2) Instagram
+3) WhatsApp
+4) Reels/TikTok script
+5) Telegram/X
 
-أجب بتنسيق منظم ومحدد لكل منصة.`;
+التزم بالحقائق التي أعطاها المستخدم، ولا تضف أرقام أداء أو ضمانات غير مثبتة.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
-      contents: prompt,
-      config: {
-        temperature: 0.8,
-      },
+    const result = await ollamaRequest({
+      model: OLLAMA_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      options: { temperature: 0.8 },
     });
 
     return res.json({
-      content: response.text || '',
-      modelUsed: 'gemini-3.5-flash',
+      content: result.text,
+      modelUsed: result.model,
+      provider: "ollama-local",
     });
-  } catch (error: any) {
-    console.error('Generate Content API Error:', describeError(error));
-    return res.status(500).json({
-      error: error?.message || 'فشل في توليد المحتوى التسويقي',
-    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "فشل توليد المحتوى";
+    return res.status(502).json({ error: message });
   }
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'Orbit Marketing OS Backend',
-    hasApiKey: Boolean(process.env.GEMINI_API_KEY),
-    time: new Date().toISOString(),
+app.post("/api/analyze-image", async (req, res) => {
+  try {
+    if (!OLLAMA_VISION_MODEL) {
+      return res.status(503).json({
+        error: "لم يتم إعداد نموذج رؤية محلي. اضبط OLLAMA_VISION_MODEL في .env.",
+      });
+    }
+
+    const body: unknown = req.body;
+    if (!isRecord(body)) return res.status(400).json({ error: "Invalid request body" });
+
+    const rawImage = getString(body.imageBase64).trim();
+    if (!rawImage) return res.status(400).json({ error: "لم يتم إرسال الصورة" });
+
+    const imageBase64 = rawImage.includes(",") ? rawImage.split(",").at(-1) ?? "" : rawImage;
+    if (!imageBase64 || imageBase64.length > 15_000_000) {
+      return res.status(400).json({ error: "حجم الصورة غير صالح" });
+    }
+
+    const analysisType = getString(body.analysisType, "comprehensive");
+    const extraPrompt = getString(body.prompt).trim().slice(0, 4_000);
+
+    const basePrompt: Readonly<Record<string, string>> = {
+      ad_critique:
+        "حلل الإعلان من حيث الرسالة، التسلسل البصري، CTA، نقاط القوة، نقاط الضعف، وتحسينات عملية.",
+      ocr_copy:
+        "استخرج النصوص الظاهرة، ثم صنفها إلى عنوان وعرض وCTA وبيانات تواصل، واقترح صياغة أوضح.",
+      platform_fit:
+        "قيّم ملاءمة التصميم لأحجام وممارسات المحتوى الشائعة على Instagram وFacebook وTikTok وWhatsApp.",
+      comprehensive:
+        "قدّم مراجعة شاملة للفكرة، التصميم، النص، وضوح العرض، الجمهور المحتمل، وتحسينات عملية قابلة للاختبار.",
+    };
+
+    const prompt = `${basePrompt[analysisType] ?? basePrompt.comprehensive}
+${extraPrompt ? `\nطلبات إضافية:\n${extraPrompt}` : ""}`;
+
+    const result = await ollamaRequest({
+      model: OLLAMA_VISION_MODEL,
+      messages: [{
+        role: "user",
+        content: prompt,
+        images: [imageBase64],
+      }],
+    });
+
+    return res.json({
+      analysis: result.text,
+      modelUsed: result.model,
+      provider: "ollama-local",
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "فشل تحليل الصورة";
+    return res.status(502).json({ error: message });
+  }
+});
+
+app.get("/api/health", async (_req, res) => {
+  let ollamaStatus: "ok" | "degraded" = "ok";
+  try {
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
+      signal: AbortSignal.timeout(5_000),
+    });
+    ollamaStatus = response.ok ? "ok" : "degraded";
+  } catch {
+    ollamaStatus = "degraded";
+  }
+
+  return res.status(200).json({
+    status: ollamaStatus === "ok" ? "ok" : "degraded",
+    service: "Orbit Marketing OS Local Runtime",
+    host: RUNTIME_HOST,
+    provider: "ollama-local",
+    ai: {
+      status: ollamaStatus,
+      model: OLLAMA_MODEL,
+      profiles: {
+        balanced: OLLAMA_MODEL,
+        fast: OLLAMA_FAST_MODEL,
+        reasoning: OLLAMA_REASONING_MODEL,
+      },
+      visionConfigured: Boolean(OLLAMA_VISION_MODEL),
+    },
   });
 });
 
-// Setup Vite middleware in development or serve static in production
-async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
+async function startServer(): Promise<void> {
+  if (process.env.NODE_ENV !== "production") {
+    const { createServer } = await import("vite");
+    const vite = await createServer({
       server: { middlewareMode: true },
-      appType: 'spa',
+      appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    // Production: serve built static files
-    const distPath = path.join(__dirname, 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    const webDistPath = path.join(__dirname, "packages", "web", "out");
+    const webIndex = path.join(webDistPath, "index.html");
+    if (!path.isAbsolute(webDistPath)) {
+      throw new Error("Invalid production web output path");
+    }
+    app.use(express.static(webDistPath));
+    app.get("/{*splat}", (_req, res) => {
+      res.sendFile(webIndex, (error) => {
+        if (error && !res.headersSent) {
+          res.status(503).json({
+            error: "Web build output is not available. Run the workspace web build first.",
+          });
+        }
+      });
     });
   }
 
-  app.listen(PORT, () => {
-    console.log(`🚀 Orbit Marketing OS Server running on port ${PORT}`);
+  app.listen(PORT, RUNTIME_HOST, () => {
+    process.stdout.write(`Orbit Marketing OS local runtime listening on ${RUNTIME_HOST}:${PORT}\n`);
   });
 }
 
-startServer().catch((err) => {
-  console.error('Failed to start server:', describeError(err));
+startServer().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : "Failed to start server";
+  process.stderr.write(`${message}\n`);
+  process.exitCode = 1;
 });

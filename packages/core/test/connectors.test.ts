@@ -1,76 +1,76 @@
 import { describe, expect, it } from "vitest";
 import {
-  executeCapability,
-  handleChallenge,
-  handshake,
+  assertSupportedTask,
+  assertUserConfirmed,
+  ConnectorRegistry,
+  FixtureConnector,
 } from "../src/connectors/index.js";
-import type { ConnectorDescriptor } from "../src/types/index.js";
+import type { Task } from "../src/types/index.js";
 
-const descriptor: ConnectorDescriptor = {
-  id: "facebook-browser",
+const task: Task = {
+  id: "task-1",
+  workspaceId: "workspace-1",
+  campaignId: "campaign-1",
+  accountId: "account-1",
   platform: "facebook",
-  capabilities: ["publish", "comment", "read_inbox"],
-  mode: "browser_assisted",
+  kind: "publish",
+  priority: 1,
+  status: "pending",
+  attempts: 0,
+  maxAttempts: 3,
+  availableAt: "2026-09-24T00:00:00.000Z",
+  idempotencyKey: "task-1",
+  createdAt: "2026-09-24T00:00:00.000Z",
 };
 
-describe("connector capability handshake", () => {
-  it("accepts when all declared capabilities are implemented", () => {
-    const result = handshake(descriptor, ["publish", "comment", "read_inbox", "analytics"]);
-    expect(result.ok).toBe(true);
+describe("connector authorization boundary", () => {
+  it("rejects externally-visible actions without explicit confirmation", () => {
+    expect(() =>
+      assertUserConfirmed({
+        accountId: "acc-1",
+        userConfirmed: false,
+      }),
+    ).toThrow("Explicit user confirmation is required");
   });
 
-  it("rejects when declared capability is missing", () => {
-    const result = handshake(descriptor, ["publish"]);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.requiresIntervention).toBe(true);
-      expect(result.error).toContain("comment");
-    }
+  it("accepts an explicitly confirmed action", () => {
+    expect(() =>
+      assertUserConfirmed({
+        accountId: "acc-1",
+        userConfirmed: true,
+      }),
+    ).not.toThrow();
   });
 
-  it("rejects unsupported action", () => {
-    const result = executeCapability(descriptor, ["publish", "comment"], "direct_message", () => ({
-      ok: true as const,
-      data: null,
-    }));
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toContain("direct_message");
-    }
+  it("rejects a task for the wrong platform", () => {
+    const connector = new FixtureConnector({ platform: "facebook" });
+    expect(() =>
+      assertSupportedTask(connector, { ...task, platform: "instagram" }),
+    ).toThrow("Task platform does not match connector platform");
   });
 
-  it("runs supported capability and captures thrown errors as intervention", () => {
-    const ok = executeCapability(descriptor, ["publish"], "publish", () => ({
-      ok: true as const,
-      data: { postId: "1" },
-    }));
-    expect(ok.ok).toBe(true);
-
-    const thrown = executeCapability(descriptor, ["publish"], "publish", () => {
-      throw new Error("dom changed");
+  it("rejects a task kind not exposed by a connector", () => {
+    const connector = new FixtureConnector({
+      platform: "facebook",
+      capabilities: { publish: false },
     });
-    expect(thrown.ok).toBe(false);
-    if (!thrown.ok) {
-      expect(thrown.requiresIntervention).toBe(true);
-    }
-  });
-});
-
-describe("challenge safe stop", () => {
-  it("does nothing when no challenge", () => {
-    const result = handleChallenge({ kind: "unknown_checkpoint", detected: false });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.requiresIntervention).toBe(false);
-    }
+    expect(() => assertSupportedTask(connector, task)).toThrow(
+      "Connector does not support task kind: publish",
+    );
   });
 
-  it("stops safely and requests intervention on challenge", () => {
-    const result = handleChallenge({ kind: "captcha", detected: true });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.requiresIntervention).toBe(true);
-      expect(result.error).toContain("captcha");
-    }
+  it("rejects duplicate platform registrations", () => {
+    const registry = new ConnectorRegistry();
+    registry.register(new FixtureConnector({ platform: "facebook" }));
+    expect(() => registry.register(new FixtureConnector({ platform: "facebook" }))).toThrow(
+      "Connector already registered",
+    );
+  });
+
+  it("returns a typed missing-connector failure from require", () => {
+    const registry = new ConnectorRegistry();
+    expect(() => registry.require("facebook")).toThrow(
+      "No connector registered for platform: facebook",
+    );
   });
 });

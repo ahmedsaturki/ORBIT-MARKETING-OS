@@ -1,0 +1,42 @@
+{
+  "installCommand": "bash scripts/vercel-install.sh",
+  "buildCommand": "pnpm --dir packages/web build",
+  "outputDirectory": "packages/web/out",
+  "framework": "nextjs",
+  "ignoreCommand": "bash scripts/vercel-ignore.sh",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "same-origin"
+        }
+      ]
+    }
+  ],
+  "git": {
+    "deploymentEnabled": false
+  },
+  "$schema": "https://openapi.vercel.sh/vercel.json"
+}

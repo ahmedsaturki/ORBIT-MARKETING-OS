@@ -15,7 +15,7 @@ export function evaluateApproval(content: ContentItem, approval?: Approval): App
   }
 
   if (!approval) {
-    return { status: content.approvalStatus, allowedToPublish: content.approvalStatus === "draft", reason: "not_required" };
+    return { status: content.approvalStatus, allowedToPublish: false, reason: "not_required" };
   }
 
   switch (approval.status) {

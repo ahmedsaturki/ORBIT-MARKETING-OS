@@ -1,42 +1,70 @@
-# ORBIT Verification Snapshot — 2026-09-24
+# ORBIT Current Verification Snapshot — 2026-09-24
 
-## Current source head
+Source implementation head at snapshot: "8904f23766b502525bbcb7d3dee825687ff914f0"
 
-- Branch: `rebuild/orbit-production`
-- HEAD: `a5c163df9adca5b6e2591b274a64e0a9f44cebf3`
-- PR #2: open, draft, unmerged
+## Live repository state
 
-## Source-level repairs completed in this tranche
+- Active branch: `rebuild/orbit-production-consolidated`
+- PR #9: open, draft, unmerged
+- Latest hosted CI run: the latest hosted jobs still fail before usable workflow step execution.
+- Latest hosted CI result: job failed before any workflow steps executed; no usable runner step evidence
+- Active self-hosted verification run: a fresh push-triggered run is expected for the final consolidated head after this documentation sync.
+- Self-hosted job: `107820579765`
+- Self-hosted status: queued for an eligible runner
+- Workflow steps registered: none yet
+- Interpretation: runner allocation/execution infrastructure failure; no TypeScript/Rust/test result is implied.
 
-1. Removed duplicate Rust derive attributes that could stop compilation.
-2. Repaired the malformed Rust rule-pack test string literal.
-3. Added the missing `workspace_id` fixture in the audit hash-chain test.
-4. Updated native account upsert logic so the persisted authorization status follows the submitted status, with a regression test.
-5. Normalized task scheduling timestamps to UTC RFC3339 before persistence/claim comparison.
-6. Bounded native task `max_attempts` to 1..=10 and added regression coverage.
-7. Updated the LinkedIn connector default API version to 202609.
-8. Strengthened workspace verification to detect duplicate consecutive Rust derive attributes.
+## Local execution environment
 
-## Execution evidence
+- Node.js: `v22.16.0`
+- npm: `10.9.2`
+- Corepack: `0.32.0`
+- pnpm: not installed
+- npm registry DNS/network: unavailable from this execution environment
+- pnpm cache: no local package/cache entry available
+- Result: no reproducible `pnpm-lock.yaml` or `Cargo.lock` is fabricated.
 
-- GitHub Actions latest CI run for this branch reached a job with `runner_id=0`, no runner name, and zero registered steps, then failed before executing the first workflow step.
-- A self-hosted lockfile-bootstrap run remains an external execution prerequisite; no committed `pnpm-lock.yaml` exists yet.
-- Local shell verification cannot manufacture a reproducible lockfile because the execution environment has no working npm registry access and does not have pnpm installed.
-- No successful clean TypeScript/Rust/browser/build evidence is claimed from this environment.
+## Source hardening completed in this line
+
+- Native SQLite schema v10 with workspace-scoped task idempotency.
+- v10 task migration guarded by version check and wrapped in a transaction.
+- Workspace/RBAC enforcement and runtime-derived approval identity.
+- Atomic approval + audit transactions.
+- Audit-integrity fail-closed external Telegram execution.
+- Invalid/ambiguous Telegram delivery responses park in human-intervention state.
+- UTC-normalized native/core task scheduling and bounded retry budgets across rule-pack, native, and core queue layers.
+- Account authorization/session state synchronization after upsert.
+- Typed/serializable desktop IPC views and stronger IPC verification.
+- LinkedIn connector default API version `202609`.
+- License install/delete mutations are atomic with audit-chain append.
+- Native conversation upsert returns the persisted message count.
+- Compatibility-shell formatting cleanup.
+- Repository-wide secret-pattern/tree scan found no tracked private-key/credential files; only `.env.example` matched the sensitive filename allowlist.
+
+## CI/release infrastructure
+
+- Branch-restricted bootstrap and full self-hosted verification workflows are exposed from `main` for manual dispatch and accept the approved rebuild refs, including `rebuild/orbit-production-consolidated`.
+- GitHub-hosted runner allocation remains the current execution blocker.
+- Current repository contains no committed `pnpm-lock.yaml` or `packages/desktop/src-tauri/Cargo.lock`.
 
 ## Vercel
 
-- Project: `orbit-marketing-os`
-- Project ID: `prj_XL2WKssI4tzw4Wd5OQw4Pb1v6dMt`
-- Repository-side Vercel configuration targets a Next.js static export at `packages/web/out`.
-- The connected project metadata has reported framework `vite`, so effective project settings still require verification.
-- The latest observed rebuild deployment failed at the install step because the repository did not contain `pnpm-lock.yaml`.
-- No successful production deployment is claimed.
+- Project: `orbit-marketing-os`.
+- Automatic Git builds are disabled repository-side.
+- Historical concrete rebuild deployment: ERROR during `bash scripts/vercel-install.sh` because `pnpm-lock.yaml` was absent.
+- Repository contract remains Next.js static export to `packages/web/out`.
+- Effective Vercel project framework/Root Directory still require external verification.
+- Successful guarded prebuilt production deployment and rollback remain unverified.
+- Vercel project-setting mutation is not executable through the connected tool: its declared schema requires `projectId`, while the backend reports an incompatible `idOrName` expectation.
 
-## Release state
+## Remaining release gates
 
-Production launch remains blocked until the reproducible install/lockfile gate and actual clean-environment execution gates pass. Desktop/mobile signing and commercial payment configuration remain separate release prerequisites.
+1. Real dependency resolution + committed `pnpm-lock.yaml` and `Cargo.lock`.
+2. Clean TypeScript/Rust/runtime/browser/device execution evidence.
+3. Real authorized connector/platform verification.
+4. Security/dependency audit, performance benchmarks, and soak.
+5. Desktop/mobile signing and production distribution.
+6. Successful Vercel prebuilt deployment + rollback test.
+7. Commercial billing/payment and final legal/commercial review.
 
-## LinkedIn compatibility note
-
-LinkedIn's current Marketing API documentation lists version `202609` (September 2026) as the active release, with versioned REST requests using the `Linkedin-Version: YYYYMM` header. ORBIT now defaults its LinkedIn connector to `202609`.
+No production-ready, signed, commercial-launch, or successful-deployment claim is made without fresh evidence.

@@ -1,9 +1,90 @@
-export type ApprovalStatus =
-  | "draft"
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "changes_requested";
+export type Platform = "facebook" | "instagram" | "telegram" | "whatsapp" | "linkedin" | "tiktok";
+
+export type AccountStatus = "connected" | "needs_refresh" | "restricted" | "paused";
+export type CampaignStatus = "draft" | "awaiting_approval" | "scheduled" | "running" | "paused" | "completed" | "failed";
+export type TaskStatus = "pending" | "awaiting_approval" | "awaiting_user_action" | "running" | "succeeded" | "failed" | "blocked" | "cancelled";
+export type ApprovalStatus = "draft" | "pending" | "approved" | "rejected" | "changes_requested";
+export type ConversationStatus = "new" | "interested" | "potential_customer" | "complaint" | "closed";
+export type ContactStatus = "new" | "interested" | "sold" | "lost";
+export type TaskKind = "publish" | "message" | "comment" | "sync" | "engage";
+export type Actor = "user" | "system" | "connector";
+
+export interface SocialAccount {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly platform: Platform;
+  readonly displayName: string;
+  readonly username?: string;
+  readonly status: AccountStatus;
+  readonly healthScore: number;
+  readonly createdAt: string;
+  readonly lastActivityAt?: string;
+}
+
+export interface ContentItem {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly title: string;
+  readonly body: string;
+  readonly platformVariants: Readonly<Record<Platform, string | undefined>>;
+  readonly approvalStatus: ApprovalStatus;
+  readonly tags: readonly string[];
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface Campaign {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly status: CampaignStatus;
+  readonly accountIds: readonly string[];
+  readonly contentIds: readonly string[];
+  readonly taskCount: number;
+  readonly createdAt: string;
+}
+
+export interface Task {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly campaignId: string;
+  readonly accountId: string;
+  readonly platform: Platform;
+  readonly kind: TaskKind;
+  readonly contentId?: string;
+  readonly destinationId?: string;
+  readonly priority: number;
+  readonly status: TaskStatus;
+  readonly attempts: number;
+  readonly maxAttempts: number;
+  readonly availableAt: string;
+  readonly idempotencyKey: string;
+  readonly createdAt: string;
+}
+
+export interface Conversation {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly accountId: string;
+  readonly platform: Platform;
+  readonly externalId: string;
+  readonly contactId?: string;
+  readonly status: ConversationStatus;
+  readonly assigneeId?: string;
+  readonly lastMessageAt?: string;
+}
+
+export interface Contact {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly phone?: string;
+  readonly email?: string;
+  readonly source?: string;
+  readonly status: ContactStatus;
+  readonly tags: readonly string[];
+  readonly followUpAt?: string;
+}
 
 export interface Approval {
   readonly id: string;
@@ -17,119 +98,31 @@ export interface Approval {
   readonly note?: string;
 }
 
-export interface ContentItem {
+export interface ConnectorCapabilities {
+  readonly publish: boolean;
+  readonly messaging: boolean;
+  readonly comments: boolean;
+  readonly inbox: boolean;
+  readonly analytics: boolean;
+  readonly media: boolean;
+}
+
+export interface ConnectorHealth {
+  readonly platform: Platform;
+  readonly connected: boolean;
+  readonly authenticated: boolean;
+  readonly challengeDetected: boolean;
+  readonly checkedAt: string;
+}
+
+export interface AuditEvent {
   readonly id: string;
-  readonly workspaceId: string;
-  readonly title: string;
-  readonly body: string;
-  readonly platformVariants: Readonly<Record<string, string | undefined>>;
-  readonly approvalStatus: ApprovalStatus;
-  readonly tags: readonly string[];
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly mediaIds?: readonly string[];
-  readonly campaignId?: string;
-}
-
-export type TaskStatus =
-  | "queued"
-  | "running"
-  | "completed"
-  | "failed"
-  | "retrying"
-  | "cancelled"
-  | "blocked";
-
-export type TaskActionType =
-  | "post_group"
-  | "post_page"
-  | "send_dm"
-  | "comment"
-  | "follow"
-  | "like"
-  | "whatsapp_msg"
-  | "telegram_post";
-
-export interface QueueTask {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly campaignId?: string;
-  readonly platform: string;
-  readonly accountId: string;
-  readonly actionType: TaskActionType;
-  readonly target: string;
-  readonly payload: {
-    readonly text?: string;
-    readonly mediaUrl?: string;
-    readonly recipient?: string;
-  };
-  readonly status: TaskStatus;
-  readonly priority: "high" | "normal" | "low";
-  readonly retries: number;
-  readonly maxRetries: number;
-  readonly lastError?: string;
-  readonly scheduledTime: string;
-  readonly executedTime?: string;
-  readonly delayAppliedSeconds?: number;
-}
-
-export interface PolicyContext {
-  readonly workspaceId: string;
-  readonly accountId: string;
-  readonly platform: string;
-  readonly actionType: TaskActionType;
-  readonly now: string;
-  readonly dailyActionsDone: number;
-  readonly dailyLimit: number;
-  readonly accountStatus: "active" | "paused" | "restricted" | "warming_up";
-  readonly challengeActive: boolean;
-  readonly breakerOpen: boolean;
-  readonly approvalAllowed: boolean;
-}
-
-export type PolicyDecisionReason =
-  | "allowed"
-  | "daily_limit"
-  | "account_paused"
-  | "account_restricted"
-  | "challenge_active"
-  | "circuit_open"
-  | "approval_required";
-
-export interface PolicyDecision {
-  readonly allowed: boolean;
-  readonly reason: PolicyDecisionReason;
-  readonly detail?: string;
-}
-
-export type ConnectorCapability =
-  | "publish"
-  | "comment"
-  | "direct_message"
-  | "read_inbox"
-  | "analytics";
-
-export interface ConnectorDescriptor {
-  readonly id: string;
-  readonly platform: string;
-  readonly capabilities: readonly ConnectorCapability[];
-  readonly mode: "official" | "browser_assisted" | "local_import" | "notification_assisted";
-}
-
-export type ConnectorResult<T = unknown> =
-  | { readonly ok: true; readonly data: T }
-  | { readonly ok: false; readonly error: string; readonly requiresIntervention: boolean };
-
-export type CircuitState = "closed" | "open" | "half_open";
-
-export interface AuditEntry {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly actorId: string;
-  readonly action: string;
-  readonly entityRef: string;
   readonly timestamp: string;
+  readonly workspaceId: string;
+  readonly category: "account" | "campaign" | "task" | "security" | "connector" | "content" | "media" | "automation" | "inbox" | "crm" | "sync" | "backup" | "license";
+  readonly action: string;
+  readonly outcome: "success" | "failure" | "blocked";
+  readonly actor: Actor;
+  readonly entityId?: string;
   readonly metadata?: Readonly<Record<string, string | number | boolean>>;
-  readonly prevHash?: string;
-  readonly hash: string;
 }
