@@ -1,7 +1,15 @@
 name: Bootstrap reproducible lockfiles
 
+# The push trigger is intentionally path-scoped: the generated pnpm-lock.yaml
+# does not match these paths, so the bootstrap commit cannot recursively trigger
+# itself. Manual workflow_dispatch remains available for deliberate re-bootstrap.
 on:
   workflow_dispatch:
+  push:
+    branches: ["rebuild/orbit-production"]
+    paths:
+      - ".github/workflows/bootstrap-lockfile.yml"
+      - "scripts/bootstrap-lockfile.sh"
 
 permissions:
   contents: write
