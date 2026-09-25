@@ -5,6 +5,7 @@ Updated: 2026-09-25
 | Surface                           | Implemented        | Verified runtime                                                                  | Release state   |
 | --------------------------------- | ------------------ | --------------------------------------------------------------------------------- | --------------- |
 | Core domain                       | yes                | Main CI typecheck/tests/coverage passed                                           | VERIFIED        |
+| Mission Control + Strategy Studio | yes                | Desktop surfaces wired to workspace-local runtime state and governed strategy/outcome commands | PARTIAL         |
 | Operating graph + governed work   | yes                | Core graph/decision tests + native persistence contracts added in PR #39              | PARTIAL         |
 | Opportunities + insights          | yes                | v12 migration/validation exists; full product E2E remains                                  | PARTIAL         |
 | Desktop Tauri shell               | yes                | Native packaging + native E2E validation is running in PR #38                     | PARTIAL         |
