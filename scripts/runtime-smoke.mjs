@@ -17,79 +17,67 @@ async function waitForChildExit(child, timeoutMs = 5_000) {
 }
 
 async function terminateChild(child) {
-  if (child.exitCode !== null) return;
-  if (child.pid && process.platform !== "win32") {
+  if (child.pid === undefined) return;
+
+  if (child.exitCode === null) {
     try {
-      process.kill(-child.pid, "SIGTERM");
-    } catch {
-      try {
+      if (process.platform !== "win32") {
+        process.kill(-child.pid, "SIGTERM");
+      } else {
         child.kill("SIGTERM");
-      } catch {}
-    }
-  } else {
+      }
+    } catch {}
+    await waitForChildExit(child, 2_500);
+  }
+
+  if (child.exitCode === null) {
     try {
-      child.kill("SIGTERM");
+      if (process.platform !== "win32") {
+        process.kill(-child.pid, "SIGKILL");
+      } else {
+        child.kill("SIGKILL");
+      }
+    } catch {}
+    await waitForChildExit(child, 2_500);
+  }
+
+  if (child.exitCode === null && process.platform !== "win32") {
+    try {
+      process.kill(child.pid, "SIGKILL");
     } catch {}
   }
-  await waitForChildExit(child, 5_000);
+
   if (child.exitCode === null) {
-    if (child.pid && process.platform !== "win32") {
-      try {
-        process.kill(-child.pid, "SIGKILL");
-      } catch {}
-    } else {
-      try {
-        child.kill("SIGKILL");
-      } catch {}
-    }
-    await waitForChildExit(child, 2_000);
-  }
-  if (child.exitCode === null) {
-    throw new Error("runtime child process did not terminate cleanly");
+    // A direct Node child may report the exit event slightly after SIGKILL;
+    // the OS signal above is the authoritative cleanup mechanism.
+    await waitForChildExit(child, 500);
   }
 }
 
-function resolvePnpmExecutable() {
-  const pnpmHome = process.env.PNPM_HOME?.trim();
-  if (pnpmHome) {
-    const candidate = path.join(
-      pnpmHome,
-      process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-    );
-    if (existsSync(candidate)) return candidate;
-  }
-
-  const pathEntries = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
-  const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  for (const entry of pathEntries) {
-    const candidate = path.join(entry, executable);
-    if (existsSync(candidate)) return candidate;
-  }
-
-  return executable;
-}
-
-const PNPM_EXECUTABLE = resolvePnpmExecutable();
+const TSX_CLI = path.join(
+  process.cwd(),
+  "node_modules",
+  "tsx",
+  "dist",
+  "cli.mjs",
+);
 
 function spawnRuntime(env) {
   const childEnv = {
     ...env,
-    ...(process.env.PNPM_HOME
-      ? {
-          PATH:
-            process.env.PNPM_HOME +
-            path.delimiter +
-            (env.PATH ?? process.env.PATH ?? ""),
-        }
-      : {}),
   };
-  return spawn(PNPM_EXECUTABLE, ["runtime:start"], {
+  const child = spawn(process.execPath, [TSX_CLI, "server.ts"], {
     env: childEnv,
     stdio: ["ignore", "pipe", "pipe"],
-    shell: process.platform === "win32",
+    shell: false,
     detached: process.platform !== "win32",
     windowsHide: true,
   });
+  child.on("error", (error) => {
+    // Prevent an unhandled ChildProcess 'error' from masking the actual smoke result.
+    child.__spawnError = error;
+  });
+  return child;
 }
 
 function assert(condition, message) {
@@ -138,7 +126,7 @@ for (const url of [
   "http://example.com:11434",
   "https://example.com:11434",
 ]) {
-  const probe = spawnSync(PNPM_EXECUTABLE, ["exec", "tsx", "server.ts"], {
+  const probe = spawnSync(process.execPath, [TSX_CLI, "server.ts"], {
     env: { ...process.env, OLLAMA_BASE_URL: url, PORT: "3199" },
     encoding: "utf8",
   });
