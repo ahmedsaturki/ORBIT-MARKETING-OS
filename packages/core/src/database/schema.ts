@@ -469,6 +469,4 @@ CREATE INDEX IF NOT EXISTS idx_insights_workspace_updated
 
 PRAGMA user_version = 12;
 
-PRAGMA user_version = 12;
-
 `;
