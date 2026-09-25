@@ -5197,8 +5197,8 @@ fn validate_strategy_reference_ids(
     Ok(())
 }
 
-#[tauri::command]
 // This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn objective_upsert(
     app: tauri::AppHandle,
@@ -5542,8 +5542,8 @@ fn offer_list(app: tauri::AppHandle) -> Result<Vec<OfferView>, String> {
         .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
 // This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn opportunity_upsert(
     app: tauri::AppHandle,
@@ -5748,8 +5748,8 @@ fn opportunity_list(app: tauri::AppHandle) -> Result<Vec<OpportunityView>, Strin
         .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
 // This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn insight_upsert(
     app: tauri::AppHandle,
@@ -5982,8 +5982,8 @@ fn insight_list(app: tauri::AppHandle) -> Result<Vec<InsightView>, String> {
         .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
 // This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn strategy_upsert(
     app: tauri::AppHandle,
@@ -6809,8 +6809,8 @@ fn validate_work_dependency_kind(value: &str) -> Result<String, String> {
     }
 }
 
-#[tauri::command]
 // This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn agent_upsert(
     app: tauri::AppHandle,
@@ -7141,8 +7141,8 @@ fn agent_run_list(app: tauri::AppHandle) -> Result<Vec<AgentRunView>, String> {
         .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
 // This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn policy_upsert(
     app: tauri::AppHandle,
@@ -7268,8 +7268,8 @@ fn policy_list(app: tauri::AppHandle) -> Result<Vec<MarketingPolicyView>, String
         .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
 // This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn work_item_upsert(
     app: tauri::AppHandle,
