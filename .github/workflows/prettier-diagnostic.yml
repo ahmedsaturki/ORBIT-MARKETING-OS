@@ -42,3 +42,7 @@ jobs:
             packages/core/src/replay/index.ts
       - name: Verify repository formatting after rendering
         run: pnpm exec prettier --check .
+      - name: Stop after diagnostic output
+        run: |
+          echo "DIAGNOSTIC_ONLY"
+          exit 1
