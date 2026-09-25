@@ -37,11 +37,15 @@ describe("campaign plan compiler", () => {
       "outcome_review",
       "learning",
     ]);
-    expect(plan.steps[4]).toMatchObject({
+    const approvalStep = plan.steps[4];
+    const executionStep = plan.steps[5];
+    expect(approvalStep).toBeDefined();
+    expect(executionStep).toBeDefined();
+    expect(approvalStep).toMatchObject({
       id: "campaign-1:approval",
       requiresApproval: true,
     });
-    expect(plan.steps[5].dependsOn).toEqual(["campaign-1:approval"]);
+    expect(executionStep?.dependsOn).toEqual(["campaign-1:approval"]);
   });
 
   it("rejects strategy from another workspace", () => {
