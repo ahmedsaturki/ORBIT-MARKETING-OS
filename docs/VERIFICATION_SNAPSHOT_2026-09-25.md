@@ -10,6 +10,7 @@
 ## Exact-head verification
 
 PR #35 CI quality completed successfully on the exact head, including:
+
 - reproducible frozen install;
 - release sanity and secret scan;
 - dependency audit;
@@ -22,12 +23,14 @@ PR #35 CI quality completed successfully on the exact head, including:
 - format check.
 
 PR #35 Rust quality completed successfully on the exact head:
+
 - rustfmt;
 - cargo check;
 - cargo test;
 - clippy with warnings denied.
 
 Native desktop validation has produced successful bundles for:
+
 - Windows x64;
 - Linux x64;
 - macOS x64;
@@ -40,6 +43,7 @@ Windows native E2E and Android debug validation remain the active jobs in the cu
 The connected Vercel project `orbit-marketing-os` has a READY production deployment at `orbit-marketing-os.vercel.app`.
 
 Direct verification has passed for:
+
 - home;
 - pricing;
 - privacy;
