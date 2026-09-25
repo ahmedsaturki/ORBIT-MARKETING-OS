@@ -9,6 +9,7 @@
     "moduleResolution": "bundler",
     "jsx": "preserve",
     "isolatedModules": true,
+    "incremental": true,
     "plugins": [
       {
         "name": "next"
