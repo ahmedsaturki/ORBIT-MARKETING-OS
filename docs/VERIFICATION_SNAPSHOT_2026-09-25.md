@@ -1,73 +1,56 @@
 # ORBIT Verification Snapshot — 2026-09-25
 
-## Current canonical cut
+## Canonical state
 
 - Default branch: `main`
-- Current open implementation PR: #35
-- PR #35 head: `b0ee492275b9cd56353a3bcfcb6e2499820da7af`
-- PR #35 is open, non-draft, unmerged.
+- Current main HEAD at snapshot: `929aaa49aa435761c2a87925d67a0749f70ae287`
+- PR #37 merged: governed marketing operating model foundation is on main.
+- PR #38 is the current release/native cleanup line and is the authoritative validation surface for this cut.
 
-## Exact-head verification
+## Verified main foundation
 
-The immediately preceding PR #35 head had a complete CI quality PASS; the current exact head is `b0ee492...` after documentation/cleanup changes and has fresh CI validation active.
+The merged main lineage includes:
 
-- reproducible frozen install;
-- release sanity and secret scan;
-- dependency audit;
-- workspace sanity;
-- TypeScript typecheck and Desktop IPC checks;
-- lint, unit/integration tests and coverage;
-- local-runtime smoke and performance smoke;
-- monorepo build;
-- browser E2E;
-- format check.
+- local-first desktop/runtime ownership;
+- workspace-aware operations;
+- secure vault/audit primitives;
+- persistent task/approval flows;
+- Telegram native and LinkedIn capability-scoped connector paths;
+- governed Strategy, Knowledge, Agent, Policy, and Operations contracts;
+- product blueprint documenting the Strategy → Campaign → Content → Execution → CRM/Inbox → Analytics → Learning graph.
 
-The immediately preceding PR #35 head had a complete Rust quality PASS; fresh exact-head validation is active.
+## Current release validation
 
-- rustfmt;
-- cargo check;
-- cargo test;
-- clippy with warnings denied.
+PR #38 is validating:
 
-Native desktop validation has produced successful bundles for:
+- canonical `packages/desktop` Tauri paths;
+- removal of the obsolete root Vite/Tauri UI/runtime surface;
+- Desktop Windows/Linux/macOS bundle matrix;
+- Windows native E2E, including renderer capability isolation and workspace/recovery scenarios;
+- Android debug validation;
+- Vercel static-export dry-run guards;
+- current release/verification scorecards.
 
-- Windows x64;
-- Linux x64;
-- macOS x64;
-- macOS arm64.
+The current PR must not be treated as production-ready until its exact-head runtime/native evidence settles.
 
-The current exact-head native validation result is not claimed until its fresh jobs settle.
+## Live web
 
-## Web production
+The connected `orbit-marketing-os` Vercel project has a READY production deployment and the public web surface has been independently checked for the current routes, manifest/service worker, 404 handling, and expected browser security headers.
 
-The connected Vercel project `orbit-marketing-os` has a READY production deployment at `orbit-marketing-os.vercel.app`.
-
-Direct verification has passed for:
-
-- home;
-- pricing;
-- privacy;
-- terms;
-- refunds;
-- EULA;
-- manifest;
-- service worker;
-- unknown-route 404;
-- HSTS and the expected browser security headers.
-
-The current READY deployment metadata is empty, so it is not treated as proof of the guarded GitHub prebuilt provenance path. Effective Vercel project metadata still reports `framework: vite`, while the repository contract intentionally uses the static-export configuration in `vercel.json`.
+The effective Vercel project metadata still requires reconciliation because it reports `framework: vite` while the repository contract targets a Next.js static export.
 
 ## Remaining release gates
 
-- Windows native E2E and Android debug artifact validation on PR #35;
-- merge PR #35 and run post-merge verification on the exact resulting main head;
-- dedicated real-instance desktop restart/migration/crash-recovery acceptance;
-- controlled live Telegram authorization/delivery test;
-- controlled live LinkedIn authorization/publishing test;
-- live multi-device CRDT network evidence beyond simulation;
-- dedicated accessibility/RTL audit;
+Implementation presence is not release evidence. Remaining gates include:
+
+- exact-head native desktop and Android validation;
+- dedicated real-instance crash/restart/migration recovery;
+- controlled real Telegram authorization/delivery test;
+- controlled real LinkedIn authorization/publishing test;
+- live multi-device CRDT network evidence;
+- accessibility/RTL audit;
 - 24-hour soak and recovery evidence;
-- final checksum/provenance release verification;
+- checksum/provenance verification for the final release;
 - desktop signing/notarization;
 - Android/iOS production signing and store distribution;
 - Vercel guarded deployment provenance and rollback drill;
@@ -75,4 +58,4 @@ The current READY deployment metadata is empty, so it is not treated as proof of
 
 ## Evidence rule
 
-Implementation presence is not release evidence. A gate moves to VERIFIED only when its current execution, artifact, or controlled human-authorized evidence exists.
+Only current execution records, artifacts, or controlled human-authorized tests may move an applicable gate to VERIFIED. No source-only or historical result is copied forward as current evidence.
