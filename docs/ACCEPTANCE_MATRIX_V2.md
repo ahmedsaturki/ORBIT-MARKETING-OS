@@ -34,6 +34,8 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | AN-01    | Campaign analytics remain campaign-scoped                                   | analytics isolation tests                           |
 | AUTO-01  | Enabled external automation rules require confirmation                      | rule-pack validation tests                          |
 | AUTO-02  | Enabled Rule Pack lifecycle is persisted and bounded                        | native lifecycle integration test                   |
+| UI-01    | Mission Control reflects current workspace operational state without server-side secrets | desktop smoke/E2E evidence |
+| UI-02    | Strategy Studio writes workspace-scoped objectives/audiences/offers/strategies | native IPC + workspace isolation E2E |
 | OUT-01   | Opportunity is workspace-scoped and contact/campaign references stay in-workspace | migration + integrity trigger + negative IPC test |
 | OUT-02   | Opportunity value/currency/probability constraints are enforced               | validation + SQLite constraint tests              |
 | INS-01   | Insight is workspace-scoped and grounded by at least one source               | validation + persistence test                     |
