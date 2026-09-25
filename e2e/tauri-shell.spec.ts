@@ -25,6 +25,34 @@ let proc: ChildProcess | null = null;
 let browser: Browser | null = null;
 let page: Page | null = null;
 
+async function bootApp(): Promise<void> {
+  try {
+    execSync("taskkill /im orbit-marketing-os.exe /F", { stdio: "ignore" });
+  } catch {
+    /* no leftover instance */
+  }
+
+  proc = spawn(exe!, [], {
+    env: {
+      ...process.env,
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
+    },
+    stdio: "ignore",
+  });
+  await new Promise((r) => setTimeout(r, 6000));
+
+  const { chromium } = await import("@playwright/test");
+  browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+  const ctx = browser.contexts()[0];
+  page = ctx.pages()[0] ?? (await ctx.waitForEvent("page"));
+  await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
+
+  await expect(page).toHaveTitle(/Orbit Marketing OS/);
+  expect(await page.evaluate(() => typeof window.__TAURI_INTERNALS__)).toBe(
+    "object",
+  );
+}
+
 async function killApp(): Promise<void> {
   if (browser) await browser.close().catch(() => {});
   browser = null;
@@ -40,6 +68,7 @@ async function killApp(): Promise<void> {
 }
 
 test.describe("Tauri renderer capability isolation (SEC-03)", () => {
+  test.describe.configure({ mode: "serial" });
   test.skip(
     !exe,
     "Tauri binary not built — run node scripts/build-tauri.mjs --release first",
@@ -89,30 +118,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
   });
 
   test("renderer boots in the isolated shell and IPC positive control works", async () => {
-    try {
-      execSync("taskkill /im orbit-marketing-os.exe /F", { stdio: "ignore" });
-    } catch {
-      /* no leftover instance */
-    }
-    proc = spawn(exe!, [], {
-      env: {
-        ...process.env,
-        WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
-      },
-      stdio: "ignore",
-    });
-    await new Promise((r) => setTimeout(r, 6000));
-
-    const { chromium } = await import("@playwright/test");
-    browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
-    const ctx = browser.contexts()[0];
-    page = ctx.pages()[0] ?? (await ctx.waitForEvent("page"));
-    await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
-
-    await expect(page).toHaveTitle(/Orbit Marketing OS/);
-    expect(await page.evaluate(() => typeof window.__TAURI_INTERNALS__)).toBe(
-      "object",
-    );
+    await bootApp();
 
     // Positive control: scale_factor is inside core:default — proves IPC works.
     const granted = await page.evaluate(() =>
@@ -151,6 +157,35 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       0,
     );
     expect(proc!.killed).toBe(false);
+  });
+
+  test("workspace selection persists after application restart", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+
+    const workspace = (await page!.evaluate(async (workspaceId) => {
+      return (await window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id: workspaceId,
+        name: "Restart Persistence Workspace",
+      })) as { id: string };
+    }, "e2e-restart-" + Date.now())) as { id: string };
+
+    await page!.evaluate(async (id) => {
+      await window.__TAURI_INTERNALS__.invoke("workspace_select", { id });
+    }, workspace.id);
+
+    const beforeRestart = (await page!.evaluate(async () => {
+      return (await window.__TAURI_INTERNALS__.invoke("workspace_current")) as { id: string };
+    })) as { id: string };
+    expect(beforeRestart.id).toBe(workspace.id);
+
+    await killApp();
+    await bootApp();
+
+    const afterRestart = (await page!.evaluate(async () => {
+      return (await window.__TAURI_INTERNALS__.invoke("workspace_current")) as { id: string };
+    })) as { id: string };
+
+    expect(afterRestart.id).toBe(workspace.id);
   });
 
   test("CSP blocks remote script injection", async () => {
