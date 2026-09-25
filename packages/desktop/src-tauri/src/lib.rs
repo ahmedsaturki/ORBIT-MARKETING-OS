@@ -5049,6 +5049,45 @@ fn validate_json_object(value: Option<String>, field: &str) -> Result<String, St
     serde_json::to_string(&parsed).map_err(|error| error.to_string())
 }
 
+fn validate_opportunity_stage(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "new",
+        "qualified",
+        "proposal",
+        "negotiation",
+        "won",
+        "lost",
+        "nurture",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported opportunity stage".to_string())
+    }
+}
+
+fn validate_insight_kind(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if ["performance", "anomaly", "learning", "trend", "recommendation"]
+        .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported insight kind".to_string())
+    }
+}
+
+fn validate_currency(value: &str) -> Result<String, String> {
+    let value = value.trim().to_uppercase();
+    if value.len() == 3 && value.chars().all(|character| character.is_ascii_uppercase()) {
+        Ok(value)
+    } else {
+        Err("currency must be a three-letter ISO-style code".to_string())
+    }
+}
+
 fn validate_strategy_metric(metric: &str) -> Result<String, String> {
     let value = metric.trim().to_lowercase();
     if [
@@ -5447,6 +5486,340 @@ fn offer_list(app: tauri::AppHandle) -> Result<Vec<OfferView>, String> {
                 constraints_json: row.get(4)?,
                 created_at: row.get(5)?,
                 updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn opportunity_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    contact_id: String,
+    campaign_id: Option<String>,
+    name: String,
+    stage: String,
+    value: f64,
+    currency: String,
+    probability: f64,
+    source: Option<String>,
+    owner_id: Option<String>,
+) -> Result<OpportunityView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let contact_id = validate_label(&contact_id).map_err(|error| error.to_string())?;
+    let campaign_id = campaign_id
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let stage = validate_opportunity_stage(&stage)?;
+    let currency = validate_currency(&currency)?;
+    if !value.is_finite() || value < 0.0 {
+        return Err("opportunity value must be finite and non-negative".to_string());
+    }
+    if !probability.is_finite() || !(0.0..=100.0).contains(&probability) {
+        return Err("opportunity probability must be between 0 and 100".to_string());
+    }
+    let source = source
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let owner_id = owner_id
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let contact_exists: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM contacts WHERE id=?1 AND workspace_id=?2
+             )",
+            params![&contact_id, &workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !contact_exists {
+        return Err("opportunity contact does not belong to active workspace".to_string());
+    }
+
+    if let Some(campaign_id) = &campaign_id {
+        let campaign_exists: bool = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM campaigns WHERE id=?1 AND workspace_id=?2
+                 )",
+                params![campaign_id, &workspace_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if !campaign_exists {
+            return Err("opportunity campaign does not belong to active workspace".to_string());
+        }
+    }
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO opportunities(
+               id, workspace_id, contact_id, campaign_id, name, stage, value, currency,
+               probability, source, owner_id, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?12)
+             ON CONFLICT(id) DO UPDATE SET
+               contact_id=excluded.contact_id,
+               campaign_id=excluded.campaign_id,
+               name=excluded.name,
+               stage=excluded.stage,
+               value=excluded.value,
+               currency=excluded.currency,
+               probability=excluded.probability,
+               source=excluded.source,
+               owner_id=excluded.owner_id,
+               updated_at=excluded.updated_at
+             WHERE opportunities.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                contact_id,
+                campaign_id,
+                name,
+                stage,
+                value,
+                currency,
+                probability,
+                source,
+                owner_id,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("opportunity id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "crm",
+        "opportunity_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(OpportunityView {
+        id,
+        contact_id,
+        campaign_id,
+        name,
+        stage,
+        value,
+        currency,
+        probability,
+        source,
+        owner_id,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn opportunity_list(app: tauri::AppHandle) -> Result<Vec<OpportunityView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, contact_id, campaign_id, name, stage, value, currency, probability,
+                    source, owner_id, created_at, updated_at
+             FROM opportunities
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(OpportunityView {
+                id: row.get(0)?,
+                contact_id: row.get(1)?,
+                campaign_id: row.get(2)?,
+                name: row.get(3)?,
+                stage: row.get(4)?,
+                value: row.get(5)?,
+                currency: row.get(6)?,
+                probability: row.get(7)?,
+                source: row.get(8)?,
+                owner_id: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn insight_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    kind: String,
+    title: String,
+    summary: String,
+    metric: Option<String>,
+    value: Option<f64>,
+    confidence: f64,
+    source_ids_json: Option<String>,
+    observed_at: String,
+) -> Result<InsightView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let kind = validate_insight_kind(&kind)?;
+    let title = validate_label(&title).map_err(|error| error.to_string())?;
+    let summary = summary.trim().to_string();
+    if summary.is_empty() || summary.len() > 20_000 {
+        return Err("insight summary is invalid".to_string());
+    }
+    let metric = metric
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+    if let Some(value) = value {
+        if !value.is_finite() {
+            return Err("insight value must be finite".to_string());
+        }
+    }
+    if !confidence.is_finite() || !(0.0..=1.0).contains(&confidence) {
+        return Err("insight confidence must be between 0 and 1".to_string());
+    }
+    let source_ids_json =
+        validate_json_string_array(source_ids_json, "source_ids_json", 100)?;
+    if serde_json::from_str::<Vec<String>>(&source_ids_json)
+        .map_err(|_| "source_ids_json must be a JSON array".to_string())?
+        .is_empty()
+    {
+        return Err("insight must reference at least one source".to_string());
+    }
+    let observed_at = normalize_rfc3339_utc(&observed_at)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO insights(
+               id, workspace_id, kind, title, summary, metric, value, confidence,
+               source_ids_json, observed_at, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)
+             ON CONFLICT(id) DO UPDATE SET
+               kind=excluded.kind,
+               title=excluded.title,
+               summary=excluded.summary,
+               metric=excluded.metric,
+               value=excluded.value,
+               confidence=excluded.confidence,
+               source_ids_json=excluded.source_ids_json,
+               observed_at=excluded.observed_at,
+               updated_at=excluded.updated_at
+             WHERE insights.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                kind,
+                title,
+                summary,
+                metric,
+                value,
+                confidence,
+                source_ids_json,
+                observed_at,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("insight id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "analytics",
+        "insight_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(InsightView {
+        id,
+        kind,
+        title,
+        summary,
+        metric,
+        value,
+        confidence,
+        source_ids_json,
+        observed_at,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn insight_list(app: tauri::AppHandle) -> Result<Vec<InsightView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, kind, title, summary, metric, value, confidence,
+                    source_ids_json, observed_at, created_at, updated_at
+             FROM insights
+             WHERE workspace_id=?1
+             ORDER BY observed_at DESC, updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(InsightView {
+                id: row.get(0)?,
+                kind: row.get(1)?,
+                title: row.get(2)?,
+                summary: row.get(3)?,
+                metric: row.get(4)?,
+                value: row.get(5)?,
+                confidence: row.get(6)?,
+                source_ids_json: row.get(7)?,
+                observed_at: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
             })
         })
         .map_err(|error| error.to_string())?;
