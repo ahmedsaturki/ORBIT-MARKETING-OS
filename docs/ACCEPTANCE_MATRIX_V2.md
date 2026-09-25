@@ -31,6 +31,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | CONT-03  | Content validation and platform variant selection                           | deterministic content contract tests                |
 | MEDIA-01 | Media type/size/hash validation and local search                            | media contract tests                                |
 | MEDIA-02 | Local media file import with streaming SHA-256                              | native file-hash integration test                   |
+| AN-02    | Outcome analytics never aggregate monetary values across currencies          | native multi-currency analytics test            |
 | AN-01    | Campaign analytics remain campaign-scoped                                   | analytics isolation tests                           |
 | AUTO-01  | Enabled external automation rules require confirmation                      | rule-pack validation tests                          |
 | AUTO-02  | Enabled Rule Pack lifecycle is persisted and bounded                        | native lifecycle integration test                   |
