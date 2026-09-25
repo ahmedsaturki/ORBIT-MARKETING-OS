@@ -3,7 +3,7 @@ import { DATABASE_SCHEMA_SQL, DATABASE_SCHEMA_VERSION } from "./schema.js";
 
 describe("canonical database schema contract", () => {
   it("tracks the current desktop schema version", () => {
-    expect(DATABASE_SCHEMA_VERSION).toBe(12);
+    expect(DATABASE_SCHEMA_VERSION).toBe(13);
   });
 
   it("includes every v11 operating-model table", () => {
