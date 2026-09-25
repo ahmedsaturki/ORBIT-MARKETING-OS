@@ -6,16 +6,16 @@ Updated: 2026-09-26
 | --------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------- | --------------- |
 | Core domain                       | yes                | Main/PR exact-head typecheck/tests/coverage passed                                                       | VERIFIED        |
 | Mission Control + Strategy Studio | yes                | Desktop surfaces wired to workspace-local runtime state and governed strategy/outcome commands           | PARTIAL         |
-| Operating graph + governed work   | yes                | Core graph/decision/native persistence plus governed event/command controls through PR #47               | PARTIAL         |
+| Operating graph + governed work   | yes                | Core graph/decision/native persistence plus governed event/command controls through PR #48               | PARTIAL         |
 | Opportunities + insights          | yes                | v13 migration/validation exists; full product E2E remains                                                | PARTIAL         |
-| Operational Event Spine           | yes                | Exact-head tests/native validation passed in PR #47                                                      | VERIFIED        |
+| Operational Event Spine           | yes                | Exact-head tests/native validation passed in PR #47; retained on main after PR #48 merge               | VERIFIED        |
 | Command Registry                  | yes                | Exact-head tests/native validation passed in PR #47                                                      | VERIFIED        |
-| Command Dispatcher                | yes                | New dispatcher tests are added on the current validation branch; exact-head runtime verification pending | PENDING         |
-| Desktop Tauri shell               | yes                | Desktop bundles + Windows native E2E passed on PR #47 exact head                                         | VERIFIED        |
+| Command Dispatcher                | yes                | Exact-head dispatcher tests + CI/native/mobile verification passed in PR #48 and merged to main          | VERIFIED        |
+| Desktop Tauri shell               | yes                | Desktop bundles + Windows native E2E passed on PR #48 exact head                                         | VERIFIED        |
 | Desktop SQLite/vault/backup       | yes                | Rust/native quality gates passed; dedicated real-instance recovery drill remains                         | PARTIAL         |
 | Desktop campaigns/tasks/CRM/inbox | yes                | Main unit/integration coverage passed; full real-instance scenario remains                               | PARTIAL         |
 | Web public/PWA                    | yes                | Main CI + live Vercel route/header/404 verification passed                                               | VERIFIED        |
-| Mobile Expo control surface       | yes                | PR #47 exact-head Mobile Validation passed                                                               | VERIFIED        |
+| Mobile Expo control surface       | yes                | PR #48 exact-head Mobile Validation passed                                                               | VERIFIED        |
 | Telegram connector                | yes                | Controlled live authorization/delivery evidence remains                                                  | UNVERIFIED      |
 | Facebook connector                | contract + fixture | No real connector                                                                                        | NOT_IMPLEMENTED |
 | Instagram connector               | contract + fixture | No real connector                                                                                        | NOT_IMPLEMENTED |
