@@ -102,6 +102,19 @@ Content variants are workspace-scoped through their parent content item. Analyti
 
 Media commands persist metadata only; local file bytes are not uploaded implicitly. Rule packs are schema-versioned JSON and external actions require confirmation.
 
+### Marketing Brain / strategy
+
+- `objective_upsert`
+- `objective_list`
+- `audience_upsert`
+- `audience_list`
+- `offer_upsert`
+- `offer_list`
+- `strategy_upsert`
+- `strategy_list`
+
+These commands persist the strategy model locally. Writes are role-gated to the active workspace. Strategy reference IDs are verified against the same workspace before persistence, so an Objective/Audience/Offer from another workspace cannot be attached silently.
+
 ### Operating graph
 
 - `operational_link_upsert`
