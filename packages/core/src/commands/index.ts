@@ -28,6 +28,7 @@ export type CommandDecision =
       readonly reason:
         | "unknown_command"
         | "workspace_required"
+        | "actor_required"
         | "scope_denied"
         | "approval_required"
         | "surface_denied";
@@ -153,7 +154,7 @@ export class CommandRegistry {
     surface: CommandSurface,
   ): CommandDecision {
     if (!invocation.workspaceId.trim()) return { allowed: false, reason: "workspace_required" };
-    if (!invocation.actorId.trim()) return { allowed: false, reason: "scope_denied" };
+    if (!invocation.actorId.trim()) return { allowed: false, reason: "actor_required" };
 
     const command = this.commands.get(invocation.commandId);
     if (!command) return { allowed: false, reason: "unknown_command" };
