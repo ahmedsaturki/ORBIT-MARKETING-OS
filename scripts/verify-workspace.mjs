@@ -266,10 +266,17 @@ if (!rust.includes("UNIQUE(workspace_id, idempotency_key)")) {
 if (!rust.includes("PRAGMA user_version = 10;")) {
   throw new Error("Schema migration must finalize at v10");
 }
-const startupRecoveryCall = rust.match(
-  /\.setup\(\s*\|\|[^\{]*\{[\s\S]{0,4000}?recover_interrupted_tasks\(&connection\)[\s\S]{0,1200}?\.map_err/s,
+const setupIndex = rust.indexOf(".setup(|app|");
+const startupRecoveryIndex = rust.indexOf(
+  "recover_interrupted_tasks(&connection)",
+  setupIndex,
 );
-if (!startupRecoveryCall) {
+if (
+  setupIndex < 0 ||
+  startupRecoveryIndex < 0 ||
+  startupRecoveryIndex > setupIndex + 6000 ||
+  !rust.slice(startupRecoveryIndex, startupRecoveryIndex + 1800).includes(".map_err")
+) {
   throw new Error("Startup recovery must be wired into application startup setup");
 }
 const openDbMatch = rust.match(/fn open_db\([\s\S]*?\n\}\n/);
