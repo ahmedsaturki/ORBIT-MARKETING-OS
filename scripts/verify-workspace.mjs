@@ -74,6 +74,10 @@ for (const file of [
   "src-tauri/Cargo.lock",
   "src-tauri/tauri.conf.json",
   "src-tauri/src/main.rs",
+  "index.html",
+  "vite.config.ts",
+  "src/App.tsx",
+  "src/main.tsx",
   "packages/mobile/package-lock.json",
 ]) {
   await assertAbsent(file);
