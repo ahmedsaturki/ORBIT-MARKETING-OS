@@ -10463,6 +10463,13 @@ mod tests {
             .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
         migrate_schema(&connection).expect("schema migration should succeed");
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'Workspace A', '2026-01-01T00:00:00Z')",
+                [],
+            )
+            .expect("workspace should exist before agent definition insert");
 
         connection
             .execute(
@@ -10694,6 +10701,7 @@ mod tests {
             .execute_batch(SCHEMA)
             .expect("current schema should be creatable");
         migrate_schema(&connection).expect("schema migration should succeed");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
 
         connection
             .execute_batch(
@@ -10941,7 +10949,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 10);
+        assert_eq!(version, 12);
     }
 
     #[test]
