@@ -183,11 +183,57 @@ try {
   }
 }
 
+const missingTokenChild = spawn("pnpm", ["runtime:start"], {
+  env: {
+    ...process.env,
+    PORT: String(AUTH_PORT),
+    RUNTIME_HOST: "0.0.0.0",
+    RUNTIME_AUTH_TOKEN: "",
+    RUNTIME_ALLOWED_ORIGINS: "",
+    RUNTIME_RATE_LIMIT: "6",
+    OLLAMA_BASE_URL: "http://127.0.0.1:9",
+  },
+  stdio: ["ignore", "pipe", "pipe"],
+  shell: process.platform === "win32",
+});
+let missingTokenLogs = "";
+missingTokenChild.stdout.on("data", (chunk) => { missingTokenLogs += String(chunk); });
+missingTokenChild.stderr.on("data", (chunk) => { missingTokenLogs += String(chunk); });
+
+try {
+  let missingReady = false;
+  const missingDeadline = Date.now() + 15_000;
+  while (Date.now() < missingDeadline) {
+    try {
+      const probe = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health");
+      if (probe.status === 503) {
+        missingReady = true;
+        break;
+      }
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  assert(missingReady, "LAN runtime must reject startup without a configured token");
+  const missingTokenResponse = await fetch(
+    "http://127.0.0.1:" + AUTH_PORT + "/api/health",
+  );
+  assert(missingTokenResponse.status === 503, "expected 503 without LAN token configuration");
+  console.log("runtime missing-token startup guard passed");
+} finally {
+  missingTokenChild.kill("SIGTERM");
+  await waitForChildExit(missingTokenChild);
+  if (missingTokenChild.exitCode !== null && missingTokenChild.exitCode !== 0) {
+    console.error(missingTokenLogs);
+    throw new Error("missing-token runtime exited with code " + missingTokenChild.exitCode);
+  }
+}
+
+const authPort = AUTH_PORT + 2;
 const authToken = "orbit-test-token";
 const authChild = spawn("pnpm", ["runtime:start"], {
   env: {
     ...process.env,
-    PORT: String(AUTH_PORT),
+    PORT: String(authPort),
     RUNTIME_HOST: "0.0.0.0",
     RUNTIME_AUTH_TOKEN: authToken,
     RUNTIME_ALLOWED_ORIGINS: "https://allowed.example",
@@ -203,33 +249,33 @@ authChild.stderr.on("data", (chunk) => { authLogs += String(chunk); });
 
 try {
   let authReady = false;
-  const deadline = Date.now() + 15_000;
-  while (Date.now() < deadline) {
+  const authDeadline = Date.now() + 15_000;
+  while (Date.now() < authDeadline) {
     try {
-      const probe = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health");
-      if (probe.status === 503) {
+      const probe = await fetch("http://127.0.0.1:" + authPort + "/api/health");
+      if (probe.status === 401) {
         authReady = true;
         break;
       }
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  assert(authReady, "LAN runtime did not enforce missing-token block");
+  assert(authReady, "LAN runtime did not enforce configured-token perimeter");
 
-  const unauthorized = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health");
-  assert(unauthorized.status === 503, "expected 503 without LAN token");
+  const unauthorized = await fetch("http://127.0.0.1:" + authPort + "/api/health");
+  assert(unauthorized.status === 401, "expected 401 without LAN token");
 
-  const wrong = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health", {
+  const wrong = await fetch("http://127.0.0.1:" + authPort + "/api/health", {
     headers: { Authorization: "Bearer wrong-token" },
   });
   assert(wrong.status === 401, "expected 401 with wrong LAN token");
 
-  const oversized = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health", {
+  const oversized = await fetch("http://127.0.0.1:" + authPort + "/api/health", {
     headers: { Authorization: "Bearer " + "x".repeat(1025) },
   });
   assert(oversized.status === 401, "expected 401 for oversized bearer credential");
 
-  const blockedOrigin = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health", {
+  const blockedOrigin = await fetch("http://127.0.0.1:" + authPort + "/api/health", {
     headers: {
       Authorization: "Bearer " + authToken,
       Origin: "https://blocked.example",
@@ -237,7 +283,7 @@ try {
   });
   assert(blockedOrigin.status === 403, "expected 403 for blocked origin");
 
-  const allowedOrigin = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health", {
+  const allowedOrigin = await fetch("http://127.0.0.1:" + authPort + "/api/health", {
     headers: {
       Authorization: "Bearer " + authToken,
       Origin: "https://allowed.example",
@@ -247,7 +293,7 @@ try {
 
   const rateResponses = [];
   for (let index = 0; index < 3; index += 1) {
-    const rateResponse = await fetch("http://127.0.0.1:" + AUTH_PORT + "/api/health", {
+    const rateResponse = await fetch("http://127.0.0.1:" + authPort + "/api/health", {
       headers: { Authorization: "Bearer " + authToken },
     });
     rateResponses.push(rateResponse.status);
