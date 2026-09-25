@@ -4316,6 +4316,7 @@ type TaskFailureRow = (
     String,
 );
 
+#[tauri::command]
 fn task_fail(app: tauri::AppHandle, id: String, now: String) -> Result<TaskView, String> {
     let workspace_id = active_workspace_id();
     let entity_id = validate_label(&id).map_err(|error| error.to_string())?;
