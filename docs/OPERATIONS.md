@@ -41,7 +41,7 @@ Unsupported capabilities must remain blocked.
 
 ## Release
 
-A release starts from a version tag. Desktop artifacts are currently unsigned and accompanied by SHA-256 checksums.
+A release starts from a verified commit/tag. Desktop validation artifacts are currently unsigned and accompanied by SHA-256 checksums; the production web surface is live on Vercel.
 
 Signed distribution, store submission, production web deployment, and commercial billing remain separate release gates.
 
