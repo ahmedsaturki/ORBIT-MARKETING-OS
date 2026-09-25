@@ -5,7 +5,7 @@ on:
     branches: ["main"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   format-diagnostic:
@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 22
       - run: pnpm install --frozen-lockfile
-      - name: Format known drift files
+      - name: Render exact Prettier diff
         run: |
           pnpm exec prettier --write \
             docs/ACCEPTANCE_MATRIX_V2.md \
@@ -31,15 +31,7 @@ jobs:
             packages/core/src/policy-packs/index.ts \
             packages/core/src/replay/index.test.ts \
             packages/core/src/replay/index.ts
-      - name: Commit formatted output
-        run: |
-          if git diff --quiet --; then
-            echo "No formatting changes required."
-            exit 0
-          fi
-          git config user.name "orbit-format-bot"
-          git config user.email "orbit-format-bot@users.noreply.github.com"
-          git add -- \
+          git diff --no-ext-diff -- \
             docs/ACCEPTANCE_MATRIX_V2.md \
             docs/LAUNCH_SCORECARD.md \
             packages/core/src/knowledge/context.test.ts \
@@ -48,7 +40,5 @@ jobs:
             packages/core/src/policy-packs/index.ts \
             packages/core/src/replay/index.test.ts \
             packages/core/src/replay/index.ts
-          git commit -m "chore: apply repository Prettier formatting"
-          git push
-      - name: Verify repository formatting
+      - name: Verify repository formatting after rendering
         run: pnpm exec prettier --check .
