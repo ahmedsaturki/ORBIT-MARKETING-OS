@@ -60,6 +60,8 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | QA-01    | Unit coverage threshold                                                     | coverage report                                     |
 | QA-02    | Critical E2E paths                                                          | Playwright report                                   |
 | DOC-01   | User guide matches product                                                  | documentation review                                |
+| GRAPH-01 | Operating graph preserves workspace boundaries and rejects invalid links | graph validation tests                              |
+| GRAPH-02 | AI/agent graph context is bounded by depth/node/relation scopes              | bounded context projection tests                    |
 | DOC-02   | Security model documented                                                   | security review                                     |
 
 ## Gate rules
