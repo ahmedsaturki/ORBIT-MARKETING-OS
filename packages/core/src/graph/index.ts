@@ -93,6 +93,13 @@ export function validateOperatingGraph(
   const links = new Set<string>();
   for (const link of graph.links) {
     const key = linkKey(link);
+    if (link.workspaceId !== graph.workspaceId) {
+      issues.push({
+        code: "cross_workspace_link",
+        message: `Graph link belongs to workspace ${link.workspaceId}, not ${graph.workspaceId}`,
+        link,
+      });
+    }
     if (links.has(key)) {
       issues.push({
         code: "duplicate_link",
