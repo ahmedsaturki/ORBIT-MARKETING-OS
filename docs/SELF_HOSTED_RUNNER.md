@@ -56,7 +56,7 @@ Once the interactive path is proven, install the runner as a service using GitHu
 
 Both manual self-hosted workflows are:
 
-- restricted to the approved production rebuild refs (`rebuild/orbit-production` and `rebuild/orbit-production-consolidated`);
+- restricted to the approved production rebuild refs (`rebuild/orbit-production` and `rebuild/orbit-production-final`);
 - restricted to the repository owner account `ahmedsaturki`;
 - restricted to `self-hosted, x64, linux`.
 
@@ -70,9 +70,9 @@ and pushes only the selected branch.
 ## Run order
 
 1. Register and bring the runner Online.
-2. Dispatch **Bootstrap lockfiles on hosted runner** on `rebuild/orbit-production-consolidated` (this is the normal path).
+2. Dispatch **Bootstrap lockfiles on hosted runner** on `rebuild/orbit-production-final`.
 3. Confirm the two lockfiles appear in that branch.
-4. Use the hosted `CI` workflow as the primary full verification path; use **Self-Hosted Verification** only when an owned runner is intentionally available. on `rebuild/orbit-production-consolidated`.
+4. Use the hosted `CI` workflow as the primary full verification path; use **Self-Hosted Verification** when an owned runner is intentionally available, with the verification restricted to `rebuild/orbit-production-final`.
 5. Require all quality, runtime, browser, performance, and Rust stages to pass before treating the branch as release-ready.
 
 ## Security rules
