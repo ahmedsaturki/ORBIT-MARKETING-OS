@@ -25,7 +25,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Performance smoke                               | VERIFIED    | Main CI performance smoke passed                                                                |
 | Browser E2E                                     | VERIFIED    | Main CI Playwright E2E passed                                                                   |
 | Production web deployment                       | VERIFIED*   | Live Vercel production alias is READY and public routes/headers/404 were checked                |
-| Native desktop packaging                        | PARTIAL     | PR #27: Windows/Linux/macOS-arm64 passed; macOS-x64 is still running at last poll                  |
+| Native desktop packaging                        | PARTIAL     | PR #27: Windows/Linux/macOS-arm64 passed; macOS-x64 is still running at last poll               |
 | Android debug validation                        | PARTIAL     | PR #27 quality passed; APK build still running at last poll                                     |
 | Native runtime restart/migration/crash recovery | UNVERIFIED  | Dedicated full desktop runtime acceptance evidence remains                                      |
 | Real connector E2E                              | UNVERIFIED  | Telegram/LinkedIn live authorization/delivery evidence remains                                  |
