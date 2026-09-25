@@ -49,7 +49,7 @@ The latest consolidation CI run `36053293828` created jobs `107813972668` and `1
 
 ## Zero-cost verification fallback
 
-A manual self-hosted verification workflow is available at `.github/workflows/self-hosted-verify.yml`. A separate branch-restricted lockfile bootstrap workflow is available at `.github/workflows/bootstrap-lockfile.yml`; both accept the consolidated production rebuild ref. Both require an actual `self-hosted, x64, linux` runner and the bootstrap flow generates the lockfiles reproducibly.
+A manual self-hosted verification workflow is available at `.github/workflows/self-hosted-verify.yml`. A separate branch-restricted lockfile bootstrap workflow is available at `.github/workflows/bootstrap-lockfile.yml`; both are restricted to the consolidated production rebuild ref. The self-hosted verification workflow is manual-only; the hosted CI is the normal zero-cost execution path. Both require an actual `self-hosted, x64, linux` runner and the bootstrap flow generates the lockfiles reproducibly.
 
 ## Release rule
 
