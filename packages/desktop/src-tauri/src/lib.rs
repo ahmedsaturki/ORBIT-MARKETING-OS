@@ -679,6 +679,17 @@ fn telegram_task_audit(
     .map_err(|error| error.to_string())
 }
 
+fn has_column(connection: &Connection, table: &str, column: &str) -> Result<bool, rusqlite::Error> {
+    let mut statement = connection.prepare(&format!("PRAGMA table_info({})", table))?;
+    let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
+    for row in rows {
+        if row? == column {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if version > SCHEMA_VERSION {
@@ -1258,6 +1269,7 @@ fn cleanup_stale_database_artifacts(app_data: &PathBuf) -> Result<(), AppError> 
             fs::remove_file(path)?;
         }
     }
+    Ok(())
 }
 
 fn restrict_private_file(path: &PathBuf) -> Result<(), AppError> {
@@ -1825,7 +1837,7 @@ async fn telegram_execute_task(
     let effective_max_attempts = rule_config
         .map(|value| effective_max_attempts(max_attempts, value.1))
         .unwrap_or(max_attempts);
-    validate_retry_policy_limits(effective_max_attempts, effective_timeout_ms)?;
+    validate_retry_policy_limits(effective_max_attempts, effective_timeout_ms as i64)?;
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_millis(effective_timeout_ms))
         .build()
@@ -1951,7 +1963,7 @@ async fn telegram_execute_task(
         return Ok(TelegramExecutionView {
             task_id,
             status: "succeeded".to_string(),
-            external_message_id: external_id,
+            external_message_id: Some(external_id),
             message: "Telegram message sent successfully.".to_string(),
             retry_at: None,
         });
@@ -2149,7 +2161,7 @@ fn workspace_create(
         .transpose()
         .map_err(|error| error.to_string())?
         .unwrap_or_else(|| uuid_like());
-    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    let mut connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role(&connection, &["owner", "admin"]).map_err(|error| error.to_string())?;
     let created_at = chrono_like_timestamp();
 
@@ -3105,7 +3117,7 @@ fn media_asset_upsert(
     )
     .map_err(|error| error.to_string())?;
 
-    let mut connection = open_db(&app).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
