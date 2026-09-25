@@ -6,7 +6,7 @@ import {
 
 describe("canonical database schema contract", () => {
   it("tracks the current desktop schema version", () => {
-    expect(DATABASE_SCHEMA_VERSION).toBe(11);
+    expect(DATABASE_SCHEMA_VERSION).toBe(12);
   });
 
   it("includes every v11 operating-model table", () => {
@@ -24,6 +24,8 @@ describe("canonical database schema contract", () => {
       "work_items",
       "work_dependencies",
       "operational_links",
+      "opportunities",
+      "insights",
     ]) {
       expect(DATABASE_SCHEMA_SQL).toContain(
         `CREATE TABLE IF NOT EXISTS ${table}`,
@@ -32,6 +34,6 @@ describe("canonical database schema contract", () => {
   });
 
   it("sets SQLite user_version to the canonical version", () => {
-    expect(DATABASE_SCHEMA_SQL).toContain("PRAGMA user_version = 11;");
+    expect(DATABASE_SCHEMA_SQL).toContain("PRAGMA user_version = 12;");
   });
 });
