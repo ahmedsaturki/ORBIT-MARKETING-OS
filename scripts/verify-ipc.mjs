@@ -90,7 +90,7 @@ function collectInvokeArgumentObjects(source) {
   let search = 0;
 
   while (search < source.length) {
-    const match = source.slice(search).match(/(?:callNative|invoke)(?:<[^>]+>)?\\s*\\(/);
+    const match = source.slice(search).match(/(?:callNative|invoke)(?:<[^>]+>)?\s*\(/);
     if (!match) break;
 
     const start = search + match.index;
@@ -139,7 +139,7 @@ function collectInvokeArgumentObjects(source) {
 
 for (const argumentObject of collectInvokeArgumentObjects(app)) {
   const snakeCaseKeys = [
-    ...argumentObject.matchAll(/\\b([A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+)\\s*:/g),
+    ...argumentObject.matchAll(/\b([A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+)\s*:/g),
   ].map((match) => match[1]);
 
   if (snakeCaseKeys.length > 0) {
