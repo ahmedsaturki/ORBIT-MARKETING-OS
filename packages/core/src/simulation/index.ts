@@ -34,7 +34,12 @@ export function simulateGovernedExecution(
     throw new Error("simulation_requires_actions");
   }
 
-  const workspaceId = actions[0].request.run.workspaceId;
+  const firstAction = actions[0];
+  if (!firstAction) {
+    throw new Error("simulation_requires_actions");
+  }
+
+  const workspaceId = firstAction.request.run.workspaceId;
   if (actions.some((item) => item.request.run.workspaceId !== workspaceId)) {
     throw new Error("simulation_workspace_mismatch");
   }
