@@ -7238,7 +7238,7 @@ mod tests {
     }
 
     #[test]
-    fn schema_migration_reaches_v10_and_is_idempotent_afterwards() {
+    fn schema_migration_reaches_current_version_and_is_idempotent_afterwards() {
         let connection =
             Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
@@ -7256,6 +7256,81 @@ mod tests {
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should still be readable");
         assert_eq!(second, SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn schema_v11_creates_governed_marketing_operating_model_tables() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        for table in [
+            "marketing_objectives",
+            "strategy_documents",
+            "audiences",
+            "offers",
+            "knowledge_sources",
+            "knowledge_items",
+            "knowledge_evidence",
+            "agent_definitions",
+            "agent_runs",
+            "marketing_policies",
+            "work_items",
+            "work_dependencies",
+            "operational_links",
+        ] {
+            let exists: i64 = connection
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+                    params![table],
+                    |row| row.get(0),
+                )
+                .expect("table existence query should work");
+            assert_eq!(exists, 1, "expected table {table} to exist");
+        }
+
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("schema version should be readable");
+        assert_eq!(version, 11);
+    }
+
+    #[test]
+    fn schema_v11_is_workspace_scoped_for_operating_model_rows() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO marketing_objectives(
+                   id, workspace_id, name, metric, target, period_start, period_end, status, created_at, updated_at
+                 ) VALUES
+                   ('objective-a', 'workspace-a', 'A', 'leads', 10, '1', '2', 'active', '1', '1'),
+                   ('objective-b', 'workspace-b', 'B', 'leads', 20, '1', '2', 'active', '1', '1');
+                 INSERT INTO operational_links(
+                   workspace_id, from_type, from_id, to_type, to_id, relation, created_at
+                 ) VALUES
+                   ('workspace-a', 'objective', 'objective-a', 'campaign', 'campaign-a', 'supports', '1'),
+                   ('workspace-b', 'objective', 'objective-b', 'campaign', 'campaign-b', 'supports', '1');",
+            )
+            .expect("same ids can be scoped by workspace");
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM marketing_objectives WHERE workspace_id='workspace-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("workspace-scoped objective query should work");
+        assert_eq!(count, 1);
     }
 
     #[test]
