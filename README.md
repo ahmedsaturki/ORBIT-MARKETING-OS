@@ -16,7 +16,7 @@ The rebuild is acceptance-driven: implementation is not considered complete unti
 
 ## Product boundary
 
-The product is designed around local ownership of sensitive data. The desktop/local runtime is the source of truth for private account state, campaigns, task queues, CRM records, and audit records. Native SQLite schema is versioned through v10, including workspace-scoped task idempotency and conservative startup crash recovery.
+The product is designed around local ownership of sensitive data. The desktop/local runtime is the source of truth for private account state, campaigns, task queues, CRM records, and audit records. Native SQLite schema is versioned through v12, including the governed marketing operating model, persisted opportunities/insights, workspace-scoped task idempotency, and conservative startup crash recovery.
 
 Platform integrations must remain user-authorized and platform-compliant. The product does not implement fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion, or concealed automation.
 
