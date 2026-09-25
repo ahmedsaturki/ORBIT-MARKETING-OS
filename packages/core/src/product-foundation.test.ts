@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { authorizeAgentAction } from "./agents/index.js";
 import { isUsableKnowledge } from "./knowledge/index.js";
 import { evaluatePolicy } from "./policies/index.js";
+import { canStartWork } from "./operations/index.js";
 import { validateStrategy } from "./strategy/index.js";
 
 describe("ORBIT product foundation", () => {
@@ -86,6 +87,32 @@ describe("ORBIT product foundation", () => {
         approvalGranted: true,
       }),
     ).toEqual({ allowed: false, reason: "daily_budget_exceeded" });
+  });
+
+  it("blocks work that is not ready or has blocking dependencies", () => {
+    const item = {
+      id: "work-1",
+      workspaceId: "ws-1",
+      type: "campaign" as const,
+      title: "Launch campaign",
+      status: "ready" as const,
+      priority: 1,
+      createdAt: "2026-09-25T00:00:00Z",
+      updatedAt: "2026-09-25T00:00:00Z",
+    };
+
+    expect(canStartWork(item, [])).toBe(true);
+    expect(
+      canStartWork(item, [
+        {
+          workspaceId: "ws-1",
+          predecessorId: "work-0",
+          successorId: "work-1",
+          kind: "blocks",
+        },
+      ]),
+    ).toBe(false);
+    expect(canStartWork({ ...item, status: "blocked" }, [])).toBe(false);
   });
 
   it("enforces agent tool scopes and step limits", () => {
