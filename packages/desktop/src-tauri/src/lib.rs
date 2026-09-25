@@ -6,7 +6,6 @@ use aes_gcm::{
 };
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
-use rand::RngCore;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -1401,9 +1400,9 @@ fn derive_key(password: &str, salt: &[u8]) -> Result<Zeroizing<[u8; 32]>, AppErr
 
 fn seal(password: &str, plaintext: &str) -> Result<EncryptedPayload, AppError> {
     let mut salt = [0u8; 16];
-    rand::rng().fill_bytes(&mut salt);
+    rand::fill(&mut salt);
     let mut nonce_bytes = [0u8; 12];
-    rand::rng().fill_bytes(&mut nonce_bytes);
+    rand::fill(&mut nonce_bytes);
 
     let key = derive_key(password, &salt)?;
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key[..]));
