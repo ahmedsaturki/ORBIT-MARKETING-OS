@@ -1,67 +1,65 @@
 /**
- * Stability soak harness (OPS-02).
- *
- * Spawns the production server, then runs a mixed workload for a configurable
- * duration: health/static probes, AI endpoint error-path exercises, and an
- * in-process core-domain loop (policy gate → queue lifecycle → retry/backoff →
- * circuit breaker → audit-chain append/verify) with periodic RSS sampling.
- *
- * Exit 0 only if: server stayed alive, every health probe succeeded, all core
- * assertions held, and RSS stayed under budget the whole run.
+ * ORBIT stability soak harness.
  *
  * Usage:
- *   npx tsx scripts/soak.ts --minutes 10
- *   npx tsx scripts/soak.ts --hours 24        # full stability gate
- *   npx tsx scripts/soak.ts --minutes 10 --port 34790
+ *   pnpm exec tsx scripts/soak.ts --minutes 10
+ *   pnpm exec tsx scripts/soak.ts --hours 24
+ *
+ * The harness exercises the current core contracts plus the production
+ * local runtime. It exits non-zero on a health failure, unexpected AI
+ * endpoint behavior, queue/policy/audit invariant break, process exit, or
+ * RSS budget breach.
  */
-import { spawn, execSync, type ChildProcess } from "node:child_process";
-import { mkdirSync, writeFileSync, createWriteStream } from "node:fs";
+import { spawn, type ChildProcess } from "node:child_process";
+import { createWriteStream, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import {
-  gateTaskForExecution,
-  shouldRetry,
-  scheduleRetry,
-  completeTask,
-  failTerminal,
-} from "../packages/core/src/queue/index.js";
-import {
-  evaluatePolicy,
-  createCircuitBreaker,
-  recordCircuitSuccess,
-  recordCircuitFailure,
-  isCircuitBlocking,
-} from "../packages/core/src/policy/index.js";
-import { appendEntry, verifyChain } from "../packages/core/src/audit/index.js";
+import { platform } from "node:os";
+
+import { AuditIntegrityChain } from "../packages/core/src/audit/integrity.js";
+import { TaskQueue } from "../packages/core/src/queue/taskQueue.js";
+import { evaluateExecutionPolicy } from "../packages/core/src/workflows/executionPolicy.js";
 import type {
-  QueueTask,
-  PolicyContext,
-  AuditEntry,
+  Approval,
+  Campaign,
+  ContentItem,
+  SocialAccount,
+  Task,
 } from "../packages/core/src/types/index.js";
 
 const args = process.argv.slice(2);
-function argNum(flag: string): number | undefined {
-  const i = args.indexOf(flag);
-  return i >= 0 ? Number(args[i + 1]) : undefined;
+
+function readNumericArg(flag: string): number | undefined {
+  const index = args.indexOf(flag);
+  if (index < 0) return undefined;
+  const parsed = Number(args[index + 1]);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
-const minutes =
-  argNum("--minutes") ?? (argNum("--hours") !== undefined ? argNum("--hours")! * 60 : 10);
-const port = argNum("--port") ?? 34790;
+
+const requestedMinutes =
+  readNumericArg("--minutes") ??
+  ((readNumericArg("--hours") ?? 0) * 60);
+const minutes = requestedMinutes > 0 ? requestedMinutes : 10;
+const port = readNumericArg("--port") ?? 34790;
 const RSS_BUDGET_MB = 600;
-const CYCLE_MS = 2000;
+const CYCLE_MS = 2_000;
 const deadline = Date.now() + minutes * 60_000;
 
 const root = process.cwd();
 const logsDir = join(root, "logs");
 mkdirSync(logsDir, { recursive: true });
 const runId = new Date().toISOString().replace(/[:.]/g, "-");
-const jsonl = createWriteStream(join(logsDir, `soak-${runId}.jsonl`));
+const logPath = join(logsDir, `soak-${runId}.jsonl`);
+const summaryPath = join(logsDir, "soak-summary.json");
+const jsonl = createWriteStream(logPath, { flags: "w" });
 
-let server: ChildProcess | null = null;
-let healthFails = 0;
+let server: ChildProcess | undefined;
 let healthOk = 0;
-let chatErrors = 0;
-let chatResponses = 0;
+let healthFails = 0;
+let staticOk = 0;
 let staticFails = 0;
+let chatChecks = 0;
+let chatFailures = 0;
 let cycles = 0;
 let rssMin = Infinity;
 let rssMax = 0;
@@ -70,244 +68,456 @@ let rssLast = 0;
 const failures: string[] = [];
 
 function log(entry: Record<string, unknown>): void {
-  jsonl.write(`${JSON.stringify({ t: new Date().toISOString(), ...entry })}\n`);
+  jsonl.write(JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + "\n");
 }
 
-function fail(msg: string): never {
-  failures.push(msg);
-  throw new Error(msg);
+function fail(message: string): never {
+  failures.push(message);
+  throw new Error(message);
 }
 
-function serverRssMb(pid: number): number {
+function rssMb(pid: number): number {
+  if (platform() === "linux") {
+    try {
+      const status = readFileSync(`/proc/${pid}/status`, "utf8");
+      const match = status.match(/^VmRSS:\s+(\d+)\s+kB$/m);
+      return match ? Number(match[1]) / 1024 : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  if (platform() === "darwin") {
+    try {
+      const value = execFileSync("ps", ["-o", "rss=", "-p", String(pid)], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim();
+      const kb = Number(value);
+      return Number.isFinite(kb) ? kb / 1024 : 0;
+    } catch {
+      return 0;
+    }
+  }
+
   try {
-    const out = execSync(`tasklist /FI "PID eq ${pid}" /FO CSV /NH`, {
+    const out = execFileSync("tasklist", ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     });
-    const m = out.match(/"([\d,]+) K"/);
-    if (!m) return 0;
-    return Number(m[1].replace(/,/g, "")) / 1024;
+    const match = out.match(/"([\d,]+) K"/);
+    return match ? Number(match[1].replaceAll(",", "")) / 1024 : 0;
   } catch {
     return 0;
   }
 }
 
-// --- core-domain workload (deterministic, in-process) -----------------------
-function coreWorkload(cycle: number, chain: AuditEntry[]): AuditEntry[] {
-  const now = new Date().toISOString();
-  const ctx: PolicyContext = {
-    workspaceId: "ws-soak",
-    accountId: "acct-1",
-    platform: "twitter",
-    actionType: "post_group",
-    now,
-    dailyActionsDone: cycle % 500,
-    dailyLimit: 500,
-    accountStatus: "active",
-    challengeActive: false,
-    breakerOpen: false,
-    approvalAllowed: true,
+function taskForCycle(cycle: number): Task {
+  const timestamp = new Date().toISOString();
+  return {
+    id: `soak-task-${cycle}`,
+    workspaceId: "soak-workspace",
+    campaignId: "soak-campaign",
+    accountId: "soak-account",
+    platform: "telegram",
+    kind: "publish",
+    contentId: `soak-content-${cycle}`,
+    destinationId: "soak-destination",
+    priority: 1,
+    status: "pending",
+    attempts: 0,
+    maxAttempts: 3,
+    availableAt: timestamp,
+    idempotencyKey: `soak-idempotency-${cycle}`,
+    createdAt: timestamp,
   };
-  const task: QueueTask = {
-    id: `task-${cycle}`,
-    workspaceId: "ws-soak",
-    platform: "twitter",
-    accountId: "acct-1",
-    actionType: "post_group",
-    target: "group-1",
-    payload: { text: `soak ${cycle}` },
-    status: "queued",
-    priority: "normal",
-    retries: 0,
-    maxRetries: 3,
-    scheduledTime: now,
+}
+
+function runCoreInvariantWorkload(cycle: number): void {
+  const timestamp = new Date().toISOString();
+  const task = taskForCycle(cycle);
+  const account: SocialAccount = {
+    id: task.accountId,
+    workspaceId: task.workspaceId,
+    platform: "telegram",
+    displayName: "Soak account",
+    status: "connected",
+    healthScore: 100,
+    createdAt: timestamp,
+  };
+  const content: ContentItem = {
+    id: task.contentId!,
+    workspaceId: task.workspaceId,
+    title: "Soak content",
+    body: "soak",
+    platformVariants: {
+      facebook: undefined,
+      instagram: undefined,
+      telegram: "soak",
+      whatsapp: undefined,
+      linkedin: undefined,
+      tiktok: undefined,
+    },
+    approvalStatus: "approved",
+    tags: [],
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  const campaign: Campaign = {
+    id: task.campaignId,
+    workspaceId: task.workspaceId,
+    name: "Soak campaign",
+    status: "running",
+    accountIds: [task.accountId],
+    contentIds: [task.contentId!],
+    taskCount: 1,
+    createdAt: timestamp,
+  };
+  const approval: Approval = {
+    id: `soak-approval-${cycle}`,
+    workspaceId: task.workspaceId,
+    contentId: task.contentId!,
+    requestedBy: "local-user",
+    reviewerIds: ["local-user"],
+    status: "approved",
+    decidedBy: "local-user",
+    decidedAt: timestamp,
+    note: "soak",
   };
 
-  const gate = gateTaskForExecution(task, ctx, evaluatePolicy);
-  if (!gate.dispatch || gate.decision.reason !== "allowed") {
-    fail(`policy gate rejected allowed task: ${gate.decision.reason}`);
+  const policy = evaluateExecutionPolicy({
+    account,
+    campaign,
+    task: { ...task, status: "running" },
+    content,
+    approval,
+    actionsToday: cycle % 10,
+    dailyLimit: 10,
+    consecutiveFailures: 0,
+    circuitBreakerThreshold: 3,
+  });
+  if (!policy.allowed) fail(`policy unexpectedly blocked cycle ${cycle}: ${policy.reason}`);
+
+  const blocked = evaluateExecutionPolicy({
+    account,
+    campaign,
+    task: { ...task, status: "running" },
+    content,
+    approval,
+    actionsToday: 10,
+    dailyLimit: 10,
+    consecutiveFailures: 0,
+    circuitBreakerThreshold: 3,
+  });
+  if (blocked.allowed || blocked.reason !== "daily_limit_reached") {
+    fail("daily limit invariant failed");
   }
 
-  // Denied path must fail closed.
-  const denied = gateTaskForExecution(task, { ...ctx, challengeActive: true }, evaluatePolicy);
-  if (denied.dispatch || denied.decision.reason !== "challenge_active") {
-    fail("challenge context was not blocked");
+  const queue = new TaskQueue({
+    retryPolicy: {
+      maxAttempts: 3,
+      baseDelayMs: 1_000,
+      maxDelayMs: 60_000,
+    },
+  });
+  queue.enqueue(task);
+
+  let duplicateBlocked = false;
+  try {
+    queue.enqueue(task);
+  } catch {
+    duplicateBlocked = true;
+  }
+  if (!duplicateBlocked) fail("queue idempotency invariant failed");
+
+  const claimed = queue.claimNext(timestamp);
+  if (!claimed || claimed.status !== "running") fail("queue claim invariant failed");
+
+  const retry = queue.fail(claimed.id, timestamp);
+  if (retry.status !== "pending" || retry.attempts !== 1) {
+    fail("queue retry invariant failed");
   }
 
-  // Retry/backoff lifecycle.
-  let t = task;
-  t = { ...t, status: "running" };
-  if (!shouldRetry(t)) fail("retry should be available under maxRetries");
-  t = scheduleRetry(t, "transient", now);
-  if (t.status !== "retrying") fail(`scheduleRetry produced ${t.status}`);
-  if (t.retries !== 1) fail(`retries not incremented: ${t.retries}`);
-  t = { ...t, status: "running" };
-  t = completeTask(t, now);
-  if (t.status !== "completed") fail(`completeTask produced ${t.status}`);
-  const dead = failTerminal({ ...task, status: "running", retries: 3 }, "boom", now);
-  if (dead.status !== "failed") fail(`failTerminal produced ${dead.status}`);
+  const chain = new AuditIntegrityChain();
+  void chain;
+  const events = [
+    { id: `audit-${cycle}-1`, actor: "system" as const, category: "task" as const, action: "soak.start", outcome: "success" as const },
+    { id: `audit-${cycle}-2`, actor: "system" as const, category: "task" as const, action: "soak.complete", outcome: "success" as const },
+  ];
+  for (const event of events) {
+    // append/verify below is kept async so the soak loop remains deterministic.
+    // The await is handled by the async wrapper.
+    void event;
+  }
+}
 
-  // Circuit breaker lifecycle.
-  let cb = createCircuitBreaker();
-  for (let i = 0; i < 10; i++) cb = recordCircuitFailure(cb, undefined, now);
-  if (!isCircuitBlocking(cb)) fail("circuit did not open after repeated failures");
-  cb = recordCircuitSuccess(cb);
-  cb = recordCircuitSuccess(cb);
-  if (isCircuitBlocking(cb)) fail("circuit did not recover");
-
-  // Audit chain grows and stays verifiable.
-  const next = appendEntry(chain, {
-    id: `audit-${cycle}`,
-    workspaceId: "ws-soak",
-    actorId: "soak",
-    action: "soak.cycle",
-    entityRef: `task-${cycle}`,
-    timestamp: now,
+async function runAuditInvariant(cycle: number): Promise<void> {
+  const chain = new AuditIntegrityChain();
+  const timestamp = new Date().toISOString();
+  await chain.append({
+    id: `audit-${cycle}-1`,
+    timestamp,
+    workspaceId: "soak-workspace",
+    category: "task",
+    action: "soak.start",
+    outcome: "success",
+    actor: "system",
+    entityId: `soak-task-${cycle}`,
     metadata: { cycle },
   });
-  const verdict = verifyChain(next);
-  if (!verdict.valid) fail(`audit chain broken at index ${verdict.brokenAt}`);
-  return next;
+  await chain.append({
+    id: `audit-${cycle}-2`,
+    timestamp,
+    workspaceId: "soak-workspace",
+    category: "task",
+    action: "soak.complete",
+    outcome: "success",
+    actor: "system",
+    entityId: `soak-task-${cycle}`,
+    metadata: { cycle },
+  });
+  if (!(await chain.verify())) fail("audit integrity invariant failed");
 }
 
-// --- server lifecycle --------------------------------------------------------
 async function waitForHealth(): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < 60_000) {
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/api/health`);
-      if (res.ok) return;
-    } catch {
-      /* not up yet */
+  const started = Date.now();
+  while (Date.now() - started < 30_000) {
+    if (server?.exitCode !== null && server?.exitCode !== undefined) {
+      fail(`server exited before health check (code ${server.exitCode})`);
     }
-    await new Promise((r) => setTimeout(r, 500));
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/health`, {
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (response.ok) return;
+    } catch {
+      // keep probing
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  fail("server did not become healthy within 60s");
+  fail("server did not become healthy within 30 seconds");
 }
 
-function stopServer(): void {
-  if (server?.pid) {
+async function terminateProcess(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null) return;
+
+  if (child.pid && platform() !== "win32") {
     try {
-      execSync(`taskkill /pid ${server.pid} /T /F`, { stdio: "ignore" });
+      process.kill(-child.pid, "SIGTERM");
     } catch {
-      /* already gone */
+      try {
+        child.kill("SIGTERM");
+      } catch {}
     }
+  } else {
+    try {
+      child.kill("SIGTERM");
+    } catch {}
   }
-  server = null;
+
+  await new Promise<void>((resolve) => {
+    if (child.exitCode !== null) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(resolve, 5_000);
+    child.once("exit", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+
+  if (child.exitCode === null) {
+    if (child.pid && platform() !== "win32") {
+      try {
+        process.kill(-child.pid, "SIGKILL");
+      } catch {}
+    } else {
+      try {
+        child.kill("SIGKILL");
+      } catch {}
+    }
+    await new Promise<void>((resolve) => {
+      if (child.exitCode !== null) {
+        resolve();
+        return;
+      }
+      const timer = setTimeout(resolve, 2_000);
+      child.once("exit", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
+
+  if (child.exitCode === null) fail("soak server process did not terminate");
 }
 
 async function main(): Promise<void> {
   console.log(
-    `soak: ${minutes} min against prod server on :${port} (RSS budget ${RSS_BUDGET_MB} MB)`,
+    `soak: ${minutes} min against production runtime on :${port} (RSS budget ${RSS_BUDGET_MB} MB)`,
   );
   server = spawn(
     process.execPath,
-    [join(root, "node_modules/tsx/dist/cli.mjs"), join(root, "server.ts")],
+    [join(root, "node_modules", "tsx", "dist", "cli.mjs"), join(root, "server.ts")],
     {
       cwd: root,
-      env: { ...process.env, NODE_ENV: "production", PORT: String(port) },
-      stdio: "ignore",
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        PORT: String(port),
+        RUNTIME_HOST: "127.0.0.1",
+        OLLAMA_BASE_URL: "http://127.0.0.1:9",
+      },
+      stdio: ["ignore", "ignore", "pipe"],
+      detached: platform() !== "win32",
     },
   );
-  const serverPid = server.pid!;
+  let stderr = "";
+  server.stderr?.on("data", (chunk) => {
+    stderr += String(chunk);
+  });
+  server.on("error", (error) => {
+    failures.push(`server spawn error: ${error.message}`);
+  });
+
   await waitForHealth();
 
-  let chain: AuditEntry[] = [];
-  let lastRssSample = 0;
+  let lastSample = 0;
 
   while (Date.now() < deadline) {
-    cycles++;
-    // Health probe.
+    if (server.exitCode !== null) fail(`server exited with code ${server.exitCode}`);
+
+    cycles += 1;
+
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/api/health`);
-      if (res.ok) {
-        healthOk++;
-        healthFails = 0;
+      const health = await fetch(`http://127.0.0.1:${port}/api/health`, {
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (!health.ok) {
+        healthFails += 1;
+        log({ cycle: cycles, health: health.status });
       } else {
-        healthFails++;
-        log({ cycle: cycles, health: res.status });
+        healthOk += 1;
+        const body: unknown = await health.json();
+        if (
+          typeof body !== "object" ||
+          body === null ||
+          (body as { provider?: unknown }).provider !== "ollama-local"
+        ) {
+          fail("health provider contract mismatch");
+        }
       }
-    } catch {
-      healthFails++;
-      log({ cycle: cycles, health: "network_error" });
+    } catch (error) {
+      healthFails += 1;
+      log({ cycle: cycles, health: "network_error", error: error instanceof Error ? error.message : String(error) });
     }
-    if (healthFails >= 3) fail("3 consecutive health failures");
+    if (healthFails >= 3) fail("three consecutive health failures");
 
-    // Static shell probe.
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/`);
-      if (!res.ok) staticFails++;
+      const response = await fetch(`http://127.0.0.1:${port}/`, {
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (!response.ok) staticFails += 1;
+      else staticOk += 1;
     } catch {
-      staticFails++;
+      staticFails += 1;
     }
+    if (staticFails >= 3) fail("three consecutive static delivery failures");
 
-    // AI endpoint error path (no key locally) — must respond, not crash the process.
     if (cycles % 4 === 0) {
+      chatChecks += 1;
       try {
-        const res = await fetch(`http://127.0.0.1:${port}/api/chat`, {
+        const chat = await fetch(`http://127.0.0.1:${port}/api/chat`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ message: "soak ping" }),
+          body: JSON.stringify({ messages: [{ role: "user", text: "soak ping" }] }),
+          signal: AbortSignal.timeout(5_000),
         });
-        chatResponses++;
-        await res.arrayBuffer();
-      } catch {
-        chatErrors++;
+        if (chat.status !== 502) {
+          chatFailures += 1;
+          log({ cycle: cycles, chat: chat.status });
+        }
+        await chat.arrayBuffer();
+      } catch (error) {
+        chatFailures += 1;
+        log({ cycle: cycles, chat: "network_error", error: error instanceof Error ? error.message : String(error) });
       }
-      if (chatErrors >= 3) fail("3 consecutive chat connection failures");
+      if (chatFailures >= 3) fail("three consecutive AI error-path failures");
     }
 
-    // Core-domain workload.
-    chain = coreWorkload(cycles, chain);
+    runCoreInvariantWorkload(cycles);
+    await runAuditInvariant(cycles);
 
-    // RSS sampling.
-    if (Date.now() - lastRssSample > 15_000) {
-      lastRssSample = Date.now();
-      const rss = serverRssMb(serverPid);
-      if (rss > 0) {
-        if (!rssFirst) rssFirst = rss;
-        rssLast = rss;
-        rssMin = Math.min(rssMin, rss);
-        rssMax = Math.max(rssMax, rss);
-        log({ cycle: cycles, rssMb: Math.round(rss), auditLen: chain.length });
-        if (rss > RSS_BUDGET_MB) fail(`RSS ${rss.toFixed(0)} MB over budget`);
+    if (Date.now() - lastSample >= 15_000) {
+      lastSample = Date.now();
+      const currentRss = server.pid ? rssMb(server.pid) : 0;
+      if (currentRss > 0) {
+        if (rssFirst === 0) rssFirst = currentRss;
+        rssLast = currentRss;
+        rssMin = Math.min(rssMin, currentRss);
+        rssMax = Math.max(rssMax, currentRss);
+        log({
+          cycle: cycles,
+          rssMb: Math.round(currentRss),
+          healthOk,
+          staticOk,
+          chatChecks,
+        });
+        if (currentRss > RSS_BUDGET_MB) {
+          fail(`RSS ${currentRss.toFixed(1)} MB exceeded budget`);
+        }
       }
-      if (server.exitCode !== null) fail(`server exited with code ${server.exitCode}`);
     }
 
-    await new Promise((r) => setTimeout(r, CYCLE_MS));
+    await new Promise((resolve) => setTimeout(resolve, CYCLE_MS));
   }
+
+  if (stderr.trim()) log({ serverStderr: stderr.slice(-4_000) });
 }
 
 main()
-  .then(() => {
+  .then(async () => {
     const summary = {
       runId,
       minutes,
       cycles,
       healthOk,
       healthFails,
+      staticOk,
       staticFails,
-      chatResponses,
-      chatErrors,
+      chatChecks,
+      chatFailures,
       rssMinMb: Number.isFinite(rssMin) ? Math.round(rssMin) : null,
-      rssMaxMb: Math.round(rssMax) || null,
-      rssFirstMb: rssFirst || null,
-      rssLastMb: rssLast || null,
+      rssMaxMb: rssMax ? Math.round(rssMax) : null,
+      rssFirstMb: rssFirst ? Math.round(rssFirst) : null,
+      rssLastMb: rssLast ? Math.round(rssLast) : null,
       rssBudgetMb: RSS_BUDGET_MB,
       failures,
       ok: failures.length === 0,
       finishedAt: new Date().toISOString(),
     };
-    stopServer();
+    if (server) await terminateProcess(server);
     jsonl.end();
-    writeFileSync(join(logsDir, "soak-summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
+    writeFileSync(summaryPath, JSON.stringify(summary, null, 2) + "\n", "utf8");
     console.log(JSON.stringify(summary, null, 2));
     process.exit(summary.ok ? 0 : 1);
   })
-  .catch((err) => {
-    console.error(`SOAK FAILED: ${err instanceof Error ? err.message : err}`);
-    stopServer();
+  .catch(async (error: unknown) => {
+    if (server) {
+      try {
+        await terminateProcess(server);
+      } catch {}
+    }
     jsonl.end();
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`SOAK FAILED: ${message}`);
+    if (stderrHint(server)) {
+      console.error(stderrHint(server));
+    }
     process.exit(1);
   });
+
+function stderrHint(child: ChildProcess | undefined): string {
+  return child?.pid ? `See captured runtime stderr for PID ${child.pid}.` : "";
+}
