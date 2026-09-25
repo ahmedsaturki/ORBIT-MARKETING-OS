@@ -8269,6 +8269,7 @@ fn operational_event_outcome_for_audit(outcome: &str) -> &'static str {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn append_operational_event_from_audit(
     connection: &Connection,
     workspace_id: &str,
@@ -8787,6 +8788,7 @@ fn analytics_summary(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn append_operational_event(
     connection: &mut Connection,
     workspace_id: &str,
@@ -8809,7 +8811,7 @@ fn append_operational_event(
     let id = id
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| "");
+        .unwrap_or("");
     let id = if id.is_empty() {
         uuid_like()
     } else {
@@ -8915,6 +8917,7 @@ fn append_operational_event(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 fn operational_event_append(
     app: tauri::AppHandle,
