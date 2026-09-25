@@ -23,6 +23,7 @@ export interface OperationalEvent {
   readonly kind: OperationalEventKind;
   readonly outcome: OperationalEventOutcome;
   readonly actor: "user" | "system" | "agent" | "connector";
+  readonly actorId: string;
   readonly entityType?: string;
   readonly entityId?: string;
   readonly traceId?: string;
@@ -66,6 +67,7 @@ function cloneEvent(event: OperationalEvent): OperationalEvent {
 
 export function createOperationalEvent(input: OperationalEventInput): OperationalEvent {
   if (!input.workspaceId.trim()) throw new Error("operational_event_workspace_required");
+  if (!input.actorId.trim()) throw new Error("operational_event_actor_required");
   assertTimestamp(input.timestamp);
 
   const sequence = input.sequence ?? 0;
