@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const rustRoot = join(root, "packages", "desktop", "src-tauri", "src");
-const app = await readFile(join(root, "packages/desktop/src/App.tsx"), "utf8");
+const uiRoot = join(root, "packages", "desktop", "src");
 
 async function collectRustSourcePaths(dir) {
   const paths = [];
@@ -24,6 +24,28 @@ const rustContents = await Promise.all(
   rustSources.map((path) => readFile(path, "utf8")),
 );
 const rust = rustContents.join("\n");
+
+async function collectUiSourcePaths(dir) {
+  const paths = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      paths.push(...(await collectUiSourcePaths(full)));
+    } else if (
+      entry.isFile() &&
+      (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx"))
+    ) {
+      paths.push(full);
+    }
+  }
+  return paths;
+}
+
+const uiSources = await collectUiSourcePaths(uiRoot);
+const uiContents = await Promise.all(
+  uiSources.map((path) => readFile(path, "utf8")),
+);
+const ui = uiContents.join("\n");
 
 const rustCommands = new Set(
   [
@@ -74,12 +96,12 @@ if (
     "approval_decide must derive actor identity inside the runtime",
   );
 }
-if (/approval_request[\s\S]{0,800}requested_by:\s*"local-user"/.test(app)) {
+if (/approval_request[\s\S]{0,800}requested_by:\s*"local-user"/.test(ui)) {
   throw new Error(
     "Desktop UI must not supply requested_by for approval requests",
   );
 }
-if (/approval_decide[\s\S]{0,800}decided_by:\s*"local-user"/.test(app)) {
+if (/approval_decide[\s\S]{0,800}decided_by:\s*"local-user"/.test(ui)) {
   throw new Error(
     "Desktop UI must not supply decided_by for approval decisions",
   );
@@ -171,7 +193,7 @@ function collectInvokeArgumentObjects(source) {
   return segments;
 }
 
-for (const argumentObject of collectInvokeArgumentObjects(app)) {
+for (const argumentObject of collectInvokeArgumentObjects(ui)) {
   const snakeCaseKeys = [
     ...argumentObject.matchAll(/\b([A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+)\s*:/g),
   ].map((match) => match[1]);
@@ -186,7 +208,7 @@ for (const argumentObject of collectInvokeArgumentObjects(app)) {
 
 const uiCommands = new Set(
   [
-    ...app.matchAll(
+    ...ui.matchAll(
       /(?:callNative|invoke)(?:<[^>]+>)?\(\s*["']([A-Za-z_][A-Za-z0-9_]*)["']/g,
     ),
   ].map((match) => match[1]),
@@ -217,6 +239,7 @@ console.log(
   "Desktop IPC contract checks passed:",
   JSON.stringify({
     rustSourceFiles: rustSources.length,
+    uiSourceFiles: uiSources.length,
     rustCommands: rustCommands.size,
     registeredCommands: registeredCommands.size,
     uiCommands: uiCommands.size,
