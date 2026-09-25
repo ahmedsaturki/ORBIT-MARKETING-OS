@@ -426,7 +426,7 @@ export function App(): ReactElement {
       const result = await callNative<MediaAssetView>("media_asset_import", {
         id: mediaId.trim(),
         path: mediaLocalPath.trim(),
-        tags_json: JSON.stringify(
+        tagsJson: JSON.stringify(
           mediaTags
             .split(",")
             .map((tag) => tag.trim())
@@ -479,11 +479,11 @@ export function App(): ReactElement {
         id: mediaId.trim(),
         kind: mediaKind,
         filename: mediaFilename.trim(),
-        mime_type: mediaMimeType.trim(),
-        size_bytes: size,
+        mimeType: mediaMimeType.trim(),
+        sizeBytes: size,
         sha256: mediaSha256.trim() || null,
-        local_path: mediaLocalPath.trim(),
-        tags_json: JSON.stringify(
+        localPath: mediaLocalPath.trim(),
+        tagsJson: JSON.stringify(
           mediaTags
             .split(",")
             .map((tag) => tag.trim())
@@ -560,8 +560,8 @@ export function App(): ReactElement {
         id: rulePackId.trim(),
         platform: rulePackPlatform,
         version: rulePackVersion.trim(),
-        schema_version: 1,
-        rules_json: rulePackRules,
+        schemaVersion: 1,
+        rulesJson: rulePackRules,
         enabled: true,
       });
       await loadRulePacks();
@@ -591,7 +591,7 @@ export function App(): ReactElement {
       const items = await callNative<ContentVariantView[]>(
         "content_variant_list",
         {
-          content_id: contentId,
+          contentId: contentId,
         },
       );
       setContentVariants(items);
@@ -612,7 +612,7 @@ export function App(): ReactElement {
     try {
       setError("");
       await callNative<ContentVariantView>("content_variant_upsert", {
-        content_id: selectedContentId,
+        contentId: selectedContentId,
         platform: variantPlatform,
         body: variantBody.trim(),
       });
@@ -650,8 +650,8 @@ export function App(): ReactElement {
         id: contentId.trim(),
         title: contentTitle.trim(),
         body: contentBody.trim(),
-        approval_status: "draft",
-        tags_json: JSON.stringify(
+        approvalStatus: "draft",
+        tagsJson: JSON.stringify(
           contentTags
             .split(",")
             .map((tag) => tag.trim())
@@ -677,8 +677,8 @@ export function App(): ReactElement {
     try {
       setError("");
       await callNative<boolean>("campaign_attach_content", {
-        campaign_id: contentCampaignId,
-        content_id: selectedContentId,
+        campaignId: contentCampaignId,
+        contentId: selectedContentId,
       });
       await loadCampaigns();
       setError("");
@@ -698,8 +698,8 @@ export function App(): ReactElement {
       setError("");
       const result = await callNative<ApprovalView>("approval_request", {
         id: "approval-" + Date.now(),
-        content_id: selectedContentId,
-        reviewer_ids_json: JSON.stringify(["local-user"]),
+        contentId: selectedContentId,
+        reviewerIdsJson: JSON.stringify(["local-user"]),
         note: "طلب موافقة من مساحة العمل المحلية",
       });
       setApprovalId(result.id);
@@ -769,16 +769,16 @@ export function App(): ReactElement {
       }
       await callNative<TaskView>("task_enqueue", {
         id: taskId.trim() || "task-" + Date.now(),
-        campaign_id: taskCampaignId,
-        account_id: taskAccountId,
+        campaignId: taskCampaignId,
+        accountId: taskAccountId,
         platform: selectedAccount.platform,
         kind: taskKind,
         priority: 10,
-        available_at: new Date().toISOString(),
-        max_attempts: 3,
-        idempotency_key: taskIdempotencyKey.trim() || null,
-        content_id: content,
-        destination_id: destination,
+        availableAt: new Date().toISOString(),
+        maxAttempts: 3,
+        idempotencyKey: taskIdempotencyKey.trim() || null,
+        contentId: content,
+        destinationId: destination,
       });
       setTaskId("");
       setTaskIdempotencyKey("");
@@ -835,9 +835,9 @@ export function App(): ReactElement {
       const result = await callNative<TelegramExecutionView>(
         "telegram_execute_task",
         {
-          task_id: taskId,
-          vault_password: password,
-          user_confirmed: true,
+          taskId: taskId,
+          vaultPassword: password,
+          userConfirmed: true,
         },
       );
       setExecutionMessage(result.message);
@@ -925,10 +925,10 @@ export function App(): ReactElement {
       }
       await callNative<ConversationView>("conversation_upsert", {
         id: conversationId.trim(),
-        account_id: conversationAccountId,
-        contact_id: contactId.trim() || null,
+        accountId: conversationAccountId,
+        contactId: contactId.trim() || null,
         platform: conversationPlatform,
-        external_thread_id: externalThreadId.trim() || null,
+        externalThreadId: externalThreadId.trim() || null,
         status: conversationStatus,
       });
       setConversationId("");
@@ -949,7 +949,7 @@ export function App(): ReactElement {
       setError("");
       await callNative<MessageView>("message_add", {
         id: "msg-" + Date.now(),
-        conversation_id: messageConversationId,
+        conversationId: messageConversationId,
         direction: messageDirection,
         body: messageBody.trim(),
       });
@@ -966,7 +966,7 @@ export function App(): ReactElement {
       setMessageConversationId(id);
       setMessages(
         await callNative<MessageView[]>("message_list", {
-          conversation_id: id,
+          conversationId: id,
         }),
       );
     } catch (caught: unknown) {
@@ -994,7 +994,7 @@ export function App(): ReactElement {
       setError("");
       await callNative<CampaignView>("campaign_create", {
         name: campaignName.trim(),
-        account_ids: [campaignAccountId],
+        accountIds: [campaignAccountId],
       });
       setCampaignName("");
       await loadCampaigns();
@@ -1015,10 +1015,10 @@ export function App(): ReactElement {
       setError("");
       const result = await callNative<ContactView>("contact_upsert", {
         id: contactId.trim(),
-        display_name: contactName.trim(),
+        displayName: contactName.trim(),
         phone: contactPhone.trim() || null,
         email: contactEmail.trim() || null,
-        source_platform: null,
+        sourcePlatform: null,
         status: contactStatus,
         notes: contactNotes.trim() || null,
       });
@@ -1135,7 +1135,7 @@ export function App(): ReactElement {
       const result = await callNative<AccountView>("account_upsert", {
         id: accountId.trim(),
         platform: accountPlatform,
-        display_name: accountName.trim(),
+        displayName: accountName.trim(),
         username: accountUsername.trim() || null,
         session: accountSession || null,
         password: accountSession ? password : null,
