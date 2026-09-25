@@ -1,4 +1,8 @@
-import { evaluateGovernedExecution, type GovernedExecutionRequest, type GovernedExecutionDecision } from "../execution/decision.js";
+import {
+  evaluateGovernedExecution,
+  type GovernedExecutionDecision,
+  type GovernedExecutionRequest,
+} from "../execution/decision.js";
 
 export interface SimulationAction {
   readonly id: string;
