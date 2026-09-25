@@ -68,6 +68,27 @@ export function OperatingGraphPanel({ workspaceId }: GraphPanelProps) {
     if (workspaceId) void load();
   }, [workspaceId, filterType, filterId]);
 
+  const deleteLink = async (link: OperationalLinkView): Promise<void> => {
+    const confirmed = window.confirm(
+      "سيتم حذف العلاقة التشغيلية المحددة. هل تريد المتابعة؟",
+    );
+    if (!confirmed) return;
+
+    try {
+      setError("");
+      await invoke("operational_link_delete", {
+        fromType: link.from_type,
+        fromId: link.from_id,
+        toType: link.to_type,
+        toId: link.to_id,
+        relation: link.relation,
+      });
+      await load();
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "فشل حذف العلاقة");
+    }
+  };
+
   const createLink = async (
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> => {
@@ -211,6 +232,13 @@ export function OperatingGraphPanel({ workspaceId }: GraphPanelProps) {
               <div className="account-meta">
                 {link.relation} • {link.created_at}
               </div>
+              <button
+                className="button danger"
+                type="button"
+                onClick={() => void deleteLink(link)}
+              >
+                حذف العلاقة
+              </button>
             </div>
           </div>
         ))}
