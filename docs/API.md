@@ -150,8 +150,10 @@ Agent definitions are workspace-scoped and explicitly bounded by autonomy, tool 
 - `opportunity_list`
 - `insight_upsert`
 - `insight_list`
+- `outcome_analytics`
 
 Opportunities are workspace-scoped CRM outcomes linked to a contact and optionally a campaign. Values are non-negative, probability is bounded to 0–100, and currency uses a three-letter uppercase code. Insights are workspace-scoped, evidence-oriented records with explicit kind, confidence, source IDs, and UTC-normalized observation time.
+`outcome_analytics` returns workspace-scoped opportunity totals plus pipeline/won values grouped by currency, preventing invalid cross-currency aggregation.
 
 ### Operating graph
 
