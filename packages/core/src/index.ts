@@ -27,3 +27,4 @@ export * from "./outcomes/index.js";
 export * from "./simulation/index.js";
 export * from "./replay/index.js";
 export * from "./policy-packs/index.js";
+export * from "./next-actions/index.js";
