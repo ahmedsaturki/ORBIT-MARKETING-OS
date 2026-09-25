@@ -24,6 +24,8 @@ export async function issueLicenseToken(
       features: [...payload.features],
     }),
   );
-  const signature = new Uint8Array(await crypto.subtle.sign("Ed25519", key, message));
+  const signature = new Uint8Array(
+    await crypto.subtle.sign("Ed25519", key, message),
+  );
   return createLicenseToken(payload, signature);
 }

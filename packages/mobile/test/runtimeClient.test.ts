@@ -22,7 +22,10 @@ test("runtime client validates health payload and sends bearer token", async () 
   };
 
   try {
-    const health = await fetchRuntimeHealth("http://127.0.0.1:3000/", "secret-token");
+    const health = await fetchRuntimeHealth(
+      "http://127.0.0.1:3000/",
+      "secret-token",
+    );
     assert.equal(health.status, "degraded");
     assert.equal(health.provider, "ollama-local");
     assert.equal(receivedUrl, "http://127.0.0.1:3000/api/health");

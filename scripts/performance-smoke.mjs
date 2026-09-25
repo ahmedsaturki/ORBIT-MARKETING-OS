@@ -36,15 +36,21 @@ if (stats.pending !== COUNT) {
   throw new Error("Performance smoke queue count mismatch: " + stats.pending);
 }
 if (snapshot.length !== COUNT) {
-  throw new Error("Performance smoke snapshot count mismatch: " + snapshot.length);
+  throw new Error(
+    "Performance smoke snapshot count mismatch: " + snapshot.length,
+  );
 }
 if (elapsed > BUDGET_MS) {
-  throw new Error(`Performance smoke exceeded ${BUDGET_MS}ms budget: ${elapsed.toFixed(1)}ms`);
+  throw new Error(
+    `Performance smoke exceeded ${BUDGET_MS}ms budget: ${elapsed.toFixed(1)}ms`,
+  );
 }
 
-console.log(JSON.stringify({
-  test: "queue-enqueue-snapshot",
-  operations: COUNT,
-  elapsedMs: Number(elapsed.toFixed(1)),
-  budgetMs: BUDGET_MS,
-}));
+console.log(
+  JSON.stringify({
+    test: "queue-enqueue-snapshot",
+    operations: COUNT,
+    elapsedMs: Number(elapsed.toFixed(1)),
+    budgetMs: BUDGET_MS,
+  }),
+);

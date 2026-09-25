@@ -26,18 +26,26 @@ function findVcvars() {
   ];
   const found = candidates.find((c) => existsSync(c));
   if (!found) {
-    console.error("vcvars64.bat not found — install Visual Studio Build Tools.");
+    console.error(
+      "vcvars64.bat not found — install Visual Studio Build Tools.",
+    );
     process.exit(1);
   }
   return found;
 }
 
 function findRustc() {
-  const r = spawnSync("rustup", ["which", "rustc", "--toolchain", "stable-x86_64-pc-windows-msvc"], {
-    encoding: "utf8",
-  });
+  const r = spawnSync(
+    "rustup",
+    ["which", "rustc", "--toolchain", "stable-x86_64-pc-windows-msvc"],
+    {
+      encoding: "utf8",
+    },
+  );
   if (r.status !== 0 || !r.stdout?.trim()) {
-    console.error("rustup stable-x86_64-pc-windows-msvc toolchain not found (rustup toolchain install stable).");
+    console.error(
+      "rustup stable-x86_64-pc-windows-msvc toolchain not found (rustup toolchain install stable).",
+    );
     process.exit(1);
   }
   return r.stdout.trim();
@@ -49,7 +57,9 @@ function pickTargetDir() {
     const cFree = statfsSync("C:/").bavail * statfsSync("C:/").bsize;
     if (cFree < 4 * 1024 ** 3 && existsSync("D:/")) {
       const dir = "D:/orbit-cargo-target";
-      console.log(`C: has ${(cFree / 1024 ** 3).toFixed(1)} GB free — using ${dir}`);
+      console.log(
+        `C: has ${(cFree / 1024 ** 3).toFixed(1)} GB free — using ${dir}`,
+      );
       return dir;
     }
   } catch {
@@ -83,7 +93,10 @@ writeFileSync(bat, lines.join("\r\n"));
 console.log(`cargo ${cargoArgs.join(" ")}`);
 let code = 1;
 try {
-  const res = spawnSync("cmd", ["/c", bat], { cwd: join(root, "src-tauri"), stdio: "inherit" });
+  const res = spawnSync("cmd", ["/c", bat], {
+    cwd: join(root, "src-tauri"),
+    stdio: "inherit",
+  });
   code = res.status ?? 1;
 } finally {
   try {

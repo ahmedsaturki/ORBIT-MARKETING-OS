@@ -70,7 +70,11 @@ export async function decryptAes256Gcm(
   assertKey(key);
 
   const plaintext = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: base64ToBytes(payload.iv).slice().buffer as ArrayBuffer, tagLength: 128 },
+    {
+      name: "AES-GCM",
+      iv: base64ToBytes(payload.iv).slice().buffer as ArrayBuffer,
+      tagLength: 128,
+    },
     key,
     base64ToBytes(payload.ciphertext).slice().buffer as ArrayBuffer,
   );
@@ -82,9 +86,8 @@ export async function decryptAes256Gcm(
  * Generate a fresh non-exported AES-256-GCM key.
  */
 export async function generateAes256Key(): Promise<CryptoKey> {
-  return crypto.subtle.generateKey(
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
-  );
+  return crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+    "encrypt",
+    "decrypt",
+  ]);
 }

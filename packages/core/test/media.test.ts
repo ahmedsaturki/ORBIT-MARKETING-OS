@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { searchMediaAssets, validateMediaAsset, type MediaAsset } from "../src/media/catalog.js";
+import {
+  searchMediaAssets,
+  validateMediaAsset,
+  type MediaAsset,
+} from "../src/media/catalog.js";
 
 const image: MediaAsset = {
   id: "media-1",
@@ -25,7 +29,16 @@ describe("media catalog", () => {
 
   it("searches by text, kind, and all requested tags", () => {
     const results = searchMediaAssets(
-      [image, { ...image, id: "media-2", filename: "other.jpg", mimeType: "image/jpeg", tags: ["other"] }],
+      [
+        image,
+        {
+          ...image,
+          id: "media-2",
+          filename: "other.jpg",
+          mimeType: "image/jpeg",
+          tags: ["other"],
+        },
+      ],
       { text: "launch", kind: "image", tags: ["facebook"] },
     );
     expect(results.map((item) => item.id)).toEqual(["media-1"]);

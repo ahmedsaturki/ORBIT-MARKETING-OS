@@ -38,7 +38,8 @@ export class FixtureConnector implements PlatformConnector {
       return {
         status: "blocked",
         reason: "authorization_required",
-        message: "Fixture connector requires an explicit authorization boundary.",
+        message:
+          "Fixture connector requires an explicit authorization boundary.",
       };
     }
     return { status: "succeeded", message: "fixture connected" };
@@ -48,7 +49,10 @@ export class FixtureConnector implements PlatformConnector {
     return { status: "succeeded", message: "fixture disconnected" };
   }
 
-  public async execute(task: Task, context: ConnectorContext): Promise<ConnectorOutcome> {
+  public async execute(
+    task: Task,
+    context: ConnectorContext,
+  ): Promise<ConnectorOutcome> {
     assertSupportedTask(this, task);
     assertUserConfirmed(context);
 
@@ -56,7 +60,8 @@ export class FixtureConnector implements PlatformConnector {
       return {
         status: "blocked",
         reason: "platform_challenge",
-        message: "Fixture challenge: execution must stop for human intervention.",
+        message:
+          "Fixture challenge: execution must stop for human intervention.",
       };
     }
 

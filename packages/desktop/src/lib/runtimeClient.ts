@@ -35,10 +35,7 @@ export interface RuntimeContentResponse {
 export interface RuntimeImageAnalysisRequest {
   readonly imageBase64: string;
   readonly analysisType:
-    | "ad_critique"
-    | "ocr_copy"
-    | "platform_fit"
-    | "comprehensive";
+    "ad_critique" | "ocr_copy" | "platform_fit" | "comprehensive";
   readonly prompt?: string;
 }
 
@@ -52,7 +49,8 @@ export async function fetchLocalRuntimeHealth(
   baseUrl = DEFAULT_RUNTIME_URL,
 ): Promise<RuntimeHealth> {
   const payload = await requestJson<unknown>(baseUrl, "/api/health");
-  if (!isRuntimeHealth(payload)) throw new Error("Invalid local runtime health response");
+  if (!isRuntimeHealth(payload))
+    throw new Error("Invalid local runtime health response");
   return payload;
 }
 
@@ -85,7 +83,8 @@ export async function sendLocalChat(
       profile,
     }),
   });
-  if (!isRuntimeChatResponse(payload)) throw new Error("Invalid local runtime chat response");
+  if (!isRuntimeChatResponse(payload))
+    throw new Error("Invalid local runtime chat response");
   return payload;
 }
 
@@ -106,7 +105,8 @@ export async function generateLocalContent(
       targetAudience: request.targetAudience.trim().slice(0, 500),
     }),
   });
-  if (!isRuntimeContentResponse(payload)) throw new Error("Invalid local runtime content response");
+  if (!isRuntimeContentResponse(payload))
+    throw new Error("Invalid local runtime content response");
   return payload;
 }
 
@@ -123,10 +123,13 @@ export async function analyzeLocalImage(
     body: JSON.stringify({
       imageBase64: request.imageBase64,
       analysisType: request.analysisType,
-      ...(request.prompt?.trim() ? { prompt: request.prompt.trim().slice(0, 4_000) } : {}),
+      ...(request.prompt?.trim()
+        ? { prompt: request.prompt.trim().slice(0, 4_000) }
+        : {}),
     }),
   });
-  if (!isRuntimeImageAnalysisResponse(payload)) throw new Error("Invalid local runtime image-analysis response");
+  if (!isRuntimeImageAnalysisResponse(payload))
+    throw new Error("Invalid local runtime image-analysis response");
   return payload;
 }
 
@@ -184,7 +187,11 @@ function normalizeRuntimeUrl(value: string): string {
     throw new Error("Runtime URL must not contain embedded credentials");
   }
 
-  if (url.hostname !== "127.0.0.1" && url.hostname !== "localhost" && url.hostname !== "::1") {
+  if (
+    url.hostname !== "127.0.0.1" &&
+    url.hostname !== "localhost" &&
+    url.hostname !== "::1"
+  ) {
     throw new Error("Desktop AI runtime must remain on the local machine");
   }
 
@@ -194,27 +201,46 @@ function normalizeRuntimeUrl(value: string): string {
 function isRuntimeHealth(value: unknown): value is RuntimeHealth {
   if (!isRecord(value)) return false;
   return (
-    (value.status === "ok" || value.status === "degraded" || value.status === "offline") &&
+    (value.status === "ok" ||
+      value.status === "degraded" ||
+      value.status === "offline") &&
     typeof value.service === "string" &&
     (value.provider === undefined || typeof value.provider === "string") &&
     (value.model === undefined || typeof value.model === "string") &&
-    (value.visionConfigured === undefined || typeof value.visionConfigured === "boolean")
+    (value.visionConfigured === undefined ||
+      typeof value.visionConfigured === "boolean")
   );
 }
 
 function isRuntimeChatResponse(value: unknown): value is RuntimeChatResponse {
   if (!isRecord(value)) return false;
-  return typeof value.text === "string" && typeof value.modelUsed === "string" && typeof value.provider === "string";
+  return (
+    typeof value.text === "string" &&
+    typeof value.modelUsed === "string" &&
+    typeof value.provider === "string"
+  );
 }
 
-function isRuntimeContentResponse(value: unknown): value is RuntimeContentResponse {
+function isRuntimeContentResponse(
+  value: unknown,
+): value is RuntimeContentResponse {
   if (!isRecord(value)) return false;
-  return typeof value.content === "string" && typeof value.modelUsed === "string" && typeof value.provider === "string";
+  return (
+    typeof value.content === "string" &&
+    typeof value.modelUsed === "string" &&
+    typeof value.provider === "string"
+  );
 }
 
-function isRuntimeImageAnalysisResponse(value: unknown): value is RuntimeImageAnalysisResponse {
+function isRuntimeImageAnalysisResponse(
+  value: unknown,
+): value is RuntimeImageAnalysisResponse {
   if (!isRecord(value)) return false;
-  return typeof value.analysis === "string" && typeof value.modelUsed === "string" && typeof value.provider === "string";
+  return (
+    typeof value.analysis === "string" &&
+    typeof value.modelUsed === "string" &&
+    typeof value.provider === "string"
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

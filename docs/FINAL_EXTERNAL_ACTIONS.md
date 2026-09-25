@@ -5,8 +5,8 @@ Updated: 2026-09-24
 The codebase is intentionally not marked production-ready yet. The remaining actions below require access to the user's GitHub/Vercel account or execution environment.
 
 ## A. Enable zero-cost technical verification
-The repository also contains `.github/workflows/bootstrap-lockfiles-hosted.yml`, owner-restricted to the consolidated branch, for generating the reproducible lockfiles on a GitHub-hosted Linux runner when self-hosted execution is unavailable.
 
+The repository also contains `.github/workflows/bootstrap-lockfiles-hosted.yml`, owner-restricted to the consolidated branch, for generating the reproducible lockfiles on a GitHub-hosted Linux runner when self-hosted execution is unavailable.
 
 1. Open the repository **Settings → Actions → Runners → New self-hosted runner**.
 2. Register the user's owned Linux machine or Ubuntu-on-WSL environment.
@@ -62,4 +62,3 @@ Before selling the product as a production release, collect current evidence for
 - signed artifacts and checksums;
 - terms/privacy/refund pages;
 - actual payment/checkout configuration.
-

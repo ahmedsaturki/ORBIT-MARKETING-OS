@@ -7,7 +7,10 @@ import type { Task } from "../types/index.js";
 export interface TaskQueueStore {
   insert(task: Task): Promise<void>;
   get(taskId: string, workspaceId: string): Promise<Task | undefined>;
-  getByIdempotencyKey(key: string, workspaceId: string): Promise<Task | undefined>;
+  getByIdempotencyKey(
+    key: string,
+    workspaceId: string,
+  ): Promise<Task | undefined>;
   claimNext(workspaceId: string, now: string): Promise<Task | undefined>;
   save(task: Task): Promise<void>;
   list(workspaceId: string): Promise<readonly Task[]>;

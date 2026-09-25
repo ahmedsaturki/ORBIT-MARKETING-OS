@@ -34,7 +34,8 @@ export async function fetchRuntimeHealth(
   }
 
   const payload: unknown = await response.json();
-  if (!isRuntimeHealth(payload)) throw new Error("Invalid runtime health response");
+  if (!isRuntimeHealth(payload))
+    throw new Error("Invalid runtime health response");
   return payload;
 }
 
@@ -42,7 +43,9 @@ function isRuntimeHealth(value: unknown): value is RuntimeHealth {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
   return (
-    (record.status === "ok" || record.status === "degraded" || record.status === "offline") &&
+    (record.status === "ok" ||
+      record.status === "degraded" ||
+      record.status === "offline") &&
     typeof record.service === "string"
   );
 }

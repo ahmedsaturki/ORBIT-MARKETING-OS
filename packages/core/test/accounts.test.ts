@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { calculateHealthScore, calculateWarmupBudget } from "../src/accounts/safety.js";
+import {
+  calculateHealthScore,
+  calculateWarmupBudget,
+} from "../src/accounts/safety.js";
 
 describe("account safety", () => {
   it("starts with a conservative budget and grows weekly", () => {
@@ -26,12 +29,14 @@ describe("account safety", () => {
   });
 
   it("returns a neutral starting score with no activity", () => {
-    expect(calculateHealthScore({
-      tasksAttempted: 0,
-      tasksSucceeded: 0,
-      tasksFailed: 0,
-      challenges: 0,
-      daysActive: 0,
-    })).toBe(100);
+    expect(
+      calculateHealthScore({
+        tasksAttempted: 0,
+        tasksSucceeded: 0,
+        tasksFailed: 0,
+        challenges: 0,
+        daysActive: 0,
+      }),
+    ).toBe(100);
   });
 });

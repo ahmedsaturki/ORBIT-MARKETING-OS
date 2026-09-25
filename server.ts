@@ -28,7 +28,10 @@ const RUNTIME_ALLOWED_ORIGINS = new Set([
     .filter(Boolean),
 ]);
 const RUNTIME_RATE_WINDOW_MS = 60_000;
-const parsedRuntimeRateLimit = Number.parseInt(process.env.RUNTIME_RATE_LIMIT ?? "120", 10);
+const parsedRuntimeRateLimit = Number.parseInt(
+  process.env.RUNTIME_RATE_LIMIT ?? "120",
+  10,
+);
 const RUNTIME_RATE_LIMIT =
   Number.isFinite(parsedRuntimeRateLimit) && parsedRuntimeRateLimit >= 1
     ? parsedRuntimeRateLimit
@@ -47,7 +50,8 @@ function isRateLimited(req: express.Request): boolean {
     runtimeRate.set(key, { windowStart: now, count: 1 });
     if (runtimeRate.size > 1024) {
       for (const [entryKey, entry] of runtimeRate) {
-        if (now - entry.windowStart >= RUNTIME_RATE_WINDOW_MS) runtimeRate.delete(entryKey);
+        if (now - entry.windowStart >= RUNTIME_RATE_WINDOW_MS)
+          runtimeRate.delete(entryKey);
       }
     }
     return false;
@@ -81,7 +85,10 @@ function applyCors(req: express.Request, res: express.Response): void {
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Authorization, Content-Type, Accept",
+  );
 }
 
 function isLoopbackHost(host: string): boolean {
@@ -92,7 +99,10 @@ function runtimeAuthRequired(): boolean {
   return !isLoopbackHost(RUNTIME_HOST);
 }
 
-function authorizeRuntime(req: express.Request, res: express.Response): boolean {
+function authorizeRuntime(
+  req: express.Request,
+  res: express.Response,
+): boolean {
   const origin = requestOrigin(req);
   if (origin && !originAllowed(req)) {
     res.status(403).json({ error: "Origin is not allowed for this runtime." });
@@ -104,7 +114,12 @@ function authorizeRuntime(req: express.Request, res: express.Response): boolean 
   }
 
   if (!RUNTIME_AUTH_TOKEN) {
-    res.status(503).json({ error: "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback." });
+    res
+      .status(503)
+      .json({
+        error:
+          "RUNTIME_AUTH_TOKEN is required when RUNTIME_HOST is not loopback.",
+      });
     return false;
   }
 
@@ -118,8 +133,14 @@ function authorizeRuntime(req: express.Request, res: express.Response): boolean 
 
   const supplied = req.header("authorization") ?? "";
   const prefix = "Bearer ";
-  const credential = supplied.startsWith(prefix) ? supplied.slice(prefix.length) : "";
-  if (credential.length > 1024 || !supplied.startsWith(prefix) || !tokensEqual(RUNTIME_AUTH_TOKEN, credential)) {
+  const credential = supplied.startsWith(prefix)
+    ? supplied.slice(prefix.length)
+    : "";
+  if (
+    credential.length > 1024 ||
+    !supplied.startsWith(prefix) ||
+    !tokensEqual(RUNTIME_AUTH_TOKEN, credential)
+  ) {
     res.status(401).json({ error: "Unauthorized runtime request" });
     return false;
   }
@@ -137,7 +158,9 @@ app.use("/api", (req, res, next) => {
 
   if (req.method === "OPTIONS") {
     if (!originAllowed(req)) {
-      return res.status(403).json({ error: "Origin is not allowed for this runtime." });
+      return res
+        .status(403)
+        .json({ error: "Origin is not allowed for this runtime." });
     }
     return res.sendStatus(204);
   }
@@ -162,12 +185,19 @@ const OLLAMA_BASE_URL = normalizeOllamaBaseUrl(
 
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.2:3b";
 const OLLAMA_FAST_MODEL = process.env.OLLAMA_FAST_MODEL ?? OLLAMA_MODEL;
-const OLLAMA_REASONING_MODEL = process.env.OLLAMA_REASONING_MODEL ?? OLLAMA_MODEL;
+const OLLAMA_REASONING_MODEL =
+  process.env.OLLAMA_REASONING_MODEL ?? OLLAMA_MODEL;
 const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL ?? "";
-const parsedOllamaContext = Number.parseInt(process.env.OLLAMA_NUM_CTX ?? "4096", 10);
-const OLLAMA_NUM_CTX = Number.isFinite(parsedOllamaContext) && parsedOllamaContext >= 1024 && parsedOllamaContext <= 32768
-  ? parsedOllamaContext
-  : 4096;
+const parsedOllamaContext = Number.parseInt(
+  process.env.OLLAMA_NUM_CTX ?? "4096",
+  10,
+);
+const OLLAMA_NUM_CTX =
+  Number.isFinite(parsedOllamaContext) &&
+  parsedOllamaContext >= 1024 &&
+  parsedOllamaContext <= 32768
+    ? parsedOllamaContext
+    : 4096;
 
 interface ChatMessageInput {
   readonly role: "user" | "assistant" | "model";
@@ -224,11 +254,15 @@ async function ollamaRequest(
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
-    throw new Error(`Ollama request failed (${response.status})${errorText ? `: ${errorText.slice(0, 300)}` : ""}`);
+    throw new Error(
+      `Ollama request failed (${response.status})${errorText ? `: ${errorText.slice(0, 300)}` : ""}`,
+    );
   }
 
   const payload: unknown = await response.json();
-  const model = isRecord(payload) ? getString(payload.model, OLLAMA_MODEL) : OLLAMA_MODEL;
+  const model = isRecord(payload)
+    ? getString(payload.model, OLLAMA_MODEL)
+    : OLLAMA_MODEL;
   const text = extractOllamaText(payload);
 
   if (!text.trim()) {
@@ -263,7 +297,9 @@ app.post("/api/chat", async (req, res) => {
 
     const rawMessages = Array.isArray(body.messages) ? body.messages : [];
     if (rawMessages.length > 100) {
-      return res.status(400).json({ error: "عدد الرسائل يتجاوز الحد المحلي المسموح." });
+      return res
+        .status(400)
+        .json({ error: "عدد الرسائل يتجاوز الحد المحلي المسموح." });
     }
 
     const messages: ChatMessageInput[] = rawMessages
@@ -278,10 +314,15 @@ app.post("/api/chat", async (req, res) => {
       .filter((message) => message.text.length > 0);
 
     if (messages.length === 0) {
-      return res.status(400).json({ error: "قائمة الرسائل فارغة أو غير صحيحة" });
+      return res
+        .status(400)
+        .json({ error: "قائمة الرسائل فارغة أو غير صحيحة" });
     }
 
-    const totalChatChars = messages.reduce((sum, message) => sum + message.text.length, 0);
+    const totalChatChars = messages.reduce(
+      (sum, message) => sum + message.text.length,
+      0,
+    );
     if (totalChatChars > MAX_CHAT_TOTAL_CHARS) {
       return res.status(400).json({
         error: `حجم المحادثة يتجاوز الحد المحلي المسموح (${MAX_CHAT_TOTAL_CHARS} حرفًا).`,
@@ -289,7 +330,9 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const roleId = getString(body.roleId, "marketing_strategist");
-    const customInstruction = getString(body.customSystemInstruction).trim().slice(0, 10_000);
+    const customInstruction = getString(body.customSystemInstruction)
+      .trim()
+      .slice(0, 10_000);
     const profile = getString(body.profile, "balanced");
     const requestedModel = sanitizeModelName(body.model, OLLAMA_MODEL);
     const selectedModel =
@@ -301,7 +344,9 @@ app.post("/api/chat", async (req, res) => {
             ? OLLAMA_MODEL
             : requestedModel;
 
-    const instruction = ROLE_SYSTEM_INSTRUCTIONS[roleId] ?? ROLE_SYSTEM_INSTRUCTIONS.marketing_strategist;
+    const instruction =
+      ROLE_SYSTEM_INSTRUCTIONS[roleId] ??
+      ROLE_SYSTEM_INSTRUCTIONS.marketing_strategist;
     const systemContent = customInstruction
       ? `${instruction}\n\nتعليمات إضافية:\n${customInstruction}`
       : instruction;
@@ -314,10 +359,18 @@ app.post("/api/chat", async (req, res) => {
       })),
     ];
 
-    const result = await ollamaRequest({ model: selectedModel, messages: contents });
-    return res.json({ text: result.text, modelUsed: result.model, provider: "ollama-local" });
+    const result = await ollamaRequest({
+      model: selectedModel,
+      messages: contents,
+    });
+    return res.json({
+      text: result.text,
+      modelUsed: result.model,
+      provider: "ollama-local",
+    });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "حدث خطأ أثناء معالجة الطلب";
+    const message =
+      error instanceof Error ? error.message : "حدث خطأ أثناء معالجة الطلب";
     return res.status(502).json({ error: message });
   }
 });
@@ -325,14 +378,20 @@ app.post("/api/chat", async (req, res) => {
 app.post("/api/generate-content", async (req, res) => {
   try {
     const body: unknown = req.body;
-    if (!isRecord(body)) return res.status(400).json({ error: "Invalid request body" });
+    if (!isRecord(body))
+      return res.status(400).json({ error: "Invalid request body" });
 
     const topic = getString(body.topic).trim().slice(0, 2_000);
-    if (!topic) return res.status(400).json({ error: "يرجى كتابة فكرة أو موضوع المحتوى" });
+    if (!topic)
+      return res
+        .status(400)
+        .json({ error: "يرجى كتابة فكرة أو موضوع المحتوى" });
 
     const dialect = getString(body.dialect, "فصحى مبسطة").trim().slice(0, 200);
     const tone = getString(body.tone, "احترافي").trim().slice(0, 200);
-    const audience = getString(body.targetAudience, "الجمهور العام").trim().slice(0, 500);
+    const audience = getString(body.targetAudience, "الجمهور العام")
+      .trim()
+      .slice(0, 500);
 
     const prompt = `أنشئ حزمة محتوى تسويقية عربية متعددة المنصات بناءً على:
 الموضوع: ${topic}
@@ -361,7 +420,8 @@ app.post("/api/generate-content", async (req, res) => {
       provider: "ollama-local",
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "فشل توليد المحتوى";
+    const message =
+      error instanceof Error ? error.message : "فشل توليد المحتوى";
     return res.status(502).json({ error: message });
   }
 });
@@ -370,17 +430,22 @@ app.post("/api/analyze-image", async (req, res) => {
   try {
     if (!OLLAMA_VISION_MODEL) {
       return res.status(503).json({
-        error: "لم يتم إعداد نموذج رؤية محلي. اضبط OLLAMA_VISION_MODEL في .env.",
+        error:
+          "لم يتم إعداد نموذج رؤية محلي. اضبط OLLAMA_VISION_MODEL في .env.",
       });
     }
 
     const body: unknown = req.body;
-    if (!isRecord(body)) return res.status(400).json({ error: "Invalid request body" });
+    if (!isRecord(body))
+      return res.status(400).json({ error: "Invalid request body" });
 
     const rawImage = getString(body.imageBase64).trim();
-    if (!rawImage) return res.status(400).json({ error: "لم يتم إرسال الصورة" });
+    if (!rawImage)
+      return res.status(400).json({ error: "لم يتم إرسال الصورة" });
 
-    const imageBase64 = rawImage.includes(",") ? rawImage.split(",").at(-1) ?? "" : rawImage;
+    const imageBase64 = rawImage.includes(",")
+      ? (rawImage.split(",").at(-1) ?? "")
+      : rawImage;
     if (!imageBase64 || imageBase64.length > 15_000_000) {
       return res.status(400).json({ error: "حجم الصورة غير صالح" });
     }
@@ -404,11 +469,13 @@ ${extraPrompt ? `\nطلبات إضافية:\n${extraPrompt}` : ""}`;
 
     const result = await ollamaRequest({
       model: OLLAMA_VISION_MODEL,
-      messages: [{
-        role: "user",
-        content: prompt,
-        images: [imageBase64],
-      }],
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+          images: [imageBase64],
+        },
+      ],
     });
 
     return res.json({
@@ -470,7 +537,8 @@ async function startServer(): Promise<void> {
       res.sendFile(webIndex, (error) => {
         if (error && !res.headersSent) {
           res.status(503).json({
-            error: "Web build output is not available. Run the workspace web build first.",
+            error:
+              "Web build output is not available. Run the workspace web build first.",
           });
         }
       });
@@ -478,12 +546,15 @@ async function startServer(): Promise<void> {
   }
 
   app.listen(PORT, RUNTIME_HOST, () => {
-    process.stdout.write(`Orbit Marketing OS local runtime listening on ${RUNTIME_HOST}:${PORT}\n`);
+    process.stdout.write(
+      `Orbit Marketing OS local runtime listening on ${RUNTIME_HOST}:${PORT}\n`,
+    );
   });
 }
 
 startServer().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : "Failed to start server";
+  const message =
+    error instanceof Error ? error.message : "Failed to start server";
   process.stderr.write(`${message}\n`);
   process.exitCode = 1;
 });

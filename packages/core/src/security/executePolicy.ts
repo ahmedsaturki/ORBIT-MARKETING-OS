@@ -13,7 +13,11 @@ export interface ExecutionState {
 
 export type ExecutionDecision =
   | { readonly allowed: true }
-  | { readonly allowed: false; readonly reason: "daily_limit" | "circuit_breaker" | "confirmation_required" | "blocked" };
+  | {
+      readonly allowed: false;
+      readonly reason:
+        "daily_limit" | "circuit_breaker" | "confirmation_required" | "blocked";
+    };
 
 /**
  * Decide whether an externally-visible task may be started.
@@ -58,7 +62,8 @@ export function recordExecutionFailure(
   return {
     dayKey,
     completedToday: state.dayKey === dayKey ? state.completedToday : 0,
-    consecutiveFailures: state.dayKey === dayKey ? state.consecutiveFailures + 1 : 1,
+    consecutiveFailures:
+      state.dayKey === dayKey ? state.consecutiveFailures + 1 : 1,
     blocked: false,
   };
 }

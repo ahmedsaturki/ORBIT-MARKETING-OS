@@ -39,7 +39,9 @@ export class TaskQueue {
       options.retryPolicy.maxAttempts < 1 ||
       options.retryPolicy.maxAttempts > 10
     ) {
-      throw new RangeError("retryPolicy.maxAttempts must be an integer between 1 and 10");
+      throw new RangeError(
+        "retryPolicy.maxAttempts must be an integer between 1 and 10",
+      );
     }
     if (
       !Number.isFinite(options.retryPolicy.baseDelayMs) ||
@@ -54,10 +56,13 @@ export class TaskQueue {
   /** Adds a task exactly once. */
   public enqueue(task: Task): void {
     this.validateTask(task);
-    if (this.tasks.has(task.id)) throw new Error("Task already exists: " + task.id);
+    if (this.tasks.has(task.id))
+      throw new Error("Task already exists: " + task.id);
     const scopedIdempotencyKey = this.idempotencyKey(task);
     if (this.idempotencyKeys.has(scopedIdempotencyKey)) {
-      throw new Error("Task idempotency key already exists: " + task.idempotencyKey);
+      throw new Error(
+        "Task idempotency key already exists: " + task.idempotencyKey,
+      );
     }
     const stored = cloneTask({
       ...task,
@@ -78,7 +83,10 @@ export class TaskQueue {
   public claimNext(now: string): Task | undefined {
     const normalizedNow = this.normalizeTimestamp(now, "now");
     const candidates = [...this.tasks.values()]
-      .filter((task) => task.status === "pending" && task.availableAt <= normalizedNow)
+      .filter(
+        (task) =>
+          task.status === "pending" && task.availableAt <= normalizedNow,
+      )
       .sort(
         (a, b) =>
           b.priority - a.priority ||
@@ -118,7 +126,10 @@ export class TaskQueue {
   /** Resumes an approval-gated task once approval is present. */
   public resume(id: string): Task {
     const task = this.requireTask(id);
-    if (task.status !== "awaiting_approval" && task.status !== "awaiting_user_action") {
+    if (
+      task.status !== "awaiting_approval" &&
+      task.status !== "awaiting_user_action"
+    ) {
       throw new Error("Only waiting tasks can resume: " + id);
     }
     return this.setTask({ ...task, status: "pending" });
@@ -131,12 +142,19 @@ export class TaskQueue {
 
   /** Defers a claimed task without consuming an attempt. */
   public defer(id: string, availableAt: string): Task {
-    const normalizedAvailableAt = this.normalizeTimestamp(availableAt, "availableAt");
+    const normalizedAvailableAt = this.normalizeTimestamp(
+      availableAt,
+      "availableAt",
+    );
     const task = this.requireTask(id);
     if (task.status !== "running") {
       throw new Error("Only running tasks can defer: " + id);
     }
-    return this.setTask({ ...task, status: "pending", availableAt: normalizedAvailableAt });
+    return this.setTask({
+      ...task,
+      status: "pending",
+      availableAt: normalizedAvailableAt,
+    });
   }
 
   /** Cancels a task so workers cannot claim it again. */
@@ -153,14 +171,36 @@ export class TaskQueue {
     }
 
     const nextAttempt = task.attempts + 1;
-    const effectiveMaxAttempts = Math.min(task.maxAttempts, this.options.retryPolicy.maxAttempts);
-    if (!shouldRetry(nextAttempt, { ...this.options.retryPolicy, maxAttempts: effectiveMaxAttempts })) {
-      return { ...this.setTask({ ...task, attempts: nextAttempt, status: "failed" }) };
+    const effectiveMaxAttempts = Math.min(
+      task.maxAttempts,
+      this.options.retryPolicy.maxAttempts,
+    );
+    if (
+      !shouldRetry(nextAttempt, {
+        ...this.options.retryPolicy,
+        maxAttempts: effectiveMaxAttempts,
+      })
+    ) {
+      return {
+        ...this.setTask({ ...task, attempts: nextAttempt, status: "failed" }),
+      };
     }
 
-    const retryDelay = calculateRetryDelay(nextAttempt, this.options.retryPolicy);
-    const availableAt = new Date(new Date(normalizedNow).getTime() + retryDelay).toISOString();
-    return { ...this.setTask({ ...task, attempts: nextAttempt, status: "pending", availableAt }) };
+    const retryDelay = calculateRetryDelay(
+      nextAttempt,
+      this.options.retryPolicy,
+    );
+    const availableAt = new Date(
+      new Date(normalizedNow).getTime() + retryDelay,
+    ).toISOString();
+    return {
+      ...this.setTask({
+        ...task,
+        attempts: nextAttempt,
+        status: "pending",
+        availableAt,
+      }),
+    };
   }
 
   /** Atomically reserves a running task for one execution orchestrator. */
@@ -234,7 +274,12 @@ export class TaskQueue {
   }
 
   private validateTask(task: Task): void {
-    if (!task.id.trim() || !task.workspaceId.trim() || !task.campaignId.trim() || !task.accountId.trim()) {
+    if (
+      !task.id.trim() ||
+      !task.workspaceId.trim() ||
+      !task.campaignId.trim() ||
+      !task.accountId.trim()
+    ) {
       throw new Error("Task identifiers are required");
     }
     if (!task.idempotencyKey.trim()) {
@@ -243,10 +288,20 @@ export class TaskQueue {
     if (task.priority < 0 || !Number.isInteger(task.priority)) {
       throw new RangeError("priority must be a non-negative integer");
     }
-    if (task.attempts < 0 || !Number.isInteger(task.attempts) || task.attempts > task.maxAttempts) {
-      throw new RangeError("attempts must be a non-negative integer within maxAttempts");
+    if (
+      task.attempts < 0 ||
+      !Number.isInteger(task.attempts) ||
+      task.attempts > task.maxAttempts
+    ) {
+      throw new RangeError(
+        "attempts must be a non-negative integer within maxAttempts",
+      );
     }
-    if (!Number.isInteger(task.maxAttempts) || task.maxAttempts < 1 || task.maxAttempts > 10) {
+    if (
+      !Number.isInteger(task.maxAttempts) ||
+      task.maxAttempts < 1 ||
+      task.maxAttempts > 10
+    ) {
       throw new RangeError("maxAttempts must be an integer between 1 and 10");
     }
     this.normalizeTimestamp(task.availableAt, "availableAt");

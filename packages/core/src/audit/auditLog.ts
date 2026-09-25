@@ -1,16 +1,16 @@
 import type { AuditEvent } from "../types/index.js";
 import { redactRecord } from "../security/redaction.js";
 
-export function createAuditEvent(input: Omit<AuditEvent, "id"> & { id?: string }): AuditEvent {
+export function createAuditEvent(
+  input: Omit<AuditEvent, "id"> & { id?: string },
+): AuditEvent {
   const { metadata: rawMetadata, ...rest } = input;
   const id = input.id?.trim() || crypto.randomUUID();
   const metadata = rawMetadata
     ? (redactRecord(rawMetadata) as AuditEvent["metadata"])
     : undefined;
 
-  return metadata === undefined
-    ? { ...rest, id }
-    : { ...rest, id, metadata };
+  return metadata === undefined ? { ...rest, id } : { ...rest, id, metadata };
 }
 
 export class AuditLog {

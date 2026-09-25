@@ -20,9 +20,10 @@ Returns local runtime state and configured Ollama profiles.
 The Desktop client targets the local runtime at `http://127.0.0.1:3000`. The runtime rejects remote Ollama targets by default and does not act as a general-purpose cloud proxy.
 
 Request:
+
 ```json
 {
-  "messages": [{"role": "user", "text": "..." }],
+  "messages": [{ "role": "user", "text": "..." }],
   "roleId": "marketing_strategist",
   "profile": "balanced"
 }
@@ -31,6 +32,7 @@ Request:
 ### POST /api/generate-content
 
 Request:
+
 ```json
 {
   "topic": "موضوع الحملة",

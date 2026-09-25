@@ -27,7 +27,12 @@ describe("TaskQueue", () => {
   it("claims the highest-priority ready task", () => {
     const instance = queue();
     instance.enqueue(baseTask);
-    instance.enqueue({ ...baseTask, id: "task-2", priority: 20, idempotencyKey: "task-2" });
+    instance.enqueue({
+      ...baseTask,
+      id: "task-2",
+      priority: 20,
+      idempotencyKey: "task-2",
+    });
 
     expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("task-2");
     expect(instance.get("task-2")?.status).toBe("running");
@@ -41,7 +46,9 @@ describe("TaskQueue", () => {
       createdAt: "2026-09-24T03:00:00+03:00",
     });
 
-    expect(instance.get("task-1")?.availableAt).toBe("2026-09-24T00:00:00.000Z");
+    expect(instance.get("task-1")?.availableAt).toBe(
+      "2026-09-24T00:00:00.000Z",
+    );
     expect(instance.get("task-1")?.createdAt).toBe("2026-09-24T00:00:00.000Z");
     expect(instance.claimNext("2026-09-24T00:00:01.000Z")?.id).toBe("task-1");
   });
@@ -104,7 +111,9 @@ describe("TaskQueue", () => {
     const instance = queue();
     instance.enqueue(baseTask);
 
-    expect(() => instance.succeed("task-1")).toThrow("Only running tasks can transition");
+    expect(() => instance.succeed("task-1")).toThrow(
+      "Only running tasks can transition",
+    );
     expect(() => instance.fail("task-1", "2026-09-24T00:00:01.000Z")).toThrow(
       "Only running tasks can fail",
     );
@@ -125,7 +134,9 @@ describe("TaskQueue", () => {
     instance.enqueue(baseTask);
     instance.claimNext("2026-09-24T00:00:01.000Z");
 
-    expect(instance.awaitUserAction("task-1").status).toBe("awaiting_user_action");
+    expect(instance.awaitUserAction("task-1").status).toBe(
+      "awaiting_user_action",
+    );
     expect(instance.claimNext("2026-09-24T00:00:02.000Z")).toBeUndefined();
     expect(instance.resume("task-1").status).toBe("pending");
   });
@@ -194,7 +205,9 @@ describe("TaskQueue", () => {
 
     const resumed = instance.resume("task-1");
     expect(resumed.status).toBe("pending");
-    expect(instance.claimNext("2026-09-24T00:00:02.000Z")?.status).toBe("running");
+    expect(instance.claimNext("2026-09-24T00:00:02.000Z")?.status).toBe(
+      "running",
+    );
   });
 
   it("parks user-action tasks and defers without consuming attempts", () => {
@@ -300,9 +313,9 @@ describe("TaskQueue", () => {
 
   it("rejects malformed queue tasks", () => {
     const instance = queue();
-    expect(() => instance.enqueue({ ...baseTask, idempotencyKey: " " })).toThrow(
-      "Task idempotency key is required",
-    );
+    expect(() =>
+      instance.enqueue({ ...baseTask, idempotencyKey: " " }),
+    ).toThrow("Task idempotency key is required");
     expect(() => instance.enqueue({ ...baseTask, priority: -1 })).toThrow(
       "priority must be a non-negative integer",
     );

@@ -1,12 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { aggregateCampaignMetrics, buildMetricSeries } from "../src/analytics/metrics.js";
+import {
+  aggregateCampaignMetrics,
+  buildMetricSeries,
+} from "../src/analytics/metrics.js";
 
 describe("analytics primitives", () => {
   it("aggregates execution outcomes", () => {
     const metrics = aggregateCampaignMetrics([
-      { campaignId: "c1", status: "succeeded", timestamp: "2026-09-24T01:00:00.000Z" },
-      { campaignId: "c1", status: "failed", timestamp: "2026-09-24T02:00:00.000Z" },
-      { campaignId: "c1", status: "blocked", timestamp: "2026-09-24T03:00:00.000Z" },
+      {
+        campaignId: "c1",
+        status: "succeeded",
+        timestamp: "2026-09-24T01:00:00.000Z",
+      },
+      {
+        campaignId: "c1",
+        status: "failed",
+        timestamp: "2026-09-24T02:00:00.000Z",
+      },
+      {
+        campaignId: "c1",
+        status: "blocked",
+        timestamp: "2026-09-24T03:00:00.000Z",
+      },
     ]);
     expect(metrics).toMatchObject({
       attempted: 3,
@@ -22,8 +37,16 @@ describe("analytics primitives", () => {
   it("does not mix metrics from different campaigns", () => {
     const metrics = aggregateCampaignMetrics(
       [
-        { campaignId: "c1", status: "succeeded", timestamp: "2026-09-24T01:00:00.000Z" },
-        { campaignId: "c2", status: "failed", timestamp: "2026-09-24T02:00:00.000Z" },
+        {
+          campaignId: "c1",
+          status: "succeeded",
+          timestamp: "2026-09-24T01:00:00.000Z",
+        },
+        {
+          campaignId: "c2",
+          status: "failed",
+          timestamp: "2026-09-24T02:00:00.000Z",
+        },
       ],
       "c1",
     );

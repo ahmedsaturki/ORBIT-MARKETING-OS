@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { selectContentVariant, validateContentForDelivery, validateContentItem } from "../src/content/catalog.js";
+import {
+  selectContentVariant,
+  validateContentForDelivery,
+  validateContentItem,
+} from "../src/content/catalog.js";
 import type { ContentItem } from "../src/types/index.js";
 
 const content: ContentItem = {
@@ -30,7 +34,12 @@ describe("content catalog", () => {
   it("validates content delivery readiness", () => {
     expect(validateContentItem(content).valid).toBe(true);
     expect(validateContentForDelivery(content, "facebook").valid).toBe(true);
-    expect(validateContentForDelivery({ ...content, approvalStatus: "draft" }, "facebook").valid).toBe(false);
+    expect(
+      validateContentForDelivery(
+        { ...content, approvalStatus: "draft" },
+        "facebook",
+      ).valid,
+    ).toBe(false);
   });
 
   it("rejects invalid content chronology and duplicate tags", () => {
@@ -40,9 +49,11 @@ describe("content catalog", () => {
       updatedAt: "2026-09-23T00:00:00.000Z",
     });
     expect(result.valid).toBe(false);
-    expect(result.errors).toEqual(expect.arrayContaining([
-      "content tags must be unique",
-      "content updatedAt cannot precede createdAt",
-    ]));
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        "content tags must be unique",
+        "content updatedAt cannot precede createdAt",
+      ]),
+    );
   });
 });

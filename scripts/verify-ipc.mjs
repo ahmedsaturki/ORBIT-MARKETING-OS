@@ -11,7 +11,7 @@ async function collectRustSourcePaths(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
-      paths.push(...await collectRustSourcePaths(full));
+      paths.push(...(await collectRustSourcePaths(full)));
     } else if (entry.isFile() && entry.name.endsWith(".rs")) {
       paths.push(full);
     }
@@ -20,47 +20,77 @@ async function collectRustSourcePaths(dir) {
 }
 
 const rustSources = await collectRustSourcePaths(rustRoot);
-const rustContents = await Promise.all(rustSources.map((path) => readFile(path, "utf8")));
+const rustContents = await Promise.all(
+  rustSources.map((path) => readFile(path, "utf8")),
+);
 const rust = rustContents.join("\n");
 
 const rustCommands = new Set(
-  [...rust.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(
-    (match) => match[1],
-  ),
+  [
+    ...rust.matchAll(
+      /#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g,
+    ),
+  ].map((match) => match[1]),
 );
 
-const handlerBody = rust.match(/tauri::generate_handler!\[([\s\S]*?)\]/)?.[1] ?? "";
+const handlerBody =
+  rust.match(/tauri::generate_handler!\[([\s\S]*?)\]/)?.[1] ?? "";
 const registeredCommands = new Set(
-  [...handlerBody.matchAll(/([A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)?)/g)].map(
-    (match) => match[1].split("::").at(-1),
-  ),
+  [
+    ...handlerBody.matchAll(
+      /([A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)?)/g,
+    ),
+  ].map((match) => match[1].split("::").at(-1)),
 );
 
 for (const command of registeredCommands) {
   if (!rustCommands.has(command)) {
-    throw new Error("Tauri invoke handler registers a function without #[tauri::command]: " + command);
+    throw new Error(
+      "Tauri invoke handler registers a function without #[tauri::command]: " +
+        command,
+    );
   }
 }
 
-const approvalRequestSignature = rust.match(/fn\s+approval_request\([\s\S]*?\)\s*->/);
-if (!approvalRequestSignature || /requested_by\s*:\s*String/.test(approvalRequestSignature[0])) {
-  throw new Error("approval_request must derive actor identity inside the runtime");
+const approvalRequestSignature = rust.match(
+  /fn\s+approval_request\([\s\S]*?\)\s*->/,
+);
+if (
+  !approvalRequestSignature ||
+  /requested_by\s*:\s*String/.test(approvalRequestSignature[0])
+) {
+  throw new Error(
+    "approval_request must derive actor identity inside the runtime",
+  );
 }
-const approvalDecisionSignature = rust.match(/fn\s+approval_decide\([\s\S]*?\)\s*->/);
-if (!approvalDecisionSignature || /decided_by\s*:\s*String/.test(approvalDecisionSignature[0])) {
-  throw new Error("approval_decide must derive actor identity inside the runtime");
+const approvalDecisionSignature = rust.match(
+  /fn\s+approval_decide\([\s\S]*?\)\s*->/,
+);
+if (
+  !approvalDecisionSignature ||
+  /decided_by\s*:\s*String/.test(approvalDecisionSignature[0])
+) {
+  throw new Error(
+    "approval_decide must derive actor identity inside the runtime",
+  );
 }
 if (/approval_request[\s\S]{0,800}requested_by:\s*"local-user"/.test(app)) {
-  throw new Error("Desktop UI must not supply requested_by for approval requests");
+  throw new Error(
+    "Desktop UI must not supply requested_by for approval requests",
+  );
 }
 if (/approval_decide[\s\S]{0,800}decided_by:\s*"local-user"/.test(app)) {
-  throw new Error("Desktop UI must not supply decided_by for approval decisions");
+  throw new Error(
+    "Desktop UI must not supply decided_by for approval decisions",
+  );
 }
 
 const uiCommands = new Set(
-  [...app.matchAll(/(?:callNative|invoke)(?:<[^>]+>)?\(\s*["']([A-Za-z_][A-Za-z0-9_]*)["']/g)].map(
-    (match) => match[1],
-  ),
+  [
+    ...app.matchAll(
+      /(?:callNative|invoke)(?:<[^>]+>)?\(\s*["']([A-Za-z_][A-Za-z0-9_]*)["']/g,
+    ),
+  ].map((match) => match[1]),
 );
 
 for (const command of uiCommands) {
@@ -68,13 +98,17 @@ for (const command of uiCommands) {
     throw new Error("Desktop UI invokes missing Tauri command: " + command);
   }
   if (!registeredCommands.has(command)) {
-    throw new Error("Desktop UI invokes a Tauri command that is not registered: " + command);
+    throw new Error(
+      "Desktop UI invokes a Tauri command that is not registered: " + command,
+    );
   }
 }
 
 for (const command of rustCommands) {
   if (!registeredCommands.has(command)) {
-    console.warn("Tauri command is not registered in generate_handler!: " + command);
+    console.warn(
+      "Tauri command is not registered in generate_handler!: " + command,
+    );
   } else if (!uiCommands.has(command) && !["run"].includes(command)) {
     console.warn("Tauri command has no current UI call site: " + command);
   }
@@ -87,6 +121,8 @@ console.log(
     rustCommands: rustCommands.size,
     registeredCommands: registeredCommands.size,
     uiCommands: uiCommands.size,
-    uncalledCommands: [...rustCommands].filter((command) => registeredCommands.has(command) && !uiCommands.has(command)),
+    uncalledCommands: [...rustCommands].filter(
+      (command) => registeredCommands.has(command) && !uiCommands.has(command),
+    ),
   }),
 );

@@ -62,9 +62,9 @@ describe("connector authorization boundary", () => {
   it("rejects duplicate platform registrations", () => {
     const registry = new ConnectorRegistry();
     registry.register(new FixtureConnector({ platform: "facebook" }));
-    expect(() => registry.register(new FixtureConnector({ platform: "facebook" }))).toThrow(
-      "Connector already registered",
-    );
+    expect(() =>
+      registry.register(new FixtureConnector({ platform: "facebook" })),
+    ).toThrow("Connector already registered");
   });
 
   it("returns a typed missing-connector failure from require", () => {

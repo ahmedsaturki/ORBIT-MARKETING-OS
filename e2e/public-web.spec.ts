@@ -4,7 +4,9 @@ test.describe("ORBIT public web surface", () => {
   test("home page exposes the product navigation", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/ORBIT/i);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("مركز تشغيل تسويقك");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      "مركز تشغيل تسويقك",
+    );
     await expect(page.getByRole("link", { name: "الأسعار" })).toBeVisible();
     await expect(page.getByRole("link", { name: "الخصوصية" })).toBeVisible();
     await expect(page.getByRole("link", { name: "الشروط" })).toBeVisible();
@@ -14,7 +16,9 @@ test.describe("ORBIT public web surface", () => {
     );
   });
 
-  test("document direction, language, and focusable controls meet baseline accessibility", async ({ page }) => {
+  test("document direction, language, and focusable controls meet baseline accessibility", async ({
+    page,
+  }) => {
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
@@ -28,9 +32,13 @@ test.describe("ORBIT public web surface", () => {
     await expect(links.first()).toBeVisible();
   });
 
-  test("pricing page renders every configured plan without a fake checkout", async ({ page }) => {
+  test("pricing page renders every configured plan without a fake checkout", async ({
+    page,
+  }) => {
     await page.goto("/pricing/");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("الخطط والأسعار");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "الخطط والأسعار",
+    );
     await expect(page.getByRole("heading", { level: 2 })).toHaveCount(4);
     await expect(page.getByText("Basic")).toBeVisible();
     await expect(page.getByText("Pro")).toBeVisible();
@@ -40,20 +48,31 @@ test.describe("ORBIT public web surface", () => {
   });
 
   test("legal pages are reachable", async ({ page }) => {
-    for (const path of ["/legal/privacy/", "/legal/terms/", "/legal/refunds/", "/legal/eula/"]) {
+    for (const path of [
+      "/legal/privacy/",
+      "/legal/terms/",
+      "/legal/refunds/",
+      "/legal/eula/",
+    ]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      await expect(page.getByRole("link", { name: /الرئيسية/ })).toHaveAttribute("href", "/");
+      await expect(
+        page.getByRole("link", { name: /الرئيسية/ }),
+      ).toHaveAttribute("href", "/");
     }
   });
 
-  test("robots.txt is present and allows public product pages", async ({ request }) => {
+  test("robots.txt is present and allows public product pages", async ({
+    request,
+  }) => {
     const response = await request.get("/robots.txt");
     expect(response.ok()).toBe(true);
     expect(await response.text()).toContain("Allow: /");
   });
 
-  test("PWA manifest is valid and points at ORBIT branding", async ({ request }) => {
+  test("PWA manifest is valid and points at ORBIT branding", async ({
+    request,
+  }) => {
     const response = await request.get("/manifest.json");
     expect(response.ok()).toBe(true);
     const manifest = await response.json();

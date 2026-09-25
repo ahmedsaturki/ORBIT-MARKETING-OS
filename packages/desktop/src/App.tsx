@@ -2,7 +2,15 @@ import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Platform } from "@orbit/core";
-import { Bot, CheckCircle2, Image as ImageIcon, KeyRound, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Bot,
+  CheckCircle2,
+  Image as ImageIcon,
+  KeyRound,
+  LockKeyhole,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import {
   analyzeLocalImage,
   DEFAULT_RUNTIME_URL,
@@ -201,14 +209,19 @@ interface LicenseStatus {
   readonly account_count: number;
 }
 
-async function callNative<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+async function callNative<T>(
+  command: string,
+  args?: Record<string, unknown>,
+): Promise<T> {
   return invoke<T>(command, args);
 }
 
 export function App(): ReactElement {
   const [health, setHealth] = useState<Health | null>(null);
   const [workspaces, setWorkspaces] = useState<readonly WorkspaceView[]>([]);
-  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceView | null>(null);
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceView | null>(
+    null,
+  );
   const [newWorkspaceId, setNewWorkspaceId] = useState("");
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [label, setLabel] = useState("demo");
@@ -230,7 +243,9 @@ export function App(): ReactElement {
   const [campaignName, setCampaignName] = useState("");
   const [campaignAccountId, setCampaignAccountId] = useState("");
   const [contentItems, setContentItems] = useState<readonly ContentView[]>([]);
-  const [contentVariants, setContentVariants] = useState<readonly ContentVariantView[]>([]);
+  const [contentVariants, setContentVariants] = useState<
+    readonly ContentVariantView[]
+  >([]);
   const [variantPlatform, setVariantPlatform] = useState<Platform>("facebook");
   const [variantBody, setVariantBody] = useState("");
   const [mediaAssets, setMediaAssets] = useState<readonly MediaAssetView[]>([]);
@@ -242,11 +257,15 @@ export function App(): ReactElement {
   const [mediaSha256, setMediaSha256] = useState("");
   const [mediaLocalPath, setMediaLocalPath] = useState("");
   const [mediaTags, setMediaTags] = useState("");
-  const [rulePacks, setRulePacks] = useState<readonly AutomationRulePackView[]>([]);
+  const [rulePacks, setRulePacks] = useState<readonly AutomationRulePackView[]>(
+    [],
+  );
   const [rulePackId, setRulePackId] = useState("");
   const [rulePackPlatform, setRulePackPlatform] = useState("facebook");
   const [rulePackVersion, setRulePackVersion] = useState("1.0.0");
-  const [rulePackRules, setRulePackRules] = useState("[\n  {\n    \"id\": \"publish\",\n    \"taskKinds\": [\"publish\"],\n    \"enabled\": true,\n    \"requiresConfirmation\": true,\n    \"maxAttempts\": 3,\n    \"timeoutMs\": 30000\n  }\n]");
+  const [rulePackRules, setRulePackRules] = useState(
+    '[\n  {\n    "id": "publish",\n    "taskKinds": ["publish"],\n    "enabled": true,\n    "requiresConfirmation": true,\n    "maxAttempts": 3,\n    "timeoutMs": 30000\n  }\n]',
+  );
 
   const [contentId, setContentId] = useState("");
   const [contentTitle, setContentTitle] = useState("");
@@ -266,7 +285,9 @@ export function App(): ReactElement {
   const [taskDestinationId, setTaskDestinationId] = useState("");
   const [executionMessage, setExecutionMessage] = useState("");
   const [contacts, setContacts] = useState<readonly ContactView[]>([]);
-  const [conversations, setConversations] = useState<readonly ConversationView[]>([]);
+  const [conversations, setConversations] = useState<
+    readonly ConversationView[]
+  >([]);
   const [conversationId, setConversationId] = useState("");
   const [conversationAccountId, setConversationAccountId] = useState("");
   const [conversationPlatform, setConversationPlatform] = useState("facebook");
@@ -283,16 +304,23 @@ export function App(): ReactElement {
   const [contactStatus, setContactStatus] = useState("new");
   const [contactNotes, setContactNotes] = useState("");
   const [auditEntries, setAuditEntries] = useState<readonly AuditView[]>([]);
-  const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummaryView | null>(null);
-  const [auditIntegrity, setAuditIntegrity] = useState<"unknown" | "valid" | "invalid">("unknown");
+  const [analyticsSummary, setAnalyticsSummary] =
+    useState<AnalyticsSummaryView | null>(null);
+  const [auditIntegrity, setAuditIntegrity] = useState<
+    "unknown" | "valid" | "invalid"
+  >("unknown");
   const [license, setLicense] = useState<LicenseStatus | null>(null);
   const [licenseToken, setLicenseToken] = useState("");
   const [licenseMessage, setLicenseMessage] = useState("");
 
-  const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
+  const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(
+    null,
+  );
   const [aiRuntimeBusy, setAiRuntimeBusy] = useState(false);
   const [aiChatInput, setAiChatInput] = useState("");
-  const [aiChatMessages, setAiChatMessages] = useState<readonly RuntimeChatMessage[]>([]);
+  const [aiChatMessages, setAiChatMessages] = useState<
+    readonly RuntimeChatMessage[]
+  >([]);
   const [aiChatRole, setAiChatRole] = useState("marketing_strategist");
   const [aiChatProfile, setAiChatProfile] = useState("balanced");
 
@@ -304,10 +332,11 @@ export function App(): ReactElement {
 
   const [aiImageData, setAiImageData] = useState("");
   const [aiImageName, setAiImageName] = useState("");
-  const [aiImageType, setAiImageType] = useState<"ad_critique" | "ocr_copy" | "platform_fit" | "comprehensive">("comprehensive");
+  const [aiImageType, setAiImageType] = useState<
+    "ad_critique" | "ocr_copy" | "platform_fit" | "comprehensive"
+  >("comprehensive");
   const [aiImagePrompt, setAiImagePrompt] = useState("");
   const [aiImageAnalysis, setAiImageAnalysis] = useState("");
-
 
   const loadWorkspaces = async (): Promise<void> => {
     const items = await callNative<WorkspaceView[]>("workspace_list");
@@ -333,7 +362,9 @@ export function App(): ReactElement {
       setNewWorkspaceName("");
       await checkHealth();
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل إنشاء مساحة العمل");
+      setError(
+        caught instanceof Error ? caught.message : "فشل إنشاء مساحة العمل",
+      );
     }
   };
 
@@ -359,7 +390,9 @@ export function App(): ReactElement {
       resetWorkspaceTransientState();
       await checkHealth();
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تبديل مساحة العمل");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تبديل مساحة العمل",
+      );
     }
   };
 
@@ -377,7 +410,9 @@ export function App(): ReactElement {
       await callNative<boolean>("media_asset_delete", { id });
       await loadMediaAssets();
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل حذف بيانات الوسيط");
+      setError(
+        caught instanceof Error ? caught.message : "فشل حذف بيانات الوسيط",
+      );
     }
   };
 
@@ -407,15 +442,21 @@ export function App(): ReactElement {
         ...current.filter((item) => item.id !== result.id),
       ]);
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل استيراد الملف المحلي");
+      setError(
+        caught instanceof Error ? caught.message : "فشل استيراد الملف المحلي",
+      );
     }
   };
 
   const loadMediaAssets = async (): Promise<void> => {
     try {
-      setMediaAssets(await callNative<MediaAssetView[]>("media_asset_list", {}));
+      setMediaAssets(
+        await callNative<MediaAssetView[]>("media_asset_list", {}),
+      );
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تحميل مكتبة الوسائط");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تحميل مكتبة الوسائط",
+      );
     }
   };
 
@@ -462,24 +503,43 @@ export function App(): ReactElement {
 
   const loadRulePacks = async (): Promise<void> => {
     try {
-      setRulePacks(await callNative<AutomationRulePackView[]>("automation_rule_pack_list", {}));
+      setRulePacks(
+        await callNative<AutomationRulePackView[]>(
+          "automation_rule_pack_list",
+          {},
+        ),
+      );
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تحميل قواعد الأتمتة");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تحميل قواعد الأتمتة",
+      );
     }
   };
 
-  const toggleRulePack = async (id: string, enabled: boolean): Promise<void> => {
+  const toggleRulePack = async (
+    id: string,
+    enabled: boolean,
+  ): Promise<void> => {
     try {
       setError("");
-      await callNative<boolean>("automation_rule_pack_set_enabled", { id, enabled });
+      await callNative<boolean>("automation_rule_pack_set_enabled", {
+        id,
+        enabled,
+      });
       await loadRulePacks();
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تغيير حالة Rule Pack");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تغيير حالة Rule Pack",
+      );
     }
   };
 
   const saveRulePack = async (): Promise<void> => {
-    if (!rulePackId.trim() || !rulePackVersion.trim() || !rulePackRules.trim()) {
+    if (
+      !rulePackId.trim() ||
+      !rulePackVersion.trim() ||
+      !rulePackRules.trim()
+    ) {
       setError("أدخل معرف الإصدار وقواعد الأتمتة");
       return;
     }
@@ -506,7 +566,9 @@ export function App(): ReactElement {
       });
       await loadRulePacks();
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل حفظ حزمة قواعد الأتمتة");
+      setError(
+        caught instanceof Error ? caught.message : "فشل حفظ حزمة قواعد الأتمتة",
+      );
     }
   };
 
@@ -526,14 +588,19 @@ export function App(): ReactElement {
       return;
     }
     try {
-      const items = await callNative<ContentVariantView[]>("content_variant_list", {
-        content_id: contentId,
-      });
+      const items = await callNative<ContentVariantView[]>(
+        "content_variant_list",
+        {
+          content_id: contentId,
+        },
+      );
       setContentVariants(items);
       const current = items.find((item) => item.platform === variantPlatform);
       setVariantBody(current?.body ?? "");
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تحميل نسخ المحتوى");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تحميل نسخ المحتوى",
+      );
     }
   };
 
@@ -551,7 +618,9 @@ export function App(): ReactElement {
       });
       await loadVariants(selectedContentId);
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل حفظ نسخة المحتوى");
+      setError(
+        caught instanceof Error ? caught.message : "فشل حفظ نسخة المحتوى",
+      );
     }
   };
 
@@ -561,11 +630,15 @@ export function App(): ReactElement {
       setApprovals(items);
       setApprovalId((current) => current || items[0]?.id || "");
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تحميل الموافقات");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تحميل الموافقات",
+      );
     }
   };
 
-  const saveContent = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  const saveContent = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     event.preventDefault();
     if (!contentId.trim() || !contentTitle.trim() || !contentBody.trim()) {
       setError("أدخل معرف المحتوى والعنوان والنص");
@@ -610,7 +683,9 @@ export function App(): ReactElement {
       await loadCampaigns();
       setError("");
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل ربط المحتوى بالحملة");
+      setError(
+        caught instanceof Error ? caught.message : "فشل ربط المحتوى بالحملة",
+      );
     }
   };
 
@@ -635,7 +710,9 @@ export function App(): ReactElement {
     }
   };
 
-  const decideApproval = async (status: "approved" | "rejected" | "changes_requested"): Promise<void> => {
+  const decideApproval = async (
+    status: "approved" | "rejected" | "changes_requested",
+  ): Promise<void> => {
     if (!approvalId) {
       setError("اختر موافقة أولاً");
       return;
@@ -650,7 +727,9 @@ export function App(): ReactElement {
       await loadContent();
       await loadApprovals();
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل اتخاذ قرار الموافقة");
+      setError(
+        caught instanceof Error ? caught.message : "فشل اتخاذ قرار الموافقة",
+      );
     }
   };
 
@@ -668,7 +747,9 @@ export function App(): ReactElement {
       return;
     }
 
-    const selectedAccount = accounts.find((account) => account.id === taskAccountId);
+    const selectedAccount = accounts.find(
+      (account) => account.id === taskAccountId,
+    );
     if (!selectedAccount) {
       setError("الحساب المحدد غير موجود في مساحة العمل الحالية");
       return;
@@ -711,20 +792,29 @@ export function App(): ReactElement {
   const claimNextTask = async (): Promise<void> => {
     try {
       setError("");
-      await callNative<TaskView | null>("task_claim_next", { now: new Date().toISOString() });
+      await callNative<TaskView | null>("task_claim_next", {
+        now: new Date().toISOString(),
+      });
       await loadTasks();
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل سحب المهمة التالية");
+      setError(
+        caught instanceof Error ? caught.message : "فشل سحب المهمة التالية",
+      );
     }
   };
 
   const failTask = async (id: string): Promise<void> => {
     try {
       setError("");
-      await callNative<TaskView>("task_fail", { id, now: new Date().toISOString() });
+      await callNative<TaskView>("task_fail", {
+        id,
+        now: new Date().toISOString(),
+      });
       await loadTasks();
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تسجيل فشل المهمة");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تسجيل فشل المهمة",
+      );
     }
   };
 
@@ -742,11 +832,14 @@ export function App(): ReactElement {
     try {
       setError("");
       setExecutionMessage("جاري تنفيذ مهمة Telegram...");
-      const result = await callNative<TelegramExecutionView>("telegram_execute_task", {
-        task_id: taskId,
-        vault_password: password,
-        user_confirmed: true,
-      });
+      const result = await callNative<TelegramExecutionView>(
+        "telegram_execute_task",
+        {
+          task_id: taskId,
+          vault_password: password,
+          user_confirmed: true,
+        },
+      );
       setExecutionMessage(result.message);
       await loadTasks();
       await loadAccounts();
@@ -759,17 +852,25 @@ export function App(): ReactElement {
 
   const loadAnalytics = async (): Promise<void> => {
     try {
-      setAnalyticsSummary(await callNative<AnalyticsSummaryView>("analytics_summary"));
+      setAnalyticsSummary(
+        await callNative<AnalyticsSummaryView>("analytics_summary"),
+      );
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تحميل التحليلات");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تحميل التحليلات",
+      );
     }
   };
 
   const loadAudit = async (): Promise<void> => {
     try {
-      setAuditEntries(await callNative<AuditView[]>("audit_list", { limit: 25 }));
+      setAuditEntries(
+        await callNative<AuditView[]>("audit_list", { limit: 25 }),
+      );
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تحميل سجل التدقيق");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تحميل سجل التدقيق",
+      );
     }
   };
 
@@ -781,7 +882,11 @@ export function App(): ReactElement {
       await loadAudit();
     } catch (caught: unknown) {
       setAuditIntegrity("invalid");
-      setError(caught instanceof Error ? caught.message : "فشل التحقق من سلامة سجل التدقيق");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "فشل التحقق من سلامة سجل التدقيق",
+      );
     }
   };
 
@@ -791,7 +896,9 @@ export function App(): ReactElement {
       setConversations(items);
       setMessageConversationId((current) => current || items[0]?.id || "");
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تحميل صندوق المحادثات");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تحميل صندوق المحادثات",
+      );
     }
   };
 
@@ -806,8 +913,13 @@ export function App(): ReactElement {
         setError("اختر الحساب المرتبط بالمحادثة");
         return;
       }
-      const selectedConversationAccount = accounts.find((item) => item.id === conversationAccountId);
-      if (!selectedConversationAccount || selectedConversationAccount.platform !== conversationPlatform) {
+      const selectedConversationAccount = accounts.find(
+        (item) => item.id === conversationAccountId,
+      );
+      if (
+        !selectedConversationAccount ||
+        selectedConversationAccount.platform !== conversationPlatform
+      ) {
         setError("حساب المحادثة يجب أن يطابق منصة المحادثة");
         return;
       }
@@ -852,7 +964,11 @@ export function App(): ReactElement {
   const loadMessages = async (id: string): Promise<void> => {
     try {
       setMessageConversationId(id);
-      setMessages(await callNative<MessageView[]>("message_list", { conversation_id: id }));
+      setMessages(
+        await callNative<MessageView[]>("message_list", {
+          conversation_id: id,
+        }),
+      );
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تحميل الرسائل");
     }
@@ -866,7 +982,9 @@ export function App(): ReactElement {
     }
   };
 
-  const createCampaign = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  const createCampaign = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     event.preventDefault();
     if (!campaignName.trim() || !campaignAccountId) {
       setError("أدخل اسم الحملة واختر حساباً مستهدفاً");
@@ -885,7 +1003,9 @@ export function App(): ReactElement {
     }
   };
 
-  const saveContact = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  const saveContact = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     event.preventDefault();
     if (!contactId.trim() || !contactName.trim()) {
       setError("أدخل معرف العميل والاسم");
@@ -902,7 +1022,10 @@ export function App(): ReactElement {
         status: contactStatus,
         notes: contactNotes.trim() || null,
       });
-      setContacts((current) => [result, ...current.filter((item) => item.id !== result.id)]);
+      setContacts((current) => [
+        result,
+        ...current.filter((item) => item.id !== result.id),
+      ]);
       setContactId("");
       setContactName("");
       setContactPhone("");
@@ -919,7 +1042,9 @@ export function App(): ReactElement {
       setBackups(items);
       setSelectedBackup((current) => current || items[0] || "");
     } catch (caught: unknown) {
-      setBackupStatus(caught instanceof Error ? caught.message : "فشل تحميل النسخ المحلية");
+      setBackupStatus(
+        caught instanceof Error ? caught.message : "فشل تحميل النسخ المحلية",
+      );
     }
   };
 
@@ -934,7 +1059,9 @@ export function App(): ReactElement {
       setBackupStatus("تم إنشاء: " + filename);
       await loadBackups();
     } catch (caught: unknown) {
-      setBackupStatus(caught instanceof Error ? caught.message : "فشل إنشاء النسخة المشفرة");
+      setBackupStatus(
+        caught instanceof Error ? caught.message : "فشل إنشاء النسخة المشفرة",
+      );
     }
   };
 
@@ -945,11 +1072,16 @@ export function App(): ReactElement {
     }
     try {
       setBackupStatus("جاري فحص النسخة والاسترجاع...");
-      await callNative<boolean>("backup_restore", { filename: selectedBackup, password });
+      await callNative<boolean>("backup_restore", {
+        filename: selectedBackup,
+        password,
+      });
       setBackupStatus("تم استرجاع النسخة بعد اجتياز integrity check.");
       await checkHealth();
     } catch (caught: unknown) {
-      setBackupStatus(caught instanceof Error ? caught.message : "فشل استرجاع النسخة");
+      setBackupStatus(
+        caught instanceof Error ? caught.message : "فشل استرجاع النسخة",
+      );
     }
   };
 
@@ -958,7 +1090,9 @@ export function App(): ReactElement {
       setError("");
       setAccounts(await callNative<AccountView[]>("account_list"));
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تحميل الحسابات المحلية");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تحميل الحسابات المحلية",
+      );
     }
   };
 
@@ -978,11 +1112,15 @@ export function App(): ReactElement {
       await loadMediaAssets();
       await loadRulePacks();
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل فحص التطبيق المحلي");
+      setError(
+        caught instanceof Error ? caught.message : "فشل فحص التطبيق المحلي",
+      );
     }
   };
 
-  const storeAccount = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  const storeAccount = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     event.preventDefault();
     if (!accountId.trim() || !accountName.trim()) {
       setError("أدخل معرف الحساب واسم الحساب");
@@ -1002,13 +1140,18 @@ export function App(): ReactElement {
         session: accountSession || null,
         password: accountSession ? password : null,
       });
-      setAccounts((current) => [result, ...current.filter((item) => item.id !== result.id)]);
+      setAccounts((current) => [
+        result,
+        ...current.filter((item) => item.id !== result.id),
+      ]);
       setAccountSession("");
       setAccountId("");
       setAccountName("");
       setAccountUsername("");
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل حفظ الحساب المحلي");
+      setError(
+        caught instanceof Error ? caught.message : "فشل حفظ الحساب المحلي",
+      );
     }
   };
 
@@ -1016,13 +1159,16 @@ export function App(): ReactElement {
     try {
       setError("");
       const deleted = await callNative<boolean>("account_delete", { id });
-      if (deleted) setAccounts((current) => current.filter((item) => item.id !== id));
+      if (deleted)
+        setAccounts((current) => current.filter((item) => item.id !== id));
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل حذف الحساب");
     }
   };
 
-  const storeSecret = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  const storeSecret = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     event.preventDefault();
     if (!label.trim() || !secret || !password) {
       setError("أدخل اسم السجل والقيمة وكلمة المرور");
@@ -1038,7 +1184,9 @@ export function App(): ReactElement {
       setStored(result.payload_version === 1);
       setSecret("");
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل حفظ السجل المشفر");
+      setError(
+        caught instanceof Error ? caught.message : "فشل حفظ السجل المشفر",
+      );
     }
   };
 
@@ -1055,7 +1203,9 @@ export function App(): ReactElement {
       });
       setRecovered(result);
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل فك السجل المشفر");
+      setError(
+        caught instanceof Error ? caught.message : "فشل فك السجل المشفر",
+      );
     }
   };
 
@@ -1065,7 +1215,9 @@ export function App(): ReactElement {
       setLicense(result);
     } catch (caught: unknown) {
       setLicense(null);
-      setLicenseMessage(caught instanceof Error ? caught.message : "فشل قراءة حالة الترخيص");
+      setLicenseMessage(
+        caught instanceof Error ? caught.message : "فشل قراءة حالة الترخيص",
+      );
     }
   };
 
@@ -1077,12 +1229,18 @@ export function App(): ReactElement {
     }
     try {
       setError("");
-      const result = await callNative<LicenseStatus>("license_install", { token });
+      const result = await callNative<LicenseStatus>("license_install", {
+        token,
+      });
       setLicense(result);
-      setLicenseMessage(result.valid ? "تم التفعيل والتحقق من توقيع الترخيص." : result.reason);
+      setLicenseMessage(
+        result.valid ? "تم التفعيل والتحقق من توقيع الترخيص." : result.reason,
+      );
       if (result.valid) setLicenseToken("");
     } catch (caught: unknown) {
-      setLicenseMessage(caught instanceof Error ? caught.message : "فشل تثبيت الترخيص");
+      setLicenseMessage(
+        caught instanceof Error ? caught.message : "فشل تثبيت الترخيص",
+      );
     }
   };
 
@@ -1092,7 +1250,9 @@ export function App(): ReactElement {
       await loadLicense();
       setLicenseMessage("تم حذف الترخيص المحلي.");
     } catch (caught: unknown) {
-      setLicenseMessage(caught instanceof Error ? caught.message : "فشل حذف الترخيص");
+      setLicenseMessage(
+        caught instanceof Error ? caught.message : "فشل حذف الترخيص",
+      );
     }
   };
 
@@ -1103,7 +1263,11 @@ export function App(): ReactElement {
       setRuntimeHealth(result);
     } catch (caught: unknown) {
       setRuntimeHealth(null);
-      setError(caught instanceof Error ? caught.message : "تعذر الاتصال بـAI Runtime المحلي");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "تعذر الاتصال بـAI Runtime المحلي",
+      );
     } finally {
       setAiRuntimeBusy(false);
     }
@@ -1134,7 +1298,11 @@ export function App(): ReactElement {
         { role: "assistant", text: result.text },
       ]);
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل إرسال الرسالة إلى AI المحلي");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "فشل إرسال الرسالة إلى AI المحلي",
+      );
       setAiChatMessages(nextMessages);
     } finally {
       setAiRuntimeBusy(false);
@@ -1158,13 +1326,17 @@ export function App(): ReactElement {
       });
       setAiGeneratedContent(result.content);
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل توليد المحتوى محليًا");
+      setError(
+        caught instanceof Error ? caught.message : "فشل توليد المحتوى محليًا",
+      );
     } finally {
       setAiRuntimeBusy(false);
     }
   };
 
-  const chooseAiImage = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+  const chooseAiImage = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -1213,7 +1385,11 @@ export function App(): ReactElement {
       });
       setAiImageAnalysis(result.analysis);
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل تحليل الصورة عبر AI المحلي");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "فشل تحليل الصورة عبر AI المحلي",
+      );
     } finally {
       setAiRuntimeBusy(false);
     }
@@ -1232,7 +1408,9 @@ export function App(): ReactElement {
 
     void initialize().catch((caught: unknown) => {
       if (cancelled) return;
-      setError(caught instanceof Error ? caught.message : "فشل تهيئة تطبيق ORBIT");
+      setError(
+        caught instanceof Error ? caught.message : "فشل تهيئة تطبيق ORBIT",
+      );
     });
 
     return () => {
@@ -1246,9 +1424,16 @@ export function App(): ReactElement {
         <div>
           <div className="eyebrow">LOCAL-FIRST • TAURI V2</div>
           <h1>ORBIT Marketing OS</h1>
-          <p>سطح تشغيل محلي لإدارة البيانات الحساسة، الحملات، والاتصالات المصرح بها.</p>
+          <p>
+            سطح تشغيل محلي لإدارة البيانات الحساسة، الحملات، والاتصالات المصرح
+            بها.
+          </p>
         </div>
-        <button className="button secondary" type="button" onClick={() => void checkHealth()}>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={() => void checkHealth()}
+        >
           فحص التشغيل المحلي
         </button>
       </header>
@@ -1257,14 +1442,19 @@ export function App(): ReactElement {
       {health ? (
         <div className="notice success">
           <CheckCircle2 size={18} />
-          <span>الخدمة: {health.status} • قاعدة البيانات: {health.database}</span>
+          <span>
+            الخدمة: {health.status} • قاعدة البيانات: {health.database}
+          </span>
         </div>
       ) : null}
 
       <section className="card">
         <div className="eyebrow">SECURE SESSION</div>
         <h2>جلسة الخزنة المحلية</h2>
-        <p>كلمة المرور تبقى في ذاكرة التطبيق لهذه الجلسة فقط، ولا يتم عرضها أو تخزينها في واجهة الويب.</p>
+        <p>
+          كلمة المرور تبقى في ذاكرة التطبيق لهذه الجلسة فقط، ولا يتم عرضها أو
+          تخزينها في واجهة الويب.
+        </p>
         <label>
           كلمة مرور الخزنة
           <input
@@ -1275,41 +1465,68 @@ export function App(): ReactElement {
             spellCheck={false}
           />
         </label>
-        {password ? <div className="account-meta">مضبوطة لهذه الجلسة — لا يتم عرض القيمة.</div> : (
-          <div className="account-meta">غير مضبوطة بعد. مطلوبة لتشفير الجلسات والنسخ الاحتياطية وتنفيذ Telegram.</div>
+        {password ? (
+          <div className="account-meta">
+            مضبوطة لهذه الجلسة — لا يتم عرض القيمة.
+          </div>
+        ) : (
+          <div className="account-meta">
+            غير مضبوطة بعد. مطلوبة لتشفير الجلسات والنسخ الاحتياطية وتنفيذ
+            Telegram.
+          </div>
         )}
       </section>
-
 
       <section className="card">
         <div className="eyebrow">LOCAL AI STUDIO</div>
         <div className="section-heading">
           <div>
-            <h2><Bot size={20} /> مساعد ORBIT المحلي</h2>
-            <p>Chat وتوليد محتوى وتحليل صور عبر Ollama على الجهاز. لا يتم إرسال محتوى AI إلى السحابة من هذا السطح.</p>
+            <h2>
+              <Bot size={20} /> مساعد ORBIT المحلي
+            </h2>
+            <p>
+              Chat وتوليد محتوى وتحليل صور عبر Ollama على الجهاز. لا يتم إرسال
+              محتوى AI إلى السحابة من هذا السطح.
+            </p>
           </div>
-          <button className="button secondary" type="button" onClick={() => void checkLocalAiRuntime()} disabled={aiRuntimeBusy}>
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => void checkLocalAiRuntime()}
+            disabled={aiRuntimeBusy}
+          >
             {aiRuntimeBusy ? "جاري الفحص..." : "فحص AI"}
           </button>
         </div>
 
         {runtimeHealth ? (
           <div className="result">
-            AI: <strong>{runtimeHealth.status}</strong> • النموذج: {runtimeHealth.model ?? "غير معروف"} • رؤية: {runtimeHealth.visionConfigured ? "مفعلة" : "غير مفعلة"}
+            AI: <strong>{runtimeHealth.status}</strong> • النموذج:{" "}
+            {runtimeHealth.model ?? "غير معروف"} • رؤية:{" "}
+            {runtimeHealth.visionConfigured ? "مفعلة" : "غير مفعلة"}
           </div>
         ) : (
-          <div className="account-meta">Runtime المحلي الافتراضي: {DEFAULT_RUNTIME_URL}</div>
+          <div className="account-meta">
+            Runtime المحلي الافتراضي: {DEFAULT_RUNTIME_URL}
+          </div>
         )}
 
         <div className="grid">
           <section className="card">
-            <div className="icon"><Sparkles size={20} /></div>
+            <div className="icon">
+              <Sparkles size={20} />
+            </div>
             <h3>محادثة محلية</h3>
             <div className="actions">
               <label>
                 الدور
-                <select value={aiChatRole} onChange={(event) => setAiChatRole(event.target.value)}>
-                  <option value="marketing_strategist">Marketing Strategist</option>
+                <select
+                  value={aiChatRole}
+                  onChange={(event) => setAiChatRole(event.target.value)}
+                >
+                  <option value="marketing_strategist">
+                    Marketing Strategist
+                  </option>
                   <option value="copywriter">Copywriter</option>
                   <option value="crm_closer">CRM & Sales</option>
                   <option value="safety_specialist">Safety Specialist</option>
@@ -1317,7 +1534,10 @@ export function App(): ReactElement {
               </label>
               <label>
                 النمط
-                <select value={aiChatProfile} onChange={(event) => setAiChatProfile(event.target.value)}>
+                <select
+                  value={aiChatProfile}
+                  onChange={(event) => setAiChatProfile(event.target.value)}
+                >
                   <option value="balanced">Balanced</option>
                   <option value="fast">Fast</option>
                   <option value="reasoning">Reasoning</option>
@@ -1326,11 +1546,15 @@ export function App(): ReactElement {
             </div>
             <div className="result-list">
               {aiChatMessages.length === 0 ? (
-                <div className="account-meta">ابدأ بسؤال عن حملة أو محتوى أو متابعة عميل.</div>
+                <div className="account-meta">
+                  ابدأ بسؤال عن حملة أو محتوى أو متابعة عميل.
+                </div>
               ) : (
                 aiChatMessages.map((message, index) => (
                   <article className="card" key={String(index) + message.role}>
-                    <strong>{message.role === "user" ? "أنت" : "ORBIT AI"}</strong>
+                    <strong>
+                      {message.role === "user" ? "أنت" : "ORBIT AI"}
+                    </strong>
                     <p style={{ whiteSpace: "pre-wrap" }}>{message.text}</p>
                   </article>
                 ))
@@ -1346,42 +1570,108 @@ export function App(): ReactElement {
                 disabled={aiRuntimeBusy}
               />
             </label>
-            <button className="button primary" type="button" onClick={() => void sendAiChatMessage()} disabled={!aiChatInput.trim() || aiRuntimeBusy}>
+            <button
+              className="button primary"
+              type="button"
+              onClick={() => void sendAiChatMessage()}
+              disabled={!aiChatInput.trim() || aiRuntimeBusy}
+            >
               إرسال إلى AI المحلي
             </button>
           </section>
 
           <section className="card">
-            <div className="icon"><Sparkles size={20} /></div>
-            <h3>توليد حزمة محتوى</h3>
-            <label>الموضوع<input value={aiTopic} onChange={(event) => setAiTopic(event.target.value)} placeholder="موضوع الحملة" /></label>
-            <div className="actions">
-              <label>اللهجة<input value={aiDialect} onChange={(event) => setAiDialect(event.target.value)} /></label>
-              <label>النبرة<input value={aiTone} onChange={(event) => setAiTone(event.target.value)} /></label>
+            <div className="icon">
+              <Sparkles size={20} />
             </div>
-            <label>الجمهور<input value={aiAudience} onChange={(event) => setAiAudience(event.target.value)} /></label>
-            <button className="button primary" type="button" onClick={() => void generateAiContent()} disabled={aiRuntimeBusy || !aiTopic.trim()}>
+            <h3>توليد حزمة محتوى</h3>
+            <label>
+              الموضوع
+              <input
+                value={aiTopic}
+                onChange={(event) => setAiTopic(event.target.value)}
+                placeholder="موضوع الحملة"
+              />
+            </label>
+            <div className="actions">
+              <label>
+                اللهجة
+                <input
+                  value={aiDialect}
+                  onChange={(event) => setAiDialect(event.target.value)}
+                />
+              </label>
+              <label>
+                النبرة
+                <input
+                  value={aiTone}
+                  onChange={(event) => setAiTone(event.target.value)}
+                />
+              </label>
+            </div>
+            <label>
+              الجمهور
+              <input
+                value={aiAudience}
+                onChange={(event) => setAiAudience(event.target.value)}
+              />
+            </label>
+            <button
+              className="button primary"
+              type="button"
+              onClick={() => void generateAiContent()}
+              disabled={aiRuntimeBusy || !aiTopic.trim()}
+            >
               توليد المحتوى
             </button>
             {aiGeneratedContent ? (
-              <pre className="result" style={{ whiteSpace: "pre-wrap" }}>{aiGeneratedContent}</pre>
+              <pre className="result" style={{ whiteSpace: "pre-wrap" }}>
+                {aiGeneratedContent}
+              </pre>
             ) : (
-              <div className="account-meta">الناتج يظهر هنا ويمكن نسخه إلى Content Studio يدويًا.</div>
+              <div className="account-meta">
+                الناتج يظهر هنا ويمكن نسخه إلى Content Studio يدويًا.
+              </div>
             )}
           </section>
 
           <section className="card">
-            <div className="icon"><ImageIcon size={20} /></div>
+            <div className="icon">
+              <ImageIcon size={20} />
+            </div>
             <h3>تحليل صورة محلي</h3>
             <label>
               الصورة
-              <input type="file" accept="image/*" onChange={(event) => void chooseAiImage(event)} disabled={aiRuntimeBusy} />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => void chooseAiImage(event)}
+                disabled={aiRuntimeBusy}
+              />
             </label>
-            {aiImageName ? <div className="account-meta">المحدد: {aiImageName}</div> : null}
-            {aiImageData ? <img src={aiImageData} alt={aiImageName || "صورة للتحليل"} style={{ maxHeight: 240, width: "100%", objectFit: "contain", borderRadius: 12 }} /> : null}
+            {aiImageName ? (
+              <div className="account-meta">المحدد: {aiImageName}</div>
+            ) : null}
+            {aiImageData ? (
+              <img
+                src={aiImageData}
+                alt={aiImageName || "صورة للتحليل"}
+                style={{
+                  maxHeight: 240,
+                  width: "100%",
+                  objectFit: "contain",
+                  borderRadius: 12,
+                }}
+              />
+            ) : null}
             <label>
               نوع التحليل
-              <select value={aiImageType} onChange={(event) => setAiImageType(event.target.value as typeof aiImageType)}>
+              <select
+                value={aiImageType}
+                onChange={(event) =>
+                  setAiImageType(event.target.value as typeof aiImageType)
+                }
+              >
                 <option value="comprehensive">مراجعة شاملة</option>
                 <option value="ad_critique">نقد الإعلان</option>
                 <option value="ocr_copy">استخراج النص</option>
@@ -1390,83 +1680,145 @@ export function App(): ReactElement {
             </label>
             <label>
               طلب إضافي
-              <textarea value={aiImagePrompt} onChange={(event) => setAiImagePrompt(event.target.value)} rows={3} placeholder="ملاحظة اختيارية" />
+              <textarea
+                value={aiImagePrompt}
+                onChange={(event) => setAiImagePrompt(event.target.value)}
+                rows={3}
+                placeholder="ملاحظة اختيارية"
+              />
             </label>
-            <button className="button secondary" type="button" onClick={() => void analyzeAiImage()} disabled={!aiImageData || aiRuntimeBusy}>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => void analyzeAiImage()}
+              disabled={!aiImageData || aiRuntimeBusy}
+            >
               تحليل الصورة
             </button>
-            {aiImageAnalysis ? <pre className="result" style={{ whiteSpace: "pre-wrap" }}>{aiImageAnalysis}</pre> : null}
-            {!runtimeHealth?.visionConfigured ? <div className="account-meta">تحليل الصور يحتاج ضبط OLLAMA_VISION_MODEL في runtime.</div> : null}
+            {aiImageAnalysis ? (
+              <pre className="result" style={{ whiteSpace: "pre-wrap" }}>
+                {aiImageAnalysis}
+              </pre>
+            ) : null}
+            {!runtimeHealth?.visionConfigured ? (
+              <div className="account-meta">
+                تحليل الصور يحتاج ضبط OLLAMA_VISION_MODEL في runtime.
+              </div>
+            ) : null}
           </section>
         </div>
       </section>
 
       <section className="grid">
-      <section className="card workspace-switcher">
-        <div>
-          <div className="eyebrow">WORKSPACE</div>
-          <h2>مساحة العمل الحالية</h2>
-          <p>كل الحسابات والحملات والمحتوى والـCRM وصندوق المحادثات معزولة حسب مساحة العمل المحلية.</p>
-        </div>
-        <div className="actions">
-          <label>
-            المساحة النشطة
-            <select
-              value={activeWorkspace?.id ?? ""}
-              onChange={(event) => void selectWorkspace(event.target.value)}
+        <section className="card workspace-switcher">
+          <div>
+            <div className="eyebrow">WORKSPACE</div>
+            <h2>مساحة العمل الحالية</h2>
+            <p>
+              كل الحسابات والحملات والمحتوى والـCRM وصندوق المحادثات معزولة حسب
+              مساحة العمل المحلية.
+            </p>
+          </div>
+          <div className="actions">
+            <label>
+              المساحة النشطة
+              <select
+                value={activeWorkspace?.id ?? ""}
+                onChange={(event) => void selectWorkspace(event.target.value)}
+              >
+                {workspaces.map((workspace) => (
+                  <option key={workspace.id} value={workspace.id}>
+                    {workspace.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              اسم مساحة جديدة
+              <input
+                value={newWorkspaceName}
+                onChange={(event) => setNewWorkspaceName(event.target.value)}
+                placeholder="مثال: فريق التسويق"
+              />
+            </label>
+            <label>
+              معرف اختياري
+              <input
+                value={newWorkspaceId}
+                onChange={(event) => setNewWorkspaceId(event.target.value)}
+                placeholder="marketing-team"
+              />
+            </label>
+            <button
+              className="button primary"
+              type="button"
+              onClick={() => void createWorkspace()}
             >
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>{workspace.name}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            اسم مساحة جديدة
-            <input value={newWorkspaceName} onChange={(event) => setNewWorkspaceName(event.target.value)} placeholder="مثال: فريق التسويق" />
-          </label>
-          <label>
-            معرف اختياري
-            <input value={newWorkspaceId} onChange={(event) => setNewWorkspaceId(event.target.value)} placeholder="marketing-team" />
-          </label>
-          <button className="button primary" type="button" onClick={() => void createWorkspace()}>إنشاء وتفعيل</button>
-        </div>
-        {activeWorkspace ? (
-          <div className="result">النشطة الآن: <strong>{activeWorkspace.name}</strong> • {activeWorkspace.id}</div>
-        ) : null}
-      </section>
+              إنشاء وتفعيل
+            </button>
+          </div>
+          {activeWorkspace ? (
+            <div className="result">
+              النشطة الآن: <strong>{activeWorkspace.name}</strong> •{" "}
+              {activeWorkspace.id}
+            </div>
+          ) : null}
+        </section>
 
         <article className="card">
-          <div className="icon"><ShieldCheck size={22} /></div>
+          <div className="icon">
+            <ShieldCheck size={22} />
+          </div>
           <h2>الخزنة المحلية</h2>
-          <p>البيانات الحساسة تُشفّر داخل Rust باستخدام Argon2id + AES-256-GCM قبل التخزين.</p>
+          <p>
+            البيانات الحساسة تُشفّر داخل Rust باستخدام Argon2id + AES-256-GCM
+            قبل التخزين.
+          </p>
         </article>
         <article className="card">
-          <div className="icon"><LockKeyhole size={22} /></div>
+          <div className="icon">
+            <LockKeyhole size={22} />
+          </div>
           <h2>لا أسرار في السجل</h2>
-          <p>الأوامر المحلية لا تكتب كلمات المرور أو الجلسات أو المفاتيح في سجل التطبيق.</p>
+          <p>
+            الأوامر المحلية لا تكتب كلمات المرور أو الجلسات أو المفاتيح في سجل
+            التطبيق.
+          </p>
         </article>
         <article className="card">
-          <div className="icon"><KeyRound size={22} /></div>
+          <div className="icon">
+            <KeyRound size={22} />
+          </div>
           <h2>تحكم صريح</h2>
-          <p>عمليات التكامل الخارجية تُفصل عن التخزين المحلي وتحتاج إلى تفويض المستخدم.</p>
+          <p>
+            عمليات التكامل الخارجية تُفصل عن التخزين المحلي وتحتاج إلى تفويض
+            المستخدم.
+          </p>
         </article>
       </section>
-
-
-
 
       <section className="grid workspace-grid">
         <div className="card">
           <h2>مكتبة الوسائط المحلية</h2>
-          <p>يُحفظ Metadata محليًا داخل SQLite. الملف نفسه لا يُرفع إلى أي خدمة تلقائيًا.</p>
+          <p>
+            يُحفظ Metadata محليًا داخل SQLite. الملف نفسه لا يُرفع إلى أي خدمة
+            تلقائيًا.
+          </p>
           <div className="vault-form">
             <label>
               معرف الوسيط
-              <input value={mediaId} onChange={(event) => setMediaId(event.target.value)} placeholder="media-001" />
+              <input
+                value={mediaId}
+                onChange={(event) => setMediaId(event.target.value)}
+                placeholder="media-001"
+              />
             </label>
             <label>
               النوع
-              <select value={mediaKind} onChange={(event) => setMediaKind(event.target.value)}>
+              <select
+                value={mediaKind}
+                onChange={(event) => setMediaKind(event.target.value)}
+              >
                 <option value="image">صورة</option>
                 <option value="video">فيديو</option>
                 <option value="audio">صوت</option>
@@ -1475,33 +1827,64 @@ export function App(): ReactElement {
             </label>
             <label>
               اسم الملف
-              <input value={mediaFilename} onChange={(event) => setMediaFilename(event.target.value)} placeholder="launch.png" />
+              <input
+                value={mediaFilename}
+                onChange={(event) => setMediaFilename(event.target.value)}
+                placeholder="launch.png"
+              />
             </label>
             <label>
               MIME
-              <input value={mediaMimeType} onChange={(event) => setMediaMimeType(event.target.value)} placeholder="image/png" />
+              <input
+                value={mediaMimeType}
+                onChange={(event) => setMediaMimeType(event.target.value)}
+                placeholder="image/png"
+              />
             </label>
             <label>
               الحجم بالبايت
-              <input value={mediaSizeBytes} onChange={(event) => setMediaSizeBytes(event.target.value)} inputMode="numeric" />
+              <input
+                value={mediaSizeBytes}
+                onChange={(event) => setMediaSizeBytes(event.target.value)}
+                inputMode="numeric"
+              />
             </label>
             <label>
               SHA-256 (اختياري)
-              <input value={mediaSha256} onChange={(event) => setMediaSha256(event.target.value)} />
+              <input
+                value={mediaSha256}
+                onChange={(event) => setMediaSha256(event.target.value)}
+              />
             </label>
             <label>
               المسار المحلي
-              <input value={mediaLocalPath} onChange={(event) => setMediaLocalPath(event.target.value)} placeholder="C:\media\launch.png" />
+              <input
+                value={mediaLocalPath}
+                onChange={(event) => setMediaLocalPath(event.target.value)}
+                placeholder="C:\media\launch.png"
+              />
             </label>
             <label>
               الوسوم
-              <input value={mediaTags} onChange={(event) => setMediaTags(event.target.value)} placeholder="launch, campaign" />
+              <input
+                value={mediaTags}
+                onChange={(event) => setMediaTags(event.target.value)}
+                placeholder="launch, campaign"
+              />
             </label>
             <div className="actions">
-              <button className="button primary" type="button" onClick={() => void saveMediaAsset()}>
+              <button
+                className="button primary"
+                type="button"
+                onClick={() => void saveMediaAsset()}
+              >
                 حفظ بيانات الوسيط
               </button>
-              <button className="button secondary" type="button" onClick={() => void importMediaAsset()}>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() => void importMediaAsset()}
+              >
                 استيراد وفحص الملف
               </button>
             </div>
@@ -1511,28 +1894,46 @@ export function App(): ReactElement {
               <div className="account-row" key={asset.id}>
                 <div>
                   <strong>{asset.filename}</strong>
-                  <div className="account-meta">{asset.kind} • {asset.size_bytes} bytes • {asset.local_path}</div>
+                  <div className="account-meta">
+                    {asset.kind} • {asset.size_bytes} bytes • {asset.local_path}
+                  </div>
                 </div>
-                <button className="button danger" type="button" onClick={() => void deleteMediaAsset(asset.id)}>
+                <button
+                  className="button danger"
+                  type="button"
+                  onClick={() => void deleteMediaAsset(asset.id)}
+                >
                   حذف Metadata
                 </button>
               </div>
             ))}
-            {!mediaAssets.length ? <div className="result">لا توجد وسائط محفوظة.</div> : null}
+            {!mediaAssets.length ? (
+              <div className="result">لا توجد وسائط محفوظة.</div>
+            ) : null}
           </div>
         </div>
 
         <div className="card">
           <h2>حزم قواعد الأتمتة</h2>
-          <p>قواعد versioned محفوظة محليًا، والقواعد الخارجية يجب أن تتطلب تأكيد المستخدم.</p>
+          <p>
+            قواعد versioned محفوظة محليًا، والقواعد الخارجية يجب أن تتطلب تأكيد
+            المستخدم.
+          </p>
           <div className="vault-form">
             <label>
               المعرف
-              <input value={rulePackId} onChange={(event) => setRulePackId(event.target.value)} placeholder="facebook-default" />
+              <input
+                value={rulePackId}
+                onChange={(event) => setRulePackId(event.target.value)}
+                placeholder="facebook-default"
+              />
             </label>
             <label>
               المنصة
-              <select value={rulePackPlatform} onChange={(event) => setRulePackPlatform(event.target.value)}>
+              <select
+                value={rulePackPlatform}
+                onChange={(event) => setRulePackPlatform(event.target.value)}
+              >
                 <option value="facebook">Facebook</option>
                 <option value="instagram">Instagram</option>
                 <option value="telegram">Telegram</option>
@@ -1543,13 +1944,24 @@ export function App(): ReactElement {
             </label>
             <label>
               الإصدار
-              <input value={rulePackVersion} onChange={(event) => setRulePackVersion(event.target.value)} />
+              <input
+                value={rulePackVersion}
+                onChange={(event) => setRulePackVersion(event.target.value)}
+              />
             </label>
             <label>
               القواعد JSON
-              <textarea value={rulePackRules} onChange={(event) => setRulePackRules(event.target.value)} rows={10} />
+              <textarea
+                value={rulePackRules}
+                onChange={(event) => setRulePackRules(event.target.value)}
+                rows={10}
+              />
             </label>
-            <button className="button primary" type="button" onClick={() => void saveRulePack()}>
+            <button
+              className="button primary"
+              type="button"
+              onClick={() => void saveRulePack()}
+            >
               حفظ Rule Pack
             </button>
           </div>
@@ -1557,17 +1969,26 @@ export function App(): ReactElement {
             {rulePacks.slice(0, 8).map((pack) => (
               <div className="account-row" key={pack.id + ":" + pack.platform}>
                 <div>
-                  <strong>{pack.id} • {pack.platform}</strong>
+                  <strong>
+                    {pack.id} • {pack.platform}
+                  </strong>
                   <div className="account-meta">
-                    v{pack.version} • schema {pack.schema_version} • {pack.enabled ? "مفعلة" : "متوقفة"}
+                    v{pack.version} • schema {pack.schema_version} •{" "}
+                    {pack.enabled ? "مفعلة" : "متوقفة"}
                   </div>
                 </div>
-                <button className="button secondary" type="button" onClick={() => void toggleRulePack(pack.id, !pack.enabled)}>
+                <button
+                  className="button secondary"
+                  type="button"
+                  onClick={() => void toggleRulePack(pack.id, !pack.enabled)}
+                >
                   {pack.enabled ? "تعطيل" : "تفعيل"}
                 </button>
               </div>
             ))}
-            {!rulePacks.length ? <div className="result">لا توجد Rule Packs محفوظة.</div> : null}
+            {!rulePacks.length ? (
+              <div className="result">لا توجد Rule Packs محفوظة.</div>
+            ) : null}
           </div>
         </div>
       </section>
@@ -1575,25 +1996,45 @@ export function App(): ReactElement {
       <section className="grid workspace-grid">
         <div className="card">
           <h2>المحتوى والموافقات</h2>
-          <p>أنشئ المحتوى محلياً، اربطه بحملة، ثم مرره عبر approval gate قبل أي مهمة خارجية.</p>
+          <p>
+            أنشئ المحتوى محلياً، اربطه بحملة، ثم مرره عبر approval gate قبل أي
+            مهمة خارجية.
+          </p>
           <form className="vault-form" onSubmit={saveContent}>
             <label>
               معرف المحتوى
-              <input value={contentId} onChange={(event) => setContentId(event.target.value)} placeholder="content-001" />
+              <input
+                value={contentId}
+                onChange={(event) => setContentId(event.target.value)}
+                placeholder="content-001"
+              />
             </label>
             <label>
               العنوان
-              <input value={contentTitle} onChange={(event) => setContentTitle(event.target.value)} />
+              <input
+                value={contentTitle}
+                onChange={(event) => setContentTitle(event.target.value)}
+              />
             </label>
             <label>
               النص
-              <textarea value={contentBody} onChange={(event) => setContentBody(event.target.value)} rows={6} />
+              <textarea
+                value={contentBody}
+                onChange={(event) => setContentBody(event.target.value)}
+                rows={6}
+              />
             </label>
             <label>
               الوسوم (مفصولة بفواصل)
-              <input value={contentTags} onChange={(event) => setContentTags(event.target.value)} placeholder="launch, real-estate, arabic" />
+              <input
+                value={contentTags}
+                onChange={(event) => setContentTags(event.target.value)}
+                placeholder="launch, real-estate, arabic"
+              />
             </label>
-            <button className="button primary" type="submit">حفظ مسودة المحتوى</button>
+            <button className="button primary" type="submit">
+              حفظ مسودة المحتوى
+            </button>
           </form>
 
           <label>
@@ -1608,7 +2049,9 @@ export function App(): ReactElement {
             >
               <option value="">اختر محتوى</option>
               {contentItems.map((item) => (
-                <option key={item.id} value={item.id}>{item.title} • {item.approval_status}</option>
+                <option key={item.id} value={item.id}>
+                  {item.title} • {item.approval_status}
+                </option>
               ))}
             </select>
           </label>
@@ -1622,7 +2065,9 @@ export function App(): ReactElement {
                   const platform = event.target.value;
                   if (!isPlatform(platform)) return;
                   setVariantPlatform(platform);
-                  const current = contentVariants.find((item) => item.platform === platform);
+                  const current = contentVariants.find(
+                    (item) => item.platform === platform,
+                  );
                   setVariantBody(current?.body ?? "");
                 }}
               >
@@ -1644,10 +2089,19 @@ export function App(): ReactElement {
               />
             </label>
             <div className="actions">
-              <button className="button secondary" type="button" onClick={() => void loadVariants()}>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() => void loadVariants()}
+              >
                 تحميل النسخ
               </button>
-              <button className="button primary" type="button" onClick={() => void saveVariant()} disabled={!selectedContentId}>
+              <button
+                className="button primary"
+                type="button"
+                onClick={() => void saveVariant()}
+                disabled={!selectedContentId}
+              >
                 حفظ نسخة المنصة
               </button>
             </div>
@@ -1672,43 +2126,71 @@ export function App(): ReactElement {
                 </div>
               </button>
             ))}
-            {!contentVariants.length ? <div className="result">لا توجد نسخ مخصصة لهذا المحتوى.</div> : null}
+            {!contentVariants.length ? (
+              <div className="result">لا توجد نسخ مخصصة لهذا المحتوى.</div>
+            ) : null}
           </div>
 
           <label>
             الحملة لربط المحتوى
-            <select value={contentCampaignId} onChange={(event) => setContentCampaignId(event.target.value)}>
+            <select
+              value={contentCampaignId}
+              onChange={(event) => setContentCampaignId(event.target.value)}
+            >
               <option value="">اختر حملة</option>
               {campaigns.map((campaign) => (
-                <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+                <option key={campaign.id} value={campaign.id}>
+                  {campaign.name}
+                </option>
               ))}
             </select>
           </label>
 
           <div className="actions">
-            <button className="button secondary" type="button" onClick={() => void attachContent()}>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => void attachContent()}
+            >
               ربط بالحملة
             </button>
-            <button className="button primary" type="button" onClick={() => void requestApproval()} disabled={!selectedContentId}>
+            <button
+              className="button primary"
+              type="button"
+              onClick={() => void requestApproval()}
+              disabled={!selectedContentId}
+            >
               طلب موافقة
             </button>
           </div>
 
           <div className="account-list">
             {contentItems.slice(0, 8).map((item) => (
-              <button className="account-row" type="button" key={item.id} onClick={() => setSelectedContentId(item.id)}>
+              <button
+                className="account-row"
+                type="button"
+                key={item.id}
+                onClick={() => setSelectedContentId(item.id)}
+              >
                 <div>
                   <strong>{item.title}</strong>
-                  <div className="account-meta">{item.id} • {item.approval_status} • {item.updated_at}</div>
+                  <div className="account-meta">
+                    {item.id} • {item.approval_status} • {item.updated_at}
+                  </div>
                 </div>
               </button>
             ))}
-            {!contentItems.length ? <div className="result">لا يوجد محتوى محفوظ.</div> : null}
+            {!contentItems.length ? (
+              <div className="result">لا يوجد محتوى محفوظ.</div>
+            ) : null}
           </div>
 
           <label>
             الموافقة المحددة
-            <select value={approvalId} onChange={(event) => setApprovalId(event.target.value)}>
+            <select
+              value={approvalId}
+              onChange={(event) => setApprovalId(event.target.value)}
+            >
               <option value="">اختر موافقة</option>
               {approvals.map((approval) => (
                 <option key={approval.id} value={approval.id}>
@@ -1718,13 +2200,25 @@ export function App(): ReactElement {
             </select>
           </label>
           <div className="actions">
-            <button className="button primary" type="button" onClick={() => void decideApproval("approved")}>
+            <button
+              className="button primary"
+              type="button"
+              onClick={() => void decideApproval("approved")}
+            >
               اعتماد
             </button>
-            <button className="button danger" type="button" onClick={() => void decideApproval("rejected")}>
+            <button
+              className="button danger"
+              type="button"
+              onClick={() => void decideApproval("rejected")}
+            >
               رفض
             </button>
-            <button className="button secondary" type="button" onClick={() => void decideApproval("changes_requested")}>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => void decideApproval("changes_requested")}
+            >
               طلب تعديلات
             </button>
           </div>
@@ -1736,57 +2230,92 @@ export function App(): ReactElement {
           <form className="vault-form" onSubmit={createCampaign}>
             <label>
               اسم الحملة
-              <input value={campaignName} onChange={(event) => setCampaignName(event.target.value)} placeholder="حملة سبتمبر" />
+              <input
+                value={campaignName}
+                onChange={(event) => setCampaignName(event.target.value)}
+                placeholder="حملة سبتمبر"
+              />
             </label>
             <label>
               الحساب المستهدف
-              <select value={campaignAccountId} onChange={(event) => setCampaignAccountId(event.target.value)}>
+              <select
+                value={campaignAccountId}
+                onChange={(event) => setCampaignAccountId(event.target.value)}
+              >
                 <option value="">اختر حساباً</option>
                 {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>{account.display_name} • {account.platform}</option>
+                  <option key={account.id} value={account.id}>
+                    {account.display_name} • {account.platform}
+                  </option>
                 ))}
               </select>
             </label>
-            <button className="button primary" type="submit" disabled={!accounts.length}>إنشاء حملة</button>
+            <button
+              className="button primary"
+              type="submit"
+              disabled={!accounts.length}
+            >
+              إنشاء حملة
+            </button>
           </form>
           <div className="account-list">
             {campaigns.slice(0, 8).map((campaign) => (
               <div className="account-row" key={campaign.id}>
                 <div>
                   <strong>{campaign.name}</strong>
-                  <div className="account-meta">{campaign.status} • {campaign.task_count} مهام</div>
+                  <div className="account-meta">
+                    {campaign.status} • {campaign.task_count} مهام
+                  </div>
                 </div>
               </div>
             ))}
-            {!campaigns.length ? <div className="result">لا توجد حملات محفوظة.</div> : null}
+            {!campaigns.length ? (
+              <div className="result">لا توجد حملات محفوظة.</div>
+            ) : null}
           </div>
         </div>
 
         <div className="card">
           <h2>المهام</h2>
-          <p>Queue native: pending / running / succeeded / failed / blocked / cancelled.</p>
+          <p>
+            Queue native: pending / running / succeeded / failed / blocked /
+            cancelled.
+          </p>
           <div className="vault-form">
             <label>
               الحملة
-              <select value={taskCampaignId} onChange={(event) => setTaskCampaignId(event.target.value)}>
+              <select
+                value={taskCampaignId}
+                onChange={(event) => setTaskCampaignId(event.target.value)}
+              >
                 <option value="">اختر حملة</option>
                 {campaigns.map((campaign) => (
-                  <option key={campaign.id} value={campaign.id}>{campaign.name} • {campaign.status}</option>
+                  <option key={campaign.id} value={campaign.id}>
+                    {campaign.name} • {campaign.status}
+                  </option>
                 ))}
               </select>
             </label>
             <label>
               الحساب
-              <select value={taskAccountId} onChange={(event) => setTaskAccountId(event.target.value)}>
+              <select
+                value={taskAccountId}
+                onChange={(event) => setTaskAccountId(event.target.value)}
+              >
                 <option value="">اختر حساباً</option>
                 {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>{account.display_name} • {account.platform}</option>
+                  <option key={account.id} value={account.id}>
+                    {account.display_name} • {account.platform}
+                  </option>
                 ))}
               </select>
             </label>
             <label>
               نوع المهمة
-              <select value={taskKind} onChange={(event) => setTaskKind(event.target.value)}>
+              <select
+                value={taskKind}
+                onChange={(event) => setTaskKind(event.target.value)}
+              >
                 <option value="publish">نشر</option>
                 <option value="message">رسالة</option>
                 <option value="comment">تعليق</option>
@@ -1797,10 +2326,15 @@ export function App(): ReactElement {
             {taskKind !== "sync" ? (
               <label>
                 المحتوى للمهمة
-                <select value={selectedContentId} onChange={(event) => setSelectedContentId(event.target.value)}>
+                <select
+                  value={selectedContentId}
+                  onChange={(event) => setSelectedContentId(event.target.value)}
+                >
                   <option value="">اختر محتوى معتمد للمهمة</option>
                   {contentItems.map((item) => (
-                    <option key={item.id} value={item.id}>{item.title} • {item.approval_status}</option>
+                    <option key={item.id} value={item.id}>
+                      {item.title} • {item.approval_status}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1817,37 +2351,79 @@ export function App(): ReactElement {
             ) : null}
             <label>
               معرف المهمة (اختياري)
-              <input value={taskId} onChange={(event) => setTaskId(event.target.value)} placeholder="task-001" />
+              <input
+                value={taskId}
+                onChange={(event) => setTaskId(event.target.value)}
+                placeholder="task-001"
+              />
             </label>
             <label>
               Idempotency Key (اختياري)
-              <input value={taskIdempotencyKey} onChange={(event) => setTaskIdempotencyKey(event.target.value)} />
+              <input
+                value={taskIdempotencyKey}
+                onChange={(event) => setTaskIdempotencyKey(event.target.value)}
+              />
             </label>
             {taskKind !== "sync" ? (
               <>
                 <label>
                   Content ID
-                  <input value={taskContentId} onChange={(event) => setTaskContentId(event.target.value)} placeholder="content-001" />
+                  <input
+                    value={taskContentId}
+                    onChange={(event) => setTaskContentId(event.target.value)}
+                    placeholder="content-001"
+                  />
                 </label>
                 <label>
                   Destination ID
-                  <input value={taskDestinationId} onChange={(event) => setTaskDestinationId(event.target.value)} placeholder="page-or-channel-001" />
+                  <input
+                    value={taskDestinationId}
+                    onChange={(event) =>
+                      setTaskDestinationId(event.target.value)
+                    }
+                    placeholder="page-or-channel-001"
+                  />
                 </label>
               </>
             ) : null}
             <div className="actions">
-              <button className="button primary" type="button" onClick={() => void enqueueTask()}>إضافة للمحلية</button>
-              <button className="button secondary" type="button" onClick={() => void claimNextTask()}>سحب التالية</button>
-              <button className="button secondary" type="button" onClick={() => void loadTasks()}>تحديث</button>
+              <button
+                className="button primary"
+                type="button"
+                onClick={() => void enqueueTask()}
+              >
+                إضافة للمحلية
+              </button>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() => void claimNextTask()}
+              >
+                سحب التالية
+              </button>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() => void loadTasks()}
+              >
+                تحديث
+              </button>
             </div>
           </div>
-          {executionMessage ? <div className="notice success">{executionMessage}</div> : null}
+          {executionMessage ? (
+            <div className="notice success">{executionMessage}</div>
+          ) : null}
           <div className="account-list">
             {tasks.slice(0, 10).map((task) => (
               <div className="account-row" key={task.id}>
                 <div>
-                  <strong>{task.kind} • {task.platform}</strong>
-                  <div className="account-meta">{task.status} • {task.attempts}/{task.max_attempts} • أولوية {task.priority} • {task.idempotency_key}</div>
+                  <strong>
+                    {task.kind} • {task.platform}
+                  </strong>
+                  <div className="account-meta">
+                    {task.status} • {task.attempts}/{task.max_attempts} • أولوية{" "}
+                    {task.priority} • {task.idempotency_key}
+                  </div>
                 </div>
                 <div className="actions">
                   {task.status === "running" && task.platform === "telegram" ? (
@@ -1871,7 +2447,9 @@ export function App(): ReactElement {
                 </div>
               </div>
             ))}
-            {!tasks.length ? <div className="result">لا توجد مهام محفوظة.</div> : null}
+            {!tasks.length ? (
+              <div className="result">لا توجد مهام محفوظة.</div>
+            ) : null}
           </div>
         </div>
 
@@ -1881,23 +2459,40 @@ export function App(): ReactElement {
           <form className="vault-form" onSubmit={saveContact}>
             <label>
               معرف العميل
-              <input value={contactId} onChange={(event) => setContactId(event.target.value)} placeholder="lead-001" />
+              <input
+                value={contactId}
+                onChange={(event) => setContactId(event.target.value)}
+                placeholder="lead-001"
+              />
             </label>
             <label>
               الاسم
-              <input value={contactName} onChange={(event) => setContactName(event.target.value)} />
+              <input
+                value={contactName}
+                onChange={(event) => setContactName(event.target.value)}
+              />
             </label>
             <label>
               الهاتف
-              <input value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} />
+              <input
+                value={contactPhone}
+                onChange={(event) => setContactPhone(event.target.value)}
+              />
             </label>
             <label>
               البريد الإلكتروني
-              <input value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} type="email" />
+              <input
+                value={contactEmail}
+                onChange={(event) => setContactEmail(event.target.value)}
+                type="email"
+              />
             </label>
             <label>
               الحالة
-              <select value={contactStatus} onChange={(event) => setContactStatus(event.target.value)}>
+              <select
+                value={contactStatus}
+                onChange={(event) => setContactStatus(event.target.value)}
+              >
                 <option value="new">جديد</option>
                 <option value="interested">مهتم</option>
                 <option value="sold">تم البيع</option>
@@ -1906,40 +2501,60 @@ export function App(): ReactElement {
             </label>
             <label>
               ملاحظات
-              <textarea value={contactNotes} onChange={(event) => setContactNotes(event.target.value)} rows={3} />
+              <textarea
+                value={contactNotes}
+                onChange={(event) => setContactNotes(event.target.value)}
+                rows={3}
+              />
             </label>
-            <button className="button primary" type="submit">حفظ العميل</button>
+            <button className="button primary" type="submit">
+              حفظ العميل
+            </button>
           </form>
           <div className="account-list">
             {contacts.slice(0, 8).map((contact) => (
               <div className="account-row" key={contact.id}>
                 <div>
                   <strong>{contact.display_name}</strong>
-                  <div className="account-meta">{contact.status} {contact.phone ? "• " + contact.phone : ""}</div>
+                  <div className="account-meta">
+                    {contact.status} {contact.phone ? "• " + contact.phone : ""}
+                  </div>
                 </div>
               </div>
             ))}
-            {!contacts.length ? <div className="result">لا توجد جهات اتصال.</div> : null}
+            {!contacts.length ? (
+              <div className="result">لا توجد جهات اتصال.</div>
+            ) : null}
           </div>
         </div>
       </section>
 
       <section className="card">
         <h2>Inbox محلي</h2>
-        <p>المحادثات والرسائل تُحفظ محلياً، ويُرفض أي ربط خارج مساحة العمل الحالية.</p>
+        <p>
+          المحادثات والرسائل تُحفظ محلياً، ويُرفض أي ربط خارج مساحة العمل
+          الحالية.
+        </p>
         <div className="vault-form">
           <label>
             معرف المحادثة
-            <input value={conversationId} onChange={(event) => setConversationId(event.target.value)} placeholder="thread-001" />
+            <input
+              value={conversationId}
+              onChange={(event) => setConversationId(event.target.value)}
+              placeholder="thread-001"
+            />
           </label>
           <label>
             الحساب المرتبط
-            <select value={conversationAccountId} onChange={(event) => {
-              const id = event.target.value;
-              setConversationAccountId(id);
-              const account = accounts.find((item) => item.id === id);
-              if (account) setConversationPlatform(account.platform);
-            }}>
+            <select
+              value={conversationAccountId}
+              onChange={(event) => {
+                const id = event.target.value;
+                setConversationAccountId(id);
+                const account = accounts.find((item) => item.id === id);
+                if (account) setConversationPlatform(account.platform);
+              }}
+            >
               <option value="">اختر حساباً</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
@@ -1950,14 +2565,24 @@ export function App(): ReactElement {
           </label>
           <label>
             العميل المرتبط (اختياري)
-            <select value={contactId} onChange={(event) => setContactId(event.target.value)}>
+            <select
+              value={contactId}
+              onChange={(event) => setContactId(event.target.value)}
+            >
               <option value="">بدون ربط</option>
-              {contacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.display_name}</option>)}
+              {contacts.map((contact) => (
+                <option key={contact.id} value={contact.id}>
+                  {contact.display_name}
+                </option>
+              ))}
             </select>
           </label>
           <label>
             المنصة
-            <select value={conversationPlatform} onChange={(event) => setConversationPlatform(event.target.value)}>
+            <select
+              value={conversationPlatform}
+              onChange={(event) => setConversationPlatform(event.target.value)}
+            >
               <option value="facebook">Facebook</option>
               <option value="instagram">Instagram</option>
               <option value="telegram">Telegram</option>
@@ -1968,11 +2593,17 @@ export function App(): ReactElement {
           </label>
           <label>
             External Thread ID (اختياري)
-            <input value={externalThreadId} onChange={(event) => setExternalThreadId(event.target.value)} />
+            <input
+              value={externalThreadId}
+              onChange={(event) => setExternalThreadId(event.target.value)}
+            />
           </label>
           <label>
             الحالة
-            <select value={conversationStatus} onChange={(event) => setConversationStatus(event.target.value)}>
+            <select
+              value={conversationStatus}
+              onChange={(event) => setConversationStatus(event.target.value)}
+            >
               <option value="new">جديدة</option>
               <option value="interested">مهتم</option>
               <option value="potential_customer">عميل محتمل</option>
@@ -1980,48 +2611,87 @@ export function App(): ReactElement {
               <option value="closed">مغلقة</option>
             </select>
           </label>
-          <button className="button primary" type="button" onClick={() => void saveConversation()}>حفظ المحادثة</button>
+          <button
+            className="button primary"
+            type="button"
+            onClick={() => void saveConversation()}
+          >
+            حفظ المحادثة
+          </button>
         </div>
 
         <div className="account-list">
           {conversations.slice(0, 10).map((conversation) => (
-            <button className="account-row" type="button" key={conversation.id} onClick={() => void loadMessages(conversation.id)}>
+            <button
+              className="account-row"
+              type="button"
+              key={conversation.id}
+              onClick={() => void loadMessages(conversation.id)}
+            >
               <div>
-                <strong>{conversation.platform} • {conversation.id}</strong>
-                <div className="account-meta">{conversation.status} • {conversation.message_count} رسائل</div>
+                <strong>
+                  {conversation.platform} • {conversation.id}
+                </strong>
+                <div className="account-meta">
+                  {conversation.status} • {conversation.message_count} رسائل
+                </div>
               </div>
             </button>
           ))}
-          {!conversations.length ? <div className="result">لا توجد محادثات محلية.</div> : null}
+          {!conversations.length ? (
+            <div className="result">لا توجد محادثات محلية.</div>
+          ) : null}
         </div>
 
         <div className="vault-form">
           <label>
             المحادثة المحددة
-            <select value={messageConversationId} onChange={(event) => void loadMessages(event.target.value)}>
+            <select
+              value={messageConversationId}
+              onChange={(event) => void loadMessages(event.target.value)}
+            >
               <option value="">اختر محادثة</option>
-              {conversations.map((conversation) => <option key={conversation.id} value={conversation.id}>{conversation.id}</option>)}
+              {conversations.map((conversation) => (
+                <option key={conversation.id} value={conversation.id}>
+                  {conversation.id}
+                </option>
+              ))}
             </select>
           </label>
           <label>
             اتجاه الرسالة
-            <select value={messageDirection} onChange={(event) => setMessageDirection(event.target.value)}>
+            <select
+              value={messageDirection}
+              onChange={(event) => setMessageDirection(event.target.value)}
+            >
               <option value="inbound">واردة</option>
               <option value="outbound">صادرة</option>
             </select>
           </label>
           <label>
             الرسالة
-            <textarea value={messageBody} onChange={(event) => setMessageBody(event.target.value)} rows={3} />
+            <textarea
+              value={messageBody}
+              onChange={(event) => setMessageBody(event.target.value)}
+              rows={3}
+            />
           </label>
-          <button className="button primary" type="button" onClick={() => void saveMessage()}>إضافة رسالة</button>
+          <button
+            className="button primary"
+            type="button"
+            onClick={() => void saveMessage()}
+          >
+            إضافة رسالة
+          </button>
         </div>
 
         <div className="account-list">
           {messages.slice(-10).map((message) => (
             <div className="account-row" key={message.id}>
               <div>
-                <strong>{message.direction === "inbound" ? "واردة" : "صادرة"}</strong>
+                <strong>
+                  {message.direction === "inbound" ? "واردة" : "صادرة"}
+                </strong>
                 <div className="account-meta">{message.sent_at}</div>
                 <div className="result">{message.body}</div>
               </div>
@@ -2032,19 +2702,46 @@ export function App(): ReactElement {
 
       <section className="card">
         <h2>النسخ الاحتياطي المشفّر</h2>
-        <p>نسخ SQLite تُشفّر محلياً قبل حفظها في مجلد backups داخل بيانات التطبيق.</p>
+        <p>
+          نسخ SQLite تُشفّر محلياً قبل حفظها في مجلد backups داخل بيانات
+          التطبيق.
+        </p>
         <div className="actions">
-          <button className="button primary" type="button" onClick={() => void createBackup()}>إنشاء نسخة</button>
-          <button className="button secondary" type="button" onClick={() => void loadBackups()}>تحديث القائمة</button>
+          <button
+            className="button primary"
+            type="button"
+            onClick={() => void createBackup()}
+          >
+            إنشاء نسخة
+          </button>
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => void loadBackups()}
+          >
+            تحديث القائمة
+          </button>
         </div>
         <label>
           النسخة
-          <select value={selectedBackup} onChange={(event) => setSelectedBackup(event.target.value)}>
+          <select
+            value={selectedBackup}
+            onChange={(event) => setSelectedBackup(event.target.value)}
+          >
             <option value="">اختر نسخة</option>
-            {backups.map((item) => <option key={item} value={item}>{item}</option>)}
+            {backups.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
         </label>
-        <button className="button secondary" type="button" onClick={() => void restoreBackup()} disabled={!selectedBackup}>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={() => void restoreBackup()}
+          disabled={!selectedBackup}
+        >
           استرجاع بعد الفحص
         </button>
         {backupStatus ? <div className="result">{backupStatus}</div> : null}
@@ -2052,11 +2749,18 @@ export function App(): ReactElement {
 
       <section className="card">
         <h2>الحسابات المحلية</h2>
-        <p>بيانات التعريف تُحفظ في SQLite. أي session blob اختياري يُشفر داخل Rust بـ Argon2id + AES-256-GCM.</p>
+        <p>
+          بيانات التعريف تُحفظ في SQLite. أي session blob اختياري يُشفر داخل
+          Rust بـ Argon2id + AES-256-GCM.
+        </p>
         <form className="vault-form" onSubmit={storeAccount}>
           <label>
             معرف الحساب
-            <input value={accountId} onChange={(event) => setAccountId(event.target.value)} placeholder="facebook-main" />
+            <input
+              value={accountId}
+              onChange={(event) => setAccountId(event.target.value)}
+              placeholder="facebook-main"
+            />
           </label>
           <label>
             المنصة
@@ -2077,17 +2781,29 @@ export function App(): ReactElement {
           </label>
           <label>
             اسم العرض
-            <input value={accountName} onChange={(event) => setAccountName(event.target.value)} />
+            <input
+              value={accountName}
+              onChange={(event) => setAccountName(event.target.value)}
+            />
           </label>
           <label>
             اسم المستخدم (اختياري)
-            <input value={accountUsername} onChange={(event) => setAccountUsername(event.target.value)} />
+            <input
+              value={accountUsername}
+              onChange={(event) => setAccountUsername(event.target.value)}
+            />
           </label>
           <label>
             بيانات جلسة مُصرح بها (اختياري)
-            <input type="password" value={accountSession} onChange={(event) => setAccountSession(event.target.value)} />
+            <input
+              type="password"
+              value={accountSession}
+              onChange={(event) => setAccountSession(event.target.value)}
+            />
           </label>
-          <button className="button primary" type="submit">حفظ الحساب محلياً</button>
+          <button className="button primary" type="submit">
+            حفظ الحساب محلياً
+          </button>
         </form>
 
         <div className="account-list">
@@ -2099,11 +2815,17 @@ export function App(): ReactElement {
                 <div>
                   <strong>{account.display_name}</strong>
                   <div className="account-meta">
-                    {account.platform} {account.username ? "• @" + account.username : ""} • {account.status}
+                    {account.platform}{" "}
+                    {account.username ? "• @" + account.username : ""} •{" "}
+                    {account.status}
                     {account.has_encrypted_session ? " • جلسة مشفرة" : ""}
                   </div>
                 </div>
-                <button className="button danger" type="button" onClick={() => void deleteAccount(account.id)}>
+                <button
+                  className="button danger"
+                  type="button"
+                  onClick={() => void deleteAccount(account.id)}
+                >
                   حذف
                 </button>
               </div>
@@ -2112,18 +2834,28 @@ export function App(): ReactElement {
         </div>
       </section>
 
-
       <section className="card">
         <h2>الترخيص المحلي</h2>
-        <p>الترخيص يُتحقق منه محلياً بتوقيع Ed25519. لا توجد مفاتيح توقيع خاصة داخل التطبيق.</p>
+        <p>
+          الترخيص يُتحقق منه محلياً بتوقيع Ed25519. لا توجد مفاتيح توقيع خاصة
+          داخل التطبيق.
+        </p>
         <div className="account-meta">
-          الحالة: {license?.valid ? "فعال" : license?.installed ? "غير صالح" : "غير مثبت"}
+          الحالة:{" "}
+          {license?.valid
+            ? "فعال"
+            : license?.installed
+              ? "غير صالح"
+              : "غير مثبت"}
           {license?.plan ? " • " + license.plan : ""}
-          {license?.account_limit ? " • حد الحسابات " + license.account_limit : ""}
+          {license?.account_limit
+            ? " • حد الحسابات " + license.account_limit
+            : ""}
         </div>
         {license?.license_id ? (
           <div className="result">
-            {license.license_id} • {license.subject ?? "بدون subject"} • {license.reason}
+            {license.license_id} • {license.subject ?? "بدون subject"} •{" "}
+            {license.reason}
           </div>
         ) : null}
         <label>
@@ -2137,13 +2869,26 @@ export function App(): ReactElement {
           />
         </label>
         <div className="actions">
-          <button className="button primary" type="button" onClick={() => void installLicense()}>
+          <button
+            className="button primary"
+            type="button"
+            onClick={() => void installLicense()}
+          >
             تحقق وفعّل محلياً
           </button>
-          <button className="button secondary" type="button" onClick={() => void loadLicense()}>
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => void loadLicense()}
+          >
             تحديث الحالة
           </button>
-          <button className="button danger" type="button" onClick={() => void removeLicense()} disabled={!license?.installed}>
+          <button
+            className="button danger"
+            type="button"
+            onClick={() => void removeLicense()}
+            disabled={!license?.installed}
+          >
             إزالة الترخيص
           </button>
         </div>
@@ -2196,10 +2941,27 @@ export function App(): ReactElement {
         <h2>سجل التدقيق</h2>
         <p>أحداث التشغيل المحلية تُحفظ دون أسرار أو قيم الجلسات الحساسة.</p>
         <div className="actions">
-          <button className="button secondary" type="button" onClick={() => void loadAudit()}>تحديث السجل</button>
-          <button className="button primary" type="button" onClick={() => void verifyAudit()}>تحقق من سلامة السجل</button>
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => void loadAudit()}
+          >
+            تحديث السجل
+          </button>
+          <button
+            className="button primary"
+            type="button"
+            onClick={() => void verifyAudit()}
+          >
+            تحقق من سلامة السجل
+          </button>
           <span className="account-meta">
-            الحالة: {auditIntegrity === "valid" ? "سليم" : auditIntegrity === "invalid" ? "يحتاج مراجعة" : "غير متحقق"}
+            الحالة:{" "}
+            {auditIntegrity === "valid"
+              ? "سليم"
+              : auditIntegrity === "invalid"
+                ? "يحتاج مراجعة"
+                : "غير متحقق"}
           </span>
         </div>
         <div className="account-list">
@@ -2208,41 +2970,69 @@ export function App(): ReactElement {
               <div>
                 <strong>{entry.action}</strong>
                 <div className="account-meta">
-                  {entry.category} • {entry.outcome} • {entry.actor} • {entry.timestamp}
+                  {entry.category} • {entry.outcome} • {entry.actor} •{" "}
+                  {entry.timestamp}
                   {entry.entity_id ? " • " + entry.entity_id : ""}
                 </div>
               </div>
             </div>
           ))}
-          {!auditEntries.length ? <div className="result">لا توجد أحداث تدقيق بعد.</div> : null}
+          {!auditEntries.length ? (
+            <div className="result">لا توجد أحداث تدقيق بعد.</div>
+          ) : null}
         </div>
       </section>
 
       {import.meta.env.DEV ? (
         <form className="card vault-form" onSubmit={storeSecret}>
           <h2>اختبار خزنة محلية حقيقية</h2>
-          <p>هذا الاختبار يكتب السجل المشفر في قاعدة SQLite المحلية الخاصة بالتطبيق.</p>
+          <p>
+            هذا الاختبار يكتب السجل المشفر في قاعدة SQLite المحلية الخاصة
+            بالتطبيق.
+          </p>
           <label>
             اسم السجل
-            <input value={label} onChange={(event) => setLabel(event.target.value)} />
+            <input
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+            />
           </label>
           <label>
             القيمة الحساسة
-            <input type="password" value={secret} onChange={(event) => setSecret(event.target.value)} />
+            <input
+              type="password"
+              value={secret}
+              onChange={(event) => setSecret(event.target.value)}
+            />
           </label>
           <label>
             كلمة مرور الخزنة
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
           </label>
           <div className="actions">
-            <button className="button primary" type="submit">تشفير وحفظ</button>
-            <button className="button secondary" type="button" onClick={() => void loadSecret()}>فك وقراءة</button>
+            <button className="button primary" type="submit">
+              تشفير وحفظ
+            </button>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => void loadSecret()}
+            >
+              فك وقراءة
+            </button>
           </div>
-          {stored ? <div className="result">تم حفظ السجل المشفر محلياً.</div> : null}
-          {recovered ? <div className="result">القيمة المستعادة: {recovered}</div> : null}
+          {stored ? (
+            <div className="result">تم حفظ السجل المشفر محلياً.</div>
+          ) : null}
+          {recovered ? (
+            <div className="result">القيمة المستعادة: {recovered}</div>
+          ) : null}
         </form>
       ) : null}
-
     </main>
   );
 }

@@ -33,9 +33,9 @@ describe("connector registry", () => {
   it("rejects duplicate platform registration", () => {
     const registry = new ConnectorRegistry();
     registry.register(new FixtureConnector({ platform: "facebook" }));
-    expect(() => registry.register(new FixtureConnector({ platform: "facebook" }))).toThrow(
-      "Connector already registered",
-    );
+    expect(() =>
+      registry.register(new FixtureConnector({ platform: "facebook" })),
+    ).toThrow("Connector already registered");
   });
 });
 

@@ -11,7 +11,13 @@ export const metadata: Metadata = {
   description: "منصة تشغيل تسويق Local-First بملكية محلية للبيانات الحساسة.",
   manifest: "/manifest.json",
   applicationName: "ORBIT Marketing OS",
-  keywords: ["marketing operations", "CRM", "campaigns", "local-first", "Ollama"],
+  keywords: [
+    "marketing operations",
+    "CRM",
+    "campaigns",
+    "local-first",
+    "Ollama",
+  ],
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg",
@@ -22,7 +28,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { readonly children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  readonly children: ReactNode;
+}) {
   return (
     <html lang="ar" dir="rtl">
       <body>

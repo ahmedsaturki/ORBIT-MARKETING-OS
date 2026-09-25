@@ -73,7 +73,9 @@ for (const packagePath of [
     throw new Error("Package version mismatch: " + packagePath);
   }
 }
-const desktopManifest = await readJson("packages/desktop/src-tauri/tauri.conf.json");
+const desktopManifest = await readJson(
+  "packages/desktop/src-tauri/tauri.conf.json",
+);
 if (desktopManifest.version !== rootPackage.version) {
   throw new Error("Tauri version does not match root package version");
 }
@@ -92,13 +94,22 @@ for (const path of workspacePackagePaths) {
   const pkg = await readJson(path);
   if (pkg.version !== rootPackage.version) {
     throw new Error(
-      "Workspace package version drift detected: " + path + " (" + pkg.version + " != " + rootPackage.version + ")",
+      "Workspace package version drift detected: " +
+        path +
+        " (" +
+        pkg.version +
+        " != " +
+        rootPackage.version +
+        ")",
     );
   }
 }
 
 const tauriReleaseConfig = JSON.parse(
-  await readFile(join(root, "packages/desktop/src-tauri/tauri.conf.json"), "utf8"),
+  await readFile(
+    join(root, "packages/desktop/src-tauri/tauri.conf.json"),
+    "utf8",
+  ),
 );
 if (tauriReleaseConfig.version !== rootPackage.version) {
   throw new Error(
@@ -128,7 +139,10 @@ for (const [name, expected] of Object.entries(requiredRootScripts)) {
 }
 
 const corePackage = await readJson("packages/core/package.json");
-if (corePackage.scripts?.["test:coverage"] && !corePackage.devDependencies?.["@vitest/coverage-v8"]) {
+if (
+  corePackage.scripts?.["test:coverage"] &&
+  !corePackage.devDependencies?.["@vitest/coverage-v8"]
+) {
   throw new Error("Core coverage command requires @vitest/coverage-v8");
 }
 
@@ -143,11 +157,16 @@ if (webPackage.scripts?.["lint"]?.includes("next lint")) {
 await assertFile("packages/web/eslint.config.mjs");
 await assertFile("packages/mobile/test/runtimeClient.test.ts");
 const webEslint = await readJson("packages/web/package.json");
-if (!webEslint.devDependencies?.eslint || !webEslint.devDependencies?.["eslint-config-next"]) {
+if (
+  !webEslint.devDependencies?.eslint ||
+  !webEslint.devDependencies?.["eslint-config-next"]
+) {
   throw new Error("Web ESLint dependencies are incomplete");
 }
 
-const tauriCapabilities = await readJson("packages/desktop/src-tauri/capabilities/default.json");
+const tauriCapabilities = await readJson(
+  "packages/desktop/src-tauri/capabilities/default.json",
+);
 if (
   !Array.isArray(tauriCapabilities.permissions) ||
   tauriCapabilities.permissions.length !== 1 ||
@@ -157,19 +176,30 @@ if (
 }
 
 const tauriConfig = JSON.parse(
-  await readFile(join(root, "packages/desktop/src-tauri/tauri.conf.json"), "utf8"),
+  await readFile(
+    join(root, "packages/desktop/src-tauri/tauri.conf.json"),
+    "utf8",
+  ),
 );
 if (
   typeof tauriConfig.app?.security?.csp !== "string" ||
-  !tauriConfig.app.security.csp.includes("connect-src 'self' http://127.0.0.1:3000") ||
+  !tauriConfig.app.security.csp.includes(
+    "connect-src 'self' http://127.0.0.1:3000",
+  ) ||
   !tauriConfig.app.security.csp.includes("img-src 'self' data: blob:") ||
   !tauriConfig.app.security.csp.includes("object-src 'none'")
 ) {
   throw new Error("Tauri CSP does not match the local AI security contract");
 }
 
-const desktopApp = await readFile(join(root, "packages/desktop/src/App.tsx"), "utf8");
-if (desktopApp.includes("اختبار خزنة محلية حقيقية") && !desktopApp.includes("import.meta.env.DEV")) {
+const desktopApp = await readFile(
+  join(root, "packages/desktop/src/App.tsx"),
+  "utf8",
+);
+if (
+  desktopApp.includes("اختبار خزنة محلية حقيقية") &&
+  !desktopApp.includes("import.meta.env.DEV")
+) {
   throw new Error("Vault plaintext diagnostic must remain development-only");
 }
 
@@ -211,15 +241,20 @@ if (duplicateDerivePattern.test(rust)) {
 const rustFunctions = [];
 for (const entry of rustSources) {
   rustFunctions.push(
-    ...[...entry.content.matchAll(/\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map((match) => ({
-      name: match[1],
-      path: relative(root, entry.path),
-    })),
+    ...[...entry.content.matchAll(/\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(
+      (match) => ({
+        name: match[1],
+        path: relative(root, entry.path),
+      }),
+    ),
   );
 }
 const duplicateFunctions = new Map();
 for (const value of rustFunctions) {
-  duplicateFunctions.set(value.name, [...(duplicateFunctions.get(value.name) ?? []), value.path]);
+  duplicateFunctions.set(value.name, [
+    ...(duplicateFunctions.get(value.name) ?? []),
+    value.path,
+  ]);
 }
 for (const [name, paths] of duplicateFunctions) {
   if (paths.length > 1) {
@@ -232,26 +267,47 @@ for (const [name, paths] of duplicateFunctions) {
 
 for (const entry of rustSources) {
   const testModuleMarker = entry.content.indexOf("#[cfg(test)]");
-  const productionRust = testModuleMarker >= 0 ? entry.content.slice(0, testModuleMarker) : entry.content;
+  const productionRust =
+    testModuleMarker >= 0
+      ? entry.content.slice(0, testModuleMarker)
+      : entry.content;
   if (/\.unwrap\s*\(|\.expect\s*\(|\bpanic!\s*\(/.test(productionRust)) {
-    throw new Error("Unchecked Rust unwrap/expect/panic detected outside tests in " + relative(root, entry.path));
+    throw new Error(
+      "Unchecked Rust unwrap/expect/panic detected outside tests in " +
+        relative(root, entry.path),
+    );
   }
 }
 
-const taskV10MigrationIndex = rust.indexOf("ALTER TABLE tasks RENAME TO tasks_v10_old;");
+const taskV10MigrationIndex = rust.indexOf(
+  "ALTER TABLE tasks RENAME TO tasks_v10_old;",
+);
 if (taskV10MigrationIndex < 0) {
   throw new Error("Schema v10 task migration is missing");
 }
-const taskV10MigrationStart = rust.lastIndexOf("if version < 10 {", taskV10MigrationIndex);
+const taskV10MigrationStart = rust.lastIndexOf(
+  "if version < 10 {",
+  taskV10MigrationIndex,
+);
 const taskV10MigrationWindow = rust.slice(
   taskV10MigrationStart,
   Math.min(rust.length, taskV10MigrationIndex + 5000),
 );
-if (taskV10MigrationStart < 0 || !taskV10MigrationWindow.includes("let transaction = connection.unchecked_transaction()?;")) {
+if (
+  taskV10MigrationStart < 0 ||
+  !taskV10MigrationWindow.includes(
+    "let transaction = connection.unchecked_transaction()?;",
+  )
+) {
   throw new Error("Schema v10 task migration must run inside a transaction");
 }
-if (!taskV10MigrationWindow.includes("transaction.execute_batch") || !taskV10MigrationWindow.includes("transaction.commit()?;")) {
-  throw new Error("Schema v10 task migration transaction lifecycle is incomplete");
+if (
+  !taskV10MigrationWindow.includes("transaction.execute_batch") ||
+  !taskV10MigrationWindow.includes("transaction.commit()?;")
+) {
+  throw new Error(
+    "Schema v10 task migration transaction lifecycle is incomplete",
+  );
 }
 
 if (!rust.includes("CREATE TABLE IF NOT EXISTS media_assets")) {
@@ -275,16 +331,22 @@ if (
   setupIndex < 0 ||
   startupRecoveryIndex < 0 ||
   startupRecoveryIndex > setupIndex + 6000 ||
-  !rust.slice(startupRecoveryIndex, startupRecoveryIndex + 1800).includes(".map_err")
+  !rust
+    .slice(startupRecoveryIndex, startupRecoveryIndex + 1800)
+    .includes(".map_err")
 ) {
-  throw new Error("Startup recovery must be wired into application startup setup");
+  throw new Error(
+    "Startup recovery must be wired into application startup setup",
+  );
 }
 const openDbMatch = rust.match(/fn open_db\([\s\S]*?\n\}\n/);
 if (!openDbMatch || openDbMatch[0].includes("recover_interrupted_tasks")) {
   throw new Error("Task startup recovery must not run from every open_db call");
 }
 if (!rust.includes("recover_database_before_open(&app_data, &db_path)?;")) {
-  throw new Error("Interrupted backup replacement recovery must run before opening the database");
+  throw new Error(
+    "Interrupted backup replacement recovery must run before opening the database",
+  );
 }
 
 if (!rust.includes("CREATE TABLE IF NOT EXISTS automation_rule_packs")) {
@@ -292,7 +354,7 @@ if (!rust.includes("CREATE TABLE IF NOT EXISTS automation_rule_packs")) {
 }
 const mediaImportStart = rust.indexOf("fn media_asset_import(");
 const mediaImportBody = rust.slice(mediaImportStart, mediaImportStart + 6000);
-const mediaAuthIndex = mediaImportBody.indexOf('require_workspace_role_for(');
+const mediaAuthIndex = mediaImportBody.indexOf("require_workspace_role_for(");
 const mediaFileAccessIndex = mediaImportBody.indexOf("path.is_file()");
 const mediaHashIndex = mediaImportBody.indexOf("sha256_file(&path)");
 if (
@@ -302,11 +364,16 @@ if (
   mediaAuthIndex > mediaFileAccessIndex ||
   mediaAuthIndex > mediaHashIndex
 ) {
-  throw new Error("Media import must authorize before local file access or hashing");
+  throw new Error(
+    "Media import must authorize before local file access or hashing",
+  );
 }
 
 const accountDeleteStart = rust.indexOf("fn account_delete(");
-const accountDeleteBody = rust.slice(accountDeleteStart, accountDeleteStart + 2600);
+const accountDeleteBody = rust.slice(
+  accountDeleteStart,
+  accountDeleteStart + 2600,
+);
 const detachIndex = accountDeleteBody.indexOf("UPDATE conversations");
 const deleteIndex = accountDeleteBody.indexOf("DELETE FROM accounts");
 if (
@@ -316,7 +383,9 @@ if (
   detachIndex > deleteIndex ||
   !accountDeleteBody.includes("transaction")
 ) {
-  throw new Error("Account deletion must atomically detach inbox conversations");
+  throw new Error(
+    "Account deletion must atomically detach inbox conversations",
+  );
 }
 
 if (!rust.includes("fn media_asset_import(")) {
@@ -332,7 +401,9 @@ if (
   !ruleToggleBody.includes("if enabled") ||
   !ruleToggleBody.includes("validate_rule_pack_json")
 ) {
-  throw new Error("Enabling an automation rule pack must revalidate the stored rules");
+  throw new Error(
+    "Enabling an automation rule pack must revalidate the stored rules",
+  );
 }
 
 if (!rust.includes("fn automation_rule_pack_set_enabled(")) {
@@ -343,28 +414,55 @@ if (!rust.includes("BEGIN IMMEDIATE")) {
   throw new Error("Audit writes must serialize through BEGIN IMMEDIATE");
 }
 
-for (const command of ["workspace_list", "workspace_current", "workspace_create", "workspace_select"]) {
+for (const command of [
+  "workspace_list",
+  "workspace_current",
+  "workspace_create",
+  "workspace_select",
+]) {
   if (!new RegExp("fn\\s+" + command + "\\s*\\(").test(rust)) {
     throw new Error("Missing workspace command: " + command);
   }
 }
-const invokeHandler = rust.slice(rust.lastIndexOf(".invoke_handler(tauri::generate_handler!["));
-for (const command of ["workspace_list", "workspace_current", "workspace_create", "workspace_select"]) {
+const invokeHandler = rust.slice(
+  rust.lastIndexOf(".invoke_handler(tauri::generate_handler!["),
+);
+for (const command of [
+  "workspace_list",
+  "workspace_current",
+  "workspace_create",
+  "workspace_select",
+]) {
   if (!invokeHandler.includes(command)) {
-    throw new Error("Workspace command is not registered in Tauri invoke handler: " + command);
+    throw new Error(
+      "Workspace command is not registered in Tauri invoke handler: " + command,
+    );
   }
 }
 
-const defaultWorkspaceDeclarationCount = (rust.match(/const DEFAULT_WORKSPACE_ID:\s*&str\s*=\s*"default";/g) ?? []).length;
+const defaultWorkspaceDeclarationCount = (
+  rust.match(/const DEFAULT_WORKSPACE_ID:\s*&str\s*=\s*"default";/g) ?? []
+).length;
 if (defaultWorkspaceDeclarationCount !== 1) {
   throw new Error("DEFAULT_WORKSPACE_ID must have exactly one declaration");
 }
 
 if (!desktopPackage.dependencies?.["@orbit/core"]) {
-  throw new Error("Desktop must consume @orbit/core through the workspace dependency");
+  throw new Error(
+    "Desktop must consume @orbit/core through the workspace dependency",
+  );
 }
 
-const ignored = new Set([".git", "node_modules", ".next", "out", "dist", "build", ".turbo", ".expo"]);
+const ignored = new Set([
+  ".git",
+  "node_modules",
+  ".next",
+  "out",
+  "dist",
+  "build",
+  ".turbo",
+  ".expo",
+]);
 
 const productionRoots = [
   "packages/core/src",
@@ -374,7 +472,8 @@ const productionRoots = [
   "packages/shared-ui/src",
 ];
 
-const forbiddenTypeScriptAny = /(?:\:\s*any\b|\bas\s+any\b|\bany\[\]|Record<[^>]*,\s*any\s*>)/;
+const forbiddenTypeScriptAny =
+  /(?:\:\s*any\b|\bas\s+any\b|\bany\[\]|Record<[^>]*,\s*any\s*>)/;
 const forbiddenProductionSafetyTerms = [
   "fingerprint cloaking",
   "fingerprint spoof",
@@ -399,21 +498,32 @@ async function scanProductionSource(dir) {
     if (relative(root, full) === "scripts/verify-workspace.mjs") continue;
     const content = await readFile(full, "utf8");
     if (/\b(TODO|FIXME|HACK|XXX)\b/i.test(content)) {
-      throw new Error("Production source contains TODO/FIXME/HACK/XXX in " + relative(root, full));
+      throw new Error(
+        "Production source contains TODO/FIXME/HACK/XXX in " +
+          relative(root, full),
+      );
     }
-    if (/\b(?:CHANGE_ME|TBD)\b/i.test(content) || /\bPLACEHOLDER(?:_IMPLEMENTATION|_VALUE)\b/i.test(content)) {
-      throw new Error("Production source contains an implementation placeholder marker in " + relative(root, full));
+    if (
+      /\b(?:CHANGE_ME|TBD)\b/i.test(content) ||
+      /\bPLACEHOLDER(?:_IMPLEMENTATION|_VALUE)\b/i.test(content)
+    ) {
+      throw new Error(
+        "Production source contains an implementation placeholder marker in " +
+          relative(root, full),
+      );
     }
     if (forbiddenTypeScriptAny.test(content)) {
-      throw new Error("Production source uses implicit any in " + relative(root, full));
+      throw new Error(
+        "Production source uses implicit any in " + relative(root, full),
+      );
     }
     for (const fragment of forbiddenProductionSafetyTerms) {
       if (content.toLowerCase().includes(fragment.toLowerCase())) {
         throw new Error(
           "Forbidden stealth/evasion language detected in production source: " +
-          relative(root, full) +
-          ": " +
-          fragment,
+            relative(root, full) +
+            ": " +
+            fragment,
         );
       }
     }
@@ -426,10 +536,19 @@ for (const sourceRoot of productionRoots) {
 
 for (const entry of rustSources) {
   if (/\b(TODO|FIXME|HACK|XXX)\b/i.test(entry.content)) {
-    throw new Error("Production Rust source contains TODO/FIXME/HACK/XXX: " + relative(root, entry.path));
+    throw new Error(
+      "Production Rust source contains TODO/FIXME/HACK/XXX: " +
+        relative(root, entry.path),
+    );
   }
-  if (/\b(?:CHANGE_ME|TBD)\b/i.test(entry.content) || /\bPLACEHOLDER(?:_IMPLEMENTATION|_VALUE)\b/i.test(entry.content)) {
-    throw new Error("Production Rust source contains an implementation placeholder marker: " + relative(root, entry.path));
+  if (
+    /\b(?:CHANGE_ME|TBD)\b/i.test(entry.content) ||
+    /\bPLACEHOLDER(?:_IMPLEMENTATION|_VALUE)\b/i.test(entry.content)
+  ) {
+    throw new Error(
+      "Production Rust source contains an implementation placeholder marker: " +
+        relative(root, entry.path),
+    );
   }
 }
 
@@ -464,14 +583,20 @@ for (const typeName of serializableResponseViews) {
       ).test(content),
     );
   if (!declaration) {
-    throw new Error("Tauri response type is missing a Serialize derive: " + typeName);
+    throw new Error(
+      "Tauri response type is missing a Serialize derive: " + typeName,
+    );
   }
 }
 
 const tauriCommandDefinitions = [];
 for (const entry of rustSources) {
   tauriCommandDefinitions.push(
-    ...[...entry.content.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map((match) => ({
+    ...[
+      ...entry.content.matchAll(
+        /#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g,
+      ),
+    ].map((match) => ({
       name: match[1],
       path: relative(root, entry.path),
     })),
@@ -523,7 +648,11 @@ const sensitiveDesktopCommands = {
   automation_rule_pack_upsert: ["owner", "admin", "editor"],
 };
 
-const rustCommandPositions = [...rust.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)]
+const rustCommandPositions = [
+  ...rust.matchAll(
+    /#\[tauri::command\]\s*(?:pub\s+)?(?:async\s*)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g,
+  ),
+]
   .map((match) => ({ name: match[1], index: match.index ?? -1 }))
   .filter((value) => value.index >= 0);
 
@@ -531,27 +660,45 @@ for (const command of Object.keys(sensitiveDesktopCommands)) {
   const current = rustCommandPositions.find((value) => value.name === command);
   if (!current) throw new Error("Missing sensitive Tauri command: " + command);
 
-  const next = rustCommandPositions
-    .filter((value) => value.index > current.index)
-    .sort((a, b) => a.index - b.index)[0]?.index ?? rust.length;
+  const next =
+    rustCommandPositions
+      .filter((value) => value.index > current.index)
+      .sort((a, b) => a.index - b.index)[0]?.index ?? rust.length;
 
   const segment = rust.slice(current.index, next);
-  if (!segment.includes("require_workspace_role(") && !segment.includes("require_workspace_role_for(") && !segment.includes("require_workspace_role_for_module(")) {
+  if (
+    !segment.includes("require_workspace_role(") &&
+    !segment.includes("require_workspace_role_for(") &&
+    !segment.includes("require_workspace_role_for_module(")
+  ) {
     throw new Error("Sensitive Tauri command is not role-gated: " + command);
   }
-  if (segment.includes("active_workspace_id()") && !segment.includes("let workspace_id = active_workspace_id();")) {
-    throw new Error("Sensitive Tauri command uses global workspace lookup without a local snapshot: " + command);
+  if (
+    segment.includes("active_workspace_id()") &&
+    !segment.includes("let workspace_id = active_workspace_id();")
+  ) {
+    throw new Error(
+      "Sensitive Tauri command uses global workspace lookup without a local snapshot: " +
+        command,
+    );
   }
 }
 
-const rootVercel = JSON.parse(await readFile(join(root, "vercel.json"), "utf8"));
-if (rootVercel.framework !== "nextjs") throw new Error("Root Vercel framework must be nextjs");
-if (rootVercel.outputDirectory !== "packages/web/out") throw new Error("Root Vercel output directory must be packages/web/out");
-if (rootVercel.installCommand !== "bash scripts/vercel-install.sh") throw new Error("Root Vercel must use the lockfile-aware install script");
-if (rootVercel.ignoreCommand !== "bash scripts/vercel-ignore.sh") throw new Error("Root Vercel must use the versioned ignore script");
-if (rootVercel.git?.deploymentEnabled !== false) throw new Error("Vercel Git deployments must be disabled; use the guarded prebuilt release workflow");
-
-
+const rootVercel = JSON.parse(
+  await readFile(join(root, "vercel.json"), "utf8"),
+);
+if (rootVercel.framework !== "nextjs")
+  throw new Error("Root Vercel framework must be nextjs");
+if (rootVercel.outputDirectory !== "packages/web/out")
+  throw new Error("Root Vercel output directory must be packages/web/out");
+if (rootVercel.installCommand !== "bash scripts/vercel-install.sh")
+  throw new Error("Root Vercel must use the lockfile-aware install script");
+if (rootVercel.ignoreCommand !== "bash scripts/vercel-ignore.sh")
+  throw new Error("Root Vercel must use the versioned ignore script");
+if (rootVercel.git?.deploymentEnabled !== false)
+  throw new Error(
+    "Vercel Git deployments must be disabled; use the guarded prebuilt release workflow",
+  );
 
 const workflowFiles = [
   ".github/workflows/ci.yml",
@@ -562,12 +709,19 @@ const workflowFiles = [
   ".github/workflows/self-hosted-verify.yml",
   ".github/workflows/bootstrap-lockfile.yml",
 ];
-const selfHostedWorkflow = await readFile(join(root, ".github/workflows/self-hosted-verify.yml"), "utf8");
+const selfHostedWorkflow = await readFile(
+  join(root, ".github/workflows/self-hosted-verify.yml"),
+  "utf8",
+);
 if (
-  !selfHostedWorkflow.includes("github.ref_name == 'rebuild/orbit-production'") ||
+  !selfHostedWorkflow.includes(
+    "github.ref_name == 'rebuild/orbit-production'",
+  ) ||
   !selfHostedWorkflow.includes("rebuild/orbit-production-consolidated")
 ) {
-  throw new Error("Self-hosted verification must be restricted to approved production rebuild refs");
+  throw new Error(
+    "Self-hosted verification must be restricted to approved production rebuild refs",
+  );
 }
 if (!selfHostedWorkflow.includes("github.actor == 'ahmedsaturki'")) {
   throw new Error("Self-hosted verification must be owner-restricted");
@@ -575,20 +729,30 @@ if (!selfHostedWorkflow.includes("github.actor == 'ahmedsaturki'")) {
 if (!selfHostedWorkflow.includes("runs-on: [self-hosted, x64, linux]")) {
   throw new Error("Self-hosted verification must require the Linux runner");
 }
-if (!selfHostedWorkflow.includes("run: bash scripts/self-hosted-preflight.sh")) {
+if (
+  !selfHostedWorkflow.includes("run: bash scripts/self-hosted-preflight.sh")
+) {
   throw new Error("Self-hosted verification must run the runner preflight");
 }
-const bootstrapWorkflow = await readFile(join(root, ".github/workflows/bootstrap-lockfile.yml"), "utf8");
+const bootstrapWorkflow = await readFile(
+  join(root, ".github/workflows/bootstrap-lockfile.yml"),
+  "utf8",
+);
 if (!bootstrapWorkflow.includes("workflow_dispatch:")) {
   throw new Error("Lockfile bootstrap must be manually dispatched");
 }
 if (!bootstrapWorkflow.includes("contents: write")) {
-  throw new Error("Lockfile bootstrap requires explicit contents: write permission");
+  throw new Error(
+    "Lockfile bootstrap requires explicit contents: write permission",
+  );
 }
 if (!bootstrapWorkflow.includes("node scripts/commit-lockfiles.mjs")) {
   throw new Error("Lockfile bootstrap must use the canonical commit script");
 }
-const commitLockfiles = await readFile(join(root, "scripts/commit-lockfiles.mjs"), "utf8");
+const commitLockfiles = await readFile(
+  join(root, "scripts/commit-lockfiles.mjs"),
+  "utf8",
+);
 if (!commitLockfiles.includes("GITHUB_REF_NAME")) {
   throw new Error("Lockfile commit script must validate the target branch");
 }
@@ -602,7 +766,9 @@ if (!bootstrapWorkflow.includes("github.actor == 'ahmedsaturki'")) {
   throw new Error("Lockfile bootstrap must be owner-restricted");
 }
 if (!bootstrapWorkflow.includes("runs-on: [self-hosted, x64, linux]")) {
-  throw new Error("Lockfile bootstrap must require the Linux self-hosted runner");
+  throw new Error(
+    "Lockfile bootstrap must require the Linux self-hosted runner",
+  );
 }
 if (!bootstrapWorkflow.includes("run: bash scripts/self-hosted-preflight.sh")) {
   throw new Error("Lockfile bootstrap must run the runner preflight");
@@ -610,11 +776,19 @@ if (!bootstrapWorkflow.includes("run: bash scripts/self-hosted-preflight.sh")) {
 
 for (const workflow of workflowFiles) {
   const content = await readFile(join(root, workflow), "utf8");
-  if (/runs-on:\s*ubuntu-latest/.test(content) && !content.includes("timeout-minutes:")) {
+  if (
+    /runs-on:\s*ubuntu-latest/.test(content) &&
+    !content.includes("timeout-minutes:")
+  ) {
     throw new Error("Workflow is missing timeout-minutes: " + workflow);
   }
-  if (content.includes("dtolnay/rust-toolchain@master") || content.includes("dtolnay/rust-toolchain@stable")) {
-    throw new Error("Moving Rust toolchain action reference detected: " + workflow);
+  if (
+    content.includes("dtolnay/rust-toolchain@master") ||
+    content.includes("dtolnay/rust-toolchain@stable")
+  ) {
+    throw new Error(
+      "Moving Rust toolchain action reference detected: " + workflow,
+    );
   }
   if (/uses:\s*[^\s@]+\/[^\s@]+@v\d+(?:\.\d+)*(?:\s|$)/m.test(content)) {
     throw new Error("Floating GitHub Action reference detected in " + workflow);
@@ -622,7 +796,12 @@ for (const workflow of workflowFiles) {
   for (const line of content.split("\n")) {
     const match = line.match(/^\s*-?\s*uses:\s*([^@\s]+)@([^\s#]+)/);
     if (match && !/^[0-9a-f]{40}$/.test(match[2])) {
-      throw new Error("GitHub Action must be pinned to a full commit SHA: " + workflow + ": " + match[1]);
+      throw new Error(
+        "GitHub Action must be pinned to a full commit SHA: " +
+          workflow +
+          ": " +
+          match[1],
+      );
     }
   }
 }
@@ -633,7 +812,15 @@ if (!rustToolchain.includes('channel = "1.98.1"')) {
   throw new Error("Rust toolchain is not pinned to 1.98.1");
 }
 
-const forbiddenFragments = ["next lint", "typecheck:all", "test:all", "build:all", "app.get(\"*\")", "app.get(\'/*\')", "JSX.Element"];
+const forbiddenFragments = [
+  "next lint",
+  "typecheck:all",
+  "test:all",
+  "build:all",
+  'app.get("*")',
+  "app.get(\'/*\')",
+  "JSX.Element",
+];
 
 async function scan(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -644,11 +831,17 @@ async function scan(dir) {
       await scan(full);
       continue;
     }
-    if (!/\.(?:json|ya?ml|mjs|cjs|js|ts|tsx|rs|toml|sh)$/.test(entry.name)) continue;
+    if (!/\.(?:json|ya?ml|mjs|cjs|js|ts|tsx|rs|toml|sh)$/.test(entry.name))
+      continue;
     const content = await readFile(full, "utf8");
     for (const fragment of forbiddenFragments) {
       if (content.includes(fragment)) {
-        throw new Error("Stale command/contract fragment detected in " + relative(root, full) + ": " + fragment);
+        throw new Error(
+          "Stale command/contract fragment detected in " +
+            relative(root, full) +
+            ": " +
+            fragment,
+        );
       }
     }
   }

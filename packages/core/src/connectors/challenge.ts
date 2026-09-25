@@ -1,10 +1,7 @@
 import type { ConnectorResult } from "../types/index.js";
 
 export type ChallengeKind =
-  | "captcha"
-  | "login_required"
-  | "two_factor"
-  | "unknown_checkpoint";
+  "captcha" | "login_required" | "two_factor" | "unknown_checkpoint";
 
 export interface ChallengeDetection {
   readonly kind: ChallengeKind;

@@ -43,16 +43,29 @@ describe("execution guardrails", () => {
   it("requires confirmation before an externally-visible action", () => {
     const decision = canStartExecution(
       policy,
-      { dayKey: "2026-09-24", completedToday: 0, consecutiveFailures: 0, blocked: false },
+      {
+        dayKey: "2026-09-24",
+        completedToday: 0,
+        consecutiveFailures: 0,
+        blocked: false,
+      },
       false,
     );
 
-    expect(decision).toEqual({ allowed: false, reason: "confirmation_required" });
+    expect(decision).toEqual({
+      allowed: false,
+      reason: "confirmation_required",
+    });
   });
 
   it("opens a circuit after consecutive failures", () => {
     const first = recordExecutionFailure(
-      { dayKey: "2026-09-24", completedToday: 0, consecutiveFailures: 0, blocked: false },
+      {
+        dayKey: "2026-09-24",
+        completedToday: 0,
+        consecutiveFailures: 0,
+        blocked: false,
+      },
       "2026-09-24",
     );
     const second = recordExecutionFailure(first, "2026-09-24");
@@ -65,7 +78,12 @@ describe("execution guardrails", () => {
 
   it("resets the consecutive failure count after success", () => {
     const failed = recordExecutionFailure(
-      { dayKey: "2026-09-24", completedToday: 1, consecutiveFailures: 1, blocked: false },
+      {
+        dayKey: "2026-09-24",
+        completedToday: 1,
+        consecutiveFailures: 1,
+        blocked: false,
+      },
       "2026-09-24",
     );
     const recovered = recordExecutionSuccess(failed, "2026-09-24");

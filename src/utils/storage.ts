@@ -4,11 +4,14 @@
 
 export function safeGetStorage<T>(key: string, defaultValue: T): T {
   try {
-    if (typeof window === "undefined" || !window.localStorage) return defaultValue;
+    if (typeof window === "undefined" || !window.localStorage)
+      return defaultValue;
     const item = window.localStorage.getItem(key);
     if (!item) return defaultValue;
     const parsed: unknown = JSON.parse(item);
-    return parsed !== null && parsed !== undefined ? (parsed as T) : defaultValue;
+    return parsed !== null && parsed !== undefined
+      ? (parsed as T)
+      : defaultValue;
   } catch {
     return defaultValue;
   }

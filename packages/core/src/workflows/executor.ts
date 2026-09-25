@@ -31,9 +31,7 @@ export interface TaskExecutorDependencies {
   readonly queue: TaskQueue;
   readonly connectors: ConnectorRegistry;
   readonly audit: AuditLog;
-  readonly loadContext: (
-    task: Task,
-  ) => Promise<ExecutionRunContext>;
+  readonly loadContext: (task: Task) => Promise<ExecutionRunContext>;
 }
 
 function audit(
@@ -141,9 +139,15 @@ export async function executeClaimedTask(
   }
 
   if (!dependencies.queue.tryBeginExecution(task.id)) {
-    audit(dependencies.audit, task, "blocked", "execution.already_in_progress", {
-      message: "Task execution is already in progress in this runtime.",
-    });
+    audit(
+      dependencies.audit,
+      task,
+      "blocked",
+      "execution.already_in_progress",
+      {
+        message: "Task execution is already in progress in this runtime.",
+      },
+    );
     return {
       status: "blocked",
       taskId: task.id,
@@ -153,7 +157,12 @@ export async function executeClaimedTask(
   }
 
   try {
-    return await executeClaimedTaskReserved(dependencies, task, userConfirmed, now);
+    return await executeClaimedTaskReserved(
+      dependencies,
+      task,
+      userConfirmed,
+      now,
+    );
   } finally {
     dependencies.queue.endExecution(task.id);
   }
@@ -170,12 +179,20 @@ async function executeClaimedTaskReserved(
     context = await dependencies.loadContext(task);
   } catch (error: unknown) {
     const message =
-      error instanceof Error ? error.message : "Execution context could not be loaded.";
+      error instanceof Error
+        ? error.message
+        : "Execution context could not be loaded.";
     const next = dependencies.queue.fail(task.id, now);
-    audit(dependencies.audit, task, "failure", "execution.context_load_failed", {
-      message,
-      retryScheduled: next.status === "pending",
-    });
+    audit(
+      dependencies.audit,
+      task,
+      "failure",
+      "execution.context_load_failed",
+      {
+        message,
+        retryScheduled: next.status === "pending",
+      },
+    );
     return {
       status: "failed",
       taskId: task.id,
@@ -198,6 +215,11 @@ async function executeClaimedTaskReserved(
     userConfirmed,
   });
 
-  return mapRunnerResult(dependencies.queue, dependencies.audit, task, result, now);
+  return mapRunnerResult(
+    dependencies.queue,
+    dependencies.audit,
+    task,
+    result,
+    now,
+  );
 }
-

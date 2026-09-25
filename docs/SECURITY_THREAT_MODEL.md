@@ -27,20 +27,20 @@ Secrets must never cross a boundary unless that boundary is explicitly part of t
 
 ## Threats and required controls
 
-| Threat | Control |
-| --- | --- |
-| Credential leakage | encrypted vault, redaction, no secrets in logs |
-| Unauthorized external action | approval + execution policy + connector confirmation |
-| Cross-workspace data access | workspace-scoped identifiers and persistence queries |
-| Replay/double publish | idempotency keys and external-operation evidence |
-| Queue corruption | explicit state transitions and recovery tests |
-| Connector/UI change | typed connector outcomes and human intervention |
-| CAPTCHA/auth challenge | stop and require user intervention |
-| Sync disclosure | encrypt secret material before replication |
-| Malicious rule pack | schema validation, version compatibility, integrity checks |
-| Backup theft | encrypted backup payloads, no plaintext secret export |
-| Supply-chain compromise | lockfile, pinned CI actions, dependency audit gate |
-| Audit tampering | append-oriented audit model and integrity verification |
+| Threat                       | Control                                                    |
+| ---------------------------- | ---------------------------------------------------------- |
+| Credential leakage           | encrypted vault, redaction, no secrets in logs             |
+| Unauthorized external action | approval + execution policy + connector confirmation       |
+| Cross-workspace data access  | workspace-scoped identifiers and persistence queries       |
+| Replay/double publish        | idempotency keys and external-operation evidence           |
+| Queue corruption             | explicit state transitions and recovery tests              |
+| Connector/UI change          | typed connector outcomes and human intervention            |
+| CAPTCHA/auth challenge       | stop and require user intervention                         |
+| Sync disclosure              | encrypt secret material before replication                 |
+| Malicious rule pack          | schema validation, version compatibility, integrity checks |
+| Backup theft                 | encrypted backup payloads, no plaintext secret export      |
+| Supply-chain compromise      | lockfile, pinned CI actions, dependency audit gate         |
+| Audit tampering              | append-oriented audit model and integrity verification     |
 
 ## Security invariants
 

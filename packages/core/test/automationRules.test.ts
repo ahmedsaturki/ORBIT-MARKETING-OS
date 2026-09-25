@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveAutomationRule, validateAutomationRulePack, type AutomationRulePack } from "../src/automation/rules.js";
+import {
+  resolveAutomationRule,
+  validateAutomationRulePack,
+  type AutomationRulePack,
+} from "../src/automation/rules.js";
 
 const pack: AutomationRulePack = {
   schemaVersion: 1,
@@ -41,7 +45,9 @@ describe("automation rule packs", () => {
       rules: [{ ...pack.rules[0]!, requiresConfirmation: false }],
     });
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain("enabled external rules must require confirmation");
+    expect(result.errors).toContain(
+      "enabled external rules must require confirmation",
+    );
   });
 
   it("rejects duplicate ids, bad platform and unsafe timeout/attempt bounds", () => {
@@ -49,15 +55,23 @@ describe("automation rule packs", () => {
       ...pack,
       rules: [
         ...pack.rules,
-        { ...pack.rules[0]!, id: "publish", platform: "instagram", timeoutMs: 999_999, maxAttempts: 20 },
+        {
+          ...pack.rules[0]!,
+          id: "publish",
+          platform: "instagram",
+          timeoutMs: 999_999,
+          maxAttempts: 20,
+        },
       ],
     });
     expect(result.valid).toBe(false);
-    expect(result.errors).toEqual(expect.arrayContaining([
-      "rule ids must be unique",
-      "rule platform must match rule pack platform",
-      "rule maxAttempts must be between 1 and 10",
-      "rule timeoutMs must be between 1000 and 300000",
-    ]));
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        "rule ids must be unique",
+        "rule platform must match rule pack platform",
+        "rule maxAttempts must be between 1 and 10",
+        "rule timeoutMs must be between 1000 and 300000",
+      ]),
+    );
   });
 });

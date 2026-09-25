@@ -3,13 +3,24 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "packages", "web", "out");
+const root = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "packages",
+  "web",
+  "out",
+);
 const port = Number(process.env.PORT ?? "4173");
 const server = createServer(async (req, res) => {
   try {
     const requestPath = decodeURIComponent((req.url ?? "/").split("?")[0]);
-    const relativePath = requestPath === "/" ? "index.html" : requestPath.replace(/^\/+/, "");
-    if (relativePath.includes("..") || relativePath.includes("\\") || relativePath.includes("\0")) {
+    const relativePath =
+      requestPath === "/" ? "index.html" : requestPath.replace(/^\/+/, "");
+    if (
+      relativePath.includes("..") ||
+      relativePath.includes("\\") ||
+      relativePath.includes("\0")
+    ) {
       res.writeHead(400);
       res.end("bad request");
       return;
@@ -50,12 +61,17 @@ const server = createServer(async (req, res) => {
 
     const extension = path.extname(target);
     const contentType =
-      extension === ".html" ? "text/html; charset=utf-8" :
-      extension === ".css" ? "text/css; charset=utf-8" :
-      extension === ".js" ? "text/javascript; charset=utf-8" :
-      extension === ".json" ? "application/json; charset=utf-8" :
-      extension === ".svg" ? "image/svg+xml" :
-      "application/octet-stream";
+      extension === ".html"
+        ? "text/html; charset=utf-8"
+        : extension === ".css"
+          ? "text/css; charset=utf-8"
+          : extension === ".js"
+            ? "text/javascript; charset=utf-8"
+            : extension === ".json"
+              ? "application/json; charset=utf-8"
+              : extension === ".svg"
+                ? "image/svg+xml"
+                : "application/octet-stream";
 
     res.writeHead(200, {
       "content-type": contentType,
@@ -74,5 +90,7 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  process.stdout.write("ORBIT static test server listening on http://127.0.0.1:" + port + "\n");
+  process.stdout.write(
+    "ORBIT static test server listening on http://127.0.0.1:" + port + "\n",
+  );
 });

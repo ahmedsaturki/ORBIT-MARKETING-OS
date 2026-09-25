@@ -14,11 +14,20 @@ export interface Argon2idParameters {
 }
 
 export interface KeyDerivationProvider {
-  deriveKey(secret: string, salt: Uint8Array, parameters: Argon2idParameters): Promise<Uint8Array>;
+  deriveKey(
+    secret: string,
+    salt: Uint8Array,
+    parameters: Argon2idParameters,
+  ): Promise<Uint8Array>;
 }
 
-export function validateArgon2idParameters(parameters: Argon2idParameters): void {
-  if (!Number.isInteger(parameters.memoryKiB) || parameters.memoryKiB < 8 * 1024) {
+export function validateArgon2idParameters(
+  parameters: Argon2idParameters,
+): void {
+  if (
+    !Number.isInteger(parameters.memoryKiB) ||
+    parameters.memoryKiB < 8 * 1024
+  ) {
     throw new RangeError("Argon2id memory must be at least 8192 KiB");
   }
   if (!Number.isInteger(parameters.iterations) || parameters.iterations < 1) {

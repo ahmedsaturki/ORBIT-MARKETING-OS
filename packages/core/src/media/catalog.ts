@@ -48,7 +48,8 @@ export function validateMediaAsset(asset: MediaAsset): MediaValidationResult {
   if (asset.sha256 !== undefined && !/^[a-f0-9]{64}$/u.test(asset.sha256)) {
     errors.push("media sha256 must be a 64-character lowercase hex digest");
   }
-  if (asset.tags.some((tag) => !tag.trim())) errors.push("media tags must be non-empty");
+  if (asset.tags.some((tag) => !tag.trim()))
+    errors.push("media tags must be non-empty");
   return { valid: errors.length === 0, errors };
 }
 
@@ -57,13 +58,24 @@ export function searchMediaAssets(
   query: MediaSearchQuery,
 ): readonly MediaAsset[] {
   const text = query.text?.trim().toLowerCase();
-  const tags = (query.tags ?? []).map((tag) => tag.trim().toLowerCase()).filter(Boolean);
+  const tags = (query.tags ?? [])
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean);
   return assets.filter((asset) => {
     if (query.kind && asset.kind !== query.kind) return false;
-    if (text && !asset.filename.toLowerCase().includes(text) && !asset.localPath.toLowerCase().includes(text)) {
+    if (
+      text &&
+      !asset.filename.toLowerCase().includes(text) &&
+      !asset.localPath.toLowerCase().includes(text)
+    ) {
       return false;
     }
-    if (tags.length && !tags.every((tag) => asset.tags.some((item) => item.toLowerCase() === tag))) {
+    if (
+      tags.length &&
+      !tags.every((tag) =>
+        asset.tags.some((item) => item.toLowerCase() === tag),
+      )
+    ) {
       return false;
     }
     return true;

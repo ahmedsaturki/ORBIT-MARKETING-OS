@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { calculateRetryDelay, shouldRetry, type RetryPolicy } from "../src/queue/retry.js";
+import {
+  calculateRetryDelay,
+  shouldRetry,
+  type RetryPolicy,
+} from "../src/queue/retry.js";
 
 const policy: RetryPolicy = {
   maxAttempts: 3,
@@ -32,6 +36,8 @@ describe("retry policy", () => {
 
   it("rejects non-finite delay configuration", () => {
     const unsafe = { ...policy, maxDelayMs: Number.POSITIVE_INFINITY };
-    expect(() => calculateRetryDelay(1, unsafe)).toThrow("invalid retry policy");
+    expect(() => calculateRetryDelay(1, unsafe)).toThrow(
+      "invalid retry policy",
+    );
   });
 });

@@ -61,7 +61,9 @@ export async function decryptSyncUpdate(
   key: CryptoKey,
 ): Promise<Uint8Array> {
   if (envelope.version !== 1) throw new TypeError("Unsupported sync envelope");
-  const encrypted = JSON.parse(envelope.update) as Parameters<typeof decryptAes256Gcm>[0];
+  const encrypted = JSON.parse(envelope.update) as Parameters<
+    typeof decryptAes256Gcm
+  >[0];
   const updateBase64 = await decryptAes256Gcm(encrypted, key);
   return base64ToBytes(updateBase64);
 }

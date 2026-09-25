@@ -59,7 +59,6 @@ Logs contain event IDs, timestamps, component names, and non-sensitive outcomes.
 
 A feature is complete only after implementation, automated tests, build/typecheck/lint, security review, documentation, and acceptance evidence all agree.
 
-
 ## Current desktop workspace model
 
 The core domain and desktop runtime are workspace-aware. Tauri persists an active workspace identifier locally and exposes workspace list/create/select commands; every workspace-scoped operation resolves against that active context. End-to-end multi-user identity/RBAC remains a separate release gate.

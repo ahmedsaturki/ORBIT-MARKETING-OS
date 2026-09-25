@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { evaluateExecutionPolicy } from "../src/workflows/executionPolicy.js";
-import type { Campaign, ContentItem, SocialAccount, Task } from "../src/types/index.js";
+import type {
+  Campaign,
+  ContentItem,
+  SocialAccount,
+  Task,
+} from "../src/types/index.js";
 
 const account: SocialAccount = {
   id: "account-1",
@@ -227,12 +232,18 @@ describe("execution policy", () => {
   });
 
   it("blocks disconnected accounts before approval evaluation", () => {
-    const decision = evaluateExecutionPolicy({ ...context, account: { ...account, status: "needs_refresh" } });
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      account: { ...account, status: "needs_refresh" },
+    });
     expect(decision.reason).toBe("account_not_connected");
   });
 
   it("opens the circuit breaker at the configured threshold", () => {
-    const decision = evaluateExecutionPolicy({ ...context, consecutiveFailures: 3 });
+    const decision = evaluateExecutionPolicy({
+      ...context,
+      consecutiveFailures: 3,
+    });
     expect(decision.reason).toBe("circuit_breaker_open");
   });
 

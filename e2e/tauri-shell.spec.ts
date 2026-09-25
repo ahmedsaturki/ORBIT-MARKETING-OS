@@ -40,7 +40,10 @@ async function killApp(): Promise<void> {
 }
 
 test.describe("Tauri renderer capability isolation (SEC-03)", () => {
-  test.skip(!exe, "Tauri binary not built — run node scripts/build-tauri.mjs --release first");
+  test.skip(
+    !exe,
+    "Tauri binary not built — run node scripts/build-tauri.mjs --release first",
+  );
 
   test.afterAll(async () => {
     await killApp();
@@ -55,17 +58,24 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(capability.windows).toEqual(["main"]);
     for (const perm of capability.permissions) {
       expect(perm).not.toMatch(/\*/);
-      expect(perm).not.toMatch(/^(fs|shell|http|clipboard|dialog|updater|process|path:allow-write)/);
+      expect(perm).not.toMatch(
+        /^(fs|shell|http|clipboard|dialog|updater|process|path:allow-write)/,
+      );
     }
 
     // The build must have resolved that capability to itself — nothing broader.
     const resolved = JSON.parse(
-      readFileSync(join(root, "src-tauri/gen/schemas/capabilities.json"), "utf8"),
+      readFileSync(
+        join(root, "src-tauri/gen/schemas/capabilities.json"),
+        "utf8",
+      ),
     );
     expect(resolved.default.windows).toEqual(["main"]);
     expect(resolved.default.permissions).toEqual(["core:default"]);
 
-    const conf = JSON.parse(readFileSync(join(root, "src-tauri/tauri.conf.json"), "utf8"));
+    const conf = JSON.parse(
+      readFileSync(join(root, "src-tauri/tauri.conf.json"), "utf8"),
+    );
     const security = conf.app.security;
     // Strict CSP: no unsafe-eval, no remote script origins, framed embedding off.
     expect(security.csp).toMatch(/default-src 'self'/);
@@ -100,7 +110,9 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
 
     await expect(page).toHaveTitle(/Orbit Marketing OS/);
-    expect(await page.evaluate(() => typeof window.__TAURI_INTERNALS__)).toBe("object");
+    expect(await page.evaluate(() => typeof window.__TAURI_INTERNALS__)).toBe(
+      "object",
+    );
 
     // Positive control: scale_factor is inside core:default — proves IPC works.
     const granted = await page.evaluate(() =>
@@ -135,7 +147,9 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     }
 
     // The destroy attempt did not take effect — window/process still alive.
-    expect(await page!.evaluate(() => document.title.length)).toBeGreaterThan(0);
+    expect(await page!.evaluate(() => document.title.length)).toBeGreaterThan(
+      0,
+    );
     expect(proc!.killed).toBe(false);
   });
 

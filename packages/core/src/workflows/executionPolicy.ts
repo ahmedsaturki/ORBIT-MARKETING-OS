@@ -1,4 +1,10 @@
-import type { Approval, Campaign, ContentItem, SocialAccount, Task } from "../types/index.js";
+import type {
+  Approval,
+  Campaign,
+  ContentItem,
+  SocialAccount,
+  Task,
+} from "../types/index.js";
 import { evaluateApproval } from "./approval.js";
 
 export type ExecutionBlockReason =
@@ -45,7 +51,9 @@ export type ExecutionPolicyDecision =
  * Applies deterministic pre-flight safety gates before a connector is allowed
  * to perform an external side effect.
  */
-export function evaluateExecutionPolicy(context: ExecutionPolicyContext): ExecutionPolicyDecision {
+export function evaluateExecutionPolicy(
+  context: ExecutionPolicyContext,
+): ExecutionPolicyDecision {
   if (
     context.task.workspaceId !== context.account.workspaceId ||
     context.task.workspaceId !== context.campaign.workspaceId
@@ -64,7 +72,8 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
     return {
       allowed: false,
       reason: "account_mismatch",
-      message: "Task references do not match the selected account and campaign.",
+      message:
+        "Task references do not match the selected account and campaign.",
     };
   }
 
@@ -99,7 +108,8 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
     return {
       allowed: false,
       reason: "approval_scope_mismatch",
-      message: "The approval does not belong to the task workspace and campaign content.",
+      message:
+        "The approval does not belong to the task workspace and campaign content.",
     };
   }
 
@@ -155,7 +165,8 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
     return {
       allowed: false,
       reason: "content_unavailable",
-      message: "The referenced content must be loaded before external execution.",
+      message:
+        "The referenced content must be loaded before external execution.",
     };
   }
 
@@ -168,7 +179,8 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
       return {
         allowed: false,
         reason: "content_scope_mismatch",
-        message: "The content item does not belong to the task workspace and campaign.",
+        message:
+          "The content item does not belong to the task workspace and campaign.",
       };
     }
 
@@ -176,7 +188,8 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
       return {
         allowed: false,
         reason: "content_not_approved",
-        message: "The referenced content is not approved for external delivery.",
+        message:
+          "The referenced content is not approved for external delivery.",
       };
     }
   }
@@ -213,5 +226,9 @@ export function evaluateExecutionPolicy(context: ExecutionPolicyContext): Execut
     }
   }
 
-  return { allowed: true, reason: "allowed", message: "All execution safety gates passed." };
+  return {
+    allowed: true,
+    reason: "allowed",
+    message: "All execution safety gates passed.",
+  };
 }

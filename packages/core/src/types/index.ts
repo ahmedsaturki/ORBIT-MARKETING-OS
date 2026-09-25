@@ -1,10 +1,29 @@
-export type Platform = "facebook" | "instagram" | "telegram" | "whatsapp" | "linkedin" | "tiktok";
+export type Platform =
+  "facebook" | "instagram" | "telegram" | "whatsapp" | "linkedin" | "tiktok";
 
-export type AccountStatus = "connected" | "needs_refresh" | "restricted" | "paused";
-export type CampaignStatus = "draft" | "awaiting_approval" | "scheduled" | "running" | "paused" | "completed" | "failed";
-export type TaskStatus = "pending" | "awaiting_approval" | "awaiting_user_action" | "running" | "succeeded" | "failed" | "blocked" | "cancelled";
-export type ApprovalStatus = "draft" | "pending" | "approved" | "rejected" | "changes_requested";
-export type ConversationStatus = "new" | "interested" | "potential_customer" | "complaint" | "closed";
+export type AccountStatus =
+  "connected" | "needs_refresh" | "restricted" | "paused";
+export type CampaignStatus =
+  | "draft"
+  | "awaiting_approval"
+  | "scheduled"
+  | "running"
+  | "paused"
+  | "completed"
+  | "failed";
+export type TaskStatus =
+  | "pending"
+  | "awaiting_approval"
+  | "awaiting_user_action"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "blocked"
+  | "cancelled";
+export type ApprovalStatus =
+  "draft" | "pending" | "approved" | "rejected" | "changes_requested";
+export type ConversationStatus =
+  "new" | "interested" | "potential_customer" | "complaint" | "closed";
 export type ContactStatus = "new" | "interested" | "sold" | "lost";
 export type TaskKind = "publish" | "message" | "comment" | "sync" | "engage";
 export type Actor = "user" | "system" | "connector";
@@ -127,7 +146,20 @@ export interface AuditEvent {
   readonly id: string;
   readonly timestamp: string;
   readonly workspaceId: string;
-  readonly category: "account" | "campaign" | "task" | "security" | "connector" | "content" | "media" | "automation" | "inbox" | "crm" | "sync" | "backup" | "license";
+  readonly category:
+    | "account"
+    | "campaign"
+    | "task"
+    | "security"
+    | "connector"
+    | "content"
+    | "media"
+    | "automation"
+    | "inbox"
+    | "crm"
+    | "sync"
+    | "backup"
+    | "license";
   readonly action: string;
   readonly outcome: "success" | "failure" | "blocked";
   readonly actor: Actor;

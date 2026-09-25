@@ -5,7 +5,16 @@ const text = async (relative) => readFile(new URL(relative, root), "utf8");
 const json = async (relative) => JSON.parse(await text(relative));
 
 const rootPackage = await json("package.json");
-for (const script of ["verify:workspace", "verify:ipc", "verify:release", "security:scan", "test:runtime", "test:performance", "test:e2e", "soak"]) {
+for (const script of [
+  "verify:workspace",
+  "verify:ipc",
+  "verify:release",
+  "security:scan",
+  "test:runtime",
+  "test:performance",
+  "test:e2e",
+  "soak",
+]) {
   if (typeof rootPackage.scripts?.[script] !== "string") {
     throw new Error("Root package script is missing: " + script);
   }
@@ -26,23 +35,41 @@ if (!/^\d+\.\d+\.\d+$/.test(expectedVersion)) {
 
 for (const pkg of packages) {
   if (pkg.version !== expectedVersion) {
-    throw new Error("Package " + pkg.name + " version " + pkg.version + " does not match root " + expectedVersion);
+    throw new Error(
+      "Package " +
+        pkg.name +
+        " version " +
+        pkg.version +
+        " does not match root " +
+        expectedVersion,
+    );
   }
 }
 
 const cargo = await text("packages/desktop/src-tauri/Cargo.toml");
 const cargoVersion = cargo.match(/^version = "([^"]+)"/m)?.[1];
 if (cargoVersion !== expectedVersion) {
-  throw new Error("Cargo version " + (cargoVersion ?? "missing") + " does not match root " + expectedVersion);
+  throw new Error(
+    "Cargo version " +
+      (cargoVersion ?? "missing") +
+      " does not match root " +
+      expectedVersion,
+  );
 }
 
 const vercel = await json("vercel.json");
-if (vercel.framework !== "nextjs") throw new Error("Vercel framework must be nextjs");
-if (vercel.outputDirectory !== "packages/web/out") throw new Error("Vercel outputDirectory drift detected");
-if (vercel.buildCommand !== "pnpm --dir packages/web build") throw new Error("Vercel buildCommand drift detected");
-if (vercel.installCommand !== "bash scripts/vercel-install.sh") throw new Error("Vercel installCommand drift detected");
-if (vercel.ignoreCommand !== "bash scripts/vercel-ignore.sh") throw new Error("Vercel ignoreCommand drift detected");
-if (vercel.git?.deploymentEnabled !== false) throw new Error("Automatic Git Vercel deployments must remain disabled");
+if (vercel.framework !== "nextjs")
+  throw new Error("Vercel framework must be nextjs");
+if (vercel.outputDirectory !== "packages/web/out")
+  throw new Error("Vercel outputDirectory drift detected");
+if (vercel.buildCommand !== "pnpm --dir packages/web build")
+  throw new Error("Vercel buildCommand drift detected");
+if (vercel.installCommand !== "bash scripts/vercel-install.sh")
+  throw new Error("Vercel installCommand drift detected");
+if (vercel.ignoreCommand !== "bash scripts/vercel-ignore.sh")
+  throw new Error("Vercel ignoreCommand drift detected");
+if (vercel.git?.deploymentEnabled !== false)
+  throw new Error("Automatic Git Vercel deployments must remain disabled");
 
 const requiredFiles = [
   "pnpm-lock.yaml",
@@ -75,13 +102,20 @@ if (!rustToolchain.includes('channel = "1.98.1"')) {
 }
 
 const ci = await text(".github/workflows/ci.yml");
-if (!ci.includes("pnpm install --frozen-lockfile")) throw new Error("CI frozen install gate missing");
-if (!ci.includes("pnpm audit --audit-level=high")) throw new Error("CI dependency audit gate missing");
-if (!ci.includes("pnpm security:scan")) throw new Error("CI secret scan gate missing");
-if (!ci.includes("pnpm test:performance")) throw new Error("CI performance smoke gate missing");
-if (!ci.includes("pnpm test:e2e")) throw new Error("CI browser E2E gate missing");
+if (!ci.includes("pnpm install --frozen-lockfile"))
+  throw new Error("CI frozen install gate missing");
+if (!ci.includes("pnpm audit --audit-level=high"))
+  throw new Error("CI dependency audit gate missing");
+if (!ci.includes("pnpm security:scan"))
+  throw new Error("CI secret scan gate missing");
+if (!ci.includes("pnpm test:performance"))
+  throw new Error("CI performance smoke gate missing");
+if (!ci.includes("pnpm test:e2e"))
+  throw new Error("CI browser E2E gate missing");
 
-const selfHostedWeb = await text(".github/workflows/web-release-selfhosted.yml");
+const selfHostedWeb = await text(
+  ".github/workflows/web-release-selfhosted.yml",
+);
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
   "github.ref_name == 'main' && github.actor == 'ahmedsaturki'",
@@ -91,7 +125,8 @@ for (const fragment of [
   "vercel@59.23.1 deploy --prebuilt --prod",
   "node scripts/verify-live-web.mjs",
 ]) {
-  if (!selfHostedWeb.includes(fragment)) throw new Error("Self-hosted web release gate missing: " + fragment);
+  if (!selfHostedWeb.includes(fragment))
+    throw new Error("Self-hosted web release gate missing: " + fragment);
 }
 
 const vercelWorkflow = await text(".github/workflows/vercel-web.yml");
@@ -101,7 +136,8 @@ for (const fragment of [
   "vercel@59.23.1 build --prod",
   "vercel@59.23.1 deploy --prebuilt --prod",
 ]) {
-  if (!vercelWorkflow.includes(fragment)) throw new Error("Vercel deployment gate missing: " + fragment);
+  if (!vercelWorkflow.includes(fragment))
+    throw new Error("Vercel deployment gate missing: " + fragment);
 }
 
 const selfHosted = await text(".github/workflows/self-hosted-verify.yml");
@@ -118,7 +154,8 @@ for (const fragment of [
   "cargo test --locked --workspace --all-targets",
   "cargo clippy --locked --workspace --all-targets -- -D warnings",
 ]) {
-  if (!selfHosted.includes(fragment)) throw new Error("Self-hosted verification gate missing: " + fragment);
+  if (!selfHosted.includes(fragment))
+    throw new Error("Self-hosted verification gate missing: " + fragment);
 }
 
 const bootstrap = await text(".github/workflows/bootstrap-lockfile.yml");
@@ -130,7 +167,8 @@ for (const fragment of [
   "cargo generate-lockfile",
   "node scripts/commit-lockfiles.mjs",
 ]) {
-  if (!bootstrap.includes(fragment)) throw new Error("Lockfile bootstrap contract missing: " + fragment);
+  if (!bootstrap.includes(fragment))
+    throw new Error("Lockfile bootstrap contract missing: " + fragment);
 }
 
 const commitLockfiles = await text("scripts/commit-lockfiles.mjs");
@@ -142,7 +180,8 @@ for (const fragment of [
   'execFileSync("git", ["commit"',
   'execFileSync("git", ["push"',
 ]) {
-  if (!commitLockfiles.includes(fragment)) throw new Error("Canonical lockfile commit contract missing: " + fragment);
+  if (!commitLockfiles.includes(fragment))
+    throw new Error("Canonical lockfile commit contract missing: " + fragment);
 }
 
 console.log("ORBIT release sanity passed for version " + expectedVersion);

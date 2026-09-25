@@ -28,10 +28,13 @@ describe("TelegramConnector", () => {
       apiBaseUrl: "https://telegram.test",
       fetchImpl: async (input) => {
         requests.push(String(input));
-        return new Response(JSON.stringify({
-          ok: true,
-          result: { id: 7, is_bot: true, first_name: "OrbitBot" },
-        }), { status: 200 });
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: { id: 7, is_bot: true, first_name: "OrbitBot" },
+          }),
+          { status: 200 },
+        );
       },
     });
 
@@ -84,37 +87,56 @@ describe("TelegramConnector", () => {
       tokenResolver: async () => "token",
       contentResolver: async () => "hello",
       apiBaseUrl: "https://telegram.test",
-      fetchImpl: async () => new Response(JSON.stringify({
-        ok: false,
-        error_code: 401,
-        description: "Unauthorized",
-      }), { status: 401 }),
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            ok: false,
+            error_code: 401,
+            description: "Unauthorized",
+          }),
+          { status: 401 },
+        ),
     });
 
-    await expect(authConnector.connect({ accountId: "account-1", userConfirmed: true }))
-      .resolves.toMatchObject({ status: "blocked", reason: "authorization_required" });
+    await expect(
+      authConnector.connect({ accountId: "account-1", userConfirmed: true }),
+    ).resolves.toMatchObject({
+      status: "blocked",
+      reason: "authorization_required",
+    });
 
     const limitedConnector = new TelegramConnector({
       tokenResolver: async () => "token",
       contentResolver: async () => "hello",
       apiBaseUrl: "https://telegram.test",
-      fetchImpl: async () => new Response(JSON.stringify({
-        ok: false,
-        error_code: 429,
-        description: "Too Many Requests",
-      }), { status: 429 }),
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            ok: false,
+            error_code: 429,
+            description: "Too Many Requests",
+          }),
+          { status: 429 },
+        ),
     });
 
-    await expect(limitedConnector.execute(task, { accountId: "account-1", userConfirmed: true }))
-      .resolves.toMatchObject({ status: "blocked", reason: "platform_limit" });
+    await expect(
+      limitedConnector.execute(task, {
+        accountId: "account-1",
+        userConfirmed: true,
+      }),
+    ).resolves.toMatchObject({ status: "blocked", reason: "platform_limit" });
   });
 
   it("rejects external API bases that are not HTTPS or loopback HTTP", () => {
-    expect(() => new TelegramConnector({
-      tokenResolver: async () => "token",
-      contentResolver: async () => "hello",
-      apiBaseUrl: "http://telegram.example.test",
-    })).toThrow("must use HTTPS");
+    expect(
+      () =>
+        new TelegramConnector({
+          tokenResolver: async () => "token",
+          contentResolver: async () => "hello",
+          apiBaseUrl: "http://telegram.example.test",
+        }),
+    ).toThrow("must use HTTPS");
   });
 
   it("blocks ambiguous 5xx delivery responses instead of returning retryable failure", async () => {
@@ -123,11 +145,14 @@ describe("TelegramConnector", () => {
       contentResolver: async () => "hello",
       apiBaseUrl: "https://telegram.test",
       fetchImpl: async () =>
-        new Response(JSON.stringify({
-          ok: false,
-          error_code: 500,
-          description: "Internal Server Error",
-        }), { status: 500 }),
+        new Response(
+          JSON.stringify({
+            ok: false,
+            error_code: 500,
+            description: "Internal Server Error",
+          }),
+          { status: 500 },
+        ),
     });
 
     const result = await connector.execute(task, {

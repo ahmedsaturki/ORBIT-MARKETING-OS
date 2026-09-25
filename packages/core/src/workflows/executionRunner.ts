@@ -1,4 +1,10 @@
-import type { Approval, Campaign, ContentItem, SocialAccount, Task } from "../types/index.js";
+import type {
+  Approval,
+  Campaign,
+  ContentItem,
+  SocialAccount,
+  Task,
+} from "../types/index.js";
 import type { ExecutionBlockReason } from "./executionPolicy.js";
 import { ConnectorRegistry } from "../connectors/registry.js";
 import {
@@ -75,7 +81,9 @@ function policyContext(input: ExecutionRunnerInput): ExecutionPolicyContext {
 export class ExecutionRunner {
   public constructor(private readonly registry: ConnectorRegistry) {}
 
-  public async run(input: Omit<ExecutionRunnerInput, "connectorRegistry">): Promise<ExecutionRunnerResult> {
+  public async run(
+    input: Omit<ExecutionRunnerInput, "connectorRegistry">,
+  ): Promise<ExecutionRunnerResult> {
     if (input.task.status !== "running") {
       return {
         status: "blocked",
@@ -84,7 +92,9 @@ export class ExecutionRunner {
       };
     }
 
-    const decision = evaluateExecutionPolicy(policyContext({ ...input, connectorRegistry: this.registry }));
+    const decision = evaluateExecutionPolicy(
+      policyContext({ ...input, connectorRegistry: this.registry }),
+    );
     if (!decision.allowed) {
       return {
         status: "blocked",
@@ -97,7 +107,8 @@ export class ExecutionRunner {
       return {
         status: "blocked",
         reason: "user_confirmation_required",
-        message: "Explicit user confirmation is required before any external action.",
+        message:
+          "Explicit user confirmation is required before any external action.",
       };
     }
 
@@ -117,7 +128,10 @@ export class ExecutionRunner {
         return {
           status: "blocked",
           reason: "unsupported_action",
-          message: error instanceof Error ? error.message : "Connector rejected the task.",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Connector rejected the task.",
         };
       }
     }
@@ -137,13 +151,20 @@ export class ExecutionRunner {
     } catch (error: unknown) {
       return {
         status: "failed",
-        message: error instanceof Error ? error.message : "Connector execution failed.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Connector execution failed.",
       };
     }
 
     if (outcome.status === "succeeded") {
       return outcome.externalId
-        ? { status: "succeeded", externalId: outcome.externalId, message: outcome.message }
+        ? {
+            status: "succeeded",
+            externalId: outcome.externalId,
+            message: outcome.message,
+          }
         : { status: "succeeded", message: outcome.message };
     }
 

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { ConnectorRegistry } from "../src/connectors/registry.js";
 import { FixtureConnector } from "../src/connectors/fixture.js";
 import { ExecutionRunner } from "../src/workflows/executionRunner.js";
-import type { Campaign, ContentItem, SocialAccount, Task } from "../src/types/index.js";
+import type {
+  Campaign,
+  ContentItem,
+  SocialAccount,
+  Task,
+} from "../src/types/index.js";
 
 const account: SocialAccount = {
   id: "account-1",
@@ -64,7 +69,9 @@ const task: Task = {
 
 function runner(challengeOnExecute = false): ExecutionRunner {
   const registry = new ConnectorRegistry();
-  registry.register(new FixtureConnector({ platform: "facebook", challengeOnExecute }));
+  registry.register(
+    new FixtureConnector({ platform: "facebook", challengeOnExecute }),
+  );
   return new ExecutionRunner(registry);
 }
 
@@ -124,7 +131,10 @@ describe("ExecutionRunner", () => {
       circuitBreakerThreshold: 3,
       userConfirmed: false,
     });
-    expect(result).toMatchObject({ status: "blocked", reason: "user_confirmation_required" });
+    expect(result).toMatchObject({
+      status: "blocked",
+      reason: "user_confirmation_required",
+    });
   });
 
   it("blocks when the connector does not support the task capability", async () => {

@@ -35,6 +35,7 @@ The active consolidation branch is `rebuild/orbit-production-consolidated`. PR #
 ## Current execution evidence
 
 Latest observed hosted GitHub Actions CI on the consolidation line:
+
 - run `36053293828`
 - jobs `107813972668` (quality) / `107813973170` (Rust quality)
 - conclusion: `failure`
@@ -68,7 +69,6 @@ The connected Vercel project has a verified READY production deployment, but it 
 ## Release rule
 
 No tag, merge, production deployment, or commercial launch claim should be made while required gates remain `UNVERIFIED` or `BLOCKED`.
-
 
 ## Final consolidation checkpoint
 

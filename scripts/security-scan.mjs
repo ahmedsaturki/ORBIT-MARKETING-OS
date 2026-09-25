@@ -11,10 +11,7 @@ const secretFilePatterns = [
   /(^|\/).*\.(?:pem|key|p12|pfx)$/iu,
 ];
 
-const allowedEnvFiles = new Set([
-  ".env.example",
-  ".env.sample",
-]);
+const allowedEnvFiles = new Set([".env.example", ".env.sample"]);
 
 const secretPatterns = [
   /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/u,
@@ -52,17 +49,24 @@ const failures = [];
 for (const path of tracked) {
   const envLike = path.startsWith(".env");
   if (envLike && !allowedEnvFiles.has(path)) {
-    failures.push(path + ": tracked environment file is not an approved example");
+    failures.push(
+      path + ": tracked environment file is not an approved example",
+    );
     continue;
   }
 
-  if (secretFilePatterns.some((pattern) => pattern.test(path) && !allowedEnvFiles.has(path))) {
+  if (
+    secretFilePatterns.some(
+      (pattern) => pattern.test(path) && !allowedEnvFiles.has(path),
+    )
+  ) {
     failures.push(path + ": tracked private-key/secret file pattern");
     continue;
   }
 
   const dot = path.lastIndexOf(".");
-  if (dot < 0 || !extensionAllowlist.has(path.slice(dot).toLowerCase())) continue;
+  if (dot < 0 || !extensionAllowlist.has(path.slice(dot).toLowerCase()))
+    continue;
 
   let content;
   try {
@@ -82,11 +86,13 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(JSON.stringify({
-  status: "passed",
-  trackedFiles: tracked.length,
-  checkedTextFiles: tracked.filter((path) => {
-    const dot = path.lastIndexOf(".");
-    return dot >= 0 && extensionAllowlist.has(path.slice(dot).toLowerCase());
-  }).length,
-}));
+console.log(
+  JSON.stringify({
+    status: "passed",
+    trackedFiles: tracked.length,
+    checkedTextFiles: tracked.filter((path) => {
+      const dot = path.lastIndexOf(".");
+      return dot >= 0 && extensionAllowlist.has(path.slice(dot).toLowerCase());
+    }).length,
+  }),
+);

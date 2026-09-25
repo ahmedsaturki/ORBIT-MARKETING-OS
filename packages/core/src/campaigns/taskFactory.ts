@@ -29,7 +29,10 @@ export function buildCampaignTasks(
   if (!campaign.id.trim() || !campaign.workspaceId.trim()) {
     throw new Error("Campaign id and workspace id are required");
   }
-  if (template.priority !== undefined && (!Number.isInteger(template.priority) || template.priority < 0)) {
+  if (
+    template.priority !== undefined &&
+    (!Number.isInteger(template.priority) || template.priority < 0)
+  ) {
     throw new RangeError("priority must be a non-negative integer");
   }
 
@@ -39,10 +42,20 @@ export function buildCampaignTasks(
   const maxAttempts = template.maxAttempts ?? 3;
   const contentId =
     template.contentId ??
-    (template.taskKind === "sync" ? undefined : campaign.contentIds.length === 1 ? campaign.contentIds[0] : undefined);
+    (template.taskKind === "sync"
+      ? undefined
+      : campaign.contentIds.length === 1
+        ? campaign.contentIds[0]
+        : undefined);
 
-  if (template.taskKind !== "sync" && campaign.contentIds.length > 1 && !template.contentId) {
-    throw new Error("contentId is required when a campaign targets multiple content items");
+  if (
+    template.taskKind !== "sync" &&
+    campaign.contentIds.length > 1 &&
+    !template.contentId
+  ) {
+    throw new Error(
+      "contentId is required when a campaign targets multiple content items",
+    );
   }
   if (contentId && !campaign.contentIds.includes(contentId)) {
     throw new Error("contentId is not part of campaign");
@@ -73,7 +86,9 @@ export function buildCampaignTasks(
       platform,
       kind: template.taskKind,
       ...(contentId ? { contentId } : {}),
-      ...(template.destinationId ? { destinationId: template.destinationId } : {}),
+      ...(template.destinationId
+        ? { destinationId: template.destinationId }
+        : {}),
       priority,
       status: "pending",
       attempts: 0,

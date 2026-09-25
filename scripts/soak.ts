@@ -11,7 +11,12 @@
  * RSS budget breach.
  */
 import { spawn, type ChildProcess } from "node:child_process";
-import { createWriteStream, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  createWriteStream,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { platform } from "node:os";
@@ -37,8 +42,7 @@ function readNumericArg(flag: string): number | undefined {
 }
 
 const requestedMinutes =
-  readNumericArg("--minutes") ??
-  ((readNumericArg("--hours") ?? 0) * 60);
+  readNumericArg("--minutes") ?? (readNumericArg("--hours") ?? 0) * 60;
 const minutes = requestedMinutes > 0 ? requestedMinutes : 10;
 const port = readNumericArg("--port") ?? 34790;
 const RSS_BUDGET_MB = 600;
@@ -71,7 +75,9 @@ let rssLast = 0;
 const failures: string[] = [];
 
 function log(entry: Record<string, unknown>): void {
-  jsonl.write(JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + "\n");
+  jsonl.write(
+    JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + "\n",
+  );
 }
 
 function fail(message: string): never {
@@ -104,10 +110,14 @@ function rssMb(pid: number): number {
   }
 
   try {
-    const out = execFileSync("tasklist", ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
+    const out = execFileSync(
+      "tasklist",
+      ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    );
     const match = out.match(/"([\d,]+) K"/);
     return match ? Number(match[1].replaceAll(",", "")) / 1024 : 0;
   } catch {
@@ -199,7 +209,8 @@ function runCoreInvariantWorkload(cycle: number): void {
     consecutiveFailures: 0,
     circuitBreakerThreshold: 3,
   });
-  if (!policy.allowed) fail(`policy unexpectedly blocked cycle ${cycle}: ${policy.reason}`);
+  if (!policy.allowed)
+    fail(`policy unexpectedly blocked cycle ${cycle}: ${policy.reason}`);
 
   const blocked = evaluateExecutionPolicy({
     account,
@@ -234,7 +245,8 @@ function runCoreInvariantWorkload(cycle: number): void {
   if (!duplicateBlocked) fail("queue idempotency invariant failed");
 
   const claimed = queue.claimNext(timestamp);
-  if (!claimed || claimed.status !== "running") fail("queue claim invariant failed");
+  if (!claimed || claimed.status !== "running")
+    fail("queue claim invariant failed");
 
   const retry = queue.fail(claimed.id, timestamp);
   if (retry.status !== "pending" || retry.attempts !== 1) {
@@ -244,8 +256,20 @@ function runCoreInvariantWorkload(cycle: number): void {
   const chain = new AuditIntegrityChain();
   void chain;
   const events = [
-    { id: `audit-${cycle}-1`, actor: "system" as const, category: "task" as const, action: "soak.start", outcome: "success" as const },
-    { id: `audit-${cycle}-2`, actor: "system" as const, category: "task" as const, action: "soak.complete", outcome: "success" as const },
+    {
+      id: `audit-${cycle}-1`,
+      actor: "system" as const,
+      category: "task" as const,
+      action: "soak.start",
+      outcome: "success" as const,
+    },
+    {
+      id: `audit-${cycle}-2`,
+      actor: "system" as const,
+      category: "task" as const,
+      action: "soak.complete",
+      outcome: "success" as const,
+    },
   ];
   for (const event of events) {
     // append/verify below is kept async so the soak loop remains deterministic.
@@ -362,7 +386,10 @@ async function main(): Promise<void> {
   );
   server = spawn(
     process.execPath,
-    [join(root, "node_modules", "tsx", "dist", "cli.mjs"), join(root, "server.ts")],
+    [
+      join(root, "node_modules", "tsx", "dist", "cli.mjs"),
+      join(root, "server.ts"),
+    ],
     {
       cwd: root,
       env: {
@@ -389,7 +416,8 @@ async function main(): Promise<void> {
   let lastSample = 0;
 
   while (Date.now() < deadline) {
-    if (server.exitCode !== null) fail(`server exited with code ${server.exitCode}`);
+    if (server.exitCode !== null)
+      fail(`server exited with code ${server.exitCode}`);
 
     cycles += 1;
 
@@ -400,7 +428,11 @@ async function main(): Promise<void> {
       if (!health.ok) {
         healthFailures += 1;
         consecutiveHealthFailures += 1;
-        log({ cycle: cycles, health: health.status, consecutiveHealthFailures });
+        log({
+          cycle: cycles,
+          health: health.status,
+          consecutiveHealthFailures,
+        });
       } else {
         healthOk += 1;
         consecutiveHealthFailures = 0;
@@ -423,7 +455,8 @@ async function main(): Promise<void> {
         consecutiveHealthFailures,
       });
     }
-    if (consecutiveHealthFailures >= 3) fail("three consecutive health failures");
+    if (consecutiveHealthFailures >= 3)
+      fail("three consecutive health failures");
 
     try {
       const response = await fetch(`http://127.0.0.1:${port}/`, {
@@ -436,13 +469,23 @@ async function main(): Promise<void> {
         staticOk += 1;
         consecutiveStaticFailures = 0;
       }
-      log({ cycle: cycles, staticOk, staticFailures, consecutiveStaticFailures });
+      log({
+        cycle: cycles,
+        staticOk,
+        staticFailures,
+        consecutiveStaticFailures,
+      });
     } catch {
       staticFailures += 1;
       consecutiveStaticFailures += 1;
-      log({ cycle: cycles, static: "network_error", consecutiveStaticFailures });
+      log({
+        cycle: cycles,
+        static: "network_error",
+        consecutiveStaticFailures,
+      });
     }
-    if (consecutiveStaticFailures >= 3) fail("three consecutive static delivery failures");
+    if (consecutiveStaticFailures >= 3)
+      fail("three consecutive static delivery failures");
 
     if (cycles % 4 === 0) {
       chatChecks += 1;
@@ -450,7 +493,9 @@ async function main(): Promise<void> {
         const chat = await fetch(`http://127.0.0.1:${port}/api/chat`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ messages: [{ role: "user", text: "soak ping" }] }),
+          body: JSON.stringify({
+            messages: [{ role: "user", text: "soak ping" }],
+          }),
           signal: AbortSignal.timeout(5_000),
         });
         if (chat.status !== 502) {
@@ -471,7 +516,8 @@ async function main(): Promise<void> {
           consecutiveChatFailures,
         });
       }
-      if (consecutiveChatFailures >= 3) fail("three consecutive AI error-path failures");
+      if (consecutiveChatFailures >= 3)
+        fail("three consecutive AI error-path failures");
     }
 
     runCoreInvariantWorkload(cycles);

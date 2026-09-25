@@ -1,4 +1,5 @@
-const SECRET_KEY_PATTERN = /(password|passwd|secret|token|cookie|session|authorization|api[-_]?key|private[-_]?key)/i;
+const SECRET_KEY_PATTERN =
+  /(password|passwd|secret|token|cookie|session|authorization|api[-_]?key|private[-_]?key)/i;
 
 /**
  * Redact likely credential fields before data reaches logs or telemetry.

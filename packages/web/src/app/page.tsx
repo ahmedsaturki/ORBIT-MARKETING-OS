@@ -30,12 +30,19 @@ export default function HomePage(): ReactElement {
         <div className="eyebrow">LOCAL-FIRST MARKETING OPERATIONS</div>
         <h1>مركز تشغيل تسويقك، مع ملكية بياناتك على جهازك.</h1>
         <p>
-          ORBIT يجمع التخطيط، المحتوى، CRM، صندوق المحادثات، والمهام في مساحة واحدة،
-          مع تشغيل محلي للبيانات الحساسة ومساعد AI عبر Ollama.
+          ORBIT يجمع التخطيط، المحتوى، CRM، صندوق المحادثات، والمهام في مساحة
+          واحدة، مع تشغيل محلي للبيانات الحساسة ومساعد AI عبر Ollama.
         </p>
         <div className="actions">
-          <Link className="button primary" href="/pricing/">استكشف الخطط</Link>
-          <a className="button secondary" href="https://github.com/ahmedsaturki/ORBIT-MARKETING-OS">المستودع</a>
+          <Link className="button primary" href="/pricing/">
+            استكشف الخطط
+          </Link>
+          <a
+            className="button secondary"
+            href="https://github.com/ahmedsaturki/ORBIT-MARKETING-OS"
+          >
+            المستودع
+          </a>
         </div>
       </section>
 
@@ -56,7 +63,9 @@ export default function HomePage(): ReactElement {
         </p>
       </section>
 
-      <footer className="container footer">ORBIT Marketing OS • v0.2.0 • Local-first</footer>
+      <footer className="container footer">
+        ORBIT Marketing OS • v0.2.0 • Local-first
+      </footer>
     </main>
   );
 }

@@ -65,7 +65,6 @@ Use the runner for this private repository only. Keep the runner machine patched
 
 A successful self-hosted verification run is valid execution evidence for the corresponding technical gates, but signing, third-party platform authorization, payment configuration, and other external release prerequisites remain separate gates.
 
-
 ## One-click lockfile bootstrap
 
 After the self-hosted x64 runner is registered, use:

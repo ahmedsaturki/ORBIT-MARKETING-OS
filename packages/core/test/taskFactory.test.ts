@@ -24,7 +24,10 @@ describe("buildCampaignTasks", () => {
     );
 
     expect(tasks).toHaveLength(2);
-    expect(tasks.map((task) => task.id)).toEqual(["camp-1:task:facebook:publish:acc-1:content-1", "camp-1:task:facebook:publish:acc-2:content-1"]);
+    expect(tasks.map((task) => task.id)).toEqual([
+      "camp-1:task:facebook:publish:acc-1:content-1",
+      "camp-1:task:facebook:publish:acc-2:content-1",
+    ]);
     expect(tasks.every((task) => task.maxAttempts === 4)).toBe(true);
     expect(tasks.every((task) => task.priority === 5)).toBe(true);
   });
@@ -64,7 +67,9 @@ describe("buildCampaignTasks", () => {
         "facebook",
         { taskKind: "publish" },
       ),
-    ).toThrow("contentId is required when a campaign targets multiple content items");
+    ).toThrow(
+      "contentId is required when a campaign targets multiple content items",
+    );
   });
 
   it("keeps task identities distinct when content differs", () => {

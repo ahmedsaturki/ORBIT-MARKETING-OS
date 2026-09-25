@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Campaign, SocialAccount, Task } from "../src/types/index.js";
 import { AuditLog } from "../src/audit/auditLog.js";
-import { ConnectorRegistry, FixtureConnector } from "../src/connectors/index.js";
+import {
+  ConnectorRegistry,
+  FixtureConnector,
+} from "../src/connectors/index.js";
 import { TaskQueue } from "../src/queue/index.js";
 import { executeClaimedTask } from "../src/workflows/executor.js";
 
@@ -64,7 +67,14 @@ function context(task: Task) {
       workspaceId: "workspace-1",
       title: "Approved",
       body: "Hello",
-      platformVariants: { facebook: "Hello", instagram: undefined, telegram: undefined, whatsapp: undefined, linkedin: undefined, tiktok: undefined },
+      platformVariants: {
+        facebook: "Hello",
+        instagram: undefined,
+        telegram: undefined,
+        whatsapp: undefined,
+        linkedin: undefined,
+        tiktok: undefined,
+      },
       approvalStatus: "approved" as const,
       tags: [],
       createdAt: "2026-09-24T00:00:00.000Z",
@@ -104,7 +114,6 @@ describe("task execution orchestrator", () => {
       ),
     ).rejects.toThrow("Only claimed running tasks may be executed.");
   });
-
 
   it("runs a confirmed external task through policy, connector, queue, and audit", async () => {
     const task = makeTask();
@@ -332,7 +341,9 @@ describe("task execution orchestrator", () => {
       reason: "daily_limit_reached",
     });
     expect(taskQueue.get(task.id)?.status).toBe("pending");
-    expect(taskQueue.get(task.id)?.availableAt).toBe("2026-09-25T00:00:00.000Z");
+    expect(taskQueue.get(task.id)?.availableAt).toBe(
+      "2026-09-25T00:00:00.000Z",
+    );
   });
 
   it("releases a task when user confirmation is missing", async () => {
@@ -365,7 +376,9 @@ describe("task execution orchestrator", () => {
     const taskQueue = queue(task);
     const claimed = taskQueue.claimNext("2026-09-24T00:00:01.000Z");
     const registry = new ConnectorRegistry();
-    registry.register(new FixtureConnector({ platform: "facebook", challengeOnExecute: true }));
+    registry.register(
+      new FixtureConnector({ platform: "facebook", challengeOnExecute: true }),
+    );
     const audit = new AuditLog();
 
     const result = await executeClaimedTask(

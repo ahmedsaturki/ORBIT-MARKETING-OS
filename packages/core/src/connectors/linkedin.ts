@@ -47,7 +47,8 @@ export class LinkedInConnector implements PlatformConnector {
       return {
         status: "blocked",
         reason: "authorization_required",
-        message: "Explicit authorization is required before connecting LinkedIn.",
+        message:
+          "Explicit authorization is required before connecting LinkedIn.",
       };
     }
 
@@ -129,7 +130,11 @@ export class LinkedInConnector implements PlatformConnector {
       if (response.status === 201) {
         const externalId = response.headers.get("x-restli-id");
         return externalId
-          ? { status: "succeeded", externalId, message: "LinkedIn post published." }
+          ? {
+              status: "succeeded",
+              externalId,
+              message: "LinkedIn post published.",
+            }
           : { status: "succeeded", message: "LinkedIn post published." };
       }
 

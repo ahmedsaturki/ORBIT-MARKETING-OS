@@ -17,7 +17,8 @@ export class ConnectorRegistry {
 
   public require(platform: Platform): PlatformConnector {
     const connector = this.get(platform);
-    if (!connector) throw new Error("No connector registered for platform: " + platform);
+    if (!connector)
+      throw new Error("No connector registered for platform: " + platform);
     return connector;
   }
 

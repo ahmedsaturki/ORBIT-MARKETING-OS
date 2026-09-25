@@ -44,9 +44,12 @@ export class ErrorBoundary extends Component<Props, State> {
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">حدث خطأ غير متوقع</h2>
+              <h2 className="text-lg font-bold text-white">
+                حدث خطأ غير متوقع
+              </h2>
               <p className="text-xs text-slate-400 mt-1">
-                واجه التطبيق استثناءً أثناء معالجة البيانات أو العرض. يمكنك إعادة تهيئة الجلسة واستعادة الحالة الأصلية.
+                واجه التطبيق استثناءً أثناء معالجة البيانات أو العرض. يمكنك
+                إعادة تهيئة الجلسة واستعادة الحالة الأصلية.
               </p>
               {this.state.error?.message && (
                 <pre className="mt-3 p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-rose-300 text-[11px] font-mono overflow-x-auto text-right">

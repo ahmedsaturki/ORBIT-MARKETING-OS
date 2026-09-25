@@ -9,7 +9,10 @@ import {
 
 export interface TelegramConnectorOptions {
   readonly tokenResolver: (accountId: string) => Promise<string | undefined>;
-  readonly contentResolver: (contentId: string, platform: "telegram") => Promise<string | undefined>;
+  readonly contentResolver: (
+    contentId: string,
+    platform: "telegram",
+  ) => Promise<string | undefined>;
   readonly apiBaseUrl?: string;
   readonly fetchImpl?: typeof fetch;
 }
@@ -42,11 +45,18 @@ const DEFAULT_API = "https://api.telegram.org";
 function normalizeApiBaseUrl(value: string): string {
   const url = new URL(value);
   const loopback = new Set(["localhost", "127.0.0.1", "::1"]);
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback.has(url.hostname))) {
-    throw new Error("Telegram API base URL must use HTTPS (or HTTP only for loopback fixtures)");
+  if (
+    url.protocol !== "https:" &&
+    !(url.protocol === "http:" && loopback.has(url.hostname))
+  ) {
+    throw new Error(
+      "Telegram API base URL must use HTTPS (or HTTP only for loopback fixtures)",
+    );
   }
   if (url.username || url.password) {
-    throw new Error("Telegram API base URL must not contain embedded credentials");
+    throw new Error(
+      "Telegram API base URL must not contain embedded credentials",
+    );
   }
   return url.toString().replace(/\/$/, "");
 }
@@ -86,7 +96,12 @@ export class TelegramConnector implements PlatformConnector {
     }
 
     try {
-      const response = await this.request<TelegramUser>(token, "getMe", undefined, context.signal);
+      const response = await this.request<TelegramUser>(
+        token,
+        "getMe",
+        undefined,
+        context.signal,
+      );
       if (!response.payload.ok || !response.payload.result) {
         return this.mapApiFailure(response.payload, response.statusCode);
       }
@@ -98,25 +113,34 @@ export class TelegramConnector implements PlatformConnector {
     } catch (error: unknown) {
       return {
         status: "failed",
-        message: error instanceof Error ? error.message : "Telegram connection failed.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Telegram connection failed.",
       };
     }
   }
 
-  public async disconnect(context: ConnectorContext): Promise<ConnectorOutcome> {
+  public async disconnect(
+    context: ConnectorContext,
+  ): Promise<ConnectorOutcome> {
     return {
       status: "succeeded",
       message: `Telegram connector disconnected for ${context.accountId}.`,
     };
   }
 
-  public async execute(task: Task, context: ConnectorContext): Promise<ConnectorOutcome> {
+  public async execute(
+    task: Task,
+    context: ConnectorContext,
+  ): Promise<ConnectorOutcome> {
     assertSupportedTask(this, task);
     if (!context.userConfirmed) {
       return {
         status: "blocked",
         reason: "user_confirmation_required",
-        message: "Explicit user confirmation is required before Telegram sends a message.",
+        message:
+          "Explicit user confirmation is required before Telegram sends a message.",
       };
     }
 
@@ -175,7 +199,8 @@ export class TelegramConnector implements PlatformConnector {
       return {
         status: "blocked",
         reason: "delivery_status_unknown",
-        message: "Telegram delivery status is unknown. Verify delivery before retrying to avoid duplicate messages.",
+        message:
+          "Telegram delivery status is unknown. Verify delivery before retrying to avoid duplicate messages.",
       };
     }
   }
@@ -209,7 +234,9 @@ export class TelegramConnector implements PlatformConnector {
     try {
       payload = (await response.json()) as TelegramApiResponse<T>;
     } catch {
-      throw new Error(`Telegram returned HTTP ${response.status} with an invalid JSON body.`);
+      throw new Error(
+        `Telegram returned HTTP ${response.status} with an invalid JSON body.`,
+      );
     }
 
     return {
@@ -234,7 +261,8 @@ export class TelegramConnector implements PlatformConnector {
       return {
         status: "blocked",
         reason: "platform_limit",
-        message: "Telegram rate-limited the bot request; execution must back off.",
+        message:
+          "Telegram rate-limited the bot request; execution must back off.",
       };
     }
 
@@ -242,7 +270,8 @@ export class TelegramConnector implements PlatformConnector {
       return {
         status: "blocked",
         reason: "delivery_status_unknown",
-        message: "Telegram delivery status is ambiguous. Verify delivery before retrying.",
+        message:
+          "Telegram delivery status is ambiguous. Verify delivery before retrying.",
       };
     }
 

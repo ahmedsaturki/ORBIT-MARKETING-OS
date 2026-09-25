@@ -23,7 +23,9 @@ try {
     await page.setContent(
       `<!doctype html><style>*{margin:0;padding:0}html,body{width:${size}px;height:${size}px;background:transparent}</style>${svg.replace(/width="\d+"/, `width="${size}"`).replace(/height="\d+"/, `height="${size}"`)}`,
     );
-    const buf = await page.screenshot({ clip: { x: 0, y: 0, width: size, height: size } });
+    const buf = await page.screenshot({
+      clip: { x: 0, y: 0, width: size, height: size },
+    });
     pngFrames.push({ size, png: buf });
   }
 } finally {
@@ -52,4 +54,6 @@ for (const { size, png } of pngFrames) {
 }
 const ico = Buffer.concat([header, ...entries, ...pngFrames.map((f) => f.png)]);
 writeFileSync(join(outDir, "icon.ico"), ico);
-console.log(`icon.ico written (${ico.length} bytes, frames: ${pngFrames.map((f) => f.size).join(",")})`);
+console.log(
+  `icon.ico written (${ico.length} bytes, frames: ${pngFrames.map((f) => f.size).join(",")})`,
+);

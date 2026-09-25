@@ -22,18 +22,24 @@ describe("offline license verification", () => {
       features: ["analytics"],
     };
 
-    const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
-    const canonical = new TextEncoder().encode(JSON.stringify({
-      licenseId: payload.licenseId,
-      plan: payload.plan,
-      subject: payload.subject,
-      issuedAt: payload.issuedAt,
-      expiresAt: payload.expiresAt,
-      maxDevices: payload.maxDevices,
-      accountLimit: payload.accountLimit,
-      features: [...payload.features],
-    }));
-    const signature = new Uint8Array(await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical));
+    const publicKey = new Uint8Array(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    );
+    const canonical = new TextEncoder().encode(
+      JSON.stringify({
+        licenseId: payload.licenseId,
+        plan: payload.plan,
+        subject: payload.subject,
+        issuedAt: payload.issuedAt,
+        expiresAt: payload.expiresAt,
+        maxDevices: payload.maxDevices,
+        accountLimit: payload.accountLimit,
+        features: [...payload.features],
+      }),
+    );
+    const signature = new Uint8Array(
+      await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical),
+    );
     const token = createLicenseToken(payload, signature);
 
     const result = await verifyLicenseToken(token, publicKey, {
@@ -45,7 +51,6 @@ describe("offline license verification", () => {
     expect(result.valid).toBe(true);
     expect(result.reason).toBe("valid");
   });
-
 
   it("verifies a non-expiring lifetime license", async () => {
     const keyPair = (await crypto.subtle.generateKey(
@@ -64,18 +69,24 @@ describe("offline license verification", () => {
       features: ["analytics"],
     };
 
-    const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
-    const canonical = new TextEncoder().encode(JSON.stringify({
-      licenseId: payload.licenseId,
-      plan: payload.plan,
-      subject: payload.subject,
-      issuedAt: payload.issuedAt,
-      expiresAt: null,
-      maxDevices: payload.maxDevices,
-      accountLimit: payload.accountLimit,
-      features: [...payload.features],
-    }));
-    const signature = new Uint8Array(await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical));
+    const publicKey = new Uint8Array(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    );
+    const canonical = new TextEncoder().encode(
+      JSON.stringify({
+        licenseId: payload.licenseId,
+        plan: payload.plan,
+        subject: payload.subject,
+        issuedAt: payload.issuedAt,
+        expiresAt: null,
+        maxDevices: payload.maxDevices,
+        accountLimit: payload.accountLimit,
+        features: [...payload.features],
+      }),
+    );
+    const signature = new Uint8Array(
+      await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical),
+    );
     const token = createLicenseToken(payload, signature);
 
     const result = await verifyLicenseToken(token, publicKey, {
@@ -106,18 +117,24 @@ describe("offline license verification", () => {
       features: [],
     };
 
-    const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
-    const canonical = new TextEncoder().encode(JSON.stringify({
-      licenseId: payload.licenseId,
-      plan: payload.plan,
-      subject: payload.subject,
-      issuedAt: payload.issuedAt,
-      expiresAt: payload.expiresAt,
-      maxDevices: payload.maxDevices,
-      accountLimit: payload.accountLimit,
-      features: [...payload.features],
-    }));
-    const signature = new Uint8Array(await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical));
+    const publicKey = new Uint8Array(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    );
+    const canonical = new TextEncoder().encode(
+      JSON.stringify({
+        licenseId: payload.licenseId,
+        plan: payload.plan,
+        subject: payload.subject,
+        issuedAt: payload.issuedAt,
+        expiresAt: payload.expiresAt,
+        maxDevices: payload.maxDevices,
+        accountLimit: payload.accountLimit,
+        features: [...payload.features],
+      }),
+    );
+    const signature = new Uint8Array(
+      await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical),
+    );
     const token = createLicenseToken(payload, signature);
 
     const result = await verifyLicenseToken(token, publicKey, {
@@ -146,25 +163,33 @@ describe("offline license verification", () => {
       features: [],
     };
 
-    const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
-    const canonical = new TextEncoder().encode(JSON.stringify({
-      licenseId: payload.licenseId,
-      plan: payload.plan,
-      subject: payload.subject,
-      issuedAt: payload.issuedAt,
-      expiresAt: payload.expiresAt,
-      maxDevices: payload.maxDevices,
-      accountLimit: payload.accountLimit,
-      features: [...payload.features],
-    }));
-    const signature = new Uint8Array(await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical));
+    const publicKey = new Uint8Array(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    );
+    const canonical = new TextEncoder().encode(
+      JSON.stringify({
+        licenseId: payload.licenseId,
+        plan: payload.plan,
+        subject: payload.subject,
+        issuedAt: payload.issuedAt,
+        expiresAt: payload.expiresAt,
+        maxDevices: payload.maxDevices,
+        accountLimit: payload.accountLimit,
+        features: [...payload.features],
+      }),
+    );
+    const signature = new Uint8Array(
+      await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical),
+    );
     const token = createLicenseToken(payload, signature);
 
-    await expect(verifyLicenseToken(token, publicKey, {
-      deviceCount: 1,
-      accountCount: 1,
-      now: new Date("2026-09-24T00:00:00.000Z"),
-    })).resolves.toMatchObject({ valid: false, reason: "malformed" });
+    await expect(
+      verifyLicenseToken(token, publicKey, {
+        deviceCount: 1,
+        accountCount: 1,
+        now: new Date("2026-09-24T00:00:00.000Z"),
+      }),
+    ).resolves.toMatchObject({ valid: false, reason: "malformed" });
   });
 
   it("rejects negative or non-integer verification counters", async () => {
@@ -206,18 +231,24 @@ describe("offline license verification", () => {
       accountLimit: 5,
       features: [],
     };
-    const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
-    const canonical = new TextEncoder().encode(JSON.stringify({
-      licenseId: payload.licenseId,
-      plan: payload.plan,
-      subject: payload.subject,
-      issuedAt: payload.issuedAt,
-      expiresAt: payload.expiresAt,
-      maxDevices: payload.maxDevices,
-      accountLimit: payload.accountLimit,
-      features: [...payload.features],
-    }));
-    const signature = new Uint8Array(await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical));
+    const publicKey = new Uint8Array(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    );
+    const canonical = new TextEncoder().encode(
+      JSON.stringify({
+        licenseId: payload.licenseId,
+        plan: payload.plan,
+        subject: payload.subject,
+        issuedAt: payload.issuedAt,
+        expiresAt: payload.expiresAt,
+        maxDevices: payload.maxDevices,
+        accountLimit: payload.accountLimit,
+        features: [...payload.features],
+      }),
+    );
+    const signature = new Uint8Array(
+      await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical),
+    );
     const token = createLicenseToken(payload, signature);
 
     const result = await verifyLicenseToken(token, publicKey, {

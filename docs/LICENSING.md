@@ -7,6 +7,7 @@ ORBIT uses an offline Ed25519-signed license token.
 The shipped application contains only the public verification key. The private signing key stays outside the repository and outside customer installations.
 
 A license token contains:
+
 - license id;
 - plan;
 - subject;
@@ -34,6 +35,7 @@ The script writes only the signed token to stdout.
 ## Customer activation
 
 The Desktop application accepts the token in the local licensing panel. The native runtime verifies:
+
 - token structure;
 - payload constraints;
 - Ed25519 signature;

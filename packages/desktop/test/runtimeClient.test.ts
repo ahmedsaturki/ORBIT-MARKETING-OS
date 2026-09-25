@@ -78,7 +78,10 @@ describe("desktop runtime client", () => {
 
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async (_input, init) => {
-      const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+      const body = JSON.parse(String(init?.body ?? "{}")) as Record<
+        string,
+        unknown
+      >;
       expect(body.topic).toBe("حملة جديدة");
       expect(body.targetAudience).toBe("مشترو العقارات");
       return new Response(

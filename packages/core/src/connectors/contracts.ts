@@ -1,4 +1,9 @@
-import type { ConnectorCapabilities, Platform, Task, TaskKind } from "../types/index.js";
+import type {
+  ConnectorCapabilities,
+  Platform,
+  Task,
+  TaskKind,
+} from "../types/index.js";
 
 export interface ConnectorContext {
   readonly accountId: string;
@@ -38,17 +43,24 @@ export interface PlatformConnector {
 
 export function assertUserConfirmed(context: ConnectorContext): void {
   if (!context.userConfirmed) {
-    throw new Error("Explicit user confirmation is required for external actions");
+    throw new Error(
+      "Explicit user confirmation is required for external actions",
+    );
   }
 }
 
-const TASK_CAPABILITY: Readonly<Record<Exclude<TaskKind, "sync" | "engage">, keyof ConnectorCapabilities>> = {
+const TASK_CAPABILITY: Readonly<
+  Record<Exclude<TaskKind, "sync" | "engage">, keyof ConnectorCapabilities>
+> = {
   publish: "publish",
   message: "messaging",
   comment: "comments",
 };
 
-export function assertSupportedTask(connector: PlatformConnector, task: Task): void {
+export function assertSupportedTask(
+  connector: PlatformConnector,
+  task: Task,
+): void {
   if (task.platform !== connector.platform) {
     throw new Error("Task platform does not match connector platform");
   }

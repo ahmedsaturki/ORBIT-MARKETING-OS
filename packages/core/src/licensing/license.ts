@@ -18,8 +18,15 @@ export interface LicenseToken {
 
 const textEncoder = new TextEncoder();
 
-function isNonEmptyBoundedString(value: unknown, maxLength: number): value is string {
-  return typeof value === "string" && value.trim().length > 0 && value.length <= maxLength;
+function isNonEmptyBoundedString(
+  value: unknown,
+  maxLength: number,
+): value is string {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.length <= maxLength
+  );
 }
 
 function isFiniteNonNegativeInteger(value: unknown): value is number {
@@ -27,13 +34,23 @@ function isFiniteNonNegativeInteger(value: unknown): value is number {
 }
 
 function validatePayload(payload: LicensePayload): void {
-  if (!isNonEmptyBoundedString(payload.licenseId, 200)) throw new Error("Invalid license payload");
-  if (!isNonEmptyBoundedString(payload.subject, 200)) throw new Error("Invalid license payload");
-  if (!["basic", "pro", "agency", "lifetime"].includes(payload.plan)) throw new Error("Invalid license payload");
-  if (!isNonEmptyBoundedString(payload.issuedAt, 100) || Number.isNaN(Date.parse(payload.issuedAt))) {
+  if (!isNonEmptyBoundedString(payload.licenseId, 200))
+    throw new Error("Invalid license payload");
+  if (!isNonEmptyBoundedString(payload.subject, 200))
+    throw new Error("Invalid license payload");
+  if (!["basic", "pro", "agency", "lifetime"].includes(payload.plan))
+    throw new Error("Invalid license payload");
+  if (
+    !isNonEmptyBoundedString(payload.issuedAt, 100) ||
+    Number.isNaN(Date.parse(payload.issuedAt))
+  ) {
     throw new Error("Invalid license payload");
   }
-  if (payload.expiresAt !== undefined && (typeof payload.expiresAt !== "string" || Number.isNaN(Date.parse(payload.expiresAt)))) {
+  if (
+    payload.expiresAt !== undefined &&
+    (typeof payload.expiresAt !== "string" ||
+      Number.isNaN(Date.parse(payload.expiresAt)))
+  ) {
     throw new Error("Invalid license payload");
   }
   if (
@@ -42,10 +59,16 @@ function validatePayload(payload: LicensePayload): void {
   ) {
     throw new Error("Invalid license payload");
   }
-  if (!isFiniteNonNegativeInteger(payload.maxDevices) || payload.maxDevices < 1) {
+  if (
+    !isFiniteNonNegativeInteger(payload.maxDevices) ||
+    payload.maxDevices < 1
+  ) {
     throw new Error("Invalid license payload");
   }
-  if (!isFiniteNonNegativeInteger(payload.accountLimit) || payload.accountLimit < 1) {
+  if (
+    !isFiniteNonNegativeInteger(payload.accountLimit) ||
+    payload.accountLimit < 1
+  ) {
     throw new Error("Invalid license payload");
   }
   if (
@@ -57,11 +80,13 @@ function validatePayload(payload: LicensePayload): void {
   }
 }
 
-
 function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+  return btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/u, "");
 }
 
 function base64UrlToBytes(value: string): Uint8Array {
@@ -119,7 +144,9 @@ export function parseLicenseToken(token: string): LicenseToken {
   const [payloadPart, signaturePart] = parts;
   if (!payloadPart || !signaturePart) throw new Error("Invalid license token");
 
-  const decoded = decodeJson<LicensePayload & { expiresAt?: string | null }>(payloadPart);
+  const decoded = decodeJson<LicensePayload & { expiresAt?: string | null }>(
+    payloadPart,
+  );
   const payload: LicensePayload =
     decoded.expiresAt === null || decoded.expiresAt === undefined
       ? {
@@ -158,7 +185,11 @@ export interface LicenseVerification {
 export async function verifyLicenseToken(
   token: string,
   publicKeyBytes: Uint8Array,
-  context: { readonly deviceCount: number; readonly accountCount: number; readonly now?: Date },
+  context: {
+    readonly deviceCount: number;
+    readonly accountCount: number;
+    readonly now?: Date;
+  },
 ): Promise<LicenseVerification> {
   let parsed: LicenseToken;
   try {
@@ -201,7 +232,10 @@ export async function verifyLicenseToken(
   if (issuedAt.getTime() > now.getTime()) {
     return { valid: false, reason: "malformed", payload: parsed.payload };
   }
-  if (parsed.payload.expiresAt && new Date(parsed.payload.expiresAt).getTime() < now.getTime()) {
+  if (
+    parsed.payload.expiresAt &&
+    new Date(parsed.payload.expiresAt).getTime() < now.getTime()
+  ) {
     return { valid: false, reason: "expired", payload: parsed.payload };
   }
   if (context.deviceCount > parsed.payload.maxDevices) {

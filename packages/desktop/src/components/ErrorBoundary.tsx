@@ -9,7 +9,10 @@ interface ErrorBoundaryState {
   readonly hasError: boolean;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   public state: ErrorBoundaryState = { hasError: false };
 
   public static getDerivedStateFromError(): ErrorBoundaryState {
@@ -26,11 +29,23 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
-        <section className="card" role="alert" style={{ maxWidth: 640, textAlign: "center" }}>
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          padding: 24,
+        }}
+      >
+        <section
+          className="card"
+          role="alert"
+          style={{ maxWidth: 640, textAlign: "center" }}
+        >
           <h1>تعذر إكمال عرض ORBIT</h1>
           <p>
-            حدث خطأ غير متوقع في الواجهة. بيانات runtime وSQLite لم يتم حذفها بسبب هذا الخطأ.
+            حدث خطأ غير متوقع في الواجهة. بيانات runtime وSQLite لم يتم حذفها
+            بسبب هذا الخطأ.
           </p>
           <button
             className="button primary"
