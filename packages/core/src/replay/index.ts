@@ -58,6 +58,9 @@ export function validateReplayTrace(
 ): { readonly valid: boolean; readonly reason?: string } {
   if (events.length === 0) return { valid: false, reason: "replay_empty" };
 
+  const first = events[0];
+  if (!first) return { valid: false, reason: "replay_empty" };
+
   try {
     events.forEach(assertReplayEvent);
   } catch (error) {
@@ -67,10 +70,16 @@ export function validateReplayTrace(
     };
   }
 
-  const first = events[0];
+  if (first.sequence !== 0) {
+    return { valid: false, reason: "replay_sequence_must_start_at_zero" };
+  }
+
   for (let index = 1; index < events.length; index += 1) {
     const previous = events[index - 1];
     const current = events[index];
+    if (!previous || !current) {
+      return { valid: false, reason: "replay_invalid_event" };
+    }
     if (current.sequence !== previous.sequence + 1) {
       return { valid: false, reason: "replay_sequence_gap" };
     }
@@ -100,6 +109,11 @@ export function replayExecutionTrace(
     throw new Error(validation.reason);
   }
 
+  const first = events[0];
+  if (!first) {
+    throw new Error("replay_empty");
+  }
+
   let lifecycleState: ReplayLifecycleState = "created";
   let successfulActions = 0;
   let failedActions = 0;
@@ -118,8 +132,8 @@ export function replayExecutionTrace(
   }
 
   return {
-    workspaceId: events[0].workspaceId,
-    taskId: events[0].taskId,
+    workspaceId: first.workspaceId,
+    taskId: first.taskId,
     lifecycleState,
     eventCount: events.length,
     successfulActions,
