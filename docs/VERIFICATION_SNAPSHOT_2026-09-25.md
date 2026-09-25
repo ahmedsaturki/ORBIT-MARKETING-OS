@@ -4,12 +4,12 @@
 
 - Default branch: `main`
 - Current open implementation PR: #35
-- PR #35 head: `8ac75e9537fa220967eb31b5cfaca67ced6ab614`
+- PR #35 head: `b0ee492275b9cd56353a3bcfcb6e2499820da7af`
 - PR #35 is open, non-draft, unmerged.
 
 ## Exact-head verification
 
-PR #35 CI quality completed successfully on the exact head, including:
+The immediately preceding PR #35 head had a complete CI quality PASS; the current exact head is `b0ee492...` after documentation/cleanup changes and has fresh CI validation active.
 
 - reproducible frozen install;
 - release sanity and secret scan;
@@ -22,7 +22,7 @@ PR #35 CI quality completed successfully on the exact head, including:
 - browser E2E;
 - format check.
 
-PR #35 Rust quality completed successfully on the exact head:
+The immediately preceding PR #35 head had a complete Rust quality PASS; fresh exact-head validation is active.
 
 - rustfmt;
 - cargo check;
@@ -36,7 +36,7 @@ Native desktop validation has produced successful bundles for:
 - macOS x64;
 - macOS arm64.
 
-Windows native E2E and Android debug validation remain the active jobs in the current cut.
+The current exact-head native validation result is not claimed until its fresh jobs settle.
 
 ## Web production
 
