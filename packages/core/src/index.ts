@@ -30,3 +30,6 @@ export * from "./replay/index.js";
 export * from "./policy-packs/index.js";
 export * from "./next-actions/index.js";
 export * from "./campaign-plans/index.js";
+
+export * from "./events/index.js";
+export * from "./commands/index.js";
