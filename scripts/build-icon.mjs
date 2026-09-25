@@ -9,7 +9,10 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const svg = readFileSync(join(root, "packages/desktop/src-tauri/icon-source.svg"), "utf8");
+const svg = readFileSync(
+  join(root, "packages/desktop/src-tauri/icon-source.svg"),
+  "utf8",
+);
 const outDir = join(root, "packages/desktop/src-tauri/icons");
 mkdirSync(outDir, { recursive: true });
 
@@ -21,7 +24,9 @@ try {
   for (const size of sizes) {
     await page.setViewportSize({ width: size, height: size });
     await page.setContent(
-      `<!doctype html><style>*{margin:0;padding:0}html,body{width:${size}px;height:${size}px;background:transparent}</style>${svg.replace(/width="\d+"/, `width="${size}"`).replace(/height="\d+"/, `height="${size}"`)}`,
+      `<!doctype html><style>*{margin:0;padding:0}html,body{width:${size}px;height:${size}px;background:transparent}</style>${svg
+        .replace(/width="\d+"/, `width="${size}"`)
+        .replace(/height="\d+"/, `height="${size}"`)}`,
     );
     const buf = await page.screenshot({
       clip: { x: 0, y: 0, width: size, height: size },
