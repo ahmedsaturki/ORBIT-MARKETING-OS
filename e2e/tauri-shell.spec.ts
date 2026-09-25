@@ -227,13 +227,34 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(proc!.killed).toBe(false);
   });
 
-  test("native runtime restart preserves workspace state", async () => {
+  test("native runtime restart preserves selected workspace state", async () => {
     expect(page, "boot test must run first").not.toBeNull();
 
     const before = (await page!.evaluate(() =>
       window.__TAURI_INTERNALS__.invoke("workspace_current"),
     )) as { id: string; name: string };
 
+    const created = (await page!.evaluate(async () => {
+      const id = "e2e-restart-" + Date.now();
+      return window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Restart Workspace",
+      });
+    })) as { id: string; name: string };
+
+    await page!.evaluate((workspaceId) =>
+      window.__TAURI_INTERNALS__.invoke("workspace_select", { id: workspaceId }),
+      created.id,
+    );
+
+    const selected = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+    expect(selected.id).toBe(created.id);
+    expect(selected.name).toBe(created.name);
+
+    // Abruptly terminate the native process and relaunch it. This exercises
+    // persisted runtime state after a crash-like process stop.
     await killApp();
 
     await launchAndConnectTauri();
@@ -245,8 +266,19 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       window.__TAURI_INTERNALS__.invoke("workspace_current"),
     )) as { id: string; name: string };
 
-    expect(after.id).toBe(before.id);
-    expect(after.name).toBe(before.name);
+    expect(after.id).toBe(created.id);
+    expect(after.name).toBe(created.name);
+
+    // Restore the original workspace so later tests do not inherit test state.
+    await page.evaluate((workspaceId) =>
+      window.__TAURI_INTERNALS__.invoke("workspace_select", { id: workspaceId }),
+      before.id,
+    );
+    const restored = (await page.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+    expect(restored.id).toBe(before.id);
+    expect(restored.name).toBe(before.name);
     await expect(page).toHaveTitle(/Orbit Marketing OS/);
   });
 
