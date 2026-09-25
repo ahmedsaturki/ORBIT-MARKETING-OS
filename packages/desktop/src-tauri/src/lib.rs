@@ -1425,6 +1425,46 @@ BEGIN
 END;
 "#;
 
+CREATE TRIGGER IF NOT EXISTS orbit_opportunities_insert_workspace
+BEFORE INSERT ON opportunities
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM contacts c
+  WHERE c.id = NEW.contact_id
+    AND c.workspace_id = NEW.workspace_id
+)
+OR (
+  NEW.campaign_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM campaigns c
+    WHERE c.id = NEW.campaign_id
+      AND c.workspace_id = NEW.workspace_id
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'opportunity workspace/reference mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_opportunities_update_workspace
+BEFORE UPDATE OF workspace_id, contact_id, campaign_id ON opportunities
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM contacts c
+  WHERE c.id = NEW.contact_id
+    AND c.workspace_id = NEW.workspace_id
+)
+OR (
+  NEW.campaign_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM campaigns c
+    WHERE c.id = NEW.campaign_id
+      AND c.workspace_id = NEW.workspace_id
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'opportunity workspace/reference mismatch');
+END;
+
 fn create_integrity_triggers(connection: &Connection) -> Result<(), AppError> {
     connection.execute_batch(INTEGRITY_TRIGGERS)?;
     Ok(())
@@ -6910,6 +6950,8 @@ fn validate_operational_entity_type(value: &str) -> Result<&'static str, String>
         "policy" => Ok("marketing_policies"),
         "work_item" => Ok("work_items"),
         "agent_run" => Ok("agent_runs"),
+        "opportunity" => Ok("opportunities"),
+        "insight" => Ok("insights"),
         "campaign" => Ok("campaigns"),
         "content" => Ok("content_items"),
         "task" => Ok("tasks"),
@@ -6937,6 +6979,8 @@ fn operational_entity_exists(
         "marketing_policies" => "SELECT EXISTS(SELECT 1 FROM marketing_policies WHERE id=?1 AND workspace_id=?2)",
         "work_items" => "SELECT EXISTS(SELECT 1 FROM work_items WHERE id=?1 AND workspace_id=?2)",
         "agent_runs" => "SELECT EXISTS(SELECT 1 FROM agent_runs WHERE id=?1 AND workspace_id=?2)",
+        "opportunities" => "SELECT EXISTS(SELECT 1 FROM opportunities WHERE id=?1 AND workspace_id=?2)",
+        "insights" => "SELECT EXISTS(SELECT 1 FROM insights WHERE id=?1 AND workspace_id=?2)",
         "campaigns" => "SELECT EXISTS(SELECT 1 FROM campaigns WHERE id=?1 AND workspace_id=?2)",
         "content_items" => "SELECT EXISTS(SELECT 1 FROM content_items WHERE id=?1 AND workspace_id=?2)",
         "tasks" => "SELECT EXISTS(SELECT 1 FROM tasks WHERE id=?1 AND workspace_id=?2)",
