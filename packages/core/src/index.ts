@@ -24,3 +24,6 @@ export * from "./graph/index.js";
 export * from "./graph/context.js";
 export * from "./execution/decision.js";
 export * from "./outcomes/index.js";
+export * from "./simulation/index.js";
+export * from "./replay/index.js";
+export * from "./policy-packs/index.js";
