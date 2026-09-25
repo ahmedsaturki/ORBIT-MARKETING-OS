@@ -4,6 +4,8 @@ Updated: 2026-09-25
 
 ## Current state
 
+PR #39 is the active operating-model foundation line; release validation remains evidence-driven and no unsupported external connector capability is implied.
+
 Production implementation is consolidated on main. Current main HEAD: ddc13f4edf516601a9fc038d97172a8037b30753.
 
 The repository has committed pnpm and Cargo lockfiles and a green full main CI run.
