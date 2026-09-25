@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { OutcomesPanel } from "./components/OutcomesPanel";
 import { OperatingGraphPanel } from "./components/OperatingGraphPanel";
+import { StrategyStudioPanel } from "./components/StrategyStudioPanel";
 import {
   analyzeLocalImage,
   DEFAULT_RUNTIME_URL,
@@ -2537,6 +2538,10 @@ export function App(): ReactElement {
           contacts={contacts}
           campaigns={campaigns}
         />
+      ) : null}
+
+      {activeWorkspace ? (
+        <StrategyStudioPanel workspaceId={activeWorkspace.id} />
       ) : null}
 
       {activeWorkspace ? (
