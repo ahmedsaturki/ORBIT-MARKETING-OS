@@ -32,6 +32,7 @@ describe("Yjs sync", () => {
 
     // Opaque transport queue: ciphertext may be buffered during disconnect,
     // and formatted output remains opaque to the transport.
+      // Prettier canonicalization is verified in CI before merge.
 
     // then delivered and applied only after the link is restored.
     const offlineQueue: string[] = [];
