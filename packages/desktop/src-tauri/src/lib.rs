@@ -4606,7 +4606,7 @@ fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<Con
 
 fn uuid_like() -> String {
     let mut bytes = [0u8; 16];
-    rand::rng().fill_bytes(&mut bytes);
+    rand::fill(&mut bytes);
     B64.encode(bytes)
         .replace('/', "_")
         .replace('+', "-")
