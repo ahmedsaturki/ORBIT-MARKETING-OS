@@ -28,7 +28,9 @@ export function buildGroundedKnowledgeContext(
   sources: readonly KnowledgeSource[],
   options: KnowledgeContextOptions = {},
 ): GroundedKnowledgeContext {
-  if (!workspaceId.trim()) throw new Error("knowledge_context_workspace_required");
+  if (!workspaceId.trim()) {
+    throw new Error("knowledge_context_workspace_required");
+  }
 
   const now = options.now ?? new Date().toISOString();
   if (Number.isNaN(Date.parse(now))) {
