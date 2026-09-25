@@ -8236,6 +8236,85 @@ fn audit_hash(
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
+fn operational_event_kind_for_audit(category: &str, action: &str) -> &'static str {
+    match (category.trim(), action.trim()) {
+        ("content", "approval_request") => "approval.requested",
+        ("content", "approval_decide") => "approval.decided",
+        ("task", "enqueue") => "work.created",
+        ("task", _) => "work.state_changed",
+        ("connector", _) => "connector.result",
+        ("insight", _) | ("analytics", _) => "insight.recorded",
+        (_, action) if action.contains("dispatch") => "connector.dispatched",
+        (_, action) if action.contains("execute") || action.contains("publish") || action.contains("send") => "connector.result",
+        _ => "command.completed",
+    }
+}
+
+fn operational_event_outcome_for_audit(outcome: &str) -> &'static str {
+    match outcome.trim().to_ascii_lowercase().as_str() {
+        "success" | "succeeded" => "succeeded",
+        "failure" | "failed" | "error" => "failed",
+        "blocked" => "blocked",
+        "pending" | "waiting" => "waiting",
+        _ => "started",
+    }
+}
+
+fn append_operational_event_from_audit(
+    connection: &Connection,
+    workspace_id: &str,
+    audit_id: &str,
+    timestamp: &str,
+    category: &str,
+    action: &str,
+    outcome: &str,
+    actor: &str,
+    entity_id: Option<&str>,
+) -> Result<(), rusqlite::Error> {
+    if workspace_id.trim().is_empty() || actor.trim().is_empty() {
+        return Ok(());
+    }
+
+    let next_sequence: i64 = connection.query_row(
+        "SELECT COALESCE(MAX(sequence), 0) + 1
+         FROM operational_events
+         WHERE workspace_id=?1",
+        params![workspace_id],
+        |row| row.get(0),
+    )?;
+
+    let payload_json = serde_json::json!({
+        "source": "audit_bridge",
+        "audit_id": audit_id,
+        "category": category,
+        "action": action,
+    })
+    .to_string();
+
+    connection.execute(
+        "INSERT INTO operational_events(
+          id, workspace_id, sequence, timestamp, kind, outcome, actor, actor_id,
+          entity_type, entity_id, trace_id, parent_event_id, payload_json
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL, ?12)",
+        params![
+            format!("op-{}", uuid_like()),
+            workspace_id,
+            next_sequence,
+            timestamp,
+            operational_event_kind_for_audit(category, action),
+            operational_event_outcome_for_audit(outcome),
+            actor.trim(),
+            actor.trim(),
+            Some(category.trim()),
+            entity_id,
+            audit_id,
+            payload_json,
+        ],
+    )?;
+
+    Ok(())
+}
+
 fn append_audit_event(
     connection: &Connection,
     workspace_id: &str,
@@ -8280,7 +8359,7 @@ fn append_audit_event(
          )
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, ?10)",
         params![
-            id,
+            &id,
             workspace_id,
             timestamp,
             category,
@@ -8292,6 +8371,19 @@ fn append_audit_event(
             hash
         ],
     )?;
+
+    append_operational_event_from_audit(
+        connection,
+        workspace_id,
+        &id,
+        &timestamp,
+        category,
+        action,
+        outcome,
+        actor,
+        entity_id,
+    )?;
+
     Ok(())
 }
 
