@@ -366,12 +366,14 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       window.__TAURI_INTERNALS__.invoke("workspace_current"),
     )) as { id: string; name: string };
 
-    const recoveryWorkspace = (await page!.evaluate(async (id) =>
-      window.__TAURI_INTERNALS__.invoke("workspace_create", {
-        id,
-        name: "E2E Recovery Isolation",
-      }),
-    `e2e-recovery-workspace-${suffix}`)) as { id: string; name: string };
+    const recoveryWorkspace = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Recovery Isolation",
+        }),
+      `e2e-recovery-workspace-${suffix}`,
+    )) as { id: string; name: string };
 
     await page!.evaluate(
       (workspaceId) =>
