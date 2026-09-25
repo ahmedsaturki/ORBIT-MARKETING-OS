@@ -8603,6 +8603,59 @@ mod tests {
     }
 
     #[test]
+    fn knowledge_validators_enforce_supported_types_and_safe_hashes() {
+        assert_eq!(
+            validate_knowledge_source_type("Research").expect("source type should normalize"),
+            "research"
+        );
+        assert!(validate_knowledge_source_type("scrape").is_err());
+        assert_eq!(
+            validate_knowledge_trust("VERIFIED").expect("trust should normalize"),
+            "verified"
+        );
+        assert!(validate_knowledge_trust("trusted").is_err());
+        assert_eq!(
+            validate_hash_64(&"A".repeat(64), "excerpt_hash")
+                .expect("valid hash should normalize"),
+            "a".repeat(64)
+        );
+        assert!(validate_hash_64("abcd", "excerpt_hash").is_err());
+        assert!(validate_hash_64(&"g".repeat(64), "excerpt_hash").is_err());
+    }
+
+    #[test]
+    fn knowledge_source_reference_validation_is_workspace_scoped() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO knowledge_sources(id, workspace_id, type, title, collected_at)
+                 VALUES ('source-a', 'workspace-a', 'research', 'A', '1'),
+                        ('source-b', 'workspace-b', 'research', 'B', '1');",
+            )
+            .expect("knowledge source fixtures should be inserted");
+
+        assert!(validate_workspace_source_ids(
+            &connection,
+            "workspace-a",
+            r#"["source-a"]"#,
+        )
+        .is_ok());
+        assert!(validate_workspace_source_ids(
+            &connection,
+            "workspace-a",
+            r#"["source-b"]"#,
+        )
+        .is_err());
+    }
+
+    #[test]
     fn strategy_brain_validators_reject_malformed_payloads() {
         assert_eq!(
             validate_json_string_array(
