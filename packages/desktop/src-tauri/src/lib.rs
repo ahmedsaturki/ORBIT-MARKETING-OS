@@ -1490,6 +1490,15 @@ OR (
       AND c.workspace_id = NEW.workspace_id
   )
 )
+OR (
+  NEW.owner_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM workspace_memberships m
+    WHERE m.workspace_id = NEW.workspace_id
+      AND m.user_id = NEW.owner_id
+      AND m.active = 1
+  )
+)
 BEGIN
   SELECT RAISE(ABORT, 'opportunity workspace/reference mismatch');
 END;
@@ -1508,6 +1517,15 @@ OR (
     SELECT 1 FROM campaigns c
     WHERE c.id = NEW.campaign_id
       AND c.workspace_id = NEW.workspace_id
+  )
+)
+OR (
+  NEW.owner_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM workspace_memberships m
+    WHERE m.workspace_id = NEW.workspace_id
+      AND m.user_id = NEW.owner_id
+      AND m.active = 1
   )
 )
 BEGIN
@@ -10699,7 +10717,7 @@ mod tests {
                  )",
                 [],
             )
-            .is_ok());
+            .is_err());
 
         let opportunity_exists: i64 = connection
             .query_row(
