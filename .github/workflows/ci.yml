@@ -3,7 +3,7 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: ["rebuild/orbit-production-final"]
+    branches: ["main", "rebuild/orbit-production-final"]
   pull_request:
     branches: ["main"]
 
