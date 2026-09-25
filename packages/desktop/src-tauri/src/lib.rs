@@ -10467,6 +10467,56 @@ mod tests {
     }
 
     #[test]
+    fn outcome_updates_preserve_creation_timestamp() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1');
+                INSERT INTO contacts(id, workspace_id, display_name, status, created_at, updated_at)
+                VALUES ('contact-a', 'workspace-a', 'A', 'new', '1', '1');
+                INSERT INTO opportunities(
+                  id, workspace_id, contact_id, name, stage, value, currency,
+                  probability, created_at, updated_at
+                ) VALUES (
+                  'opp-time', 'workspace-a', 'contact-a', 'Deal', 'new',
+                  100, 'USD', 10, 'created-original', 'updated-original'
+                );
+                "#,
+            )
+            .expect("initial outcome should insert");
+
+        connection
+            .execute(
+                "UPDATE opportunities
+                 SET stage='qualified', updated_at='updated-new'
+                 WHERE id='opp-time' AND workspace_id='workspace-a'",
+                [],
+            )
+            .expect("outcome should update");
+
+        let timestamps: (String, String) = connection
+            .query_row(
+                "SELECT created_at, updated_at
+                 FROM opportunities
+                 WHERE id='opp-time' AND workspace_id='workspace-a'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("updated outcome should be queryable");
+
+        assert_eq!(timestamps.0, "created-original");
+        assert_eq!(timestamps.1, "updated-new");
+    }
+
+    #[test]
     fn outcome_analytics_is_grouped_by_currency() {
         let connection =
             Connection::open_in_memory().expect("in-memory SQLite should be available");
