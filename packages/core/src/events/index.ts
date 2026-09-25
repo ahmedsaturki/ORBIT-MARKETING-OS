@@ -1,11 +1,7 @@
 import { redactRecord } from "../security/redaction.js";
 
 export type OperationalEventOutcome =
-  | "started"
-  | "succeeded"
-  | "failed"
-  | "blocked"
-  | "waiting";
+  "started" | "succeeded" | "failed" | "blocked" | "waiting";
 export type OperationalEventKind =
   | "command.received"
   | "command.authorized"
@@ -36,8 +32,10 @@ export interface OperationalEvent {
   readonly payload?: Readonly<Record<string, unknown>>;
 }
 
-export interface OperationalEventInput
-  extends Omit<OperationalEvent, "id" | "sequence"> {
+export interface OperationalEventInput extends Omit<
+  OperationalEvent,
+  "id" | "sequence"
+> {
   readonly id?: string;
   readonly sequence?: number;
 }
@@ -65,7 +63,11 @@ function cloneEvent(event: OperationalEvent): OperationalEvent {
   return {
     ...event,
     ...(event.payload
-      ? { payload: cloneValue(event.payload) as Readonly<Record<string, unknown>> }
+      ? {
+          payload: cloneValue(event.payload) as Readonly<
+            Record<string, unknown>
+          >,
+        }
       : {}),
   };
 }
@@ -129,7 +131,8 @@ export class OperationalEventLog {
       sequence: this.nextSequence,
     });
 
-    if (this.ids.has(event.id)) throw new Error("operational_event_duplicate_id");
+    if (this.ids.has(event.id))
+      throw new Error("operational_event_duplicate_id");
     if (event.parentEventId && !this.ids.has(event.parentEventId)) {
       throw new Error("operational_event_parent_missing");
     }
@@ -157,7 +160,9 @@ export class OperationalEventLog {
   }
 
   public forTrace(traceId: string): readonly OperationalEvent[] {
-    return this.events.filter((event) => event.traceId === traceId).map(cloneEvent);
+    return this.events
+      .filter((event) => event.traceId === traceId)
+      .map(cloneEvent);
   }
 
   public snapshot(): {
