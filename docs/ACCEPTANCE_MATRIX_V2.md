@@ -1,48 +1,66 @@
 # ORBIT Acceptance Matrix v2
 
+Last evidence refresh: 2026-09-25
+
 Status vocabulary: `PASS`, `FAIL`, `PARTIAL`, `UNVERIFIED`, `NOT_APPLICABLE`.
 
 A feature cannot be marked PASS from source inspection alone when the requirement is runtime behavior.
 
-| ID | Requirement | Evidence required | Status | Evidence |
-|---|---|---|---|---|
-| SEC-01 | Secrets encrypted at rest | cryptographic tests + restore test | PASS | `src/security/vault.ts` AES-256-GCM + scrypt (N=16384) atomic file vault; `test/security-vault.test.ts` 13 tests: plaintext never on disk, wrong passphrase/tampered-ciphertext/tampered-salt/foreign-file/truncated rejected, restore-from-copy, rollback on failed persist |
-| SEC-02 | Secrets excluded from logs/analytics | redaction tests + log scan | PASS | `src/security/redaction.ts` pattern+deep-key redaction wired into `server.ts` error/warn logs; `test/security-redaction.test.ts` 6 tests incl. sentinel log scan (JWT/AWS/Google/vendor tokens/passwords/URL creds never appear in logger output) |
-| SEC-03 | Renderer capability isolation | Tauri capability review + E2E | PASS | Tauri 2.11 shell in `src-tauri/` (v2 capability model, deny-by-default): `capabilities/default.json` grants exactly `core:default` scoped to window `main`; `e2e/tauri-shell.spec.ts` (4 tests, real WebView2 attached over CDP): boots the embedded production `dist/`, IPC positive control (`scale_factor` granted → 1.25), `plugin:window|destroy` + `plugin:fs|read_text_file` rejected with `not allowed by ACL` while the window survives, CSP violation fired for remote script injection; file-based capability review asserts no wildcard/dangerous permissions, strict CSP (`script-src 'self'`, no unsafe-eval/remote origins), `freezePrototype`, no CSP bypass; release build + `gen/schemas/` committed, build reproducible via `npm run tauri:build` (`scripts/build-tauri.mjs` — forces msvc toolchain + vcvars + `custom-protocol`) |
-| SEC-04 | License tamper detection | mutation/forgery tests | PASS | `src/security/license.ts` HMAC-SHA256 (timing-safe) signed licenses; `test/security-license.test.ts` 10 tests: tier/seat upgrade forgery, bit-flipped payload, wrong secret, spliced tokens, expired/not-yet-valid, malformed, correctly-signed invalid claims rejected |
-| DATA-01 | Local SQLite persistence | clean runtime test | PASS | `packages/core/src/data/sqlite.ts` + `test/data-sqlite.test.ts` (WAL db opens, applies migrations, persists across close/reopen, upsert, workspace isolation) |
-| DATA-02 | Migration safety | forward migration + backup restore | PASS | `test/data-backup.test.ts` (v1→v2 forward migration without data loss; pre-migration backup restored and migrated forward; failing migration rolls back atomically) + `test/data-sqlite.test.ts` (idempotent reopen) |
-| DATA-03 | 1,000 contacts searchable | performance benchmark | PASS | `test/data-sqlite.test.ts` (1,000 contacts bulk-inserted in one transaction, searched by name/email/tag with pagination; full suite runs in ~5s) |
-| QUE-01 | Persistent queue | restart/recovery test | PASS | `packages/core/src/queue/persistence.ts` + `test/queue-persistence.test.ts` (file store restart restore, running→retrying/failed recovery, corrupt snapshot rejected, atomic save) |
-| QUE-02 | Bounded retries | deterministic retry tests | PASS | `packages/core/test/queue.test.ts` (shouldRetry, scheduleRetry, backoff bounds) |
-| QUE-03 | Circuit breaker | fault-injection test | PASS | `packages/core/test/policy.test.ts` (failure injection opens breaker; half-open after pause) |
-| CAMP-01 | Campaign creates tasks | integration test | PASS | `src/workflows/campaigns.ts` + `test/campaigns.test.ts` (create→activate→membership→enqueue into real `PersistentQueue`; task carries campaignId/workspace/account/payload; multi-member enqueue) |
-| CAMP-02 | Account membership enforced | negative integration test | PASS | `test/campaigns.test.ts` (non-member account rejected and queue unchanged; cross-workspace membership rejected; draft/paused/completed campaigns fail closed; malformed fields rejected) |
-| CAMP-03 | Approval gates block execution | workflow test | PASS | `packages/core/test/approval.test.ts` (fail-closed without approval evidence) + queue gate blocks when `approvalAllowed=false` |
-| CONT-01 | Content variants | local AI fixture/provider test | PASS | `src/content/variants.ts` VariantProvider abstraction + `test/content-variants.test.ts` 8 tests: local fixture generates bounded per-platform variants, provider failure/over-limit/empty/unknown-platform all fail closed, `withPlatformVariants` frozen merge |
-| CONT-02 | Media metadata/search | indexing test | PASS | `src/media/index.ts` workspace-scoped `MediaIndex` + `test/media-index.test.ts` 6 tests: case-insensitive filename search, tag/mime-prefix filters with AND semantics, workspace isolation on get/search/count/remove, duplicate/malformed rejection |
-| INBOX-01 | Unified conversation model | connector fixture integration | PASS | `src/inbox/index.ts` `UnifiedInbox` + `test/inbox.test.ts` 6 tests: Facebook/Telegram fixtures normalized into one workspace inbox, threads keyed platform+account+external-id (no cross-platform collisions), chronological order, idempotent re-delivery, markRead, workspace isolation, malformed fail closed |
-| CRM-01 | Conversation-contact linking | relational integration test | PASS | `test/data-sqlite.test.ts` (conversation links to contact under `PRAGMA foreign_keys = ON`; inserting a conversation for a non-existent contact is rejected; workspace-scoped counts) |
-| SYNC-01 | Offline edits survive restart | device simulation test | PASS | `src/sync/index.ts` (`SyncDocument` + `FileSyncStore`) + `test/sync.test.ts` 3 tests: offline edits persist through FileSyncStore and restore across two simulated restarts, remote-while-offline edits survive restart, corrupt/truncated/wrong-version/undecodable snapshots rejected fail-closed |
-| SYNC-02 | Concurrent edits converge | Yjs convergence test | PASS | `test/sync.test.ts` 5 tests with real yjs 13.6.33: concurrent text edits converge (identical state vectors + content), same-key concurrent map writes pick one deterministic winner on both sides, three-device mesh converges after two all-pairs rounds, garbage/empty updates rejected fail-closed, onAnyUpdate emits each update exactly once |
-| BACK-01 | Encrypted backup | backup/restore test | PASS | `packages/core/src/data/backup.ts` + `test/data-backup.test.ts` (AES-256-GCM passphrase roundtrip, plaintext roundtrip, restore over existing destination clears stale WAL sidecars, passphrase required to verify) |
-| BACK-02 | Corrupt backup rejected | integrity test | PASS | `test/data-backup.test.ts` (flipped bit in encrypted payload, flipped bit in plaintext payload, tampered header hash, wrong passphrase, truncated file, non-container file, corrupt restore never overwrites destination) |
-| CONN-01 | Capability handshake | connector contract test | PASS | `packages/core/test/connectors.test.ts` (handshake accepts/rejects declared vs implemented) |
-| CONN-02 | Unsupported action rejected | negative connector test | PASS | `packages/core/test/connectors.test.ts` (executeCapability rejects undeclared capability) |
-| CONN-03 | Challenge causes safe stop | browser fixture test | PASS | `e2e/connector-challenge.spec.ts` (3 tests, real Chromium fixtures): challenge page DOM detection (captcha iframe / 2FA input / checkpoint form) feeds `handleChallenge` → `requiresIntervention` and runner executes no step after detection; normal-page control runs the full pipeline to completion; no-challenge reported as non-intervention; core logic also covered in `connectors.test.ts` |
-| WEB-01 | PWA manifest/service worker | production browser test | PASS | `e2e/pwa.spec.ts` (3 tests, Chromium 153): manifest linked in DOM and served with all icon URLs returning 200; service worker installs→activates→controls the page live (prod-only registration in `src/main.tsx` verified at runtime); offline reload serves the full app shell from cache after one controlled visit |
-| MOB-01 | Mobile control surface | Expo typecheck/build test | PASS | `packages/mobile/` — Expo SDK 57 (expo 57.0.25 / react-native 0.86.3 / react 19.2.3) monitoring surface: typed health-polling client `src/api.ts` (5s poll, AbortController timeout, latency capture) + shared-contract guards `src/contracts.ts` (type-only imports from `packages/core/src/types` with `Assert<Eq<...>>` exhaustive equality checks over TaskStatus/ApprovalStatus/CircuitState/PolicyDecisionReason/TaskActionType — core union drift fails the mobile typecheck). Executed evidence: `npm run mobile:typecheck` PASS (tsc strict), `npm run mobile:build` PASS (`expo export --platform android`: 582 modules bundled → 1.4 MB Hermes bytecode in `packages/mobile/dist/`). Scope honesty: monitoring + contract sharing; control actions await backend control endpoints |
-| REL-01 | Reproducible workspace install | clean CI checkout | PARTIAL | `package-lock.json` + `packages/core/package-lock.json` committed; CI triggered on push (run 36028445859) but jobs blocked by GitHub billing/spending limit — needs first green run after billing fix |
-| REL-02 | Signed desktop artifact | release pipeline evidence | UNVERIFIED | Signing keys/pipeline not configured |
-| REL-03 | Checksums match distributed artifacts | release verification | PARTIAL | `npm run checksums` writes `dist/SHA256SUMS.txt`; CI uploads artifact; distribution-side match pending |
-| OPS-01 | Crash recovery | forced termination test | PASS | `test/crash-recovery.test.ts` (child process runs production queue+SQLite code, SIGKILL'd mid-open-transaction; running task → retrying with `interrupted_before_restart`, committed rows survive, uncommitted transaction rolls back, `integrity_check` ok, recovery idempotent on reopen) |
-| OPS-02 | 24h stability | soak-test evidence | PARTIAL | Harness `scripts/soak.ts` (`npm run soak -- --hours 24`): spawns prod server, mixes health/static/AI-endpoint probes with an in-process core workload (policy gate allow+deny, retry/backoff lifecycle, circuit breaker open+recover, audit-chain append/verify) under a 600 MB RSS budget, fail-fast exit codes; artifacts `logs/soak-summary.json` + per-cycle `logs/soak-*.jsonl`. Verified 10-min run: **295/295 health probes OK, 73 endpoint responses/0 errors, RSS flat 47→48 MB, 295 core assertion cycles, 0 failures**. Full 24h run still required — must be scheduled/executed outside an interactive session |
-| PERF-01 | Startup target | measured benchmark | PASS | `test/perf-benchmark.test.ts` spawns production server (`NODE_ENV=production`) and measures spawn→`/api/health` first-200: 1.9–5.6s measured (idle vs parallel suite load), asserted ≤8000ms budget; free-port probe avoids this machine's dead 45000–48999 TCP range; process tree killed after each run |
-| PERF-02 | Memory target | measured benchmark | PASS | `test/perf-benchmark.test.ts` + `test/fixtures/perf-memory-worker.mjs`: after 1,000 contacts + 500 queue tasks + 500 inbox messages + 200 media assets + 100 variant generations, worker self-reports RSS 70.9–77.6MB (≤200MB budget) and heapUsed ~10.6MB (≤100MB budget); workload counts asserted before trusting the number |
-| QA-01 | Unit coverage threshold | coverage report | PASS | `npm run test:coverage --prefix packages/core` enforces thresholds (lines ≥80, funcs ≥80, branches ≥70); 125 tests, clean run 95.4% lines / 88.39% branches / 98.01% funcs |
-| QA-02 | Critical E2E paths | Playwright report | PASS | `npm run test:e2e` — `e2e/critical-paths.spec.ts` (4 tests) + `e2e/pwa.spec.ts` (3 tests) + `e2e/connector-challenge.spec.ts` (3 tests) + `e2e/tauri-shell.spec.ts` (4 tests) against a production build (`NODE_ENV=production`, real `dist/`): branded boot + title, `/api/health` ok, workspace tab navigation with shell intact, static assets 200, manifest/icons, SW lifecycle, offline shell, challenge safe-stop, Tauri ACL denial + CSP isolation; HTML report in `playwright-report/`, CI job `e2e` added |
-| DOC-01 | User guide matches product | documentation review | PASS | `docs/USER_GUIDE.md` — full guide (install/run, all 12 workspace tabs matched against `App.tsx` nav, automation lifecycle `queued→running→completed/retrying→failed/cancelled/blocked` and approval statuses `draft→pending→approved\|rejected\|changes_requested` verified against `packages/core/src/types/index.ts` + `workflows/approval.ts`, inbox/CRM, content+DAM, vault/Anti-Ban, sync/licensing, offline/PWA, security invariants, Tauri shell, troubleshooting, FAQ); README links to it |
-| DOC-02 | Security model documented | security review | PASS | `docs/SECURITY_MODEL.md` documents trust boundaries, gates, audit chain, release integrity |
+| ID       | Requirement                                                                 | Evidence required                                   |
+| -------- | --------------------------------------------------------------------------- | --------------------------------------------------- |
+| SEC-01   | Secrets encrypted at rest                                                   | cryptographic tests + restore test                  |
+| SEC-02   | Secrets excluded from logs/analytics                                        | redaction tests + log scan                          |
+| SEC-03   | Renderer capability isolation                                               | Tauri capability review + E2E                       |
+| SEC-04   | License tamper detection                                                    | mutation/forgery tests                              |
+| DATA-01  | Local SQLite persistence                                                    | clean runtime test                                  |
+| DATA-02  | Migration safety                                                            | forward migration + backup restore                  |
+| DATA-03  | 1,000 contacts searchable                                                   | performance benchmark                               |
+| WS-01    | Workspace membership is required for workspace access                       | native SQLite membership test + IPC negative test   |
+| WS-02    | Workspace switching persists and scopes data                                | restart test + multi-workspace integration test     |
+| WS-03    | Workspace membership gates sensitive operations                             | negative native IPC tests                           |
+| QUE-01   | Persistent queue                                                            | restart/recovery test                               |
+| QUE-02   | Bounded retries                                                             | deterministic retry tests                           |
+| QUE-03   | Circuit breaker                                                             | fault-injection test                                |
+| QUE-04   | Human-intervention wait state                                               | task parks and resumes without consuming an attempt |
+| RBAC-01  | Sensitive IPC operations require role authorization                         | role matrix test + native IPC integration           |
+| CAMP-01  | Campaign creates tasks                                                      | integration test                                    |
+| CAMP-02  | Account membership enforced                                                 | negative integration test                           |
+| CAMP-03  | Approval gates block execution                                              | workflow test                                       |
+| CONT-01  | Content variants                                                            | local AI fixture/provider test                      |
+| CONT-02  | Media metadata/search                                                       | indexing test                                       |
+| CONT-03  | Content validation and platform variant selection                           | deterministic content contract tests                |
+| MEDIA-01 | Media type/size/hash validation and local search                            | media contract tests                                |
+| MEDIA-02 | Local media file import with streaming SHA-256                              | native file-hash integration test                   |
+| AN-01    | Campaign analytics remain campaign-scoped                                   | analytics isolation tests                           |
+| AUTO-01  | Enabled external automation rules require confirmation                      | rule-pack validation tests                          |
+| AUTO-02  | Enabled Rule Pack lifecycle is persisted and bounded                        | native lifecycle integration test                   |
+| INBOX-01 | Unified conversation model                                                  | connector fixture integration                       |
+| CRM-01   | Conversation-contact linking                                                | relational integration test                         |
+| SYNC-01  | Offline edits survive restart                                               | device simulation test                              |
+| SYNC-02  | Concurrent edits converge                                                   | Yjs convergence test                                |
+| BACK-01  | Encrypted backup                                                            | backup/restore test                                 |
+| BACK-02  | Corrupt backup rejected                                                     | integrity test                                      |
+| BACK-03  | Restore rejects newer/incompatible schema                                   | restore integration test                            |
+| CONN-01  | Capability handshake                                                        | connector contract test                             |
+| CONN-02  | Unsupported action rejected                                                 | negative connector test                             |
+| CONN-03  | Challenge causes safe stop                                                  | browser fixture test                                |
+| CONN-04  | Native direct execution enforces local daily/circuit safety budgets         | Rust unit test + source gate                        |
+| CONN-05  | LinkedIn Posts API connector is capability/authorization scoped             | connector unit fixtures + controlled API test       |
+| WEB-01   | PWA manifest/service worker                                                 | production browser test                             |
+| AI-01    | Local AI Studio chat/content/image analysis stays on local runtime boundary | desktop client contract tests + runtime smoke       |
+| MOB-01   | Mobile control surface                                                      | Expo typecheck/build test                           |
+| REL-01   | Reproducible workspace install                                              | clean CI checkout                                   |
+| REL-02   | Signed desktop artifact                                                     | release pipeline evidence                           |
+| REL-03   | Checksums match distributed artifacts                                       | release verification                                |
+| LIC-01   | Offline license install/verification/removal                                | signed token tests + native integration             |
+| OPS-01   | Crash recovery                                                              | forced termination test                             |
+| OPS-02   | 24h stability                                                               | soak-test evidence                                  |
+| PERF-01  | Startup target                                                              | measured benchmark                                  |
+| PERF-02  | Memory target                                                               | measured benchmark                                  |
+| QA-01    | Unit coverage threshold                                                     | coverage report                                     |
+| QA-02    | Critical E2E paths                                                          | Playwright report                                   |
+| DOC-01   | User guide matches product                                                  | documentation review                                |
+| DOC-02   | Security model documented                                                   | security review                                     |
 
 ## Gate rules
 
@@ -50,9 +68,3 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 - Any `UNVERIFIED` runtime requirement blocks the claim "production ready".
 - Performance targets are measured, never inferred from code size.
 - Real-platform tests must be controlled and must not be used to claim immunity from platform enforcement.
-
-## Current release posture
-
-- No `FAIL` entries.
-- Multiple `UNVERIFIED` runtime requirements remain → **not production-ready** claim is blocked per gate rules.
-- Core domain gates (approval, retries, persistent queue recovery, circuit breaker, connector handshake, audit chain, SQLite persistence, migrations, encrypted backup, corruption rejection, campaign membership, secret vault/redaction, license tampering, content variants, media index, unified inbox, offline-first sync and CRDT convergence, startup/memory budgets) are covered by deterministic unit tests (125 tests), plus 14 Playwright E2E tests (critical paths, PWA/offline, connector challenge safe-stop, Tauri capability isolation) against a production build, plus a fail-fast stability soak harness with a verified 10-minute run (295 cycles, zero failures, flat RSS).

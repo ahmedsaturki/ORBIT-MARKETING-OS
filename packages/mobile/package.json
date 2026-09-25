@@ -1,24 +1,36 @@
 {
-    "name":  "mobile",
-    "version":  "1.0.0",
-    "main":  "index.ts",
-    "dependencies":  {
-                         "expo":  "~57.0.25",
-                         "expo-status-bar":  "~57.0.1",
-                         "react":  "19.2.3",
-                         "react-native":  "0.86.3"
-                     },
-    "devDependencies":  {
-                            "@types/react":  "~19.2.2",
-                            "typescript":  "~6.0.3"
-                        },
-    "scripts":  {
-                    "start":  "expo start",
-                    "android":  "expo start --android",
-                    "ios":  "expo start --ios",
-                    "web":  "expo start --web",
-                    "typecheck":  "tsc --noEmit",
-                    "build":  "expo export --platform android"
-                },
-    "private":  true
+  "name": "@orbit/mobile",
+  "version": "0.2.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build": "expo export --platform web",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "expo": "^57.0.24",
+    "expo-router": "^57.0.22",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-web": "~0.21.0",
+    "expo-secure-store": "57.0.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "6.0.3",
+    "tsx": "4.23.15",
+    "@types/node": "^22.20.3"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  }
 }

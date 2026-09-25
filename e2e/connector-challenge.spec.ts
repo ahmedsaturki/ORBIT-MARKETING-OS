@@ -46,7 +46,11 @@ async function detectInPage(page: Page): Promise<ChallengeDetection> {
       'form[action*="challenge"], form[action*="validate"]',
     );
     if (captchaIframe) {
-      return { kind: "captcha", detected: true, selectorHint: "iframe[src*=captcha]" };
+      return {
+        kind: "captcha",
+        detected: true,
+        selectorHint: "iframe[src*=captcha]",
+      };
     }
     if (twoFactorInput) {
       return {
@@ -98,7 +102,8 @@ test.describe("connector challenge causes safe stop (CONN-03)", () => {
     }
 
     expect(stop).not.toBeNull();
-    if (!stop || stop.ok) throw new Error("expected challenge to stop the runner");
+    if (!stop || stop.ok)
+      throw new Error("expected challenge to stop the runner");
     expect(stop.requiresIntervention).toBe(true);
     expect(stop.error).toContain("automation stopped safely");
 

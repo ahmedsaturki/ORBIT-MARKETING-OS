@@ -10,3 +10,6 @@ src-tauri/target/
 *.log
 .env*
 !.env.example
+*.pem
+*.key
+.orbit-secrets/

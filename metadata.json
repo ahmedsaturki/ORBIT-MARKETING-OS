@@ -1,6 +1,5 @@
 {
-  "name": "Orbit Marketing OS - منصة تشغيل وتسويق وأتمتة شاملة",
-  "description": "منصة تشغيل وتسويق وأتمتة شاملة متعددة القنوات مع مساعد ذكاء اصطناعي تفاعلي متعدد الأدوار وتحليل إعلانات بالذكاء الاصطناعي وجدولة حملات وحماية الحسابات.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "Orbit Marketing OS - Local-First Marketing Operations",
+  "description": "منصة تشغيل تسويق محلية لإدارة المحتوى والحملات والعملاء والتكاملات المصرح بها.",
+  "requestFramePermissions": []
 }

@@ -1,0 +1,33 @@
+[package]
+name = "orbit-marketing-os"
+version = "0.2.0"
+description = "ORBIT Marketing OS desktop runtime"
+authors = ["ORBIT Marketing OS"]
+edition = "2021"
+
+[lib]
+name = "orbit_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "orbit-marketing-os"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+aes-gcm = "0.10"
+argon2 = "0.5"
+base64 = "0.22"
+ed25519-dalek = "2"
+rand = "0.9"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+sha2 = "0.10"
+rusqlite = { version = "0.38", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+time = { version = "0.3", features = ["formatting", "parsing"] }
+tauri = { version = "2.11.5", features = [] }
+thiserror = "2"
+zeroize = "1"

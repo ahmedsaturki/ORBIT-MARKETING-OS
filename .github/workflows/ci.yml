@@ -1,89 +1,131 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main]
+    branches: ["rebuild/orbit-production-final"]
   pull_request:
-    branches: [main]
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orbit-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  verify:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20, 22]
-
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
+          version: 10.17.1
 
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Install core dependencies
-        run: npm ci
-        working-directory: packages/core
-
-      - name: Typecheck app
-        run: npm run lint
-
-      - name: Typecheck core
-        run: npm run typecheck
-        working-directory: packages/core
-
-      - name: Core unit tests with coverage
-        run: npm run test:coverage
-        working-directory: packages/core
-
-      - name: Production build
-        run: npm run build
-
-      - name: Verify dist artifacts exist
-        run: |
-          test -f dist/index.html
-          test -f dist/manifest.webmanifest
-          test -f dist/sw.js
-
-      - name: Generate checksums
-        run: npm run checksums
-
-      - name: Upload checksums
-        uses: actions/upload-artifact@v4
-        with:
-          name: checksums-node-${{ matrix.node-version }}
-          path: dist/SHA256SUMS.txt
-
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
-          cache: npm
 
-      - name: Install root dependencies
-        run: npm ci
+      - name: Verify toolchain
+        run: |
+          node --version
+          pnpm --version
+          test "$(pnpm --version)" = "10.17.1"
+
+      - name: Require committed lockfiles
+        run: test -f pnpm-lock.yaml
+      - name: Require desktop Cargo.lock
+        run: test -f packages/desktop/src-tauri/Cargo.lock
+
+      - name: Release sanity
+        run: pnpm verify:release
+
+      - name: Secret scan
+        run: pnpm security:scan
+
+      - name: Workspace sanity
+        run: pnpm verify:workspace
+
+      - name: Reproducible install
+        run: pnpm install --frozen-lockfile
+
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Desktop IPC contract
+        run: pnpm verify:ipc
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Core coverage
+        run: pnpm --filter @orbit/core test:coverage
+
+      - name: Runtime smoke
+        timeout-minutes: 3
+        run: pnpm test:runtime
+
+      - name: Performance smoke
+        timeout-minutes: 3
+        run: pnpm test:performance
+
+      - name: Build
+        run: pnpm build
 
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run E2E suite against production server
-        run: npm run test:e2e
+      - name: Web E2E
+        timeout-minutes: 5
+        run: pnpm test:e2e
 
-      - name: Upload Playwright report
-        if: failure()
-        uses: actions/upload-artifact@v4
+      - name: Format check
+        run: pnpm format:check
+
+  rust:
+    name: Rust quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
         with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
+          version: 10.17.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
+        with:
+          toolchain: 1.98.1
+          components: rustfmt,clippy
+      - name: Require Cargo lockfile
+        run: test -s packages/desktop/src-tauri/Cargo.lock
+      - name: Install JavaScript dependencies for Tauri icon generation
+        run: pnpm install --frozen-lockfile
+      - name: Generate Tauri icons
+        run: pnpm --dir packages/desktop tauri icon src-tauri/icon-source.svg
+      - name: Install Linux Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Rust format
+        working-directory: packages/desktop/src-tauri
+        run: cargo fmt --all -- --check
+      - name: Rust check
+        working-directory: packages/desktop/src-tauri
+        run: cargo check --workspace --all-targets
+      - name: Rust tests
+        working-directory: packages/desktop/src-tauri
+        run: cargo test --workspace --all-targets
+      - name: Rust clippy
+        working-directory: packages/desktop/src-tauri
+        run: cargo clippy --workspace --all-targets -- -D warnings
