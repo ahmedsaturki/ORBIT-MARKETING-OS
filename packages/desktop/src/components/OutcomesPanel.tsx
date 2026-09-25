@@ -186,7 +186,7 @@ export function OutcomesPanel({
 
   return (
     <section className="card">
-      <div className="section-heading">
+      <div className="actions">
         <div>
           <h2>Outcomes & Learning</h2>
           <p>
