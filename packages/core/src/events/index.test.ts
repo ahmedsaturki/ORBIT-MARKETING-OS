@@ -10,6 +10,7 @@ describe("OperationalEventLog", () => {
       kind: "command.received",
       outcome: "started",
       actor: "user",
+      actorId: "user-1",
       entityType: "campaign",
       entityId: "cmp-1",
     });
@@ -19,6 +20,7 @@ describe("OperationalEventLog", () => {
       kind: "command.completed",
       outcome: "succeeded",
       actor: "system",
+      actorId: "system",
       parentEventId: first.id,
     });
 
@@ -36,6 +38,7 @@ describe("OperationalEventLog", () => {
         kind: "command.received",
         outcome: "started",
         actor: "user",
+      actorId: "user-1",
       }),
     ).toThrow("operational_event_workspace_mismatch");
 
@@ -46,6 +49,7 @@ describe("OperationalEventLog", () => {
         kind: "command.received",
         outcome: "started",
         actor: "user",
+        actorId: "user-1",
         parentEventId: "missing",
       }),
     ).toThrow("operational_event_parent_missing");
@@ -58,6 +62,7 @@ describe("OperationalEventLog", () => {
       kind: "connector.result",
       outcome: "succeeded",
       actor: "connector",
+      actorId: "telegram",
       payload: { accessToken: "secret-value", result: "ok" },
     });
 
@@ -72,6 +77,7 @@ describe("OperationalEventLog", () => {
       kind: "work.created",
       outcome: "started",
       actor: "system",
+      actorId: "system",
       payload: { nested: { labels: ["a"] } },
     });
 
