@@ -136,14 +136,10 @@ for (const url of [
 }
 
 const child = spawnRuntime({
-  env: {
     ...process.env,
     PORT: String(RUNTIME_PORT),
     RUNTIME_HOST: "127.0.0.1",
     OLLAMA_BASE_URL: "http://127.0.0.1:" + OLLAMA_PORT,
-  },
-  stdio: ["ignore", "pipe", "pipe"],
-  shell: process.platform === "win32",
 });
 let logs = "";
 child.stdout.on("data", (chunk) => { logs += String(chunk); });
@@ -257,7 +253,6 @@ try {
 }
 
 const missingTokenChild = spawnRuntime({
-  env: {
     ...process.env,
     PORT: String(AUTH_PORT),
     RUNTIME_HOST: "0.0.0.0",
@@ -265,9 +260,6 @@ const missingTokenChild = spawnRuntime({
     RUNTIME_ALLOWED_ORIGINS: "",
     RUNTIME_RATE_LIMIT: "6",
     OLLAMA_BASE_URL: `http://127.0.0.1:${OLLAMA_PORT}`,
-  },
-  stdio: ["ignore", "pipe", "pipe"],
-  shell: process.platform === "win32",
 });
 let missingTokenLogs = "";
 missingTokenChild.stdout.on("data", (chunk) => { missingTokenLogs += String(chunk); });
@@ -304,7 +296,6 @@ try {
 const authPort = AUTH_PORT + 2;
 const authToken = "orbit-test-token";
 const authChild = spawnRuntime({
-  env: {
     ...process.env,
     PORT: String(authPort),
     RUNTIME_HOST: "0.0.0.0",
@@ -312,9 +303,6 @@ const authChild = spawnRuntime({
     RUNTIME_ALLOWED_ORIGINS: "https://allowed.example",
     RUNTIME_RATE_LIMIT: "6",
     OLLAMA_BASE_URL: `http://127.0.0.1:${OLLAMA_PORT}`,
-  },
-  stdio: ["ignore", "pipe", "pipe"],
-  shell: process.platform === "win32",
 });
 let authLogs = "";
 authChild.stdout.on("data", (chunk) => { authLogs += String(chunk); });
@@ -383,7 +371,6 @@ try {
 }
 
 const bruteForceChild = spawnRuntime({
-  env: {
     ...process.env,
     PORT: String(BRUTE_FORCE_PORT),
     RUNTIME_HOST: "0.0.0.0",
@@ -391,9 +378,6 @@ const bruteForceChild = spawnRuntime({
     RUNTIME_RATE_LIMIT: "2",
     RUNTIME_ALLOWED_ORIGINS: "",
     OLLAMA_BASE_URL: `http://127.0.0.1:${OLLAMA_PORT}`,
-  },
-  stdio: ["ignore", "pipe", "pipe"],
-  shell: process.platform === "win32",
 });
 let bruteForceLogs = "";
 bruteForceChild.stdout.on("data", (chunk) => { bruteForceLogs += String(chunk); });
