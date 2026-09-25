@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { OutcomesPanel } from "./components/OutcomesPanel";
 import {
   analyzeLocalImage,
   DEFAULT_RUNTIME_URL,
@@ -2528,6 +2529,14 @@ export function App(): ReactElement {
           </div>
         </div>
       </section>
+
+      {activeWorkspace ? (
+        <OutcomesPanel
+          workspaceId={activeWorkspace.id}
+          contacts={contacts}
+          campaigns={campaigns}
+        />
+      ) : null}
 
       <section className="card">
         <h2>Inbox محلي</h2>
