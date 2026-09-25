@@ -43,9 +43,7 @@ interface Rule {
   readonly items: readonly SourceItem[];
 }
 
-const RULES: ReadonlyArray<
-  (input: MissionControlInput) => Rule
-> = [
+const RULES: ReadonlyArray<(input: MissionControlInput) => Rule> = [
   (input) => ({
     kind: "human_intervention",
     score: 1000,
