@@ -68,3 +68,11 @@ External platform actions are gated by account/campaign/task integrity, approval
 ### Human intervention lifecycle
 
 Externally visible tasks can be parked in `awaiting_user_action` when the user must confirm, re-authorize, or resolve a platform challenge. The task is not eligible for worker claiming until the user explicitly resumes it. Approval requirements use the separate `awaiting_approval` state.
+
+
+## Operational spine
+
+The runtime now has two reusable coordination contracts above the domain stores:
+
+- **Operational Event Spine** — append-only, workspace-bound trace with contiguous sequencing, parent/trace references, defensive payload copying, and credential-aware redaction. It feeds replay and diagnostics without replacing the SQLite system of record or the compliance AuditLog.
+- **Command Registry** — stable intent catalog shared conceptually across Desktop, Web, Mobile, CLI, MCP, and Agents. Each command declares risk, scopes, supported surfaces, mutation/external visibility, and approval requirements. Command resolution is side-effect free; external execution remains owned by the existing governed execution fabric.
