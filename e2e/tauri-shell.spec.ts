@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { execSync, spawn, type ChildProcess } from "node:child_process";
+import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -36,9 +36,9 @@ function configureWebView2DebugPolicy(): void {
   if (!executableName) {
     throw new Error("Unable to determine Tauri executable name");
   }
-  execSync(
+  execFileSync(
+    "reg",
     [
-      "reg",
       "add",
       WEBVIEW2_POLICY_KEY,
       "/v",
@@ -58,8 +58,9 @@ function cleanupWebView2DebugPolicy(): void {
   const executableName = exe.split(/[\\/]/).pop();
   if (!executableName) return;
   try {
-    execSync(
-      ["reg", "delete", WEBVIEW2_POLICY_KEY, "/v", executableName, "/f"],
+    execFileSync(
+      "reg",
+      ["delete", WEBVIEW2_POLICY_KEY, "/v", executableName, "/f"],
       { stdio: "ignore" },
     );
   } catch {
