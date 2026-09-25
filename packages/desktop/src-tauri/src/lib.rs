@@ -1271,11 +1271,11 @@ fn cleanup_stale_database_artifacts(app_data: &Path) -> Result<(), AppError> {
     Ok(())
 }
 
-fn restrict_private_file(path: &PathBuf) -> Result<(), AppError> {
+fn restrict_private_file(_path: &PathBuf) -> Result<(), AppError> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+        fs::set_permissions(_path, fs::Permissions::from_mode(0o600))?;
     }
     Ok(())
 }

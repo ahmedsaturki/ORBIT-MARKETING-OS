@@ -106,7 +106,7 @@ jobs:
       - name: Generate app icons
         run: pnpm --dir packages/desktop tauri icon src-tauri/icon-source.svg
       - name: Build desktop
-        run: pnpm --dir packages/desktop tauri build
+        run: pnpm --dir packages/desktop tauri build --features e2e-cdp
       - name: Build web surface for native E2E server
         run: pnpm --dir packages/web build
 
