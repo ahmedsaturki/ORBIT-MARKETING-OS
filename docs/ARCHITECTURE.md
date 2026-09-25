@@ -75,4 +75,3 @@ The runtime now has two reusable coordination contracts above the domain stores:
 
 - **Operational Event Spine** — append-only, workspace-bound trace with contiguous sequencing, parent/trace references, defensive payload copying, and credential-aware redaction. It feeds replay and diagnostics without replacing the SQLite system of record or the compliance AuditLog.
 - **Command Registry** — stable intent catalog shared conceptually across Desktop, Web, Mobile, CLI, MCP, and Agents. Each command declares risk, scopes, supported surfaces, mutation/external visibility, and approval requirements. Command resolution is side-effect free; external execution remains owned by the existing governed execution fabric.
-
