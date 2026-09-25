@@ -76,8 +76,9 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | GRAPH-01 | Operating graph preserves workspace boundaries and rejects invalid links                         | graph validation tests                              |
 | GRAPH-02 | AI/agent graph context is bounded by depth/node/relation scopes                                  | bounded context projection tests                    |
 | EXEC-01  | Agent + policy + approval + budget compose into one deterministic execution decision             | decision kernel tests                               |
-| EVENT-01 | Operational event spine preserves workspace scope, ordering and parent references                    | event log tests + runtime persistence evidence      |
-| CMD-01   | Canonical command registry enforces surface, scope and approval gates                              | registry decision tests + cross-surface integration |\n| DOC-02   | Security model documented                                                                        | security review                                     |
+| EVENT-01 | Operational event spine preserves workspace scope, ordering and parent references                | event log tests + runtime persistence evidence      |
+| CMD-01   | Canonical command registry enforces surface, scope and approval gates                            | registry decision tests + cross-surface integration |
+| DOC-02   | Security model documented                                                                        | security review                                     |
 
 ## Gate rules
 
@@ -85,3 +86,4 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 - Any `UNVERIFIED` runtime requirement blocks the claim "production ready".
 - Performance targets are measured, never inferred from code size.
 - Real-platform tests must be controlled and must not be used to claim immunity from platform enforcement.
+
