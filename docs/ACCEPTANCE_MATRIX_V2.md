@@ -44,6 +44,9 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | SIM-01   | Governed execution simulation produces a read-only deterministic plan                    | simulation tests + no-dispatch invariant             |
 | REP-01   | Execution replay reconstructs state without re-running external actions                  | replay validation + deterministic reconstruction     |
 | POL-01   | Built-in policy packs materialize explicit workspace-bound safety policies               | policy pack tests + workspace identity validation    |
+| MC-01    | Mission Control next actions are workspace-scoped, deterministic, explainable, and read-only | deterministic ranking tests + workspace validation  |
+| PLAN-01  | Campaign plan compiler requires a valid strategy and emits dependency-ordered governed work | compiler tests + workspace/strategy validation       |
+| AI-02    | Grounded knowledge context excludes untrusted/expired/cross-workspace evidence and obeys budgets | context tests + workspace/source validation       |
 | INBOX-01 | Unified conversation model                                                               | connector fixture integration                       |
 | CRM-01   | Conversation-contact linking                                                             | relational integration test                         |
 | SYNC-01  | Offline edits survive restart                                                            | device simulation test                              |
