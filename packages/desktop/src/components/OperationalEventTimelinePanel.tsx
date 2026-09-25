@@ -44,9 +44,7 @@ export function OperationalEventTimelinePanel({
       );
     } catch (caught: unknown) {
       setError(
-        caught instanceof Error
-          ? caught.message
-          : "فشل تحميل سجل التشغيل",
+        caught instanceof Error ? caught.message : "فشل تحميل سجل التشغيل",
       );
     } finally {
       setLoading(false);
