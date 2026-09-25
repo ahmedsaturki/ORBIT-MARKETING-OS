@@ -102,6 +102,17 @@ Content variants are workspace-scoped through their parent content item. Analyti
 
 Media commands persist metadata only; local file bytes are not uploaded implicitly. Rule packs are schema-versioned JSON and external actions require confirmation.
 
+### Knowledge Fabric
+
+- `knowledge_source_upsert`
+- `knowledge_source_list`
+- `knowledge_item_upsert`
+- `knowledge_item_list`
+- `knowledge_evidence_add`
+- `knowledge_evidence_list`
+
+Knowledge records are local and workspace-scoped. A knowledge item must reference at least one source in the same workspace; evidence is represented by a deterministic excerpt hash rather than storing sensitive excerpts in the graph layer. Trust levels are explicit and expirations are normalized to UTC timestamps.
+
 ### Marketing Brain / strategy
 
 - `objective_upsert`
