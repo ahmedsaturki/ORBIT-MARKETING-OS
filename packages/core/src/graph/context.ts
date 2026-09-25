@@ -41,6 +41,9 @@ export function projectGraphContext(
     (candidate) => candidate.type === root.type && candidate.id === root.id,
   );
   if (!rootNode) throw new Error("graph_root_not_found");
+  if (rootNode.workspaceId !== graph.workspaceId) {
+    throw new Error("graph_root_workspace_mismatch");
+  }
 
   const nodeMap = new Map(graph.nodes.map((node) => [key(node), node]));
   const seen = new Set<string>([key(rootNode)]);
