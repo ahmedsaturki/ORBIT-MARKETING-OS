@@ -40,6 +40,7 @@ async function killApp(): Promise<void> {
 }
 
 test.describe("Tauri renderer capability isolation (SEC-03)", () => {
+  test.describe.configure({ mode: "serial" });
   test.skip(
     !exe,
     "Tauri binary not built — run node scripts/build-tauri.mjs --release first",
