@@ -1015,6 +1015,8 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
 
         transaction.commit()?;
     }
+
+    Ok(())
 }
 
 const INTEGRITY_TRIGGERS: &str = r#"
