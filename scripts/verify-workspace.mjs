@@ -346,7 +346,7 @@ if (!rust.includes("UNIQUE(workspace_id, idempotency_key)")) {
   throw new Error("Task idempotency must be workspace-scoped");
 }
 if (!rust.includes("PRAGMA user_version = 13;")) {
-  throw new Error("Schema migration must finalize at v12");
+  throw new Error("Schema migration must finalize at v13");
 }
 const setupIndex = rust.indexOf(".setup(|app|");
 const startupRecoveryIndex = rust.indexOf(
