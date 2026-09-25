@@ -1,5 +1,6 @@
 export type CommandRisk = "low" | "medium" | "high" | "critical";
-export type CommandSurface = "desktop" | "web" | "mobile" | "cli" | "mcp" | "agent";
+export type CommandSurface =
+  "desktop" | "web" | "mobile" | "cli" | "mcp" | "agent";
 
 export interface CommandDefinition {
   readonly id: string;
@@ -49,7 +50,8 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
   {
     id: "content.draft",
     title: "Draft content",
-    description: "Create a content draft using approved strategy and knowledge.",
+    description:
+      "Create a content draft using approved strategy and knowledge.",
     risk: "low",
     scopes: ["content:write", "knowledge:read"],
     surfaces: ["desktop", "web", "mobile", "cli", "mcp", "agent"],
@@ -115,7 +117,8 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
   {
     id: "execution.replay",
     title: "Replay execution",
-    description: "Reconstruct execution state without re-running external actions.",
+    description:
+      "Reconstruct execution state without re-running external actions.",
     risk: "low",
     scopes: ["execution:replay"],
     surfaces: ["desktop", "web", "mobile", "cli", "mcp", "agent"],
@@ -128,7 +131,9 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
 export class CommandRegistry {
   private readonly commands = new Map<string, CommandDefinition>();
 
-  public constructor(commands: readonly CommandDefinition[] = BUILTIN_COMMANDS) {
+  public constructor(
+    commands: readonly CommandDefinition[] = BUILTIN_COMMANDS,
+  ) {
     for (const command of commands) this.register(command);
   }
 
@@ -155,7 +160,11 @@ export class CommandRegistry {
 
   public list(): readonly CommandDefinition[] {
     return [...this.commands.values()]
-      .map((command) => ({ ...command, scopes: [...command.scopes], surfaces: [...command.surfaces] }))
+      .map((command) => ({
+        ...command,
+        scopes: [...command.scopes],
+        surfaces: [...command.surfaces],
+      }))
       .sort((left, right) => left.id.localeCompare(right.id));
   }
 
