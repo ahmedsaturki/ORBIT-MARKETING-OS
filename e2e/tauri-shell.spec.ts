@@ -51,7 +51,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
   test("capability files are deny-by-default and least-privilege (capability review)", () => {
     const capability = JSON.parse(
-      readFileSync(join(root, "packages/desktop/src-tauri/capabilities/default.json"), "utf8"),
+      readFileSync(
+        join(root, "packages/desktop/src-tauri/capabilities/default.json"),
+        "utf8",
+      ),
     );
     // Exactly one grant: core:default — no fs/shell/http/clipboard/dialog/updater.
     expect(capability.permissions).toEqual(["core:default"]);
@@ -74,7 +77,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(resolved.default.permissions).toEqual(["core:default"]);
 
     const conf = JSON.parse(
-      readFileSync(join(root, "packages/desktop/src-tauri/tauri.conf.json"), "utf8"),
+      readFileSync(
+        join(root, "packages/desktop/src-tauri/tauri.conf.json"),
+        "utf8",
+      ),
     );
     const security = conf.app.security;
     // Strict CSP: no unsafe-eval, no remote script origins, framed embedding off.
