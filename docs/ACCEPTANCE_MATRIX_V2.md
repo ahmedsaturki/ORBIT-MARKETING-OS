@@ -62,6 +62,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | DOC-01   | User guide matches product                                                  | documentation review                                |
 | GRAPH-01 | Operating graph preserves workspace boundaries and rejects invalid links | graph validation tests                              |
 | GRAPH-02 | AI/agent graph context is bounded by depth/node/relation scopes              | bounded context projection tests                    |
+| EXEC-01  | Agent + policy + approval + budget compose into one deterministic execution decision | decision kernel tests                         |
 | DOC-02   | Security model documented                                                   | security review                                     |
 
 ## Gate rules
