@@ -5568,6 +5568,22 @@ fn opportunity_upsert(
         return Err("opportunity contact does not belong to active workspace".to_string());
     }
 
+    if let Some(owner_id) = &owner_id {
+        let owner_exists: bool = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM workspace_memberships
+                   WHERE workspace_id=?1 AND user_id=?2 AND active=1
+                 )",
+                params![&workspace_id, owner_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if !owner_exists {
+            return Err("opportunity owner is not an active member of the workspace".to_string());
+        }
+    }
+
     if let Some(campaign_id) = &campaign_id {
         let campaign_exists: bool = connection
             .query_row(
