@@ -15,8 +15,8 @@ declare global {
 const EXE_CANDIDATES = [
   process.env.TAURI_EXE,
   "D:/orbit-cargo-target/x86_64-pc-windows-msvc/release/orbit-marketing-os.exe",
-  "src-tauri/target/x86_64-pc-windows-msvc/release/orbit-marketing-os.exe",
-  "src-tauri/target/release/orbit-marketing-os.exe",
+  "packages/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/orbit-marketing-os.exe",
+  "packages/desktop/src-tauri/target/release/orbit-marketing-os.exe",
 ].filter(Boolean) as string[];
 const exe = EXE_CANDIDATES.find((p) => existsSync(p));
 const CDP_PORT = 9340;
@@ -51,7 +51,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
   test("capability files are deny-by-default and least-privilege (capability review)", () => {
     const capability = JSON.parse(
-      readFileSync(join(root, "src-tauri/capabilities/default.json"), "utf8"),
+      readFileSync(join(root, "packages/desktop/src-tauri/capabilities/default.json"), "utf8"),
     );
     // Exactly one grant: core:default — no fs/shell/http/clipboard/dialog/updater.
     expect(capability.permissions).toEqual(["core:default"]);
@@ -66,7 +66,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     // The build must have resolved that capability to itself — nothing broader.
     const resolved = JSON.parse(
       readFileSync(
-        join(root, "src-tauri/gen/schemas/capabilities.json"),
+        join(root, "packages/desktop/src-tauri/gen/schemas/capabilities.json"),
         "utf8",
       ),
     );
@@ -74,7 +74,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(resolved.default.permissions).toEqual(["core:default"]);
 
     const conf = JSON.parse(
-      readFileSync(join(root, "src-tauri/tauri.conf.json"), "utf8"),
+      readFileSync(join(root, "packages/desktop/src-tauri/tauri.conf.json"), "utf8"),
     );
     const security = conf.app.security;
     // Strict CSP: no unsafe-eval, no remote script origins, framed embedding off.
