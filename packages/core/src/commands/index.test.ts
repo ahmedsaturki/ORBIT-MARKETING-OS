@@ -10,6 +10,25 @@ describe("CommandRegistry", () => {
     expect(ids).toContain("execution.replay");
   });
 
+  it("rejects externally visible mutable commands without approval", () => {
+    expect(
+      () =>
+        new CommandRegistry([
+          {
+            id: "unsafe.test",
+            title: "Unsafe test",
+            description: "fixture",
+            risk: "high",
+            scopes: ["task:execute"],
+            surfaces: ["desktop"],
+            mutatesState: true,
+            externallyVisible: true,
+            requiresApproval: false,
+          },
+        ]),
+    ).toThrow("command_approval_contract_violation");
+  });
+
   it("requires the full declared scope set", () => {
     const registry = new CommandRegistry();
     expect(
