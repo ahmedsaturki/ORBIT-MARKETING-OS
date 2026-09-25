@@ -27,6 +27,43 @@ let browser: Browser | null = null;
 let page: Page | null = null;
 let processOutput = "";
 const webview2UserDataFolders = new Set<string>();
+const WEBVIEW2_POLICY_KEY =
+  "HKCU\\Software\\Policies\\Microsoft\\Edge\\WebView2\\AdditionalBrowserArguments";
+
+function configureWebView2DebugPolicy(): void {
+  if (!exe) return;
+  const executableName = exe.split(/[\\/]/).pop();
+  if (!executableName) throw new Error("Unable to determine Tauri executable name");
+  execSync(
+    [
+      "reg",
+      "add",
+      WEBVIEW2_POLICY_KEY,
+      "/v",
+      executableName,
+      "/t",
+      "REG_SZ",
+      "/d",
+      "--remote-debugging-port=" + CDP_PORT,
+      "/f",
+    ],
+    { stdio: "ignore" },
+  );
+}
+
+function cleanupWebView2DebugPolicy(): void {
+  if (!exe) return;
+  const executableName = exe.split(/[\\/]/).pop();
+  if (!executableName) return;
+  try {
+    execSync(
+      ["reg", "delete", WEBVIEW2_POLICY_KEY, "/v", executableName, "/f"],
+      { stdio: "ignore" },
+    );
+  } catch {
+    /* policy value did not exist or was already removed */
+  }
+}
 
 function createWebView2UserDataFolder(): string {
   const folder = mkdtempSync(join(tmpdir(), "orbit-webview2-e2e-"));
@@ -70,6 +107,7 @@ async function launchAndConnectTauri(): Promise<void> {
   }
 
   processOutput = "";
+  configureWebView2DebugPolicy();
   const webview2UserDataFolder = createWebView2UserDataFolder();
   const child = spawn(exe, [], {
     env: {
@@ -147,6 +185,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
   test.afterAll(async () => {
     await killApp();
     cleanupWebView2UserDataFolders();
+    cleanupWebView2DebugPolicy();
   });
 
   test("capability files are deny-by-default and least-privilege (capability review)", () => {
