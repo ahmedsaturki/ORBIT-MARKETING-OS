@@ -172,7 +172,12 @@ for (const fragment of [
 }
 
 const commitLockfiles = await text("scripts/commit-lockfiles.mjs");
-for (const fragment of ["GITHUB_REF_NAME", "rebuild/orbit-production", "rebuild/orbit-production-consolidated", "rebuild/orbit-production-final"]) {
+for (const fragment of [
+  "GITHUB_REF_NAME",
+  "rebuild/orbit-production",
+  "rebuild/orbit-production-consolidated",
+  "rebuild/orbit-production-final",
+]) {
   if (!commitLockfiles.includes(fragment))
     throw new Error("Canonical lockfile commit contract missing: " + fragment);
 }
