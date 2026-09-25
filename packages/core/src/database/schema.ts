@@ -445,6 +445,58 @@ CREATE INDEX IF NOT EXISTS idx_opportunities_workspace_stage
 
 CREATE INDEX IF NOT EXISTS idx_opportunities_workspace_contact
   ON opportunities(workspace_id, contact_id, updated_at);
+CREATE TRIGGER IF NOT EXISTS orbit_opportunities_insert_workspace
+BEFORE INSERT ON opportunities
+WHEN NOT EXISTS (
+  SELECT 1 FROM contacts c
+  WHERE c.id = NEW.contact_id AND c.workspace_id = NEW.workspace_id
+)
+OR (
+  NEW.campaign_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM campaigns c
+    WHERE c.id = NEW.campaign_id AND c.workspace_id = NEW.workspace_id
+  )
+)
+OR (
+  NEW.owner_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM workspace_memberships m
+    WHERE m.workspace_id = NEW.workspace_id
+      AND m.user_id = NEW.owner_id
+      AND m.active = 1
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'opportunity workspace/reference mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_opportunities_update_workspace
+BEFORE UPDATE OF workspace_id, contact_id, campaign_id, owner_id ON opportunities
+WHEN NOT EXISTS (
+  SELECT 1 FROM contacts c
+  WHERE c.id = NEW.contact_id AND c.workspace_id = NEW.workspace_id
+)
+OR (
+  NEW.campaign_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM campaigns c
+    WHERE c.id = NEW.campaign_id AND c.workspace_id = NEW.workspace_id
+  )
+)
+OR (
+  NEW.owner_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM workspace_memberships m
+    WHERE m.workspace_id = NEW.workspace_id
+      AND m.user_id = NEW.owner_id
+      AND m.active = 1
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'opportunity workspace/reference mismatch');
+END;
+
 
 CREATE TABLE IF NOT EXISTS insights (
   id TEXT PRIMARY KEY,
