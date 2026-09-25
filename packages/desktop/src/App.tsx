@@ -14,6 +14,7 @@ import {
 import { OutcomesPanel } from "./components/OutcomesPanel";
 import { MissionControlPanel } from "./components/MissionControlPanel";
 import { OperatingGraphPanel } from "./components/OperatingGraphPanel";
+import { OperationalEventTimelinePanel } from "./components/OperationalEventTimelinePanel";
 import { StrategyStudioPanel } from "./components/StrategyStudioPanel";
 import {
   analyzeLocalImage,
@@ -2560,6 +2561,10 @@ export function App(): ReactElement {
 
       {activeWorkspace ? (
         <OperatingGraphPanel workspaceId={activeWorkspace.id} />
+      ) : null}
+
+      {activeWorkspace ? (
+        <OperationalEventTimelinePanel workspaceId={activeWorkspace.id} />
       ) : null}
 
       <section className="card">
