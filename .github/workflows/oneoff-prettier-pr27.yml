@@ -1,0 +1,37 @@
+name: One-off Prettier repair
+
+on:
+  push:
+    branches: ["chore/remove-legacy-root-tauri-20260925-v2"]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Format target
+        run: pnpm exec prettier --write e2e/tauri-shell.spec.ts
+      - name: Commit formatted target
+        shell: bash
+        run: |
+          if git diff --quiet -- e2e/tauri-shell.spec.ts; then
+            echo "Target already formatted."
+            exit 0
+          fi
+          git config user.name "ORBIT Automation"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add e2e/tauri-shell.spec.ts
+          git commit -m "style(e2e): apply Prettier canonical formatting"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
