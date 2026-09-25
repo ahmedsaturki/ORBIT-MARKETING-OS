@@ -1,8 +1,6 @@
 # ORBIT Launch Scorecard
 
-Updated: 2026-09-25 (post-merge refresh)
-
-The release line is now merged into `main`. Technical gates are tracked from the clean release-line evidence and a new full-CI-on-main gate is being established so the exact default branch receives current execution evidence.
+Updated: 2026-09-24 (latest evidence refresh)
 
 Legend:
 
@@ -31,24 +29,23 @@ Legend:
 | Campaign task analytics          | IMPLEMENTED   | Workspace/campaign scoped native aggregation                                                                                                                    |
 | Local AI defaults                | IMPLEMENTED   | llama3.2:3b default, bounded OLLAMA_NUM_CTX=4096                                                                                                                |
 | Runtime AI smoke                 | IMPLEMENTED   | Fake-Ollama contract added to runtime smoke                                                                                                                     |
-| Clean install                    | VERIFIED   | Committed `pnpm-lock.yaml` and frozen-install evidence from the release-line CI |
-| Typecheck/lint/tests/build       | VERIFIED*  | Full release-line technical gate passed; fresh post-merge main CI is being re-run |
-| Rust fmt/test/clippy             | VERIFIED*  | Full release-line Rust gate passed; fresh post-merge main CI is being re-run |
-| Native SQLite integration        | UNVERIFIED | Automated coverage exists; native restart/crash-recovery drill still pending |
-| Connector real-platform E2E      | UNVERIFIED | Telegram/LinkedIn adapters exist; controlled live authorization evidence pending |
-| Browser E2E/accessibility        | VERIFIED*  | Browser E2E passed in release-line CI; accessibility audit remains separate |
-| Security/dependency audit        | VERIFIED*  | CI audit and repository security scan passed on release line |
-| Performance/soak                 | UNVERIFIED | Performance smoke passed; 24h soak remains unexecuted |
-| Desktop signing                  | BLOCKED    | Signing credentials unavailable; validation artifacts only |
-| Mobile production signing        | BLOCKED    | Store/signing credentials and production distribution remain external |
-| Vercel production deployment     | BLOCKED    | Connected project metadata still reports `framework: vite`; current READY deployment is prior main surface; guarded release workflow has not deployed the current main |
-| Billing/payment                  | BLOCKED    | No verified commercial payment configuration |
-| Production launch                | BLOCKED    | Runtime/distribution/deployment/commercial gates remain open |
+| Clean install                    | UNVERIFIED    | Requires clean checkout execution and lockfile evidence                                                                                                         |
+| Typecheck/lint/tests/build       | BLOCKED       | GitHub hosted runner currently fails before steps; zero-cost self-hosted verification workflow is available                                                     |
+| Rust fmt/test/clippy             | BLOCKED       | Same runner-allocation failure                                                                                                                                  |
+| Native SQLite integration        | UNVERIFIED    | Tests exist; no clean native runtime execution evidence yet                                                                                                     |
+| Connector real-platform E2E      | UNVERIFIED    | Telegram/LinkedIn paths exist; controlled live/API evidence still required                                                                                      |
+| Browser E2E/accessibility        | UNVERIFIED    | Tests are present; no successful clean browser run recorded                                                                                                     |
+| Security/dependency audit        | UNVERIFIED    | Static source scan clean for critical patterns; automated dependency analysis not completed                                                                     |
+| Performance/soak                 | UNVERIFIED    | Benchmarks and 24h soak not executed                                                                                                                            |
+| Desktop signing                  | BLOCKED       | Signing credentials are intentionally absent; validation builds only                                                                                            |
+| Mobile production signing        | BLOCKED       | Current workflow produces debug validation APK                                                                                                                  |
+| Vercel production deployment     | BLOCKED       | A READY production deployment exists for legacy `main`; rebuild deployment is still unverified. Repository-side rebuild config uses guarded prebuilt deployment |
+| Billing/payment                  | BLOCKED       | No commercial payment provider configuration is verified                                                                                                        |
+| Production launch                | BLOCKED       | Any applicable UNVERIFIED/BLOCKED runtime or distribution gate prevents release claim                                                                           |
 
-## Current infrastructure state
+## Current infrastructure blocker
 
-GitHub-hosted runners are now executing jobs normally. Earlier pre-allocation failures are historical and no longer represent the current default-branch state. The active verification gap is post-merge provenance: the exact `main` head needs one complete current run.
-
+The latest consolidation CI run `36053293828` created jobs `107813972668` and `107813973170`; both failed before any workflow step executed with no usable step records. Earlier runs in the same series also show the runner allocation pattern. This is execution-infrastructure evidence, not source-build evidence.
 
 ## Zero-cost verification fallback
 
@@ -57,6 +54,3 @@ A manual self-hosted verification workflow is available at `.github/workflows/se
 ## Release rule
 
 The product must remain in development/validation state until all release-critical gates have current execution evidence. A source change, green-looking YAML, or an artifact that was not produced by a verified gate is not proof of production readiness.
-
-
-*Release-line verification is current for the merged source family; a fresh default-branch run is required before treating the exact post-merge `main` commit as independently verified.
