@@ -367,7 +367,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
         window.__TAURI_INTERNALS__.invoke("account_upsert", {
           id,
           platform: "telegram",
-          display_name: "E2E Recovery Account",
+          displayName: "E2E Recovery Account",
           username: "orbit-recovery",
           session: "recovery-session-fixture",
           password: "e2e-recovery-password",
