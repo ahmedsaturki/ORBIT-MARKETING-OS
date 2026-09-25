@@ -8,7 +8,7 @@ The repository contains `vercel.json` plus guarded GitHub Actions deployment wor
 
 The deployment path must use Vercel's CI build output flow (`vercel pull` → `vercel build` → `vercel deploy --prebuilt`). A normal Next.js build alone is not treated as Vercel Build Output evidence.
 
-The connected Vercel project exists. Automatic Git deployments are disabled repository-side; the intended release path is the guarded prebuilt flow described below. Release verification remains blocked by lockfile and project-setting evidence documented in `docs/VERIFICATION_BLOCKERS.md`.
+The connected Vercel project exists. Automatic Git deployments are disabled repository-side; the intended release path is the guarded prebuilt flow described below. The reproducible lockfile gate is now verified on main/current hosted CI. Remaining Vercel verification is the project-setting/provenance reconciliation documented in `docs/VERIFICATION_BLOCKERS.md`.
 
 ## Desktop
 

@@ -46,6 +46,8 @@ Request:
 
 Requires `OLLAMA_VISION_MODEL`. Accepts `imageBase64` plus an `analysisType`.
 
+At the Tauri JavaScript boundary, command arguments use `camelCase` (for example `displayName`, `campaignId`, `sourceIdsJson`). Rust handler parameters may remain `snake_case`; Tauri's generated command contract is the boundary. The repository IPC verification guard rejects snake_case argument keys in Desktop invoke payloads.
+
 ## Desktop IPC
 
 ### Health and vault
@@ -101,6 +103,65 @@ Content variants are workspace-scoped through their parent content item. Analyti
 - `automation_rule_pack_list`
 
 Media commands persist metadata only; local file bytes are not uploaded implicitly. Rule packs are schema-versioned JSON and external actions require confirmation.
+
+### Knowledge Fabric
+
+- `knowledge_source_upsert`
+- `knowledge_source_list`
+- `knowledge_item_upsert`
+- `knowledge_item_list`
+- `knowledge_evidence_add`
+- `knowledge_evidence_list`
+
+Knowledge records are local and workspace-scoped. A knowledge item must reference at least one source in the same workspace; evidence is represented by a deterministic excerpt hash rather than storing sensitive excerpts in the graph layer. Trust levels are explicit and expirations are normalized to UTC timestamps.
+
+### Marketing Brain / strategy
+
+- `objective_upsert`
+- `objective_list`
+- `audience_upsert`
+- `audience_list`
+- `offer_upsert`
+- `offer_list`
+- `strategy_upsert`
+- `strategy_list`
+
+These commands persist the strategy model locally. Writes are role-gated to the active workspace. Strategy reference IDs are verified against the same workspace before persistence, so an Objective/Audience/Offer from another workspace cannot be attached silently.
+
+### Agents, policies and work graph
+
+- `agent_upsert`
+- `agent_list`
+- `agent_run_create`
+- `agent_run_set_status`
+- `agent_run_list`
+- `policy_upsert`
+- `policy_list`
+- `work_item_upsert`
+- `work_item_list`
+- `work_dependency_upsert`
+- `work_dependency_list`
+
+Agent definitions are workspace-scoped and explicitly bounded by autonomy, tool grants, knowledge scope, and maximum steps. Agent runs cannot be created for disabled agents or agents outside the active workspace. Policy writes are owner/admin gated. Work dependencies require both referenced work items to belong to the active workspace and reject self-dependencies.
+
+### Outcomes and learning
+
+- `opportunity_upsert`
+- `opportunity_list`
+- `insight_upsert`
+- `insight_list`
+- `outcome_analytics`
+
+Opportunities are workspace-scoped CRM outcomes linked to a contact and optionally a campaign. Values are non-negative, probability is bounded to 0–100, and currency uses a three-letter uppercase code. Insights are workspace-scoped, evidence-oriented records with explicit kind, confidence, source IDs, and UTC-normalized observation time.
+`outcome_analytics` returns workspace-scoped opportunity totals plus pipeline/won values grouped by currency, preventing invalid cross-currency aggregation.
+
+### Operating graph
+
+- `operational_link_upsert`
+- `operational_link_list`
+- `operational_link_delete`
+
+Operating links are strictly scoped to the active workspace and validate both endpoint entities before persistence. The runtime accepts only persisted operating entity types; self-links, unknown entities, and cross-workspace references are rejected. Relations use the same lowercase identifier contract as the core graph kernel.
 
 ### CRM and inbox
 

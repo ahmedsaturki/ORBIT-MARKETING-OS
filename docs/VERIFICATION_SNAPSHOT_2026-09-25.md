@@ -1,66 +1,61 @@
 # ORBIT Verification Snapshot — 2026-09-25
 
-## Source of truth
+## Canonical state
 
 - Default branch: `main`
-- Current main HEAD at snapshot: `4036f88362d81eef1ae449616c272fa8c7e42db0`
-- PR #29 merged: encrypted CRDT disconnect/reconnect convergence and wrong-key replay regression are now on main.
-- PR #27 remains the only open pull request for legacy-surface cleanup/native validation.
+- Current main HEAD at snapshot: `929aaa49aa435761c2a87925d67a0749f70ae287`
+- PR #37 merged: governed marketing operating model foundation is on main.
+- PR #38 is the current release/native cleanup line and is the authoritative validation surface for this cut.
 
-## Verified main evidence
+## Verified main foundation
 
-Main CI run `36144303102` passed on the PR #29 merge commit, including:
+The merged main lineage includes:
 
-- reproducible frozen install;
-- release sanity;
-- secret scan;
-- dependency audit;
-- workspace sanity;
-- TypeScript typecheck;
-- Desktop IPC contract;
-- lint;
-- tests;
-- coverage;
-- runtime smoke;
-- performance smoke;
-- build;
-- Playwright browser E2E;
-- format check;
-- Rust fmt/check/test/clippy.
+- local-first desktop/runtime ownership;
+- workspace-aware operations;
+- secure vault/audit primitives;
+- persistent task/approval flows;
+- Telegram native and LinkedIn capability-scoped connector paths;
+- governed Strategy, Knowledge, Agent, Policy, and Operations contracts;
+- product blueprint documenting the Strategy → Campaign → Content → Execution → CRM/Inbox → Analytics → Learning graph.
 
-Main Web Deploy run `36144303202` passed its Web quality gate and was associated with a READY production web deployment.
+## Current release validation
 
-## Live web evidence
+PR #38 is validating:
 
-Direct Vercel fetches against `orbit-marketing-os.vercel.app` returned:
+- canonical `packages/desktop` Tauri paths;
+- removal of the obsolete root Vite/Tauri UI/runtime surface;
+- Desktop Windows/Linux/macOS bundle matrix;
+- Windows native E2E, including renderer capability isolation and workspace/recovery scenarios;
+- Android debug validation;
+- Vercel static-export dry-run guards;
+- current release/verification scorecards.
 
-- HTTP 200 for home, pricing, privacy, terms, refunds, EULA, manifest and service worker;
-- HTTP 404 for an unknown route;
-- HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP and CORP headers.
+The current PR must not be treated as production-ready until its exact-head runtime/native evidence settles.
 
-Vercel runtime error aggregation for the selected seven-day period reports no runtime errors.
+## Live web
 
-## Native validation
+The connected `orbit-marketing-os` Vercel project has a READY production deployment and the public web surface has been independently checked for the current routes, manifest/service worker, 404 handling, and expected browser security headers.
 
-PR #27 has successful Windows x64, Linux x64, macOS x64 and macOS ARM64 desktop bundle jobs. Windows native E2E and Android debug validation remain active gates in the recorded workflow run.
+The effective Vercel project metadata still requires reconciliation because it reports `framework: vite` while the repository contract targets a Next.js static export.
 
 ## Remaining release gates
 
-- dedicated native restart/migration/crash-recovery acceptance;
-- real authorized Telegram delivery test;
-- real authorized LinkedIn publishing test;
+Implementation presence is not release evidence. Remaining gates include:
+
+- exact-head native desktop and Android validation;
+- dedicated real-instance crash/restart/migration recovery;
+- controlled real Telegram authorization/delivery test;
+- controlled real LinkedIn authorization/publishing test;
 - live multi-device CRDT network evidence;
-- manual accessibility audit;
+- accessibility/RTL audit;
 - 24-hour soak and recovery evidence;
-- full desktop real-instance workflow;
-- full RBAC negative matrix;
-- final release-tag checksum/provenance;
+- checksum/provenance verification for the final release;
 - desktop signing/notarization;
-- Android/iOS production signing and store release;
-- Vercel project-setting provenance reconciliation and rollback drill;
-- payment/refund configuration and verification;
-- final legal/commercial review.
+- Android/iOS production signing and store distribution;
+- Vercel guarded deployment provenance and rollback drill;
+- payment/refund configuration and final legal/commercial review.
 
 ## Evidence rule
 
-Implementation presence is not release evidence. Only current execution records, artifacts, or controlled human-authorized tests may move an applicable gate to VERIFIED.
+Only current execution records, artifacts, or controlled human-authorized tests may move an applicable gate to VERIFIED. No source-only or historical result is copied forward as current evidence.

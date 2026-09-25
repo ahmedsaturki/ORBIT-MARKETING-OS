@@ -16,7 +16,7 @@ The rebuild is acceptance-driven: implementation is not considered complete unti
 
 ## Product boundary
 
-The product is designed around local ownership of sensitive data. The desktop/local runtime is the source of truth for private account state, campaigns, task queues, CRM records, and audit records. Native SQLite schema is versioned through v10, including workspace-scoped task idempotency and conservative startup crash recovery.
+The product is designed around local ownership of sensitive data. The desktop/local runtime is the source of truth for private account state, campaigns, task queues, CRM records, and audit records. Native SQLite schema is versioned through v12, including the governed marketing operating model, persisted opportunities/insights, workspace-scoped task idempotency, and conservative startup crash recovery.
 
 Platform integrations must remain user-authorized and platform-compliant. The product does not implement fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion, or concealed automation.
 
@@ -60,9 +60,13 @@ A feature is not release-complete merely because its source code exists. Release
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md](docs/ACCEPTANCE_MATRIX_V2.md), and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
 
-Product north star: [docs/TARGET_PRODUCT_BLUEPRINT.md](docs/TARGET_PRODUCT_BLUEPRINT.md) defines the Strategy → Campaign → Content → Execution → CRM/Inbox → Analytics → Learning operating graph and the staged platform roadmap.
+Product north star: [docs/TARGET_PRODUCT_BLUEPRINT.md](docs/TARGET_PRODUCT_BLUEPRINT.md) defines the Strategy → Campaign → Content → Execution → CRM/Inbox → Analytics → Learning operating graph and the staged platform roadmap. The Desktop currently exposes Mission Control, Strategy Studio, Outcomes/Learning, and the Operating Graph as governed local workspace surfaces.
 
-Launch control: `docs/LAUNCH_SCORECARD.md`\n\nThe current web product is live on Vercel; desktop artifacts and Android validation artifacts are built by GitHub Actions. Commercial launch remains gated by signing, real connector E2E, soak/rollback, and billing evidence.
+Operating control: [docs/OPERATING_CONTROL.md](docs/OPERATING_CONTROL.md) defines the deterministic Simulation, Replay, and Policy Pack layer used to preview, explain, and govern execution without creating a second execution system.
+
+Launch control: `docs/LAUNCH_SCORECARD.md`
+
+The current web product is live on Vercel; desktop artifacts and Android validation artifacts are built by GitHub Actions. Commercial launch remains gated by signing, real connector E2E, soak/rollback, and billing evidence.
 
 Zero-cost technical verification fallback: `docs/SELF_HOSTED_VERIFICATION.md`
 

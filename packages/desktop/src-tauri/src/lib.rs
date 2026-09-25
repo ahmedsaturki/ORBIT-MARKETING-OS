@@ -24,7 +24,7 @@ const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
 const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
 const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
-const SCHEMA_VERSION: i64 = 10;
+const SCHEMA_VERSION: i64 = 12;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 static TELEGRAM_EXECUTION_IDS: OnceLock<Mutex<std::collections::HashSet<String>>> = OnceLock::new();
@@ -472,6 +472,55 @@ struct MessageView {
     direction: String,
     body: String,
     sent_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OpportunityView {
+    id: String,
+    contact_id: String,
+    campaign_id: Option<String>,
+    name: String,
+    stage: String,
+    value: f64,
+    currency: String,
+    probability: f64,
+    source: Option<String>,
+    owner_id: Option<String>,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OutcomeCurrencySummary {
+    currency: String,
+    pipeline_value: f64,
+    weighted_pipeline_value: f64,
+    won_value: f64,
+}
+
+#[derive(Debug, Serialize)]
+struct OutcomeAnalyticsView {
+    opportunity_count: i64,
+    open_opportunity_count: i64,
+    won_opportunity_count: i64,
+    lost_opportunity_count: i64,
+    insight_count: i64,
+    by_currency: Vec<OutcomeCurrencySummary>,
+}
+
+#[derive(Debug, Serialize)]
+struct InsightView {
+    id: String,
+    kind: String,
+    title: String,
+    summary: String,
+    metric: Option<String>,
+    value: Option<f64>,
+    confidence: f64,
+    source_ids_json: String,
+    observed_at: String,
+    created_at: String,
+    updated_at: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -1013,6 +1062,258 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         transaction.commit()?;
     }
 
+    if version < 11 {
+        connection.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS marketing_objectives (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              metric TEXT NOT NULL,
+              target REAL NOT NULL,
+              period_start TEXT NOT NULL,
+              period_end TEXT NOT NULL,
+              status TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_marketing_objectives_workspace
+              ON marketing_objectives(workspace_id, status, period_end);
+
+            CREATE TABLE IF NOT EXISTS strategy_documents (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              version INTEGER NOT NULL CHECK(version >= 1),
+              objective_ids_json TEXT NOT NULL DEFAULT '[]',
+              audience_ids_json TEXT NOT NULL DEFAULT '[]',
+              offer_ids_json TEXT NOT NULL DEFAULT '[]',
+              positioning TEXT NOT NULL,
+              key_messages_json TEXT NOT NULL DEFAULT '[]',
+              content_pillars_json TEXT NOT NULL DEFAULT '[]',
+              channels_json TEXT NOT NULL DEFAULT '[]',
+              status TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_strategy_documents_workspace
+              ON strategy_documents(workspace_id, status, updated_at);
+
+            CREATE TABLE IF NOT EXISTS audiences (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              description TEXT NOT NULL DEFAULT '',
+              attributes_json TEXT NOT NULL DEFAULT '{}',
+              exclusions_json TEXT NOT NULL DEFAULT '[]',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_audiences_workspace
+              ON audiences(workspace_id, updated_at);
+
+            CREATE TABLE IF NOT EXISTS offers (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              promise TEXT NOT NULL,
+              proof_points_json TEXT NOT NULL DEFAULT '[]',
+              constraints_json TEXT NOT NULL DEFAULT '[]',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_offers_workspace
+              ON offers(workspace_id, updated_at);
+
+            CREATE TABLE IF NOT EXISTS knowledge_sources (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              type TEXT NOT NULL,
+              title TEXT NOT NULL,
+              locator TEXT,
+              collected_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_knowledge_sources_workspace
+              ON knowledge_sources(workspace_id, collected_at);
+
+            CREATE TABLE IF NOT EXISTS knowledge_items (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              statement TEXT NOT NULL,
+              source_ids_json TEXT NOT NULL DEFAULT '[]',
+              trust TEXT NOT NULL,
+              tags_json TEXT NOT NULL DEFAULT '[]',
+              expires_at TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_knowledge_items_workspace_trust
+              ON knowledge_items(workspace_id, trust, updated_at);
+
+            CREATE TABLE IF NOT EXISTS knowledge_evidence (
+              item_id TEXT NOT NULL REFERENCES knowledge_items(id) ON DELETE CASCADE,
+              source_id TEXT NOT NULL REFERENCES knowledge_sources(id) ON DELETE CASCADE,
+              excerpt_hash TEXT NOT NULL,
+              collected_at TEXT NOT NULL,
+              PRIMARY KEY(item_id, source_id, excerpt_hash)
+            );
+
+            CREATE TABLE IF NOT EXISTS agent_definitions (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              role TEXT NOT NULL,
+              goal TEXT NOT NULL,
+              autonomy TEXT NOT NULL,
+              tool_grants_json TEXT NOT NULL DEFAULT '[]',
+              knowledge_scope_json TEXT NOT NULL DEFAULT '[]',
+              max_steps INTEGER NOT NULL CHECK(max_steps > 0),
+              enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0, 1)),
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_agent_definitions_workspace
+              ON agent_definitions(workspace_id, enabled, role);
+
+            CREATE TABLE IF NOT EXISTS agent_runs (
+              id TEXT PRIMARY KEY,
+              agent_id TEXT NOT NULL REFERENCES agent_definitions(id) ON DELETE CASCADE,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              input TEXT NOT NULL,
+              status TEXT NOT NULL,
+              step_count INTEGER NOT NULL DEFAULT 0 CHECK(step_count >= 0),
+              started_at TEXT,
+              completed_at TEXT,
+              blocked_reason TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_agent_runs_workspace_status
+              ON agent_runs(workspace_id, status, started_at);
+
+            CREATE TABLE IF NOT EXISTS marketing_policies (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              mode TEXT NOT NULL,
+              allowed_actions_json TEXT NOT NULL DEFAULT '[]',
+              blocked_actions_json TEXT NOT NULL DEFAULT '[]',
+              max_daily_external_actions INTEGER NOT NULL CHECK(max_daily_external_actions >= 0),
+              require_approval_for_json TEXT NOT NULL DEFAULT '[]',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_marketing_policies_workspace
+              ON marketing_policies(workspace_id, updated_at);
+
+            CREATE TABLE IF NOT EXISTS work_items (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              entity_type TEXT NOT NULL,
+              title TEXT NOT NULL,
+              status TEXT NOT NULL,
+              owner_id TEXT,
+              priority INTEGER NOT NULL DEFAULT 0,
+              due_at TEXT,
+              source_id TEXT,
+              target_id TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_work_items_workspace_status
+              ON work_items(workspace_id, status, priority, due_at);
+
+            CREATE TABLE IF NOT EXISTS work_dependencies (
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              predecessor_id TEXT NOT NULL,
+              successor_id TEXT NOT NULL,
+              kind TEXT NOT NULL,
+              PRIMARY KEY(workspace_id, predecessor_id, successor_id, kind)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_work_dependencies_successor
+              ON work_dependencies(workspace_id, successor_id, kind);
+
+            CREATE TABLE IF NOT EXISTS operational_links (
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              from_type TEXT NOT NULL,
+              from_id TEXT NOT NULL,
+              to_type TEXT NOT NULL,
+              to_id TEXT NOT NULL,
+              relation TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              PRIMARY KEY(workspace_id, from_type, from_id, to_type, to_id, relation)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_operational_links_from
+              ON operational_links(workspace_id, from_type, from_id);
+
+            CREATE INDEX IF NOT EXISTS idx_operational_links_to
+              ON operational_links(workspace_id, to_type, to_id);
+
+            PRAGMA user_version = 11;
+            ",
+        )?;
+    }
+
+    if version < 12 {
+        connection.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS opportunities (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE RESTRICT,
+              campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
+              name TEXT NOT NULL,
+              stage TEXT NOT NULL CHECK(stage IN ('new', 'qualified', 'proposal', 'negotiation', 'won', 'lost', 'nurture')),
+              value REAL NOT NULL CHECK(value >= 0),
+              currency TEXT NOT NULL CHECK(length(currency) = 3 AND currency = upper(currency)),
+              probability REAL NOT NULL CHECK(probability >= 0 AND probability <= 100),
+              source TEXT,
+              owner_id TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_opportunities_workspace_stage
+              ON opportunities(workspace_id, stage, updated_at);
+
+            CREATE INDEX IF NOT EXISTS idx_opportunities_workspace_contact
+              ON opportunities(workspace_id, contact_id, updated_at);
+
+            CREATE TABLE IF NOT EXISTS insights (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              kind TEXT NOT NULL CHECK(kind IN ('performance', 'anomaly', 'learning', 'trend', 'recommendation')),
+              title TEXT NOT NULL,
+              summary TEXT NOT NULL,
+              metric TEXT,
+              value REAL,
+              confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+              source_ids_json TEXT NOT NULL DEFAULT '[]',
+              observed_at TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_insights_workspace_kind
+              ON insights(workspace_id, kind, observed_at);
+
+            CREATE INDEX IF NOT EXISTS idx_insights_workspace_updated
+              ON insights(workspace_id, updated_at);
+
+            PRAGMA user_version = 12;
+            ",
+        )?;
+    }
+
     Ok(())
 }
 
@@ -1170,6 +1471,64 @@ WHEN NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'approval workspace/content mismatch');
 END;
+CREATE TRIGGER IF NOT EXISTS orbit_opportunities_insert_workspace
+BEFORE INSERT ON opportunities
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM contacts c
+  WHERE c.id = NEW.contact_id
+    AND c.workspace_id = NEW.workspace_id
+)
+OR (
+  NEW.campaign_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM campaigns c
+    WHERE c.id = NEW.campaign_id
+      AND c.workspace_id = NEW.workspace_id
+  )
+)
+OR (
+  NEW.owner_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM workspace_memberships m
+    WHERE m.workspace_id = NEW.workspace_id
+      AND m.user_id = NEW.owner_id
+      AND m.active = 1
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'opportunity workspace/reference mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_opportunities_update_workspace
+BEFORE UPDATE OF workspace_id, contact_id, campaign_id, owner_id ON opportunities
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM contacts c
+  WHERE c.id = NEW.contact_id
+    AND c.workspace_id = NEW.workspace_id
+)
+OR (
+  NEW.campaign_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM campaigns c
+    WHERE c.id = NEW.campaign_id
+      AND c.workspace_id = NEW.workspace_id
+  )
+)
+OR (
+  NEW.owner_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM workspace_memberships m
+    WHERE m.workspace_id = NEW.workspace_id
+      AND m.user_id = NEW.owner_id
+      AND m.active = 1
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'opportunity workspace/reference mismatch');
+END;
+
 "#;
 
 fn create_integrity_triggers(connection: &Connection) -> Result<(), AppError> {
@@ -1271,11 +1630,11 @@ fn cleanup_stale_database_artifacts(app_data: &Path) -> Result<(), AppError> {
     Ok(())
 }
 
-fn restrict_private_file(path: &PathBuf) -> Result<(), AppError> {
+fn restrict_private_file(_path: &PathBuf) -> Result<(), AppError> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+        fs::set_permissions(_path, fs::Permissions::from_mode(0o600))?;
     }
     Ok(())
 }
@@ -4642,6 +5001,2808 @@ fn backup_filename_timestamp() -> String {
     chrono_like_timestamp().replace(':', "-")
 }
 
+#[derive(Debug, Serialize)]
+struct MarketingObjectiveView {
+    id: String,
+    name: String,
+    metric: String,
+    target: f64,
+    period_start: String,
+    period_end: String,
+    status: String,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct AudienceView {
+    id: String,
+    name: String,
+    description: String,
+    attributes_json: String,
+    exclusions_json: String,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OfferView {
+    id: String,
+    name: String,
+    promise: String,
+    proof_points_json: String,
+    constraints_json: String,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct StrategyDocumentView {
+    id: String,
+    version: i64,
+    objective_ids_json: String,
+    audience_ids_json: String,
+    offer_ids_json: String,
+    positioning: String,
+    key_messages_json: String,
+    content_pillars_json: String,
+    channels_json: String,
+    status: String,
+    created_at: String,
+    updated_at: String,
+}
+
+fn validate_json_string_array(
+    value: Option<String>,
+    field: &str,
+    max_items: usize,
+) -> Result<String, String> {
+    let raw = value.unwrap_or_else(|| "[]".to_string());
+    let parsed: Vec<String> = serde_json::from_str(&raw)
+        .map_err(|_| format!("{field} must be a JSON array of strings"))?;
+    if parsed.len() > max_items {
+        return Err(format!("{field} contains too many items"));
+    }
+    let cleaned = parsed
+        .into_iter()
+        .map(|item| item.trim().to_string())
+        .collect::<Vec<_>>();
+    if cleaned.iter().any(String::is_empty) {
+        return Err(format!("{field} contains an empty item"));
+    }
+    serde_json::to_string(&cleaned).map_err(|error| error.to_string())
+}
+
+fn validate_json_object(value: Option<String>, field: &str) -> Result<String, String> {
+    let raw = value.unwrap_or_else(|| "{}".to_string());
+    let parsed: serde_json::Value =
+        serde_json::from_str(&raw).map_err(|_| format!("{field} must be valid JSON"))?;
+    if !parsed.is_object() {
+        return Err(format!("{field} must be a JSON object"));
+    }
+    serde_json::to_string(&parsed).map_err(|error| error.to_string())
+}
+
+fn validate_opportunity_stage(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "new",
+        "qualified",
+        "proposal",
+        "negotiation",
+        "won",
+        "lost",
+        "nurture",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported opportunity stage".to_string())
+    }
+}
+
+fn validate_insight_kind(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "performance",
+        "anomaly",
+        "learning",
+        "trend",
+        "recommendation",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported insight kind".to_string())
+    }
+}
+
+fn validate_currency(value: &str) -> Result<String, String> {
+    let value = value.trim().to_uppercase();
+    if value.len() == 3
+        && value
+            .chars()
+            .all(|character| character.is_ascii_uppercase())
+    {
+        Ok(value)
+    } else {
+        Err("currency must be a three-letter ISO-style code".to_string())
+    }
+}
+
+fn validate_strategy_metric(metric: &str) -> Result<String, String> {
+    let value = metric.trim().to_lowercase();
+    if [
+        "awareness",
+        "engagement",
+        "leads",
+        "opportunities",
+        "revenue",
+        "retention",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported objective metric".to_string())
+    }
+}
+
+fn validate_strategy_status(status: &str) -> Result<String, String> {
+    let value = status.trim().to_lowercase();
+    if ["draft", "active", "paused", "archived"].contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err("unsupported strategy status".to_string())
+    }
+}
+
+fn validate_strategy_reference_ids(
+    connection: &Connection,
+    workspace_id: &str,
+    table: &str,
+    ids_json: &str,
+) -> Result<(), String> {
+    let ids: Vec<String> = serde_json::from_str(ids_json)
+        .map_err(|_| "strategy reference list must be a JSON array".to_string())?;
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let normalized = ids
+        .iter()
+        .map(|id| validate_label(id).map_err(|error| error.to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let sql = match table {
+        "marketing_objectives" => {
+            "SELECT COUNT(*) FROM marketing_objectives WHERE workspace_id=?1 AND id=?2"
+        }
+        "audiences" => "SELECT COUNT(*) FROM audiences WHERE workspace_id=?1 AND id=?2",
+        "offers" => "SELECT COUNT(*) FROM offers WHERE workspace_id=?1 AND id=?2",
+        _ => return Err("unsupported strategy reference table".to_string()),
+    };
+
+    for id in normalized {
+        let found: i64 = connection
+            .query_row(sql, params![workspace_id, id], |row| row.get(0))
+            .map_err(|error| error.to_string())?;
+        if found != 1 {
+            return Err(format!(
+                "strategy reference does not belong to active workspace: {id}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn objective_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    name: String,
+    metric: String,
+    target: f64,
+    period_start: String,
+    period_end: String,
+    status: String,
+) -> Result<MarketingObjectiveView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let metric = validate_strategy_metric(&metric)?;
+    if !target.is_finite() || target < 0.0 {
+        return Err("objective target must be a finite non-negative number".to_string());
+    }
+    let period_start = normalize_rfc3339_utc(&period_start)?;
+    let period_end = normalize_rfc3339_utc(&period_end)?;
+    if period_end <= period_start {
+        return Err("objective period_end must be after period_start".to_string());
+    }
+    let status = validate_strategy_status(&status)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO marketing_objectives(
+               id, workspace_id, name, metric, target, period_start, period_end, status,
+               created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name,
+               metric=excluded.metric,
+               target=excluded.target,
+               period_start=excluded.period_start,
+               period_end=excluded.period_end,
+               status=excluded.status,
+               updated_at=excluded.updated_at
+             WHERE marketing_objectives.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                name,
+                metric,
+                target,
+                period_start,
+                period_end,
+                status,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("objective id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "strategy",
+        "objective_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(MarketingObjectiveView {
+        id,
+        name,
+        metric,
+        target,
+        period_start,
+        period_end,
+        status,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn objective_list(app: tauri::AppHandle) -> Result<Vec<MarketingObjectiveView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, metric, target, period_start, period_end, status, created_at, updated_at
+             FROM marketing_objectives
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(MarketingObjectiveView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                metric: row.get(2)?,
+                target: row.get(3)?,
+                period_start: row.get(4)?,
+                period_end: row.get(5)?,
+                status: row.get(6)?,
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn audience_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    name: String,
+    description: String,
+    attributes_json: Option<String>,
+    exclusions_json: Option<String>,
+) -> Result<AudienceView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    if description.trim().len() > 10_000 {
+        return Err("audience description is too long".to_string());
+    }
+    let attributes_json = validate_json_object(attributes_json, "attributes_json")?;
+    let exclusions_json = validate_json_string_array(exclusions_json, "exclusions_json", 100)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let description = description.trim().to_string();
+    let changed = connection
+        .execute(
+            "INSERT INTO audiences(
+               id, workspace_id, name, description, attributes_json, exclusions_json, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name,
+               description=excluded.description,
+               attributes_json=excluded.attributes_json,
+               exclusions_json=excluded.exclusions_json,
+               updated_at=excluded.updated_at
+             WHERE audiences.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                name,
+                description,
+                attributes_json,
+                exclusions_json,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("audience id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "strategy",
+        "audience_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(AudienceView {
+        id,
+        name,
+        description,
+        attributes_json,
+        exclusions_json,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn audience_list(app: tauri::AppHandle) -> Result<Vec<AudienceView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, description, attributes_json, exclusions_json, created_at, updated_at
+             FROM audiences
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(AudienceView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                attributes_json: row.get(3)?,
+                exclusions_json: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn offer_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    name: String,
+    promise: String,
+    proof_points_json: Option<String>,
+    constraints_json: Option<String>,
+) -> Result<OfferView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    if promise.trim().is_empty() || promise.len() > 10_000 {
+        return Err("offer promise is invalid".to_string());
+    }
+    let proof_points_json =
+        validate_json_string_array(proof_points_json, "proof_points_json", 100)?;
+    let constraints_json = validate_json_string_array(constraints_json, "constraints_json", 100)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let promise = promise.trim().to_string();
+    let changed = connection
+        .execute(
+            "INSERT INTO offers(
+               id, workspace_id, name, promise, proof_points_json, constraints_json, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name,
+               promise=excluded.promise,
+               proof_points_json=excluded.proof_points_json,
+               constraints_json=excluded.constraints_json,
+               updated_at=excluded.updated_at
+             WHERE offers.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                name,
+                promise,
+                proof_points_json,
+                constraints_json,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("offer id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "strategy",
+        "offer_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(OfferView {
+        id,
+        name,
+        promise,
+        proof_points_json,
+        constraints_json,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn offer_list(app: tauri::AppHandle) -> Result<Vec<OfferView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, promise, proof_points_json, constraints_json, created_at, updated_at
+             FROM offers
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(OfferView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                promise: row.get(2)?,
+                proof_points_json: row.get(3)?,
+                constraints_json: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn opportunity_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    contact_id: String,
+    campaign_id: Option<String>,
+    name: String,
+    stage: String,
+    value: f64,
+    currency: String,
+    probability: f64,
+    source: Option<String>,
+    owner_id: Option<String>,
+) -> Result<OpportunityView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let contact_id = validate_label(&contact_id).map_err(|error| error.to_string())?;
+    let campaign_id = campaign_id
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let stage = validate_opportunity_stage(&stage)?;
+    let currency = validate_currency(&currency)?;
+    if !value.is_finite() || value < 0.0 {
+        return Err("opportunity value must be finite and non-negative".to_string());
+    }
+    if !probability.is_finite() || !(0.0..=100.0).contains(&probability) {
+        return Err("opportunity probability must be between 0 and 100".to_string());
+    }
+    let source = source
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let owner_id = owner_id
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let contact_exists: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM contacts WHERE id=?1 AND workspace_id=?2
+             )",
+            params![&contact_id, &workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !contact_exists {
+        return Err("opportunity contact does not belong to active workspace".to_string());
+    }
+
+    if let Some(owner_id) = &owner_id {
+        let owner_exists: bool = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM workspace_memberships
+                   WHERE workspace_id=?1 AND user_id=?2 AND active=1
+                 )",
+                params![&workspace_id, owner_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if !owner_exists {
+            return Err("opportunity owner is not an active member of the workspace".to_string());
+        }
+    }
+
+    if let Some(campaign_id) = &campaign_id {
+        let campaign_exists: bool = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM campaigns WHERE id=?1 AND workspace_id=?2
+                 )",
+                params![campaign_id, &workspace_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if !campaign_exists {
+            return Err("opportunity campaign does not belong to active workspace".to_string());
+        }
+    }
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO opportunities(
+               id, workspace_id, contact_id, campaign_id, name, stage, value, currency,
+               probability, source, owner_id, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?12)
+             ON CONFLICT(id) DO UPDATE SET
+               contact_id=excluded.contact_id,
+               campaign_id=excluded.campaign_id,
+               name=excluded.name,
+               stage=excluded.stage,
+               value=excluded.value,
+               currency=excluded.currency,
+               probability=excluded.probability,
+               source=excluded.source,
+               owner_id=excluded.owner_id,
+               updated_at=excluded.updated_at
+             WHERE opportunities.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                contact_id,
+                campaign_id,
+                name,
+                stage,
+                value,
+                currency,
+                probability,
+                source,
+                owner_id,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("opportunity id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "crm",
+        "opportunity_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    let created_at: String = connection
+        .query_row(
+            "SELECT created_at FROM opportunities WHERE id=?1 AND workspace_id=?2",
+            params![&id, &workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+
+    Ok(OpportunityView {
+        id,
+        contact_id,
+        campaign_id,
+        name,
+        stage,
+        value,
+        currency,
+        probability,
+        source,
+        owner_id,
+        created_at,
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn opportunity_list(app: tauri::AppHandle) -> Result<Vec<OpportunityView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, contact_id, campaign_id, name, stage, value, currency, probability,
+                    source, owner_id, created_at, updated_at
+             FROM opportunities
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(OpportunityView {
+                id: row.get(0)?,
+                contact_id: row.get(1)?,
+                campaign_id: row.get(2)?,
+                name: row.get(3)?,
+                stage: row.get(4)?,
+                value: row.get(5)?,
+                currency: row.get(6)?,
+                probability: row.get(7)?,
+                source: row.get(8)?,
+                owner_id: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn insight_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    kind: String,
+    title: String,
+    summary: String,
+    metric: Option<String>,
+    value: Option<f64>,
+    confidence: f64,
+    source_ids_json: Option<String>,
+    observed_at: String,
+) -> Result<InsightView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let kind = validate_insight_kind(&kind)?;
+    let title = validate_label(&title).map_err(|error| error.to_string())?;
+    let summary = summary.trim().to_string();
+    if summary.is_empty() || summary.len() > 20_000 {
+        return Err("insight summary is invalid".to_string());
+    }
+    let metric = metric
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+    if let Some(value) = value {
+        if !value.is_finite() {
+            return Err("insight value must be finite".to_string());
+        }
+    }
+    if !confidence.is_finite() || !(0.0..=1.0).contains(&confidence) {
+        return Err("insight confidence must be between 0 and 1".to_string());
+    }
+    let source_ids_json = validate_json_string_array(source_ids_json, "source_ids_json", 100)?;
+    if serde_json::from_str::<Vec<String>>(&source_ids_json)
+        .map_err(|_| "source_ids_json must be a JSON array".to_string())?
+        .is_empty()
+    {
+        return Err("insight must reference at least one source".to_string());
+    }
+    let observed_at = normalize_rfc3339_utc(&observed_at)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO insights(
+               id, workspace_id, kind, title, summary, metric, value, confidence,
+               source_ids_json, observed_at, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)
+             ON CONFLICT(id) DO UPDATE SET
+               kind=excluded.kind,
+               title=excluded.title,
+               summary=excluded.summary,
+               metric=excluded.metric,
+               value=excluded.value,
+               confidence=excluded.confidence,
+               source_ids_json=excluded.source_ids_json,
+               observed_at=excluded.observed_at,
+               updated_at=excluded.updated_at
+             WHERE insights.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                kind,
+                title,
+                summary,
+                metric,
+                value,
+                confidence,
+                source_ids_json,
+                observed_at,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("insight id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "analytics",
+        "insight_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    let created_at: String = connection
+        .query_row(
+            "SELECT created_at FROM insights WHERE id=?1 AND workspace_id=?2",
+            params![&id, &workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+
+    Ok(InsightView {
+        id,
+        kind,
+        title,
+        summary,
+        metric,
+        value,
+        confidence,
+        source_ids_json,
+        observed_at,
+        created_at,
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn outcome_analytics(app: tauri::AppHandle) -> Result<OutcomeAnalyticsView, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let totals = connection
+        .query_row(
+            "SELECT
+               COUNT(*),
+               COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage = 'won' THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage = 'lost' THEN 1 ELSE 0 END), 0),
+               (SELECT COUNT(*) FROM insights WHERE workspace_id=?1)
+             FROM opportunities
+             WHERE workspace_id=?1",
+            params![&workspace_id],
+            |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, i64>(4)?,
+                ))
+            },
+        )
+        .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT
+               currency,
+               COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value * probability / 100.0 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN stage = 'won' THEN value ELSE 0 END), 0)
+             FROM opportunities
+             WHERE workspace_id=?1
+             GROUP BY currency
+             ORDER BY currency ASC",
+        )
+        .map_err(|error| error.to_string())?;
+
+    let by_currency = statement
+        .query_map(params![&workspace_id], |row| {
+            Ok(OutcomeCurrencySummary {
+                currency: row.get(0)?,
+                pipeline_value: row.get(1)?,
+                weighted_pipeline_value: row.get(2)?,
+                won_value: row.get(3)?,
+            })
+        })
+        .map_err(|error| error.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())?;
+
+    Ok(OutcomeAnalyticsView {
+        opportunity_count: totals.0,
+        open_opportunity_count: totals.1,
+        won_opportunity_count: totals.2,
+        lost_opportunity_count: totals.3,
+        insight_count: totals.4,
+        by_currency,
+    })
+}
+
+#[tauri::command]
+fn insight_list(app: tauri::AppHandle) -> Result<Vec<InsightView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, kind, title, summary, metric, value, confidence,
+                    source_ids_json, observed_at, created_at, updated_at
+             FROM insights
+             WHERE workspace_id=?1
+             ORDER BY observed_at DESC, updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(InsightView {
+                id: row.get(0)?,
+                kind: row.get(1)?,
+                title: row.get(2)?,
+                summary: row.get(3)?,
+                metric: row.get(4)?,
+                value: row.get(5)?,
+                confidence: row.get(6)?,
+                source_ids_json: row.get(7)?,
+                observed_at: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn strategy_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    version: i64,
+    objective_ids_json: Option<String>,
+    audience_ids_json: Option<String>,
+    offer_ids_json: Option<String>,
+    positioning: String,
+    key_messages_json: Option<String>,
+    content_pillars_json: Option<String>,
+    channels_json: Option<String>,
+    status: String,
+) -> Result<StrategyDocumentView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    if version < 1 {
+        return Err("strategy version must be at least 1".to_string());
+    }
+    if positioning.trim().is_empty() || positioning.len() > 20_000 {
+        return Err("strategy positioning is invalid".to_string());
+    }
+    let objective_ids_json =
+        validate_json_string_array(objective_ids_json, "objective_ids_json", 100)?;
+    let audience_ids_json =
+        validate_json_string_array(audience_ids_json, "audience_ids_json", 100)?;
+    let offer_ids_json = validate_json_string_array(offer_ids_json, "offer_ids_json", 100)?;
+    let key_messages_json =
+        validate_json_string_array(key_messages_json, "key_messages_json", 100)?;
+    let content_pillars_json =
+        validate_json_string_array(content_pillars_json, "content_pillars_json", 100)?;
+    let channels_json = validate_json_string_array(channels_json, "channels_json", 50)?;
+    let status = validate_strategy_status(&status)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    validate_strategy_reference_ids(
+        &connection,
+        &workspace_id,
+        "marketing_objectives",
+        &objective_ids_json,
+    )?;
+    validate_strategy_reference_ids(&connection, &workspace_id, "audiences", &audience_ids_json)?;
+    validate_strategy_reference_ids(&connection, &workspace_id, "offers", &offer_ids_json)?;
+
+    let positioning = positioning.trim().to_string();
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO strategy_documents(
+               id, workspace_id, version, objective_ids_json, audience_ids_json, offer_ids_json,
+               positioning, key_messages_json, content_pillars_json, channels_json, status,
+               created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?12)
+             ON CONFLICT(id) DO UPDATE SET
+               version=excluded.version,
+               objective_ids_json=excluded.objective_ids_json,
+               audience_ids_json=excluded.audience_ids_json,
+               offer_ids_json=excluded.offer_ids_json,
+               positioning=excluded.positioning,
+               key_messages_json=excluded.key_messages_json,
+               content_pillars_json=excluded.content_pillars_json,
+               channels_json=excluded.channels_json,
+               status=excluded.status,
+               updated_at=excluded.updated_at
+             WHERE strategy_documents.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                version,
+                objective_ids_json,
+                audience_ids_json,
+                offer_ids_json,
+                positioning,
+                key_messages_json,
+                content_pillars_json,
+                channels_json,
+                status,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("strategy id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "strategy",
+        "document_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(StrategyDocumentView {
+        id,
+        version,
+        objective_ids_json,
+        audience_ids_json,
+        offer_ids_json,
+        positioning,
+        key_messages_json,
+        content_pillars_json,
+        channels_json,
+        status,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn strategy_list(app: tauri::AppHandle) -> Result<Vec<StrategyDocumentView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, version, objective_ids_json, audience_ids_json, offer_ids_json,
+                    positioning, key_messages_json, content_pillars_json, channels_json,
+                    status, created_at, updated_at
+             FROM strategy_documents
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(StrategyDocumentView {
+                id: row.get(0)?,
+                version: row.get(1)?,
+                objective_ids_json: row.get(2)?,
+                audience_ids_json: row.get(3)?,
+                offer_ids_json: row.get(4)?,
+                positioning: row.get(5)?,
+                key_messages_json: row.get(6)?,
+                content_pillars_json: row.get(7)?,
+                channels_json: row.get(8)?,
+                status: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[derive(Debug, Serialize)]
+struct KnowledgeSourceView {
+    id: String,
+    source_type: String,
+    title: String,
+    locator: Option<String>,
+    collected_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct KnowledgeItemView {
+    id: String,
+    statement: String,
+    source_ids_json: String,
+    trust: String,
+    tags_json: String,
+    expires_at: Option<String>,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct KnowledgeEvidenceView {
+    item_id: String,
+    source_id: String,
+    excerpt_hash: String,
+    collected_at: String,
+}
+
+fn validate_knowledge_source_type(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "document",
+        "website",
+        "crm",
+        "campaign",
+        "analytics",
+        "research",
+        "user",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported knowledge source type".to_string())
+    }
+}
+
+fn validate_knowledge_trust(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if ["verified", "approved", "observed", "unverified"].contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err("unsupported knowledge trust level".to_string())
+    }
+}
+
+fn validate_hash_64(value: &str, field: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if value.len() != 64 || !value.chars().all(|character| character.is_ascii_hexdigit()) {
+        return Err(format!("{field} must be a 64-character hexadecimal hash"));
+    }
+    Ok(value)
+}
+
+fn validate_workspace_source_ids(
+    connection: &Connection,
+    workspace_id: &str,
+    ids_json: &str,
+) -> Result<(), String> {
+    let ids: Vec<String> = serde_json::from_str(ids_json)
+        .map_err(|_| "source_ids_json must be a JSON array of strings".to_string())?;
+    for id in ids {
+        let id = validate_label(&id).map_err(|error| error.to_string())?;
+        let found: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_sources WHERE id=?1 AND workspace_id=?2",
+                params![id, workspace_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if found != 1 {
+            return Err(format!(
+                "knowledge source does not belong to active workspace: {id}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn knowledge_source_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    source_type: String,
+    title: String,
+    locator: Option<String>,
+) -> Result<KnowledgeSourceView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let source_type = validate_knowledge_source_type(&source_type)?;
+    let title = validate_label(&title).map_err(|error| error.to_string())?;
+    let locator = locator
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .filter(|value| value.len() <= 2_000);
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let collected_at = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO knowledge_sources(
+               id, workspace_id, type, title, locator, collected_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(id) DO UPDATE SET
+               type=excluded.type,
+               title=excluded.title,
+               locator=excluded.locator,
+               collected_at=excluded.collected_at
+             WHERE knowledge_sources.workspace_id=excluded.workspace_id",
+            params![id, workspace_id, source_type, title, locator, collected_at],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("knowledge source id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "knowledge",
+        "source_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(KnowledgeSourceView {
+        id,
+        source_type,
+        title,
+        locator,
+        collected_at,
+    })
+}
+
+#[tauri::command]
+fn knowledge_source_list(app: tauri::AppHandle) -> Result<Vec<KnowledgeSourceView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, type, title, locator, collected_at
+             FROM knowledge_sources
+             WHERE workspace_id=?1
+             ORDER BY collected_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(KnowledgeSourceView {
+                id: row.get(0)?,
+                source_type: row.get(1)?,
+                title: row.get(2)?,
+                locator: row.get(3)?,
+                collected_at: row.get(4)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn knowledge_item_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    statement: String,
+    source_ids_json: Option<String>,
+    trust: String,
+    tags_json: Option<String>,
+    expires_at: Option<String>,
+) -> Result<KnowledgeItemView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let statement = statement.trim().to_string();
+    if statement.is_empty() || statement.len() > 20_000 {
+        return Err("knowledge statement is invalid".to_string());
+    }
+    let source_ids_json = validate_json_string_array(source_ids_json, "source_ids_json", 100)?;
+    if source_ids_json == "[]" {
+        return Err("knowledge item requires at least one source".to_string());
+    }
+    let trust = validate_knowledge_trust(&trust)?;
+    let tags_json = validate_json_string_array(tags_json, "tags_json", 100)?;
+    let expires_at = expires_at
+        .map(|value| normalize_rfc3339_utc(&value))
+        .transpose()?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+    validate_workspace_source_ids(&connection, &workspace_id, &source_ids_json)?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO knowledge_items(
+               id, workspace_id, statement, source_ids_json, trust, tags_json, expires_at,
+               created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+             ON CONFLICT(id) DO UPDATE SET
+               statement=excluded.statement,
+               source_ids_json=excluded.source_ids_json,
+               trust=excluded.trust,
+               tags_json=excluded.tags_json,
+               expires_at=excluded.expires_at,
+               updated_at=excluded.updated_at
+             WHERE knowledge_items.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                statement,
+                source_ids_json,
+                trust,
+                tags_json,
+                expires_at,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("knowledge item id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "knowledge",
+        "item_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(KnowledgeItemView {
+        id,
+        statement,
+        source_ids_json,
+        trust,
+        tags_json,
+        expires_at,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn knowledge_item_list(app: tauri::AppHandle) -> Result<Vec<KnowledgeItemView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, statement, source_ids_json, trust, tags_json, expires_at, created_at, updated_at
+             FROM knowledge_items
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(KnowledgeItemView {
+                id: row.get(0)?,
+                statement: row.get(1)?,
+                source_ids_json: row.get(2)?,
+                trust: row.get(3)?,
+                tags_json: row.get(4)?,
+                expires_at: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn knowledge_evidence_add(
+    app: tauri::AppHandle,
+    item_id: String,
+    source_id: String,
+    excerpt_hash: String,
+) -> Result<KnowledgeEvidenceView, String> {
+    let workspace_id = active_workspace_id();
+    let item_id = validate_label(&item_id).map_err(|error| error.to_string())?;
+    let source_id = validate_label(&source_id).map_err(|error| error.to_string())?;
+    let excerpt_hash = validate_hash_64(&excerpt_hash, "excerpt_hash")?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let item_workspace: Option<String> = connection
+        .query_row(
+            "SELECT workspace_id FROM knowledge_items WHERE id=?1",
+            params![&item_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    if item_workspace.as_deref() != Some(workspace_id.as_str()) {
+        return Err("knowledge item is not in active workspace".to_string());
+    }
+
+    let source_workspace: Option<String> = connection
+        .query_row(
+            "SELECT workspace_id FROM knowledge_sources WHERE id=?1",
+            params![&source_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    if source_workspace.as_deref() != Some(workspace_id.as_str()) {
+        return Err("knowledge source is not in active workspace".to_string());
+    }
+
+    let collected_at = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO knowledge_evidence(
+               item_id, source_id, excerpt_hash, collected_at
+             )
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(item_id, source_id, excerpt_hash)
+             DO UPDATE SET collected_at=excluded.collected_at",
+            params![item_id, source_id, excerpt_hash, collected_at],
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit(
+        &connection,
+        "knowledge",
+        "evidence_add",
+        "success",
+        "user",
+        Some(&format!("{item_id}:{source_id}:{excerpt_hash}")),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(KnowledgeEvidenceView {
+        item_id,
+        source_id,
+        excerpt_hash,
+        collected_at,
+    })
+}
+
+#[tauri::command]
+fn knowledge_evidence_list(
+    app: tauri::AppHandle,
+    item_id: String,
+) -> Result<Vec<KnowledgeEvidenceView>, String> {
+    let workspace_id = active_workspace_id();
+    let item_id = validate_label(&item_id).map_err(|error| error.to_string())?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let exists: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM knowledge_items
+               WHERE id=?1 AND workspace_id=?2
+             )",
+            params![item_id, workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !exists {
+        return Err(AppError::NotFound.to_string());
+    }
+
+    let mut statement = connection
+        .prepare(
+            "SELECT e.item_id, e.source_id, e.excerpt_hash, e.collected_at
+             FROM knowledge_evidence e
+             JOIN knowledge_sources s ON s.id=e.source_id AND s.workspace_id=?1
+             WHERE e.item_id=?2
+             ORDER BY e.collected_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id, item_id], |row| {
+            Ok(KnowledgeEvidenceView {
+                item_id: row.get(0)?,
+                source_id: row.get(1)?,
+                excerpt_hash: row.get(2)?,
+                collected_at: row.get(3)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[derive(Debug, Serialize)]
+struct AgentDefinitionView {
+    id: String,
+    name: String,
+    role: String,
+    goal: String,
+    autonomy: String,
+    tool_grants_json: String,
+    knowledge_scope_json: String,
+    max_steps: i64,
+    enabled: bool,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct AgentRunView {
+    id: String,
+    agent_id: String,
+    input: String,
+    status: String,
+    step_count: i64,
+    started_at: Option<String>,
+    completed_at: Option<String>,
+    blocked_reason: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct MarketingPolicyView {
+    id: String,
+    name: String,
+    mode: String,
+    allowed_actions_json: String,
+    blocked_actions_json: String,
+    max_daily_external_actions: i64,
+    require_approval_for_json: String,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct WorkItemView {
+    id: String,
+    entity_type: String,
+    title: String,
+    status: String,
+    owner_id: Option<String>,
+    priority: i64,
+    due_at: Option<String>,
+    source_id: Option<String>,
+    target_id: Option<String>,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct WorkDependencyView {
+    predecessor_id: String,
+    successor_id: String,
+    kind: String,
+}
+
+fn validate_agent_role(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "research",
+        "strategy",
+        "content",
+        "engagement",
+        "crm",
+        "analytics",
+        "campaign",
+        "qa",
+        "operator",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported agent role".to_string())
+    }
+}
+
+fn validate_agent_autonomy(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "suggest",
+        "draft",
+        "execute_bounded",
+        "execute_with_approval",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported agent autonomy".to_string())
+    }
+}
+
+fn validate_agent_status(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "queued",
+        "running",
+        "awaiting_approval",
+        "awaiting_user_action",
+        "succeeded",
+        "failed",
+        "cancelled",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported agent run status".to_string())
+    }
+}
+
+fn validate_agent_tool_grants(value: Option<String>) -> Result<String, String> {
+    let raw = value.unwrap_or_else(|| "[]".to_string());
+    let parsed: serde_json::Value = serde_json::from_str(&raw)
+        .map_err(|_| "tool_grants_json must be valid JSON".to_string())?;
+    let Some(grants) = parsed.as_array() else {
+        return Err("tool_grants_json must be a JSON array".to_string());
+    };
+    if grants.len() > 100 {
+        return Err("too many agent tool grants".to_string());
+    }
+    for grant in grants {
+        let Some(object) = grant.as_object() else {
+            return Err("each agent tool grant must be an object".to_string());
+        };
+        if object
+            .get("tool")
+            .and_then(serde_json::Value::as_str)
+            .is_none_or(|value| value.trim().is_empty() || value.len() > 200)
+        {
+            return Err("agent tool grant tool is invalid".to_string());
+        }
+        let Some(scopes) = object.get("scopes").and_then(serde_json::Value::as_array) else {
+            return Err("agent tool grant scopes must be an array".to_string());
+        };
+        if scopes.len() > 100
+            || scopes
+                .iter()
+                .any(|scope| scope.as_str().is_none_or(|value| value.trim().is_empty()))
+        {
+            return Err("agent tool grant scopes are invalid".to_string());
+        }
+        if object
+            .get("requiresApproval")
+            .and_then(serde_json::Value::as_bool)
+            .is_none()
+        {
+            return Err("agent tool grant requiresApproval must be boolean".to_string());
+        }
+    }
+    serde_json::to_string(&parsed).map_err(|error| error.to_string())
+}
+
+fn validate_policy_mode(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if ["manual", "assisted", "bounded", "approved"].contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err("unsupported marketing policy mode".to_string())
+    }
+}
+
+fn validate_risk_array(value: Option<String>) -> Result<String, String> {
+    let raw = value.unwrap_or_else(|| "[]".to_string());
+    let parsed: Vec<String> = serde_json::from_str(&raw)
+        .map_err(|_| "risk list must be a JSON array of strings".to_string())?;
+    if parsed.len() > 4
+        || parsed.iter().any(|risk| {
+            !["low", "medium", "high", "critical"].contains(&risk.to_lowercase().as_str())
+        })
+    {
+        return Err("invalid risk list".to_string());
+    }
+    let normalized = parsed
+        .into_iter()
+        .map(|risk| risk.to_lowercase())
+        .collect::<Vec<_>>();
+    serde_json::to_string(&normalized).map_err(|error| error.to_string())
+}
+
+fn validate_work_item_type(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "objective",
+        "strategy",
+        "campaign",
+        "content",
+        "task",
+        "conversation",
+        "contact",
+        "opportunity",
+        "insight",
+        "agent_run",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported work item type".to_string())
+    }
+}
+
+fn validate_work_item_status(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "backlog",
+        "ready",
+        "in_progress",
+        "blocked",
+        "waiting",
+        "done",
+        "cancelled",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported work item status".to_string())
+    }
+}
+
+fn validate_work_dependency_kind(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if ["blocks", "requires", "follows"].contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err("unsupported work dependency kind".to_string())
+    }
+}
+
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn agent_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    name: String,
+    role: String,
+    goal: String,
+    autonomy: String,
+    tool_grants_json: Option<String>,
+    knowledge_scope_json: Option<String>,
+    max_steps: i64,
+    enabled: bool,
+) -> Result<AgentDefinitionView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let role = validate_agent_role(&role)?;
+    let goal = goal.trim().to_string();
+    if goal.is_empty() || goal.len() > 20_000 {
+        return Err("agent goal is invalid".to_string());
+    }
+    let autonomy = validate_agent_autonomy(&autonomy)?;
+    if !(1..=10_000).contains(&max_steps) {
+        return Err("agent max_steps must be between 1 and 10000".to_string());
+    }
+    let tool_grants_json = validate_agent_tool_grants(tool_grants_json)?;
+    let knowledge_scope_json =
+        validate_json_string_array(knowledge_scope_json, "knowledge_scope_json", 100)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO agent_definitions(
+               id, workspace_id, name, role, goal, autonomy, tool_grants_json,
+               knowledge_scope_json, max_steps, enabled, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name,
+               role=excluded.role,
+               goal=excluded.goal,
+               autonomy=excluded.autonomy,
+               tool_grants_json=excluded.tool_grants_json,
+               knowledge_scope_json=excluded.knowledge_scope_json,
+               max_steps=excluded.max_steps,
+               enabled=excluded.enabled,
+               updated_at=excluded.updated_at
+             WHERE agent_definitions.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                name,
+                role,
+                goal,
+                autonomy,
+                tool_grants_json,
+                knowledge_scope_json,
+                max_steps,
+                enabled as i64,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("agent id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "agent",
+        "definition_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(AgentDefinitionView {
+        id,
+        name,
+        role,
+        goal,
+        autonomy,
+        tool_grants_json,
+        knowledge_scope_json,
+        max_steps,
+        enabled,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn agent_list(app: tauri::AppHandle) -> Result<Vec<AgentDefinitionView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, role, goal, autonomy, tool_grants_json,
+                    knowledge_scope_json, max_steps, enabled, created_at, updated_at
+             FROM agent_definitions
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(AgentDefinitionView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                role: row.get(2)?,
+                goal: row.get(3)?,
+                autonomy: row.get(4)?,
+                tool_grants_json: row.get(5)?,
+                knowledge_scope_json: row.get(6)?,
+                max_steps: row.get(7)?,
+                enabled: row.get::<_, i64>(8)? == 1,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn agent_run_create(
+    app: tauri::AppHandle,
+    id: String,
+    agent_id: String,
+    input: String,
+) -> Result<AgentRunView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let agent_id = validate_label(&agent_id).map_err(|error| error.to_string())?;
+    let input = input.trim().to_string();
+    if input.is_empty() || input.len() > 50_000 {
+        return Err("agent run input is invalid".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let agent_exists: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1 FROM agent_definitions
+               WHERE id=?1 AND workspace_id=?2 AND enabled=1
+             )",
+            params![agent_id, workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !agent_exists {
+        return Err("agent must exist, be enabled, and belong to the active workspace".to_string());
+    }
+
+    connection
+        .execute(
+            "INSERT INTO agent_runs(
+               id, agent_id, workspace_id, input, status, step_count
+             )
+             VALUES (?1, ?2, ?3, ?4, 'queued', 0)",
+            params![id, agent_id, workspace_id, input],
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit(
+        &connection,
+        "agent",
+        "run_create",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(AgentRunView {
+        id,
+        agent_id,
+        input,
+        status: "queued".to_string(),
+        step_count: 0,
+        started_at: None,
+        completed_at: None,
+        blocked_reason: None,
+    })
+}
+
+#[tauri::command]
+fn agent_run_set_status(
+    app: tauri::AppHandle,
+    id: String,
+    status: String,
+    blocked_reason: Option<String>,
+) -> Result<AgentRunView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let status = validate_agent_status(&status)?;
+    let blocked_reason = blocked_reason
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .filter(|value| value.len() <= 2_000);
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "operator"])
+        .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let started_at = if status == "running" {
+        Some(timestamp.clone())
+    } else {
+        None
+    };
+    let completed_at = if ["succeeded", "failed", "cancelled"].contains(&status.as_str()) {
+        Some(timestamp.clone())
+    } else {
+        None
+    };
+
+    let changed = connection
+        .execute(
+            "UPDATE agent_runs
+             SET status=?1,
+                 started_at=COALESCE(?2, started_at),
+                 completed_at=COALESCE(?3, completed_at),
+                 blocked_reason=?4
+             WHERE id=?5 AND workspace_id=?6",
+            params![
+                status,
+                started_at,
+                completed_at,
+                blocked_reason,
+                id,
+                workspace_id
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err(AppError::NotFound.to_string());
+    }
+
+    let row = connection
+        .query_row(
+            "SELECT agent_id, input, status, step_count, started_at, completed_at, blocked_reason
+             FROM agent_runs
+             WHERE id=?1 AND workspace_id=?2",
+            params![id, workspace_id],
+            |row| {
+                Ok(AgentRunView {
+                    id: id.clone(),
+                    agent_id: row.get(0)?,
+                    input: row.get(1)?,
+                    status: row.get(2)?,
+                    step_count: row.get(3)?,
+                    started_at: row.get(4)?,
+                    completed_at: row.get(5)?,
+                    blocked_reason: row.get(6)?,
+                })
+            },
+        )
+        .map_err(|error| error.to_string())?;
+
+    write_audit(
+        &connection,
+        "agent",
+        "run_status",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(row)
+}
+
+#[tauri::command]
+fn agent_run_list(app: tauri::AppHandle) -> Result<Vec<AgentRunView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, agent_id, input, status, step_count, started_at, completed_at, blocked_reason
+             FROM agent_runs
+             WHERE workspace_id=?1
+             ORDER BY rowid DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(AgentRunView {
+                id: row.get(0)?,
+                agent_id: row.get(1)?,
+                input: row.get(2)?,
+                status: row.get(3)?,
+                step_count: row.get(4)?,
+                started_at: row.get(5)?,
+                completed_at: row.get(6)?,
+                blocked_reason: row.get(7)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn policy_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    name: String,
+    mode: String,
+    allowed_actions_json: Option<String>,
+    blocked_actions_json: Option<String>,
+    max_daily_external_actions: i64,
+    require_approval_for_json: Option<String>,
+) -> Result<MarketingPolicyView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let mode = validate_policy_mode(&mode)?;
+    let allowed_actions_json =
+        validate_json_string_array(allowed_actions_json, "allowed_actions_json", 500)?;
+    let blocked_actions_json =
+        validate_json_string_array(blocked_actions_json, "blocked_actions_json", 500)?;
+    let require_approval_for_json = validate_risk_array(require_approval_for_json)?;
+    if !(0..=1_000_000).contains(&max_daily_external_actions) {
+        return Err("max_daily_external_actions is invalid".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin"])
+        .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO marketing_policies(
+               id, workspace_id, name, mode, allowed_actions_json, blocked_actions_json,
+               max_daily_external_actions, require_approval_for_json, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name,
+               mode=excluded.mode,
+               allowed_actions_json=excluded.allowed_actions_json,
+               blocked_actions_json=excluded.blocked_actions_json,
+               max_daily_external_actions=excluded.max_daily_external_actions,
+               require_approval_for_json=excluded.require_approval_for_json,
+               updated_at=excluded.updated_at
+             WHERE marketing_policies.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                name,
+                mode,
+                allowed_actions_json,
+                blocked_actions_json,
+                max_daily_external_actions,
+                require_approval_for_json,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("policy id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "policy",
+        "upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(MarketingPolicyView {
+        id,
+        name,
+        mode,
+        allowed_actions_json,
+        blocked_actions_json,
+        max_daily_external_actions,
+        require_approval_for_json,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn policy_list(app: tauri::AppHandle) -> Result<Vec<MarketingPolicyView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, mode, allowed_actions_json, blocked_actions_json,
+                    max_daily_external_actions, require_approval_for_json,
+                    created_at, updated_at
+             FROM marketing_policies
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(MarketingPolicyView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                mode: row.get(2)?,
+                allowed_actions_json: row.get(3)?,
+                blocked_actions_json: row.get(4)?,
+                max_daily_external_actions: row.get(5)?,
+                require_approval_for_json: row.get(6)?,
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+// This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn work_item_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    entity_type: String,
+    title: String,
+    status: String,
+    owner_id: Option<String>,
+    priority: i64,
+    due_at: Option<String>,
+    source_id: Option<String>,
+    target_id: Option<String>,
+) -> Result<WorkItemView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let entity_type = validate_work_item_type(&entity_type)?;
+    let title = validate_label(&title).map_err(|error| error.to_string())?;
+    let status = validate_work_item_status(&status)?;
+    if !(-100..=100).contains(&priority) {
+        return Err("work item priority is invalid".to_string());
+    }
+    let owner_id = owner_id
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let source_id = source_id
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let target_id = target_id
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let due_at = due_at
+        .map(|value| normalize_rfc3339_utc(&value))
+        .transpose()?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO work_items(
+               id, workspace_id, entity_type, title, status, owner_id, priority, due_at,
+               source_id, target_id, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)
+             ON CONFLICT(id) DO UPDATE SET
+               entity_type=excluded.entity_type,
+               title=excluded.title,
+               status=excluded.status,
+               owner_id=excluded.owner_id,
+               priority=excluded.priority,
+               due_at=excluded.due_at,
+               source_id=excluded.source_id,
+               target_id=excluded.target_id,
+               updated_at=excluded.updated_at
+             WHERE work_items.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                entity_type,
+                title,
+                status,
+                owner_id,
+                priority,
+                due_at,
+                source_id,
+                target_id,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("work item id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "operations",
+        "work_item_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(WorkItemView {
+        id,
+        entity_type,
+        title,
+        status,
+        owner_id,
+        priority,
+        due_at,
+        source_id,
+        target_id,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn work_item_list(app: tauri::AppHandle) -> Result<Vec<WorkItemView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, entity_type, title, status, owner_id, priority, due_at, source_id, target_id,
+                    created_at, updated_at
+             FROM work_items
+             WHERE workspace_id=?1
+             ORDER BY priority DESC, COALESCE(due_at, '9999-12-31T23:59:59Z') ASC, updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(WorkItemView {
+                id: row.get(0)?,
+                entity_type: row.get(1)?,
+                title: row.get(2)?,
+                status: row.get(3)?,
+                owner_id: row.get(4)?,
+                priority: row.get(5)?,
+                due_at: row.get(6)?,
+                source_id: row.get(7)?,
+                target_id: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn work_dependency_upsert(
+    app: tauri::AppHandle,
+    predecessor_id: String,
+    successor_id: String,
+    kind: String,
+) -> Result<WorkDependencyView, String> {
+    let workspace_id = active_workspace_id();
+    let predecessor_id = validate_label(&predecessor_id).map_err(|error| error.to_string())?;
+    let successor_id = validate_label(&successor_id).map_err(|error| error.to_string())?;
+    let kind = validate_work_dependency_kind(&kind)?;
+    if predecessor_id == successor_id {
+        return Err("work dependency cannot be self-referential".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    for id in [&predecessor_id, &successor_id] {
+        let exists: bool = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM work_items
+                   WHERE id=?1 AND workspace_id=?2
+                 )",
+                params![id, workspace_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if !exists {
+            return Err(format!("work item is not in active workspace: {id}"));
+        }
+    }
+
+    connection
+        .execute(
+            "INSERT INTO work_dependencies(
+               workspace_id, predecessor_id, successor_id, kind
+             )
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(workspace_id, predecessor_id, successor_id, kind)
+             DO NOTHING",
+            params![workspace_id, predecessor_id, successor_id, kind],
+        )
+        .map_err(|error| error.to_string())?;
+
+    let dependency_id = format!("{predecessor_id}->{successor_id}:{kind}");
+    write_audit(
+        &connection,
+        "operations",
+        "dependency_upsert",
+        "success",
+        "user",
+        Some(&dependency_id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(WorkDependencyView {
+        predecessor_id,
+        successor_id,
+        kind,
+    })
+}
+
+#[tauri::command]
+fn work_dependency_list(app: tauri::AppHandle) -> Result<Vec<WorkDependencyView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT predecessor_id, successor_id, kind
+             FROM work_dependencies
+             WHERE workspace_id=?1
+             ORDER BY rowid DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(WorkDependencyView {
+                predecessor_id: row.get(0)?,
+                successor_id: row.get(1)?,
+                kind: row.get(2)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[derive(Debug, Serialize)]
+struct OperationalLinkView {
+    workspace_id: String,
+    from_type: String,
+    from_id: String,
+    to_type: String,
+    to_id: String,
+    relation: String,
+    created_at: String,
+}
+
+fn validate_operational_entity_type(value: &str) -> Result<&'static str, String> {
+    match value.trim() {
+        "objective" => Ok("marketing_objectives"),
+        "strategy" => Ok("strategy_documents"),
+        "audience" => Ok("audiences"),
+        "offer" => Ok("offers"),
+        "knowledge_item" => Ok("knowledge_items"),
+        "agent" => Ok("agent_definitions"),
+        "policy" => Ok("marketing_policies"),
+        "work_item" => Ok("work_items"),
+        "agent_run" => Ok("agent_runs"),
+        "opportunity" => Ok("opportunities"),
+        "insight" => Ok("insights"),
+        "campaign" => Ok("campaigns"),
+        "content" => Ok("content_items"),
+        "task" => Ok("tasks"),
+        "conversation" => Ok("conversations"),
+        "contact" => Ok("contacts"),
+        "media_asset" => Ok("media_assets"),
+        _ => Err("unsupported operational entity type".to_string()),
+    }
+}
+
+fn operational_entity_exists(
+    connection: &Connection,
+    workspace_id: &str,
+    entity_type: &str,
+    entity_id: &str,
+) -> Result<bool, String> {
+    let table = validate_operational_entity_type(entity_type)?;
+    let sql = match table {
+        "marketing_objectives" => {
+            "SELECT EXISTS(SELECT 1 FROM marketing_objectives WHERE id=?1 AND workspace_id=?2)"
+        }
+        "strategy_documents" => {
+            "SELECT EXISTS(SELECT 1 FROM strategy_documents WHERE id=?1 AND workspace_id=?2)"
+        }
+        "audiences" => "SELECT EXISTS(SELECT 1 FROM audiences WHERE id=?1 AND workspace_id=?2)",
+        "offers" => "SELECT EXISTS(SELECT 1 FROM offers WHERE id=?1 AND workspace_id=?2)",
+        "knowledge_items" => {
+            "SELECT EXISTS(SELECT 1 FROM knowledge_items WHERE id=?1 AND workspace_id=?2)"
+        }
+        "agent_definitions" => {
+            "SELECT EXISTS(SELECT 1 FROM agent_definitions WHERE id=?1 AND workspace_id=?2)"
+        }
+        "marketing_policies" => {
+            "SELECT EXISTS(SELECT 1 FROM marketing_policies WHERE id=?1 AND workspace_id=?2)"
+        }
+        "work_items" => "SELECT EXISTS(SELECT 1 FROM work_items WHERE id=?1 AND workspace_id=?2)",
+        "agent_runs" => "SELECT EXISTS(SELECT 1 FROM agent_runs WHERE id=?1 AND workspace_id=?2)",
+        "opportunities" => {
+            "SELECT EXISTS(SELECT 1 FROM opportunities WHERE id=?1 AND workspace_id=?2)"
+        }
+        "insights" => "SELECT EXISTS(SELECT 1 FROM insights WHERE id=?1 AND workspace_id=?2)",
+        "campaigns" => "SELECT EXISTS(SELECT 1 FROM campaigns WHERE id=?1 AND workspace_id=?2)",
+        "content_items" => {
+            "SELECT EXISTS(SELECT 1 FROM content_items WHERE id=?1 AND workspace_id=?2)"
+        }
+        "tasks" => "SELECT EXISTS(SELECT 1 FROM tasks WHERE id=?1 AND workspace_id=?2)",
+        "conversations" => {
+            "SELECT EXISTS(SELECT 1 FROM conversations WHERE id=?1 AND workspace_id=?2)"
+        }
+        "contacts" => "SELECT EXISTS(SELECT 1 FROM contacts WHERE id=?1 AND workspace_id=?2)",
+        "media_assets" => {
+            "SELECT EXISTS(SELECT 1 FROM media_assets WHERE id=?1 AND workspace_id=?2)"
+        }
+        _ => return Err("unsupported operational entity type".to_string()),
+    };
+    connection
+        .query_row(sql, params![entity_id, workspace_id], |row| row.get(0))
+        .map_err(|error| error.to_string())
+}
+
+fn validate_operational_relation(value: &str) -> Result<String, String> {
+    let relation = value.trim();
+    if relation.is_empty()
+        || relation.len() > 80
+        || !relation.chars().enumerate().all(|(index, c)| {
+            c.is_ascii_lowercase()
+                || c.is_ascii_digit() && index > 0
+                || matches!(c, '_' | '-' | '.')
+        })
+        || !relation
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_lowercase())
+    {
+        return Err("invalid operational relation".to_string());
+    }
+    Ok(relation.to_string())
+}
+
+#[tauri::command]
+fn operational_link_upsert(
+    app: tauri::AppHandle,
+    from_type: String,
+    from_id: String,
+    to_type: String,
+    to_id: String,
+    relation: String,
+) -> Result<OperationalLinkView, String> {
+    let workspace_id = active_workspace_id();
+    let from_id = validate_label(&from_id).map_err(|error| error.to_string())?;
+    let to_id = validate_label(&to_id).map_err(|error| error.to_string())?;
+    let from_type = from_type.trim().to_string();
+    let to_type = to_type.trim().to_string();
+    let relation = validate_operational_relation(&relation)?;
+
+    if from_type == to_type && from_id == to_id {
+        return Err("self-link is not allowed".to_string());
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    if !operational_entity_exists(&connection, &workspace_id, &from_type, &from_id)? {
+        return Err("source entity does not exist in active workspace".to_string());
+    }
+    if !operational_entity_exists(&connection, &workspace_id, &to_type, &to_id)? {
+        return Err("target entity does not exist in active workspace".to_string());
+    }
+
+    let created_at = chrono_like_timestamp();
+    connection
+        .execute(
+            "INSERT INTO operational_links(
+               workspace_id, from_type, from_id, to_type, to_id, relation, created_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(workspace_id, from_type, from_id, to_type, to_id, relation)
+             DO UPDATE SET created_at=excluded.created_at",
+            params![
+                workspace_id,
+                from_type,
+                from_id,
+                to_type,
+                to_id,
+                relation,
+                created_at
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+
+    let link_id = format!("{from_type}:{from_id}->{to_type}:{to_id}:{relation}");
+    write_audit(
+        &connection,
+        "operations",
+        "link_upsert",
+        "success",
+        "user",
+        Some(&link_id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(OperationalLinkView {
+        workspace_id: active_workspace_id(),
+        from_type,
+        from_id,
+        to_type,
+        to_id,
+        relation,
+        created_at,
+    })
+}
+
+#[tauri::command]
+fn operational_link_delete(
+    app: tauri::AppHandle,
+    from_type: String,
+    from_id: String,
+    to_type: String,
+    to_id: String,
+    relation: String,
+) -> Result<bool, String> {
+    let workspace_id = active_workspace_id();
+    let from_type = from_type.trim().to_string();
+    let from_id = validate_label(&from_id).map_err(|error| error.to_string())?;
+    let to_type = to_type.trim().to_string();
+    let to_id = validate_label(&to_id).map_err(|error| error.to_string())?;
+    let relation = validate_operational_relation(&relation)?;
+
+    validate_operational_entity_type(&from_type)?;
+    validate_operational_entity_type(&to_type)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let deleted = connection
+        .execute(
+            "DELETE FROM operational_links
+             WHERE workspace_id=?1
+               AND from_type=?2
+               AND from_id=?3
+               AND to_type=?4
+               AND to_id=?5
+               AND relation=?6",
+            params![workspace_id, from_type, from_id, to_type, to_id, relation],
+        )
+        .map_err(|error| error.to_string())?;
+
+    if deleted == 0 {
+        return Ok(false);
+    }
+
+    let link_id = format!("{from_type}:{from_id}->{to_type}:{to_id}:{relation}");
+    write_audit(
+        &connection,
+        "operations",
+        "link_delete",
+        "success",
+        "user",
+        Some(&link_id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+fn operational_link_list(
+    app: tauri::AppHandle,
+    entity_type: Option<String>,
+    entity_id: Option<String>,
+) -> Result<Vec<OperationalLinkView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let normalized_type = entity_type.map(|value| value.trim().to_string());
+    if let Some(ref value) = normalized_type {
+        validate_operational_entity_type(value)?;
+    }
+    let normalized_id = entity_id
+        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+        .transpose()?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT workspace_id, from_type, from_id, to_type, to_id, relation, created_at
+             FROM operational_links
+             WHERE workspace_id=?1
+               AND (?2 IS NULL OR from_type=?2 OR to_type=?2)
+               AND (?3 IS NULL OR from_id=?3 OR to_id=?3)
+             ORDER BY created_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+
+    let rows = statement
+        .query_map(
+            params![workspace_id, normalized_type, normalized_id],
+            |row| {
+                Ok(OperationalLinkView {
+                    workspace_id: row.get(0)?,
+                    from_type: row.get(1)?,
+                    from_id: row.get(2)?,
+                    to_type: row.get(3)?,
+                    to_id: row.get(4)?,
+                    relation: row.get(5)?,
+                    created_at: row.get(6)?,
+                })
+            },
+        )
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 fn backup_create(app: tauri::AppHandle, password: String) -> Result<String, String> {
     if password.is_empty() {
@@ -7036,7 +10197,7 @@ mod tests {
     }
 
     #[test]
-    fn schema_migration_reaches_v10_and_is_idempotent_afterwards() {
+    fn schema_migration_reaches_current_version_and_is_idempotent_afterwards() {
         let connection =
             Connection::open_in_memory().expect("in-memory SQLite should be available");
         connection
@@ -7054,6 +10215,696 @@ mod tests {
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should still be readable");
         assert_eq!(second, SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn agent_policy_and_work_validators_enforce_runtime_contracts() {
+        assert_eq!(validate_agent_role("QA").expect("agent role"), "qa");
+        assert!(validate_agent_role("sales_bot").is_err());
+        assert_eq!(
+            validate_agent_autonomy("EXECUTE_BOUNDED").expect("autonomy"),
+            "execute_bounded"
+        );
+        assert!(validate_agent_autonomy("unbounded").is_err());
+        assert!(validate_agent_status("running").is_ok());
+        assert!(validate_agent_status("finished").is_err());
+        assert!(validate_policy_mode("approved").is_ok());
+        assert!(validate_policy_mode("autonomous").is_err());
+        assert_eq!(
+            validate_work_item_type("agent_run").expect("work type"),
+            "agent_run"
+        );
+        assert!(validate_work_item_type("message").is_err());
+        assert!(validate_work_item_status("IN_PROGRESS").is_ok());
+        assert!(validate_work_dependency_kind("requires").is_ok());
+        assert!(validate_work_dependency_kind("depends").is_err());
+
+        let grants_json =
+            r#"[{"tool":"publisher","scopes":["campaign.publish"],"requiresApproval":true}]"#;
+        let grants_input: Option<String> = Some(grants_json.to_string());
+        let grants = validate_agent_tool_grants(grants_input).expect("tool grant should validate");
+        assert!(grants.contains("publisher"));
+
+        let missing_scopes_json = r#"[{"tool":"publisher"}]"#;
+        let missing_scopes: Option<String> = Some(missing_scopes_json.to_string());
+        let missing_result = validate_agent_tool_grants(missing_scopes);
+        assert!(missing_result.is_err());
+
+        let safe_risks_json = r#"["low","critical"]"#;
+        let safe_risks: Option<String> = Some(safe_risks_json.to_string());
+        assert!(validate_risk_array(safe_risks).is_ok());
+
+        let unsafe_risks_json = r#"["extreme"]"#;
+        let unsafe_risks: Option<String> = Some(unsafe_risks_json.to_string());
+        assert!(validate_risk_array(unsafe_risks).is_err());
+    }
+
+    #[test]
+    fn agent_run_and_work_dependencies_are_workspace_scoped() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO agent_definitions(
+                   id, workspace_id, name, role, goal, autonomy, tool_grants_json,
+                   knowledge_scope_json, max_steps, enabled, created_at, updated_at
+                 ) VALUES
+                   ('agent-a', 'workspace-a', 'A', 'qa', 'test', 'suggest', '[]', '[]', 3, 1, '1', '1');
+                 INSERT INTO agent_runs(
+                   id, agent_id, workspace_id, input, status, step_count
+                 ) VALUES
+                   ('run-a', 'agent-a', 'workspace-a', 'test', 'queued', 0);
+                 INSERT INTO work_items(
+                   id, workspace_id, entity_type, title, status, priority, created_at, updated_at
+                 ) VALUES
+                   ('work-a', 'workspace-a', 'task', 'A', 'ready', 1, '1', '1'),
+                   ('work-b', 'workspace-b', 'task', 'B', 'ready', 1, '1', '1');",
+            )
+            .expect("agent and work fixtures should be inserted");
+
+        let agent_workspace: String = connection
+            .query_row(
+                "SELECT workspace_id FROM agent_runs WHERE id='run-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("agent run workspace should be readable");
+        assert_eq!(agent_workspace, "workspace-a");
+
+        let cross_workspace_exists: bool = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM work_items
+                   WHERE id='work-a' AND workspace_id='workspace-b'
+                 )",
+                [],
+                |row| row.get(0),
+            )
+            .expect("workspace isolation query should work");
+        assert!(!cross_workspace_exists);
+    }
+
+    #[test]
+    fn knowledge_validators_enforce_supported_types_and_safe_hashes() {
+        assert_eq!(
+            validate_knowledge_source_type("Research").expect("source type should normalize"),
+            "research"
+        );
+        assert!(validate_knowledge_source_type("scrape").is_err());
+        assert_eq!(
+            validate_knowledge_trust("VERIFIED").expect("trust should normalize"),
+            "verified"
+        );
+        assert!(validate_knowledge_trust("trusted").is_err());
+        assert_eq!(
+            validate_hash_64(&"A".repeat(64), "excerpt_hash").expect("valid hash should normalize"),
+            "a".repeat(64)
+        );
+        assert!(validate_hash_64("abcd", "excerpt_hash").is_err());
+        assert!(validate_hash_64(&"g".repeat(64), "excerpt_hash").is_err());
+    }
+
+    #[test]
+    fn knowledge_source_reference_validation_is_workspace_scoped() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO knowledge_sources(id, workspace_id, type, title, collected_at)
+                 VALUES ('source-a', 'workspace-a', 'research', 'A', '1'),
+                        ('source-b', 'workspace-b', 'research', 'B', '1');",
+            )
+            .expect("knowledge source fixtures should be inserted");
+
+        assert!(
+            validate_workspace_source_ids(&connection, "workspace-a", r#"["source-a"]"#,).is_ok()
+        );
+        assert!(
+            validate_workspace_source_ids(&connection, "workspace-a", r#"["source-b"]"#,).is_err()
+        );
+    }
+
+    #[test]
+    fn strategy_brain_validators_reject_malformed_payloads() {
+        assert_eq!(
+            validate_json_string_array(Some(r#"["one"," two "]"#.to_string()), "values", 10)
+                .expect("array should normalize"),
+            r#"["one","two"]"#
+        );
+        assert!(
+            validate_json_string_array(Some(r#"{"not":"array"}"#.to_string()), "values", 10)
+                .is_err()
+        );
+        assert!(validate_json_string_array(Some(r#"[""]"#.to_string()), "values", 10).is_err());
+        assert_eq!(
+            validate_json_object(Some(r#"{"region":"Cairo"}"#.to_string()), "attributes")
+                .expect("object should normalize"),
+            r#"{"region":"Cairo"}"#
+        );
+        assert!(validate_json_object(Some(r#"["not-object"]"#.to_string()), "attributes").is_err());
+        assert_eq!(
+            validate_strategy_metric("LEADS").expect("metric should normalize"),
+            "leads"
+        );
+        assert!(validate_strategy_metric("followers").is_err());
+        assert!(validate_strategy_status("LIVE").is_err());
+        assert_eq!(
+            validate_strategy_status("ACTIVE").expect("status should normalize"),
+            "active"
+        );
+    }
+
+    #[test]
+    fn strategy_reference_validation_blocks_cross_workspace_references() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO marketing_objectives(
+                   id, workspace_id, name, metric, target, period_start, period_end, status, created_at, updated_at
+                 ) VALUES
+                   ('objective-a', 'workspace-a', 'A', 'leads', 1, '2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z', 'active', '1', '1'),
+                   ('objective-b', 'workspace-b', 'B', 'leads', 1, '2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z', 'active', '1', '1');",
+            )
+            .expect("objective fixtures should be inserted");
+
+        assert!(validate_strategy_reference_ids(
+            &connection,
+            "workspace-a",
+            "marketing_objectives",
+            r#"["objective-a"]"#,
+        )
+        .is_ok());
+        assert!(validate_strategy_reference_ids(
+            &connection,
+            "workspace-a",
+            "marketing_objectives",
+            r#"["objective-b"]"#,
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn operational_relation_validation_matches_graph_relation_contract() {
+        assert_eq!(
+            validate_operational_relation("supports").expect("valid relation"),
+            "supports"
+        );
+        assert_eq!(
+            validate_operational_relation("campaign.produces").expect("valid relation"),
+            "campaign.produces"
+        );
+        assert!(validate_operational_relation("").is_err());
+        assert!(validate_operational_relation("Supports").is_err());
+        assert!(validate_operational_relation(".supports").is_err());
+        assert!(validate_operational_relation("supports relation").is_err());
+    }
+
+    #[test]
+    fn operational_entity_lookup_is_workspace_scoped() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                 VALUES ('campaign-a', 'workspace-a', 'A', 'draft', '1');",
+            )
+            .expect("workspace fixtures should be inserted");
+
+        assert!(
+            operational_entity_exists(&connection, "workspace-a", "campaign", "campaign-a")
+                .expect("same-workspace entity should be found")
+        );
+        assert!(
+            !operational_entity_exists(&connection, "workspace-b", "campaign", "campaign-a")
+                .expect("cross-workspace entity must not be found")
+        );
+        assert!(
+            operational_entity_exists(&connection, "workspace-a", "campaign", "missing")
+                .is_ok_and(|value| !value)
+        );
+    }
+
+    #[test]
+    fn operational_entity_lookup_supports_agent_runs() {
+        let connection = Connection::open_in_memory().expect("in-memory database");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'Workspace A', '2026-01-01T00:00:00Z')",
+                [],
+            )
+            .expect("workspace should exist before agent definition insert");
+
+        connection
+            .execute(
+                "INSERT INTO agent_definitions(
+                   id, workspace_id, name, role, goal, autonomy,
+                   tool_grants_json, knowledge_scope_json, max_steps, enabled,
+                   created_at, updated_at
+                 ) VALUES (
+                   'agent-a', 'workspace-a', 'Agent A', 'campaign',
+                   'test', 'execute_bounded', '[]', '[]', 3, 1, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'
+                 )",
+                [],
+            )
+            .expect("agent definition should insert");
+        connection
+            .execute(
+                "INSERT INTO agent_runs(
+                   id, agent_id, workspace_id, input, status, step_count
+                 ) VALUES ('run-a', 'agent-a', 'workspace-a', 'test', 'queued', 0)",
+                [],
+            )
+            .expect("agent run should insert");
+
+        assert!(
+            operational_entity_exists(&connection, "workspace-a", "agent_run", "run-a")
+                .expect("same-workspace agent run should exist")
+        );
+        assert!(
+            !operational_entity_exists(&connection, "workspace-b", "agent_run", "run-a")
+                .expect("cross-workspace agent run lookup should succeed")
+        );
+    }
+
+    #[test]
+    fn outcome_updates_preserve_creation_timestamp() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1');
+                INSERT INTO contacts(id, workspace_id, display_name, status, created_at, updated_at)
+                VALUES ('contact-a', 'workspace-a', 'A', 'new', '1', '1');
+                INSERT INTO opportunities(
+                  id, workspace_id, contact_id, name, stage, value, currency,
+                  probability, created_at, updated_at
+                ) VALUES (
+                  'opp-time', 'workspace-a', 'contact-a', 'Deal', 'new',
+                  100, 'USD', 10, 'created-original', 'updated-original'
+                );
+                "#,
+            )
+            .expect("initial outcome should insert");
+
+        connection
+            .execute(
+                "UPDATE opportunities
+                 SET stage='qualified', updated_at='updated-new'
+                 WHERE id='opp-time' AND workspace_id='workspace-a'",
+                [],
+            )
+            .expect("outcome should update");
+
+        let timestamps: (String, String) = connection
+            .query_row(
+                "SELECT created_at, updated_at
+                 FROM opportunities
+                 WHERE id='opp-time' AND workspace_id='workspace-a'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("updated outcome should be queryable");
+
+        assert_eq!(timestamps.0, "created-original");
+        assert_eq!(timestamps.1, "updated-new");
+    }
+
+    #[test]
+    fn outcome_analytics_is_grouped_by_currency() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        create_integrity_triggers(&connection).expect("integrity triggers should be creatable");
+
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1');
+                INSERT INTO contacts(id, workspace_id, display_name, status, created_at, updated_at)
+                VALUES ('contact-a', 'workspace-a', 'A', 'new', '1', '1');
+                INSERT INTO opportunities(
+                  id, workspace_id, contact_id, name, stage, value, currency,
+                  probability, created_at, updated_at
+                ) VALUES
+                  ('opp-egp', 'workspace-a', 'contact-a', 'EGP deal', 'qualified', 1000, 'EGP', 50, '1', '1'),
+                  ('opp-usd', 'workspace-a', 'contact-a', 'USD deal', 'qualified', 100, 'USD', 25, '1', '1'),
+                  ('opp-egp-won', 'workspace-a', 'contact-a', 'EGP won', 'won', 500, 'EGP', 100, '1', '1');
+                "#,
+            )
+            .expect("currency-diverse opportunities should insert");
+
+        let mut statement = connection
+            .prepare(
+                "SELECT currency,
+                        SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value ELSE 0 END),
+                        SUM(CASE WHEN stage NOT IN ('won', 'lost') THEN value * probability / 100.0 ELSE 0 END),
+                        SUM(CASE WHEN stage = 'won' THEN value ELSE 0 END)
+                 FROM opportunities
+                 WHERE workspace_id='workspace-a'
+                 GROUP BY currency
+                 ORDER BY currency",
+            )
+            .expect("analytics query should prepare");
+
+        let rows = statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, f64>(1)?,
+                    row.get::<_, f64>(2)?,
+                    row.get::<_, f64>(3)?,
+                ))
+            })
+            .expect("analytics query should execute")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("analytics rows should decode");
+
+        assert_eq!(
+            rows,
+            vec![
+                ("EGP".to_string(), 1000.0, 500.0, 500.0),
+                ("USD".to_string(), 100.0, 25.0, 0.0),
+            ],
+        );
+    }
+
+    #[test]
+    fn schema_v11_to_v12_migration_creates_outcome_tables() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("base schema should be creatable");
+        connection
+            .execute_batch(
+                "DROP TRIGGER IF EXISTS orbit_opportunities_insert_workspace;
+                 DROP TRIGGER IF EXISTS orbit_opportunities_update_workspace;
+                 DROP TABLE IF EXISTS insights;
+                 DROP TABLE IF EXISTS opportunities;
+                 PRAGMA user_version = 11;",
+            )
+            .expect("v11 state should be prepared");
+        migrate_schema(&connection).expect("v11 to v12 migration should succeed");
+
+        for table in ["opportunities", "insights"] {
+            let exists: i64 = connection
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+                    params![table],
+                    |row| row.get(0),
+                )
+                .expect("table existence query should work");
+            assert_eq!(exists, 1, "expected migrated table {table} to exist");
+        }
+
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("schema version should be readable");
+        assert_eq!(version, 12);
+    }
+
+    #[test]
+    fn schema_v12_creates_governed_marketing_operating_model_and_outcome_tables() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        for table in [
+            "marketing_objectives",
+            "strategy_documents",
+            "audiences",
+            "offers",
+            "knowledge_sources",
+            "knowledge_items",
+            "knowledge_evidence",
+            "agent_definitions",
+            "agent_runs",
+            "marketing_policies",
+            "work_items",
+            "work_dependencies",
+            "operational_links",
+            "opportunities",
+            "insights",
+        ] {
+            let exists: i64 = connection
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+                    params![table],
+                    |row| row.get(0),
+                )
+                .expect("table existence query should work");
+            assert_eq!(exists, 1, "expected table {table} to exist");
+        }
+
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("schema version should be readable");
+        assert_eq!(version, 12);
+    }
+
+    #[test]
+    fn schema_v12_outcomes_are_workspace_scoped_and_linkable() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+
+                INSERT INTO contacts(id, workspace_id, display_name, status, created_at, updated_at)
+                VALUES ('contact-a', 'workspace-a', 'A', 'new', '1', '1');
+
+                INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                VALUES ('campaign-a', 'workspace-a', 'A', 'active', '1');
+
+                INSERT INTO opportunities(
+                  id, workspace_id, contact_id, campaign_id, name, stage, value,
+                  currency, probability, source, created_at, updated_at
+                ) VALUES (
+                  'opp-a', 'workspace-a', 'contact-a', 'campaign-a', 'Deal', 'qualified',
+                  1000, 'USD', 50, 'campaign', '1', '1'
+                );
+
+                INSERT INTO insights(
+                  id, workspace_id, kind, title, summary, confidence,
+                  source_ids_json, observed_at, created_at, updated_at
+                ) VALUES (
+                  'insight-a', 'workspace-a', 'learning', 'Insight', 'Grounded', 0.9,
+                  '["analytics-a"]', '2026-09-25T00:00:00Z', '1', '1'
+                );
+                "#,
+            )
+            .expect("outcomes should persist inside their workspace");
+
+        assert!(connection
+            .execute(
+                "INSERT INTO opportunities(
+                   id, workspace_id, contact_id, campaign_id, name, stage, value,
+                   currency, probability, created_at, updated_at
+                 ) VALUES (
+                   'opp-b', 'workspace-a', 'contact-a', 'campaign-a', 'Deal', 'invalid',
+                   1000, 'USD', 50, '1', '1'
+                 )",
+                [],
+            )
+            .is_err());
+
+        assert!(connection
+            .execute(
+                "INSERT INTO opportunities(
+                   id, workspace_id, contact_id, campaign_id, name, stage, value,
+                   currency, probability, created_at, updated_at
+                 ) VALUES (
+                   'opp-c', 'workspace-a', 'contact-a', 'campaign-a', 'qualified',
+                   1000, 'usd', 50, '1', '1'
+                 )",
+                [],
+            )
+            .is_err());
+
+        assert!(connection
+            .execute(
+                "INSERT INTO opportunities(
+                   id, workspace_id, contact_id, campaign_id, name, stage, value,
+                   currency, probability, created_at, updated_at
+                 ) VALUES (
+                   'opp-d', 'workspace-a', 'contact-a', 'campaign-a', 'Deal', 'qualified',
+                   1000, 'USD', 101, '1', '1'
+                 )",
+                [],
+            )
+            .is_err());
+
+        assert!(connection
+            .execute(
+                "INSERT INTO insights(
+                   id, workspace_id, kind, title, summary, confidence,
+                   source_ids_json, observed_at, created_at, updated_at
+                 ) VALUES (
+                   'insight-b', 'workspace-a', 'learning', 'Insight', 'Grounded', 1.1,
+                   '[\"analytics-b\"]', '2026-09-25T00:00:00Z', '1', '1'
+                 )",
+                [],
+            )
+            .is_err());
+
+        connection
+            .execute(
+                "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES ('workspace-a', 'member-a', 'editor', 1, '1')",
+                [],
+            )
+            .expect("workspace owner candidate should insert");
+
+        assert!(connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM workspace_memberships
+                   WHERE workspace_id='workspace-a' AND user_id='member-a' AND active=1
+                 )",
+                [],
+                |row| row.get::<_, bool>(0),
+            )
+            .expect("membership query should work"));
+
+        let insert_result = connection.execute(
+            "INSERT INTO opportunities(
+               id, workspace_id, contact_id, name, stage, value, currency,
+               probability, owner_id, created_at, updated_at
+             ) VALUES (
+               'opp-owner', 'workspace-a', 'contact-a', 'Owner deal', 'qualified',
+               100, 'USD', 20, 'member-a', '1', '1'
+             )",
+            [],
+        );
+        assert!(insert_result.is_ok());
+
+        assert!(connection
+            .execute(
+                "INSERT INTO opportunities(
+                   id, workspace_id, contact_id, name, stage, value, currency,
+                   probability, owner_id, created_at, updated_at
+                 ) VALUES (
+                   'opp-owner-bad', 'workspace-a', 'contact-a', 'Bad owner', 'qualified',
+                   100, 'USD', 20, 'missing-user', '1', '1'
+                 )",
+                [],
+            )
+            .is_err());
+
+        let opportunity_exists: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM opportunities WHERE workspace_id='workspace-a' AND id='opp-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("opportunity should be queryable");
+        assert_eq!(opportunity_exists, 1);
+
+        assert!(
+            !operational_entity_exists(&connection, "workspace-b", "opportunity", "opp-a")
+                .expect("cross-workspace opportunity lookup should succeed")
+        );
+        assert!(
+            operational_entity_exists(&connection, "workspace-a", "insight", "insight-a")
+                .expect("same-workspace insight should exist")
+        );
+
+        connection
+            .execute(
+                "INSERT INTO operational_links(
+                   workspace_id, from_type, from_id, to_type, to_id, relation, created_at
+                 ) VALUES ('workspace-a', 'opportunity', 'opp-a', 'insight', 'insight-a', 'informed_by', '1')",
+                [],
+            )
+            .expect("outcome entities should participate in the operating graph");
+    }
+
+    #[test]
+    fn schema_v11_is_workspace_scoped_for_operating_model_rows() {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO marketing_objectives(
+                   id, workspace_id, name, metric, target, period_start, period_end, status, created_at, updated_at
+                 ) VALUES
+                   ('objective-a', 'workspace-a', 'A', 'leads', 10, '1', '2', 'active', '1', '1'),
+                   ('objective-b', 'workspace-b', 'B', 'leads', 20, '1', '2', 'active', '1', '1');
+                 INSERT INTO operational_links(
+                   workspace_id, from_type, from_id, to_type, to_id, relation, created_at
+                 ) VALUES
+                   ('workspace-a', 'objective', 'objective-a', 'campaign', 'campaign-a', 'supports', '1'),
+                   ('workspace-b', 'objective', 'objective-b', 'campaign', 'campaign-b', 'supports', '1');",
+            )
+            .expect("same ids can be scoped by workspace");
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM marketing_objectives WHERE workspace_id='workspace-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("workspace-scoped objective query should work");
+        assert_eq!(count, 1);
     }
 
     #[test]
@@ -7112,7 +10963,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 10);
+        assert_eq!(version, 12);
     }
 
     #[test]
@@ -7139,6 +10990,7 @@ VALUES ('legacy-account', 'facebook', 'Legacy Account', 'connected', '2026-01-01
 INSERT INTO audit_events(id, timestamp, category, action, outcome, actor) VALUES ('legacy-audit', '2025-12-31T23:59:00Z', 'security', 'legacy', 'success', 'system');
 INSERT INTO tasks(id, campaign_id, account_id, platform, kind, priority, status, attempts, max_attempts, available_at, created_at)
 VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish', 0, 'pending', 0, 3, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+
 "#;
 
         if let Err(error) = connection.execute_batch(legacy) {
@@ -7501,6 +11353,28 @@ mod execution_counter_tests {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+
+    // Windows WebView2 Runtime 150+ ignores user-level debugging flags for
+    // elevated hosts. Keep the CDP override behind a build-only E2E feature so
+    // production binaries never gain a debug port from runtime environment input.
+    #[cfg(all(windows, feature = "e2e-cdp"))]
+    let context = {
+        let mut context = context;
+        if let Ok(raw_port) = std::env::var("ORBIT_E2E_CDP_PORT") {
+            if let Ok(port) = raw_port.trim().parse::<u16>() {
+                if port != 0 {
+                    if let Some(window) = context.config_mut().app.windows.get_mut(0) {
+                        window.additional_browser_args = Some(format!(
+                            "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port={port}"
+                        ));
+                    }
+                }
+            }
+        }
+        context
+    };
+
     let result = tauri::Builder::default()
         .setup(|app| {
             let connection = open_db(app.handle()).map_err(Box::<dyn std::error::Error>::from)?;
@@ -7533,6 +11407,39 @@ pub fn run() {
             automation_rule_pack_upsert,
             automation_rule_pack_set_enabled,
             automation_rule_pack_list,
+            knowledge_source_upsert,
+            agent_upsert,
+            agent_list,
+            agent_run_create,
+            agent_run_set_status,
+            agent_run_list,
+            policy_upsert,
+            policy_list,
+            work_item_upsert,
+            work_item_list,
+            work_dependency_upsert,
+            work_dependency_list,
+            knowledge_source_list,
+            knowledge_item_upsert,
+            knowledge_item_list,
+            knowledge_evidence_add,
+            knowledge_evidence_list,
+            objective_upsert,
+            objective_list,
+            audience_upsert,
+            audience_list,
+            offer_upsert,
+            offer_list,
+            opportunity_upsert,
+            opportunity_list,
+            insight_upsert,
+            insight_list,
+            outcome_analytics,
+            strategy_upsert,
+            strategy_list,
+            operational_link_upsert,
+            operational_link_list,
+            operational_link_delete,
             content_variant_list,
             campaign_attach_content,
             approval_request,
@@ -7559,7 +11466,7 @@ pub fn run() {
             license::license_status,
             license::license_delete
         ])
-        .run(tauri::generate_context!());
+        .run(context);
 
     if let Err(error) = result {
         eprintln!("failed to run ORBIT Marketing OS: {error}");

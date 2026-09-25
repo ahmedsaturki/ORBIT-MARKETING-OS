@@ -4,7 +4,9 @@ Updated: 2026-09-25
 
 ## Current state
 
-Production implementation is consolidated on main. Current main HEAD: ddc13f4edf516601a9fc038d97172a8037b30753.
+The current operating-model line includes the governed operating graph plus deterministic control-plane capabilities; release validation remains evidence-driven and no unsupported external connector capability is implied.
+
+Production implementation is consolidated on main. This branch contains the next governed operating-model release candidate; the main branch is updated only after exact-head release verification passes.
 
 The repository has committed pnpm and Cargo lockfiles and a green full main CI run.
 
