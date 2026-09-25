@@ -2,15 +2,15 @@
 
 ## Current release line
 
-The consolidated production implementation is merged into main through PR #10. Current main HEAD is 9edaede0f9e01d118829f4592ef90cde10147aa9.
+The consolidated production implementation is merged into main through PR #10. Current main HEAD is 4036f88362d81eef1ae449616c272fa8c7e42db0.
 
 Historical rebuild PR #2 is closed and unmerged. PR #27 is the current cleanup line removing the obsolete root Tauri/Vite surface.
 
 ## Verified execution
 
-Main CI run 36126479828 is a real hosted execution and passed reproducible install, release sanity, secret scan, dependency audit, workspace sanity, TypeScript typecheck, Desktop IPC verification, lint, tests, coverage, runtime smoke, performance smoke, monorepo build, Playwright E2E, formatting, Rust fmt/check/test/clippy.
+Main CI run 36144303102 is a real hosted execution and passed reproducible install, release sanity, secret scan, dependency audit, workspace sanity, TypeScript typecheck, Desktop IPC verification, lint, tests, coverage, runtime smoke, performance smoke, monorepo build, Playwright E2E, formatting, Rust fmt/check/test/clippy.
 
-Main Web Deploy run 36126479836 passed the Web quality gate, including web build and Web E2E.
+Main Web Deploy run 36144303202 passed the Web quality gate, including web build and Web E2E.
 
 ## Verified production web
 
@@ -20,13 +20,13 @@ The GitHub Vercel deployment job remains conditional on repository secrets and w
 
 ## Native validation
 
-PR #27 currently has successful main-style quality and Rust gates, successful Windows/Linux/macOS-arm64 and Windows desktop builds, with macOS-x64 and Android debug validation still in progress.
+PR #27 currently has successful main-style quality and Rust gates, successful Windows/Linux/macOS-arm64 and Windows desktop builds, with all four desktop platform bundle jobs complete; Windows native E2E and Android debug validation remain separate PR #27 gates.
 
 ## Remaining release gates
 
 - dedicated native runtime restart/migration/crash-recovery acceptance;
 - controlled real-user Telegram/LinkedIn authorization and delivery evidence;
-- encrypted CRDT transport and multi-device convergence;
+- live multi-device CRDT network verification beyond the encrypted reconnect/convergence simulation;
 - dedicated accessibility/RTL audit;
 - 24-hour soak;
 - signed/notarized desktop distribution;
