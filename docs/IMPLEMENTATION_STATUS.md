@@ -4,9 +4,9 @@ Updated: 2026-09-26
 
 ## Current state
 
-The production implementation is consolidated on main through PR #47. The authoritative current main commit is `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
+The production implementation is consolidated on main through PR #48. The authoritative current main merge commit is `cea2873db9817d4930662747441b55e1660dd67d`.
 
-The current validation branch adds the governed Command Dispatcher on top of that verified lineage. No unsupported external connector capability is implied.
+PR #48 adds the governed Command Dispatcher on top of the PR #47 control-plane lineage. No unsupported external connector capability is implied.
 
 ## Product surface
 
@@ -22,7 +22,7 @@ The current validation branch adds the governed Command Dispatcher on top of tha
 - marketing operating graph, outcomes and insights;
 - Mission Control, Strategy Studio, Simulation, Replay and Policy Packs;
 - Operational Event Spine and Command Registry;
-- Command Dispatcher validation layer on the current release branch;
+- Command Dispatcher governed execution layer;
 - Telegram native API path;
 - LinkedIn text publishing connector;
 - local Ollama runtime;
@@ -31,13 +31,9 @@ The current validation branch adds the governed Command Dispatcher on top of tha
 
 ## Exact verified execution baseline
 
-PR #47 exact head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed:
+PR #47 exact head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed exact-head CI/native/mobile validation and merged as `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
 
-- CI run 36198100587;
-- Desktop Native Validation run 36198100491;
-- Mobile Validation run 36198100618.
-
-It was merged to main as `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
+PR #48 exact head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed exact-head CI/native/mobile validation and merged as `cea2873db9817d4930662747441b55e1660dd67d`.
 
 ## Production web evidence
 
@@ -47,7 +43,6 @@ The effective Vercel project metadata still reports `framework: vite` while the 
 
 ## Evidence still required
 
-- current Command Dispatcher exact-head CI/native verification;
 - dedicated native restart/migration/crash-recovery acceptance;
 - controlled real Telegram authorization/delivery;
 - controlled real LinkedIn authorization/delivery;
