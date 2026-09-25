@@ -2,9 +2,8 @@ name: CI
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["main", "feat/**", "rebuild/**"]
   pull_request:
+    branches: ["main"]
 
 permissions:
   contents: read
