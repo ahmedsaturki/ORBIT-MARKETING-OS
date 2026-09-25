@@ -68,8 +68,12 @@ describe("execution simulation", () => {
       blockedCount: 1,
       executable: false,
     });
-    expect(result.steps[0].decision.allowed).toBe(true);
-    expect(result.steps[1].decision.block).toBe("budget");
+    const allowedStep = result.steps[0];
+    const blockedStep = result.steps[1];
+    expect(allowedStep).toBeDefined();
+    expect(blockedStep).toBeDefined();
+    expect(allowedStep?.decision.allowed).toBe(true);
+    expect(blockedStep?.decision.block).toBe("budget");
   });
 
   it("rejects mixed-workspace simulations", () => {
