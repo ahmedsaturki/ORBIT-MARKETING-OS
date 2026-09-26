@@ -10,13 +10,14 @@ PR #45 established the RC2.1 native/release baseline. PR #47 added the governed 
 
 ## Verified execution baseline
 
-PR #47 exact head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed:
+PR #47 exact head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed CI/native/mobile and merged as `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
 
-- CI run 36198100587;
-- Desktop Native Validation run 36198100491;
-- Mobile Validation run 36198100618.
+PR #48 exact head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed:
+- CI run 36200698291;
+- Desktop Native Validation run 36200698273;
+- Mobile Validation run 36200698316.
 
-The merged main tree therefore has fresh exact-head evidence for the governed control-plane merge.
+The resulting `main` head `cea2873db9817d4930662747441b55e1660dd67d` also has passing CI run 36202057601 and Web Deploy run 36202057689.
 
 ## Verified production web
 
