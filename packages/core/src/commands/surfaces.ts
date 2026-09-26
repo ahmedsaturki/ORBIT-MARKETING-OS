@@ -70,3 +70,4 @@ export function previewCommandInvocation(input: {
 
   return { command, decision, surface: input.surface, invocation };
 }
+\n
