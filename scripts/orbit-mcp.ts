@@ -95,6 +95,12 @@ function serverInfo() {
   return { name: SERVER_NAME, version: SERVER_VERSION };
 }
 
+function modernResponseMeta() {
+  return {
+    "io.modelcontextprotocol/serverInfo": serverInfo(),
+  };
+}
+
 function modernDiscoveryResult() {
   return {
     supportedVersions: [MODERN_PROTOCOL_VERSION],
@@ -153,7 +159,9 @@ async function handle(request: RpcRequest): Promise<void> {
       return;
     }
 
+    const modern = isModernRequest(params);
     write(request.id, {
+      ...(modern ? { _meta: modernResponseMeta() } : {}),
       tools: [
         {
           name: "orbit.commands.list",
@@ -206,6 +214,7 @@ async function handle(request: RpcRequest): Promise<void> {
 
     if (name === "orbit.commands.list") {
       write(request.id, {
+        ...(isModernRequest(params) ? { _meta: modernResponseMeta() } : {}),
         content: [
           {
             type: "text",
