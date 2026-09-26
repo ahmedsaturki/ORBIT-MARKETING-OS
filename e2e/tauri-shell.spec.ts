@@ -521,7 +521,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
             sourceType: "manual",
             metricName: "clicks",
             metricValue: 14,
-            observedAt: "2026-09-26T18:00:00Z",
+            observedAt: "2026-09-26T20:00:00+02:00",
             sourceLocator: null,
             provenance: "manual_observation",
             metadataJson: JSON.stringify({ test: true }),
