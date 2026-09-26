@@ -261,5 +261,9 @@ export function inferExperiment(
     confidenceLevel: level,
     variants,
     comparisons,
+    maxAbsoluteAllocationDrift: variants.reduce(
+      (max, variant) => Math.max(max, Math.abs(variant.allocationDrift)),
+      0,
+    ),
   };
 }
