@@ -49,6 +49,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | AI-02    | Grounded knowledge context excludes untrusted/expired/cross-workspace evidence and obeys budgets               | context tests + workspace/source validation           |
 | GRAPH-01 | Operating graph preserves workspace boundaries and rejects invalid links                                       | graph validation tests                                |
 | GRAPH-02 | AI/agent graph context is bounded by depth/node/relation scopes                                                | bounded context projection tests                      |
+| AGENT-01| Agent registry enforces workspace-scoped definitions, bounded tool grants, and step budgets               | deterministic inference unit tests + bounded interval evidence |
 | EXEC-01  | Agent + policy + approval + budget compose into one deterministic execution decision                           | decision kernel tests                                 |
 | CMD-01   | Command dispatcher enforces registry/surface/scope/approval gates and emits a bounded trace                    | dispatcher tests + event-spine integration            |
 | EXP-01   | Experiment definition enforces workspace, variant, allocation, and time-window invariants                      | deterministic core validation tests                   |
