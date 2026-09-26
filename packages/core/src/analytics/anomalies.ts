@@ -1,4 +1,4 @@
-import type { MarketingInsight } from "../outcomes/index.js";
+import { createMarketingInsight, type MarketingInsight } from "../outcomes/index.js";
 import { buildMetricSeries, type MetricPoint } from "./metrics.js";
 
 export type AnomalyDirection = "spike" | "drop";
@@ -176,7 +176,7 @@ export function buildAnomalyInsights(
   return anomalies.map((anomaly) => {
     const timestamp = new Date(anomaly.timestamp).toISOString();
 
-    return {
+    return createMarketingInsight(return {
       id: "anomaly:" + workspaceId + ":" + anomaly.metric + ":" + timestamp,
       workspaceId,
       kind: "anomaly" as const,
@@ -197,6 +197,6 @@ export function buildAnomalyInsights(
       observedAt: anomaly.timestamp,
       createdAt: now,
       updatedAt: now,
-    };
-  });
+    });
+  }); });
 }
