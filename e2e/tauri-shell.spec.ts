@@ -417,6 +417,183 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     );
   });
 
+  test("local link registry persists evidence and isolates workspaces", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+
+    const suffix = Date.now();
+    const beforeWorkspace = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+
+    const workspaceA = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Link Workspace A",
+        }),
+      "e2e-link-a-" + suffix,
+    )) as { id: string; name: string };
+
+    await page!.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      workspaceA.id,
+    );
+
+    const account = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("account_upsert", {
+          id,
+          platform: "telegram",
+          displayName: "E2E Link Account",
+          username: null,
+          session: null,
+          password: null,
+        }),
+      "e2e-link-account-" + suffix,
+    )) as { id: string };
+
+    const campaign = (await page!.evaluate(
+      ({ name, accountId }) =>
+        window.__TAURI_INTERNALS__.invoke("campaign_create", {
+          name,
+          accountIds: [accountId],
+        }),
+      {
+        name: "E2E Link Campaign " + suffix,
+        accountId: account.id,
+      },
+    )) as { id: string };
+
+    const content = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("content_upsert", {
+          id,
+          title: "E2E Link Content",
+          body: "Link intelligence evidence content",
+          approvalStatus: "draft",
+          tagsJson: JSON.stringify(["links"]),
+        }),
+      "e2e-link-content-" + suffix,
+    )) as { id: string };
+
+    const link = (await page!.evaluate(
+      ({ campaignId, contentId }) =>
+        window.__TAURI_INTERNALS__.invoke("marketing_link_upsert", {
+          linkKey: "lnk_abcdef12",
+          destinationUrl: "https://example.com/offer",
+          trackedUrl:
+            "https://example.com/offer?utm_campaign=e2e&utm_source=telegram",
+          trackingJson: JSON.stringify({
+            utm_campaign: "e2e",
+            utm_source: "telegram",
+          }),
+          campaignId,
+          contentId,
+        }),
+      { campaignId: campaign.id, contentId: content.id },
+    )) as { id: string; link_key: string; provenance: string };
+
+    expect(link.link_key).toBe("lnk_abcdef12");
+    expect(link.provenance).toBe("local");
+
+    const firstEvidence = (await page!.evaluate(
+      (linkId) =>
+        window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
+          linkId,
+          sourceType: "manual",
+          metricName: "clicks",
+          metricValue: 12,
+          observedAt: "2026-09-26T18:00:00Z",
+          sourceLocator: null,
+          provenance: "manual_observation",
+          metadataJson: JSON.stringify({ test: true }),
+        }),
+      link.id,
+    )) as { id: string; metric_value: number };
+
+    const secondEvidence = (await page!.evaluate(
+      (linkId) =>
+        window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
+          linkId,
+          sourceType: "manual",
+          metricName: "clicks",
+          metricValue: 14,
+          observedAt: "2026-09-26T18:00:00Z",
+          sourceLocator: null,
+          provenance: "manual_observation",
+          metadataJson: JSON.stringify({ test: true }),
+        }),
+      link.id,
+    )) as { id: string; metric_value: number };
+
+    expect(secondEvidence.id).toBe(firstEvidence.id);
+    expect(secondEvidence.metric_value).toBe(14);
+
+    const savedLinks = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("marketing_link_list", {}),
+    )) as Array<{ id: string }>;
+    expect(savedLinks.some((item) => item.id === link.id)).toBe(true);
+
+    const savedEvidence = (await page!.evaluate((linkId) =>
+      window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_list", {
+        linkId,
+      }),
+    )) as Array<{ link_id: string; metric_value: number }>;
+    expect(savedEvidence).toHaveLength(1);
+    expect(savedEvidence[0].link_id).toBe(link.id);
+    expect(savedEvidence[0].metric_value).toBe(14);
+
+    const workspaceB = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Link Workspace B",
+        }),
+      "e2e-link-b-" + suffix,
+    )) as { id: string; name: string };
+
+    await page!.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      workspaceB.id,
+    );
+
+    const isolatedLinks = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("marketing_link_list", {}),
+    )) as Array<{ id: string }>;
+    expect(isolatedLinks).toEqual([]);
+
+    let crossWorkspaceError = "";
+    try {
+      await page!.evaluate((linkId) =>
+        window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
+          linkId,
+          sourceType: "manual",
+          metricName: "clicks",
+          metricValue: 1,
+          observedAt: "2026-09-26T18:00:00Z",
+          sourceLocator: null,
+          provenance: "manual_observation",
+          metadataJson: JSON.stringify({ test: true }),
+        }),
+      link.id);
+    } catch (caught: unknown) {
+      crossWorkspaceError =
+        caught instanceof Error ? caught.message : String(caught);
+    }
+    expect(crossWorkspaceError).toContain(
+      "marketing link does not exist in active workspace",
+    );
+
+    await page!.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      beforeWorkspace.id,
+    );
+    const restored = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string };
+    expect(restored.id).toBe(beforeWorkspace.id);
+  });
+
   test("global search is workspace-scoped and bounded", async () => {
     expect(page, "boot test must run first").not.toBeNull();
 
