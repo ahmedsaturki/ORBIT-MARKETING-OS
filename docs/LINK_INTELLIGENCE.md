@@ -30,4 +30,4 @@ This layer is designed to support future reporting, attribution, and content lea
 
 ## Native IPC contract
 
-`marketing_link_evidence_add` receives the evidence fields directly in the Tauri command payload; it is not nested under an `input` property. Native E2E coverage verifies persistence, deduplication, and workspace isolation against this contract.
+`marketing_link_evidence_add` receives its evidence payload under the command's `input` property. Native E2E coverage verifies persistence, deduplication, and workspace isolation against this contract.
