@@ -308,7 +308,8 @@ pub(crate) fn marketing_link_evidence_add(
     let metadata_json = validate_json(&metadata_json, "metadata_json", 8192)?;
     let source_locator = source_locator
         .map(|value| validate_http_url(&value, "source_locator"))
-        .transpose()?;
+        .transpose()?
+        .unwrap_or_default();
 
     if !metric_value.is_finite() || metric_value < 0.0 {
         return Err("metric_value must be finite and non-negative".to_string());
