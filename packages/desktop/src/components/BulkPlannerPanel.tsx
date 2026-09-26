@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { Layers3, ShieldCheck } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { buildBulkPlan } from "@orbit/core";
+import { buildBulkPlan } from "@orbit/core";
 import type { BulkPlanItem } from "@orbit/core";
 
 interface AccountOption {
@@ -70,16 +71,18 @@ export function BulkPlannerPanel({
     [contentId, contentItems],
   );
 
-  const buildPlan = () => {
+  const buildPlan = (): readonly PlannedTask[] | null => {
     try {
-      return buildBulkPlan({
-        startAt,
+      const plan = buildBulkPlan({
+        startAt: new Date(startAt).toISOString(),
         intervalMinutes: Number(intervalMinutes),
         count: Number(count),
+        seed: `bulk-${campaignId}-${accountId}-${contentId}`,
       });
+      return plan;
     } catch (caught: unknown) {
       setError(
-        caught instanceof Error ? caught.message : "تعذر بناء خطة النشر",
+        caught instanceof Error ? caught.message : "خطة النشر الجماعي غير صالحة.",
       );
       return null;
     }
