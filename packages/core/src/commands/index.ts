@@ -140,6 +140,18 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
     requiresApproval: false,
   },
   {
+    id: "analytics.detect_anomalies",
+    title: "Detect metric anomalies",
+    description:
+      "Detect descriptive metric anomalies against a preceding rolling baseline.",
+    risk: "low",
+    scopes: ["analytics:read"],
+    surfaces: ["desktop", "web", "mobile", "cli", "mcp", "agent"],
+    mutatesState: false,
+    externallyVisible: false,
+    requiresApproval: false,
+  },
+  {
     id: "analytics.explain",
     title: "Explain analytics",
     description: "Summarize workspace-scoped performance evidence.",
