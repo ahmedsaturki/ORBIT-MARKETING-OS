@@ -1,4 +1,3 @@
-import type { MarketingInsight } from "../outcomes/index.js";
 import { buildMetricSeries, type MetricPoint } from "./metrics.js";
 
 export type AnomalyDirection = "spike" | "drop";
@@ -56,58 +55,6 @@ function classifyAnomaly(
 
 function assertOption(condition: boolean, errorCode: string): void {
   if (!condition) throw new Error(errorCode);
-}
-
-function insightMetadata(
-  workspaceId: string,
-  sourceId: string,
-  observedAt: string,
-  now: string,
-): Pick<
-  MarketingInsight,
-  "workspaceId" | "confidence" | "sourceIds" | "observedAt" | "createdAt" | "updatedAt"
-> {
-  return {
-    workspaceId,
-    confidence: 0,
-    sourceIds: [sourceId],
-    observedAt,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-
-function normalizedOptions(
-  options: AnomalyDetectionOptions,
-): Required<AnomalyDetectionOptions> {
-  const windowSize = options.windowSize ?? 7;
-  const threshold = options.threshold ?? 3.5;
-  const minAbsoluteDelta = options.minAbsoluteDelta ?? 0;
-  const maxResults = options.maxResults ?? 50;
-
-  assertOption(
-    Number.isInteger(windowSize) && windowSize >= 3 && windowSize <= 365,
-    "anomaly_window_invalid",
-  );
-  assertOption(
-    Number.isFinite(threshold) && threshold > 0 && threshold <= 100,
-    "anomaly_threshold_invalid",
-  );
-  assertOption(
-    Number.isFinite(minAbsoluteDelta) && minAbsoluteDelta >= 0,
-    "anomaly_min_absolute_delta_invalid",
-  );
-  assertOption(
-    Number.isInteger(maxResults) && maxResults >= 1 && maxResults <= 1000,
-    "anomaly_max_results_invalid",
-  );
-  return {
-    windowSize,
-    threshold,
-    minAbsoluteDelta,
-    maxResults,
-  };
 }
 
 /**
@@ -171,40 +118,3 @@ export function detectMetricAnomalies(
     .map((anomaly) => ({ ...anomaly }));
 }
 
-export function buildAnomalyInsights(
-  workspaceId: string,
-  anomalies: readonly MetricAnomaly[],
-  now: string,
-): readonly MarketingInsight[] {
-  if (!workspaceId.trim()) {
-    throw new Error("anomaly_workspace_required");
-  }
-  if (!now.trim() || Number.isNaN(Date.parse(now))) {
-    throw new Error("anomaly_insight_timestamp_invalid");
-  }
-  return anomalies.map((anomaly) => {
-    const timestamp = new Date(anomaly.timestamp).toISOString();
-    return {
-      ...insightMetadata(
-        workspaceId,
-        "metric:" + anomaly.metric + ":" + timestamp,
-        anomaly.timestamp,
-        now,
-      ),
-      id: "anomaly:" + workspaceId + ":" + anomaly.metric + ":" + timestamp,
-      kind: "anomaly",
-      title:
-        (anomaly.direction === "spike"
-          ? "Spike detected: "
-          : "Drop detected: ") + anomaly.metric,
-      summary:
-        anomaly.metric +
-        " changed by " +
-        anomaly.absoluteDelta.toFixed(4) +
-        " versus its preceding rolling median. This is a descriptive anomaly " +
-        "signal; causality and statistical significance are not claimed.",
-      metric: anomaly.metric,
-      value: anomaly.value,
-    };
-  });
-}
