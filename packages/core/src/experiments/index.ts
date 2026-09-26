@@ -185,10 +185,14 @@ export function summarizeExperiment(
     throw new Error("invalid_experiment");
   }
 
+  const declaredVariantIds = new Set(
+    experiment.variants.map((variant) => variant.id),
+  );
   const scoped = observations.filter(
     (observation) =>
       observation.experimentId === experiment.id &&
-      observation.workspaceId === experiment.workspaceId,
+      observation.workspaceId === experiment.workspaceId &&
+      declaredVariantIds.has(observation.variantId),
   );
 
   const variants = experiment.variants.map<ExperimentVariantSummary>(
@@ -208,7 +212,9 @@ export function summarizeExperiment(
       const totalValue = rows.reduce(
         (sum, observation) =>
           sum +
-          (Number.isFinite(observation.value) ? (observation.value ?? 0) : 0),
+          (observation.exposed && Number.isFinite(observation.value)
+            ? (observation.value ?? 0)
+            : 0),
         0,
       );
 
