@@ -100,7 +100,6 @@ describe("experiment inference", () => {
     );
   });
 
-
   it("rejects summary identity mismatch", () => {
     const experiment: Parameters<typeof inferExperiment>[0] = {
       id: "exp-1",
@@ -145,10 +144,7 @@ describe("experiment inference", () => {
         ],
       },
     );
-    expect(inferred.variants[0]?.allocationDrift).toBeCloseTo(
-      0.2,
-      10,
-    );
+    expect(inferred.variants[0]?.allocationDrift).toBeCloseTo(0.2, 10);
     expect(inferred.maxAbsoluteAllocationDrift).toBeCloseTo(0.2, 10);
   });
 
