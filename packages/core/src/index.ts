@@ -33,4 +33,5 @@ export * from "./campaign-plans/index.js";
 
 export * from "./events/index.js";
 export * from "./commands/index.js";
+export * from "./commands/surfaces.js";
 export * from "./experiments/index.js";
