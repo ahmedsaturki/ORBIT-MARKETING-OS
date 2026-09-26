@@ -301,11 +301,13 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(page, "boot test must run first").not.toBeNull();
 
     const suffix = Date.now();
-    const workspaceA = (await page!.evaluate(async (id) =>
-      window.__TAURI_INTERNALS__.invoke("workspace_create", {
-        id,
-        name: "E2E Search Workspace A",
-      }), "e2e-search-a-" + suffix
+    const workspaceA = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Search Workspace A",
+        }),
+      "e2e-search-a-" + suffix,
     )) as { id: string; name: string };
     await page!.evaluate(
       (workspaceId) =>
@@ -337,19 +339,25 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       },
     );
 
-    const sameWorkspace = (await page!.evaluate((query) =>
-      window.__TAURI_INTERNALS__.invoke("global_search", { query, limit: 500 }),
+    const sameWorkspace = (await page!.evaluate(
+      (query) =>
+        window.__TAURI_INTERNALS__.invoke("global_search", {
+          query,
+          limit: 500,
+        }),
       "E2E Search Campaign " + suffix,
     )) as Array<{ kind: string; id: string; title: string }>;
 
     expect(sameWorkspace.length).toBeLessThanOrEqual(50);
     expect(sameWorkspace.some((item) => item.kind === "campaign")).toBe(true);
 
-    const workspaceB = (await page!.evaluate(async (id) =>
-      window.__TAURI_INTERNALS__.invoke("workspace_create", {
-        id,
-        name: "E2E Search Workspace B",
-      }), "e2e-search-b-" + suffix
+    const workspaceB = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Search Workspace B",
+        }),
+      "e2e-search-b-" + suffix,
     )) as { id: string; name: string };
     await page!.evaluate(
       (workspaceId) =>
@@ -357,8 +365,12 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       workspaceB.id,
     );
 
-    const isolated = (await page!.evaluate((query) =>
-      window.__TAURI_INTERNALS__.invoke("global_search", { query, limit: 50 }),
+    const isolated = (await page!.evaluate(
+      (query) =>
+        window.__TAURI_INTERNALS__.invoke("global_search", {
+          query,
+          limit: 50,
+        }),
       "E2E Search Campaign " + suffix,
     )) as Array<{ kind: string; id: string; title: string }>;
 
