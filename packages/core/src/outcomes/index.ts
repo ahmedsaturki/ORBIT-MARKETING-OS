@@ -53,6 +53,20 @@ const INSIGHT_KINDS: readonly InsightKind[] = [
   "recommendation",
 ];
 
+export interface MarketingInsightInput
+  extends Omit<MarketingInsight, "sourceIds"> {
+  readonly sourceIds: readonly string[];
+}
+
+export function createMarketingInsight(
+  input: MarketingInsightInput,
+): MarketingInsight {
+  return {
+    ...input,
+    sourceIds: [...input.sourceIds],
+  };
+}
+
 export function validateOpportunity(
   opportunity: MarketingOpportunity,
 ): string[] {
