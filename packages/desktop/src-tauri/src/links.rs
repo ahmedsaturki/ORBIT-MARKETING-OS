@@ -529,6 +529,23 @@ mod tests {
         assert!(validate_http_url("data:text/plain,hello", "url").is_err());
         assert!(validate_http_url("ftp://example.com", "url").is_err());
         assert!(validate_http_url("https://example.com/path", "url").is_ok());
+        assert!(
+            validate_http_url("https://user:pass@example.com/path", "url").is_err()
+        );
+        assert!(
+            validate_tracked_url(
+                "https://example.com/path",
+                "https://example.com/path?utm_source=orbit",
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_tracked_url(
+                "https://example.com/path",
+                "https://evil.example/path?utm_source=orbit",
+            )
+            .is_err()
+        );
     }
 
     #[test]
