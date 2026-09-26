@@ -145,7 +145,9 @@ describe("experimentation", () => {
       },
     ]);
     expect(summary.observationCount).toBe(0);
-    expect(summary.variants.every((variant) => variant.exposureCount === 0)).toBe(true);
+    expect(
+      summary.variants.every((variant) => variant.exposureCount === 0),
+    ).toBe(true);
   });
 
   it("attributes value only to exposed observations", () => {
@@ -173,11 +175,17 @@ describe("experimentation", () => {
         value: 10,
       },
     ]);
-    const control = summary.variants.find((variant) => variant.variantId === "control");
-    const benefit = summary.variants.find((variant) => variant.variantId === "benefit");
+    const control = summary.variants.find(
+      (variant) => variant.variantId === "control",
+    );
+    const benefit = summary.variants.find(
+      (variant) => variant.variantId === "benefit",
+    );
     expect(control?.totalValue).toBe(0);
     expect(benefit?.totalValue).toBe(10);
-    expect(observationsToLearningSignals(summary)).toContain("value_leader:benefit:10.00");
+    expect(observationsToLearningSignals(summary)).toContain(
+      "value_leader:benefit:10.00",
+    );
   });
 
   it("emits bounded learning signals without claiming significance", () => {
