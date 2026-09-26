@@ -1,6 +1,6 @@
 # ORBIT Marketing OS — Release Readiness
 
-Updated: 2026-09-26.
+Updated: 2026-09-27.
 
 ## Canonical state
 
@@ -17,6 +17,10 @@ Updated: 2026-09-26.
 - PR #86: merged — evidence-backed reporting packs.
 - PR #88: merged — encrypted sync-network convergence proof.
 - PR #89: merged — auditable release evidence bundle.
+- PR #93: merged — automatic exact-main release evidence.
+- PR #94: merged — release evidence collector defaults safely to verification mode.
+- PR #87: open — Link Intelligence persistence/evidence; exact-head native regression is being repaired.
+- PR #95: open — regional competitor-watch expansion on current main.
 
 ## Readiness rule
 
@@ -45,7 +49,7 @@ For the commercial lane, run:
 
 The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, deterministic link intelligence core, platform foundation, content reuse policy, evidence-backed reporting packs, workspace isolation, native desktop/mobile validation, and web quality.
 
-A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed and the corrected feature head subsequently passed CI, desktop native, mobile, and Windows Native E2E.
+A Windows Native E2E run found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed on the current release lines and a literal-wildcard regression was added. Current exact-head verification is rerunning.
 
 ## Production gates still open
 
@@ -57,7 +61,6 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 - 24-hour stability soak;
 - Vercel project settings reconciliation;
 - credential-backed Vercel prebuilt deployment with embedded Git SHA verification;
-- Release Evidence Bundle artifact generated from the exact verified ref;
 - production rollback drill;
 - desktop signing/notarization;
 - Android/iOS production signing and store distribution;
@@ -69,7 +72,9 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 The connected Vercel project is live and the current seven-day grouped runtime-error query is clean. Guarded deployments now fail closed if release credentials are missing and, when credentials exist, verify the embedded release SHA through /api/health and /api/release.
 
-The current production deployment, however, predates the current `main` release state and does not expose the merged release SHA. It is therefore healthy live infrastructure, not yet canonical release provenance.
+The latest production deployment is READY but exposes empty Git metadata in the connected deployment API. It is therefore healthy live infrastructure, not yet canonical release provenance.
+
+The Release Evidence Bundle now succeeds automatically on the exact pushed `main` ref. Run `36280911514` produced the current exact-head evidence artifact for `20e05751dee23fbeeed4049f041dc9f66e2548a0`.
 
 ## Distribution posture
 
