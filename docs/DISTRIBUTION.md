@@ -16,7 +16,7 @@ The Expo project supports local development and web export. The current GitHub A
 
 The public web surface is live on the connected Vercel production project and responds correctly on the current public routes. The repository's guarded GitHub deployment workflow is intentionally credential-gated.
 
-The current READY Vercel deployment predates `main=377e86d` and does not expose current-main Git provenance. It therefore proves live infrastructure, not canonical release provenance.
+The current READY Vercel deployment predates the current `main` release state and does not expose current-main Git provenance. It therefore proves live infrastructure, not canonical release provenance.
 
 ## Release integrity
 

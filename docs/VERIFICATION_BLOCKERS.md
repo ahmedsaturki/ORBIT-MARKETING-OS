@@ -4,9 +4,7 @@ Updated: 2026-09-26
 
 ## Current state
 
-The current merged main is:
-
-`377e86d79c3c9718ca8ee4d9ce5161a5751f77a3`
+The current merged release lives on the repository default branch `main`; this document intentionally avoids hard-coding a moving SHA.
 
 PR #71 and PR #72 are merged. Their final validated feature heads passed the required hosted CI/native/mobile gates; the Windows Native E2E run also passed after exposing and driving the Universal Search escaping fix.
 

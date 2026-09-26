@@ -24,7 +24,7 @@ Updated: 2026-09-26.
 | Gate                             | Status     | Evidence                                                                     |
 | -------------------------------- | ---------- | ---------------------------------------------------------------------------- |
 | DATA-01 Local SQLite             | VERIFIED   | Native implementation and validated Rust/native gates                        |
-| DATA-02 Migration safety         | VERIFIED   | Versioned migrations through v15 and migration tests                         |
+| DATA-02 Migration safety         | VERIFIED   | Versioned migrations through v16 and migration tests                         |
 | DATA-03 Search scale             | UNVERIFIED | Contract exists; large-contact benchmark still needs fresh measured evidence |
 | QUE-01 Persistent queue recovery | PARTIAL    | Recovery implementation and E2E exist; consolidated release evidence remains |
 | QUE-02 Bounded retries           | VERIFIED   | Core/native retry validation passed                                          |
@@ -72,13 +72,13 @@ Updated: 2026-09-26.
 
 ## Web / Mobile
 
-| Gate                          | Status     | Evidence                                                                         |
-| ----------------------------- | ---------- | -------------------------------------------------------------------------------- |
-| WEB-01 PWA                    | VERIFIED   | Web build/E2E and live checks                                                    |
-| MOB-01 Mobile control surface | VERIFIED   | Mobile validation passed on validated release line                               |
-| Native desktop packaging      | VERIFIED   | Windows/Linux/macOS x64/ARM validation passed                                    |
-| Web production availability   | VERIFIED   | Current READY deployment responds successfully                                   |
-| Web production provenance     | UNVERIFIED | Current production deployment predates main=377e86d and has empty Git provenance |
+| Gate                          | Status     | Evidence                                                                                             |
+| ----------------------------- | ---------- | ---------------------------------------------------------------------------------------------------- |
+| WEB-01 PWA                    | VERIFIED   | Web build/E2E and live checks                                                                        |
+| MOB-01 Mobile control surface | VERIFIED   | Mobile validation passed on validated release line                                                   |
+| Native desktop packaging      | VERIFIED   | Windows/Linux/macOS x64/ARM validation passed                                                        |
+| Web production availability   | VERIFIED   | Current READY deployment responds successfully                                                       |
+| Web production provenance     | UNVERIFIED | Current production deployment predates the current `main` release state and has empty Git provenance |
 
 ## Release / Operations
 
