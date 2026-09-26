@@ -57,6 +57,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | EXP-04   | Learning signals do not claim unsupported statistical significance                                             | learning-signal tests                                 |
 | EXP-05   | Experiment variants bind only to same-workspace campaign content or unique governed message sources            | experiment binding tests + campaign contract tests    |
 | EXP-06   | Experiment learning produces workspace-scoped descriptive insight/strategy signals without significance claims | learning write-back tests + outcome integration tests |
+| EXP-07   | Experiment inference reports bounded descriptive uncertainty and declared-vs-observed allocation drift without significance/causal claims | inference unit tests + methodology documentation |
 | EVENT-01 | Operational event spine preserves workspace, sequence, parent, trace, redaction, and defensive-copy invariants | event-spine tests + native persistence validation     |
 | INBOX-01 | Unified conversation model                                                                                     | connector fixture integration                         |
 | CRM-01   | Conversation-contact linking                                                                                   | relational integration test                           |
