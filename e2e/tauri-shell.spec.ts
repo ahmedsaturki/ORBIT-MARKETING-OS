@@ -442,6 +442,36 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       "e2e-search-account-" + suffix,
     )) as { id: string };
 
+    const conversation = (await page!.evaluate(
+      async ({ id, accountId }) =>
+        window.__TAURI_INTERNALS__.invoke("conversation_upsert", {
+          id,
+          accountId,
+          contactId: null,
+          platform: "telegram",
+          externalThreadId: "e2e-search-thread",
+          status: "new",
+        }),
+      {
+        id: "e2e-search-conversation-" + suffix,
+        accountId: account.id,
+      },
+    )) as { id: string };
+
+    await page!.evaluate(
+      ({ id, conversationId }) =>
+        window.__TAURI_INTERNALS__.invoke("message_add", {
+          id,
+          conversationId,
+          direction: "inbound",
+          body: "E2E Search Message",
+        }),
+      {
+        id: "e2e-search-message-" + suffix,
+        conversationId: conversation.id,
+      },
+    );
+
     await page!.evaluate(
       ({ name, accountId }) =>
         window.__TAURI_INTERNALS__.invoke("campaign_create", {
@@ -506,6 +536,8 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
     expect(sameWorkspace.length).toBeLessThanOrEqual(50);
     expect(sameWorkspace.some((item) => item.kind === "campaign")).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "account")).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "message")).toBe(true);
     expect(sameWorkspace.some((item) => item.kind === "research_brief")).toBe(
       true,
     );
