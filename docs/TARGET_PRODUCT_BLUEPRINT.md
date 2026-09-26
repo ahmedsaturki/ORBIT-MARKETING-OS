@@ -46,7 +46,9 @@ Automation must not bypass authorization, safety budgets, platform controls, or 
 
 ### ORBIT Intelligence
 
-Research, knowledge grounding, analytics, anomaly detection, experiment learning, and next-action recommendations.
+Research, knowledge grounding, analytics, experimentation, anomaly detection, experiment learning, and next-action recommendations.
+
+Experimentation is a governed measurement layer: hypothesis → variants → deterministic assignment → observations → evidence summary → learning signal. It never bypasses the execution policy boundary.
 
 ### ORBIT Agents
 

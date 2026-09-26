@@ -51,6 +51,10 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | GRAPH-02 | AI/agent graph context is bounded by depth/node/relation scopes                                                | bounded context projection tests                    |
 | EXEC-01  | Agent + policy + approval + budget compose into one deterministic execution decision                           | decision kernel tests                               |
 | CMD-01   | Command dispatcher enforces registry/surface/scope/approval gates and emits a bounded trace                    | dispatcher tests + event-spine integration          |
+| EXP-01   | Experiment definition enforces workspace, variant, allocation, and time-window invariants                      | deterministic core validation tests                 |
+| EXP-02   | Variant assignment is deterministic and workspace-scoped                                                       | deterministic assignment tests                      |
+| EXP-03   | Experiment summaries ignore cross-workspace observations and compute bounded rates                             | workspace-scoped aggregation tests                  |
+| EXP-04   | Learning signals do not claim unsupported statistical significance                                             | learning-signal tests                               |
 | EVENT-01 | Operational event spine preserves workspace, sequence, parent, trace, redaction, and defensive-copy invariants | event-spine tests + native persistence validation   |
 | INBOX-01 | Unified conversation model                                                                                     | connector fixture integration                       |
 | CRM-01   | Conversation-contact linking                                                                                   | relational integration test                         |

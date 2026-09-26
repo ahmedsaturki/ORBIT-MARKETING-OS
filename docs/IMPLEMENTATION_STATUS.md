@@ -27,7 +27,8 @@ PR #48 added the governed Command Dispatcher. Its exact head passed CI, Desktop 
 - LinkedIn text publishing connector;
 - local Ollama runtime;
 - Next.js static Web/PWA surface;
-- Expo mobile monitoring surface.
+- Expo mobile monitoring surface;
+- core experimentation/learning primitives with deterministic assignment and workspace-scoped evidence summaries (persistence/UI integration is intentionally still pending).
 
 ## Exact verified execution baseline
 
