@@ -431,6 +431,7 @@ export function App(): ReactElement {
       setGlobalSearchBusy(false);
     }
   };
+
   const loadCampaigns = async (): Promise<void> => {
     try {
       setCampaigns(await callNative<CampaignView[]>("campaign_list"));
@@ -1558,6 +1559,7 @@ export function App(): ReactElement {
           <div className="account-meta">لا توجد نتائج ضمن مساحة العمل الحالية.</div>
         ) : null}
       </section>
+
       {error ? <div className="notice error">{error}</div> : null}
       {health ? (
         <div className="notice success">
