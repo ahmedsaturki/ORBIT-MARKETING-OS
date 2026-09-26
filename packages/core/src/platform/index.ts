@@ -1,8 +1,5 @@
 export type PlatformExtensionKind =
-  | "connector"
-  | "agent"
-  | "workflow"
-  | "vertical_pack";
+  "connector" | "agent" | "workflow" | "vertical_pack";
 export type PlatformCapabilityRisk = "low" | "medium" | "high" | "critical";
 
 export interface PlatformCapability {
@@ -27,10 +24,7 @@ export interface PlatformExtensionManifest {
 }
 
 export type ConnectorAuthMode =
-  | "official_oauth"
-  | "official_token"
-  | "user_authorized_browser"
-  | "manual";
+  "official_oauth" | "official_token" | "user_authorized_browser" | "manual";
 
 export interface ConnectorExtensionManifest extends PlatformExtensionManifest {
   readonly kind: "connector";
@@ -43,11 +37,7 @@ export interface VerticalPackManifest extends PlatformExtensionManifest {
   readonly kind: "vertical_pack";
   readonly vertical: string;
   readonly defaultPolicyPack:
-    | "conservative"
-    | "balanced"
-    | "agency"
-    | "enterprise"
-    | "regulated";
+    "conservative" | "balanced" | "agency" | "enterprise" | "regulated";
   readonly lifecycleStages: readonly string[];
   readonly objectTypes: readonly string[];
   readonly workflowIds: readonly string[];
@@ -156,9 +146,7 @@ export function validateVerticalPackManifest(
 export class PlatformRegistry {
   private readonly extensions = new Map<string, PlatformExtensionManifest>();
 
-  public constructor(
-    extensions: readonly PlatformExtensionManifest[] = [],
-  ) {
+  public constructor(extensions: readonly PlatformExtensionManifest[] = []) {
     for (const extension of extensions) this.register(extension);
   }
 
@@ -181,9 +169,7 @@ export class PlatformRegistry {
     this.extensions.set(extension.id, cloneManifest(extension));
   }
 
-  public get(
-    extensionId: string,
-  ): PlatformExtensionManifest | undefined {
+  public get(extensionId: string): PlatformExtensionManifest | undefined {
     const extension = this.extensions.get(extensionId);
     return extension ? cloneManifest(extension) : undefined;
   }
@@ -192,9 +178,7 @@ export class PlatformRegistry {
     kind?: PlatformExtensionKind,
   ): readonly PlatformExtensionManifest[] {
     return [...this.extensions.values()]
-      .filter(
-        (extension) => kind === undefined || extension.kind === kind,
-      )
+      .filter((extension) => kind === undefined || extension.kind === kind)
       .map(cloneManifest)
       .sort((left, right) => left.id.localeCompare(right.id));
   }

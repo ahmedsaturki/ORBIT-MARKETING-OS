@@ -100,9 +100,9 @@ describe("platform foundation", () => {
       "connector.linkedin",
       "vertical.real-estate",
     ]);
-    expect(registry.list("connector").map((extension) => extension.id)).toEqual([
-      "connector.linkedin",
-    ]);
+    expect(registry.list("connector").map((extension) => extension.id)).toEqual(
+      ["connector.linkedin"],
+    );
     expect(isConnectorManifest(registry.get("connector.linkedin")!)).toBe(true);
     expect(isVerticalPackManifest(registry.get("vertical.real-estate")!)).toBe(
       true,

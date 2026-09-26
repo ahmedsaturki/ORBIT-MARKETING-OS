@@ -183,7 +183,4 @@ export const BUILT_IN_VERTICAL_PACKS: readonly VerticalPackManifest[] = [
 ];
 
 export const BUILT_IN_PLATFORM_MANIFESTS: readonly PlatformExtensionManifest[] =
-  [
-    ...BUILT_IN_CONNECTOR_MANIFESTS,
-    ...BUILT_IN_VERTICAL_PACKS,
-  ];
+  [...BUILT_IN_CONNECTOR_MANIFESTS, ...BUILT_IN_VERTICAL_PACKS];
