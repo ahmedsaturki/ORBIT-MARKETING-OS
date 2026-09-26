@@ -483,3 +483,40 @@ pub(crate) fn marketing_link_evidence_list(
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn accepts_only_deterministic_link_keys() {
+        assert_eq!(
+            validate_link_key("lnk_abcdef12").expect("valid key"),
+            "lnk_abcdef12"
+        );
+        assert!(validate_link_key("lnk_abc").is_err());
+        assert!(validate_link_key("link_abcdef12").is_err());
+    }
+
+    #[test]
+    fn rejects_unsafe_link_urls() {
+        assert!(validate_http_url("javascript:alert(1)", "url").is_err());
+        assert!(validate_http_url("data:text/plain,hello", "url").is_err());
+        assert!(validate_http_url("ftp://example.com", "url").is_err());
+        assert!(validate_http_url("https://example.com/path", "url").is_ok());
+    }
+
+    #[test]
+    fn accepts_bounded_json_and_provenance_contracts() {
+        assert_eq!(
+            validate_json(r#"{"source":"platform"}"#, "metadata", 100).expect("json"),
+            r#"{"source":"platform"}"#
+        );
+        assert!(validate_json("{broken", "metadata", 100).is_err());
+        assert!(validate_provenance("manual_observation").is_ok());
+        assert!(validate_provenance("fake_metric").is_err());
+        assert!(validate_observed_source("platform_api").is_ok());
+        assert!(validate_observed_source("unknown").is_err());
+    }
+}
