@@ -55,6 +55,8 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | EXP-02   | Variant assignment is deterministic and workspace-scoped                                                       | deterministic assignment tests                      |
 | EXP-03   | Experiment summaries ignore cross-workspace observations and compute bounded rates                             | workspace-scoped aggregation tests                  |
 | EXP-04   | Learning signals do not claim unsupported statistical significance                                             | learning-signal tests                               |
+| EXP-05   | Experiment variants bind only to same-workspace campaign content or unique governed message sources                  | experiment binding tests + campaign contract tests            |
+| EXP-06   | Experiment learning produces workspace-scoped descriptive insight/strategy signals without significance claims     | learning write-back tests + outcome integration tests          |
 | EVENT-01 | Operational event spine preserves workspace, sequence, parent, trace, redaction, and defensive-copy invariants | event-spine tests + native persistence validation   |
 | INBOX-01 | Unified conversation model                                                                                     | connector fixture integration                       |
 | CRM-01   | Conversation-contact linking                                                                                   | relational integration test                         |
