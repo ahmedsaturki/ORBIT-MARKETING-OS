@@ -19,6 +19,8 @@ import { OperationalEventTimelinePanel } from "./components/OperationalEventTime
 import { StrategyStudioPanel } from "./components/StrategyStudioPanel";
 import { ExperimentStudioPanel } from "./components/ExperimentStudioPanel";
 import { ResearchStudioPanel } from "./components/ResearchStudioPanel";
+import { ContentCalendarPanel } from "./components/ContentCalendarPanel";
+import { BulkPlannerPanel } from "./components/BulkPlannerPanel";
 import {
   analyzeLocalImage,
   DEFAULT_RUNTIME_URL,
@@ -1506,6 +1508,25 @@ export function App(): ReactElement {
       {activeWorkspace ? (
         <ExperimentStudioPanel workspaceId={activeWorkspace.id} />
       ) : null}
+
+      <ContentCalendarPanel
+        tasks={tasks.map((task) => ({
+          id: task.id,
+          accountId: task.account_id,
+          platform: task.platform,
+          kind: task.kind,
+          status: task.status,
+          priority: task.priority,
+          availableAt: task.available_at,
+        }))}
+      />
+
+      <BulkPlannerPanel
+        accounts={accounts}
+        campaigns={campaigns}
+        contentItems={contentItems}
+        onTasksChanged={loadTasks}
+      />
 
       <header className="hero">
         <div>
