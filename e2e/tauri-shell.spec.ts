@@ -311,19 +311,22 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     )) as { id: string; name: string };
     await page!.evaluate(
       (workspaceId) =>
-        window.__TAURI_INTERNALS__.invoke("workspace_select", { id: workspaceId }),
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
       workspaceA.id,
     );
 
-    const account = (await page!.evaluate(async (id) =>
-      window.__TAURI_INTERNALS__.invoke("account_upsert", {
-        id,
-        platform: "telegram",
-        displayName: "E2E Search Account",
-        username: null,
-        session: null,
-        password: null,
-      }),
+    const account = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("account_upsert", {
+          id,
+          platform: "telegram",
+          displayName: "E2E Search Account",
+          username: null,
+          session: null,
+          password: null,
+        }),
       "e2e-search-account-" + suffix,
     )) as { id: string };
 
@@ -361,7 +364,9 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     )) as { id: string; name: string };
     await page!.evaluate(
       (workspaceId) =>
-        window.__TAURI_INTERNALS__.invoke("workspace_select", { id: workspaceId }),
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
       workspaceB.id,
     );
 
@@ -376,6 +381,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
     expect(isolated).toEqual([]);
   });
+
   test("native runtime restart preserves selected workspace state", async () => {
     expect(page, "boot test must run first").not.toBeNull();
 
