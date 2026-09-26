@@ -3520,6 +3520,19 @@ fn content_upsert(
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
+
+    let existing_variants_json: Option<String> = connection
+        .query_row(
+            "SELECT variants_json FROM experiments WHERE id=?1 AND workspace_id=?2 AND status <> 'draft'",
+            params![&id, &workspace_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    if existing_variants_json.as_deref().is_some_and(|existing| existing != variants_json) {
+        return Err("experiment_variants_immutable_after_start".to_string());
+    }
+
     let timestamp = chrono_like_timestamp();
     let changed = connection
         .execute(
@@ -9540,6 +9553,11 @@ fn experiment_record_observation(
         .map_err(|_| "stored experiment variants are invalid".to_string())?;
     if !variants.iter().any(|variant| variant.id == variant_id) {
         return Err("observation variant is not declared by the experiment".to_string());
+    }
+    let expected_variant_id =
+        experiment_variant_for_subject(&workspace_id, &experiment_id, &subject_id, &variants)?;
+    if expected_variant_id != variant_id {
+        return Err("observation_variant_does_not_match_deterministic_assignment".to_string());
     }
     let changed = connection
         .execute(
