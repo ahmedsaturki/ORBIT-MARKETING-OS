@@ -315,7 +315,6 @@ export function observationsToLearningSignals(
   return signals;
 }
 
-
 export interface ExperimentCampaignBinding {
   readonly experimentId: string;
   readonly workspaceId: string;
@@ -387,7 +386,9 @@ export function compileExperimentCampaignWorkPlan(input: {
 
     if (variant.contentId?.trim()) {
       if (!campaign.contentIds.includes(variant.contentId.trim())) {
-        throw new Error("experiment_variant_content_not_attached_to_campaign");
+        throw new Error(
+          "experiment_variant_content_not_attached_to_campaign",
+        );
       }
     }
 
@@ -468,7 +469,10 @@ export interface ExperimentStrategyLearningSignal {
   readonly id: string;
   readonly workspaceId: string;
   readonly experimentId: string;
-  readonly kind: "conversion_observation" | "value_observation" | "insufficient_evidence";
+  readonly kind:
+    | "conversion_observation"
+    | "value_observation"
+    | "insufficient_evidence";
   readonly variantId?: string;
   readonly metric?: string;
   readonly observedValue?: number;
@@ -528,7 +532,8 @@ export function buildExperimentLearningWriteback(
       workspaceId: experiment.workspaceId,
       experimentId: experiment.id,
       kind: "insufficient_evidence",
-      message: "No exposed observations are available; no learning is written back.",
+      message:
+        "No exposed observations are available; no learning is written back.",
     });
     return {
       workspaceId: experiment.workspaceId,
@@ -545,7 +550,11 @@ export function buildExperimentLearningWriteback(
   );
   if (conversionLeader) {
     signals.push({
-      id: "experiment:" + experiment.id + ":conversion:" + conversionLeader.variantId,
+      id:
+        "experiment:" +
+        experiment.id +
+        ":conversion:" +
+        conversionLeader.variantId,
       workspaceId: experiment.workspaceId,
       experimentId: experiment.id,
       kind: "conversion_observation",
@@ -593,7 +602,11 @@ export function buildExperimentLearningWriteback(
   );
   if (valueLeader && valueLeader.totalValue !== 0) {
     signals.push({
-      id: "experiment:" + experiment.id + ":value:" + valueLeader.variantId,
+      id:
+        "experiment:" +
+        experiment.id +
+        ":value:" +
+        valueLeader.variantId,
       workspaceId: experiment.workspaceId,
       experimentId: experiment.id,
       kind: "value_observation",
