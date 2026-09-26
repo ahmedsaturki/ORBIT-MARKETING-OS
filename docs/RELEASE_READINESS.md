@@ -4,7 +4,7 @@ Updated: 2026-09-26.
 
 ## Canonical state
 
-- `main`: `08e0f61e881dc94901cfb280948a29f73508fd65`
+- `main`: current repository default branch (do not hard-code a moving SHA in this document)
 - PR #71: merged — release truth / Universal Search hardening.
 - PR #72: merged — Publishing Workbench / Competitive Watch.
 - PR #76: merged — fail-closed Vercel production credential gate.
