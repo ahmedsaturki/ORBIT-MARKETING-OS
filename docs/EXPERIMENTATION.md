@@ -80,6 +80,6 @@ Still remaining:
 - automatic observations from real connector outcomes;
 - persisted native write-back through the outcome/strategy command surfaces;
 - an explicit statistical inference methodology with documented assumptions;
-- CLI/MCP/agent exposure through the same command boundary.
+- agent exposure through the same command boundary; CLI/MCP now expose governed registry and authorization previews. Executable actions remain bound to the canonical CommandDispatcher.
 
 No external action should become possible merely by enabling experimentation.
