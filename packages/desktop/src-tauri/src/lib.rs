@@ -14047,7 +14047,7 @@ mod interrupted_restore_recovery_tests {
                  VALUES ('brief-1', 'workspace-1', 'Alpha Research', 'market', 'How should Alpha grow?', '[]', 'active', '1', '1');
                  INSERT INTO research_findings(id, workspace_id, brief_id, title, statement, source_ids_json, confidence, observed_at, expires_at, tags_json, created_at, updated_at)
                  VALUES ('finding-1', 'workspace-1', 'brief-1', 'Alpha Finding', 'Alpha evidence', '["source-1"]', 0.8, '2026-09-26T00:00:00Z', NULL, '["alpha"]', '1', '1');
-                 INSERT INTO knowledge_sources(id, workspace_id, kind, label, locator, created_at)
+                 INSERT INTO knowledge_sources(id, workspace_id, type, title, locator, collected_at)
                  VALUES ('source-1', 'workspace-1', 'url', 'Source', 'https://example.com', '1');"#,
             )
             .expect("search fixture should be created");
