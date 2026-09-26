@@ -22,7 +22,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prettier --write packages/core/src/agents/registry.test.ts packages/core/src/commands/index.ts
+      - run: pnpm exec prettier --write packages/core/src/agents/registry.test.ts packages/core/src/commands/index.ts docs/ACCEPTANCE_MATRIX_V2.md
       - name: Commit canonical formatting
         run: |
           if git diff --quiet; then
