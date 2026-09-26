@@ -13,6 +13,7 @@ export interface ContentReuseHistory {
   readonly contentId: string;
   readonly platform: Platform;
   readonly publishedAt: string;
+  readonly body?: string;
 }
 
 export interface ContentReusePolicy {
@@ -108,7 +109,8 @@ export function evaluateContentReuse(
     (item) =>
       item.contentId !== candidate.contentId &&
       item.platform === candidate.platform &&
-      normalize(item.contentId) === candidateVariant,
+      typeof item.body === "string" &&
+      normalize(item.body) === candidateVariant,
   );
   if (duplicate) reasons.push("duplicate_variant");
 
