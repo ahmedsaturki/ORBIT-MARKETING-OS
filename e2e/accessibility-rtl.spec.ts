@@ -66,26 +66,28 @@ test.describe("ORBIT accessibility and RTL", () => {
       await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
       await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
 
-      const unnamedControls = await page.locator(
-        'button, input, textarea, select, [role="button"]',
-      ).evaluateAll((elements) =>
-        elements
-          .filter((element) => {
-            const label =
-              element.getAttribute("aria-label")?.trim() ??
-              element.getAttribute("title")?.trim() ??
-              "";
-            return !label && !element.textContent?.trim();
-          })
-          .map((element) => element.tagName),
-      );
+      const unnamedControls = await page
+        .locator('button, input, textarea, select, [role="button"]')
+        .evaluateAll((elements) =>
+          elements
+            .filter((element) => {
+              const label =
+                element.getAttribute("aria-label")?.trim() ??
+                element.getAttribute("title")?.trim() ??
+                "";
+              return !label && !element.textContent?.trim();
+            })
+            .map((element) => element.tagName),
+        );
       expect(unnamedControls).toEqual([]);
 
-      const missingAlt = await page.locator("img").evaluateAll((images) =>
-        images
-          .filter((image) => !image.hasAttribute("alt"))
-          .map((image) => image.getAttribute("src") ?? "unknown"),
-      );
+      const missingAlt = await page
+        .locator("img")
+        .evaluateAll((images) =>
+          images
+            .filter((image) => !image.hasAttribute("alt"))
+            .map((image) => image.getAttribute("src") ?? "unknown"),
+        );
       expect(missingAlt).toEqual([]);
 
       const duplicateIds = await page.evaluate(() => {
