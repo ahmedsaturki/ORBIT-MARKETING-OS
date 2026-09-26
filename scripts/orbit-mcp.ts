@@ -157,10 +157,10 @@ async function handle(request: RpcRequest): Promise<void> {
     if (isModernRequest(params)) {
       const modernError = assertModernRequest(params);
       if (modernError) {
-        write(request.id, undefined, {
-        code: -32602,
-        message: modernError,
-      });
+          write(request.id, undefined, {
+          code: -32602,
+          message: modernError,
+        });
         return;
       }
     } else if (!legacyInitialized) {
@@ -212,10 +212,10 @@ async function handle(request: RpcRequest): Promise<void> {
     if (isModernRequest(params)) {
       const modernError = assertModernRequest(params);
       if (modernError) {
-        write(request.id, undefined, {
-        code: -32602,
-        message: modernError,
-      });
+          write(request.id, undefined, {
+          code: -32602,
+          message: modernError,
+        });
         return;
       }
     } else if (!legacyInitialized) {
