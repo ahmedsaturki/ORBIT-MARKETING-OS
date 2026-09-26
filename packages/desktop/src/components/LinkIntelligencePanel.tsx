@@ -176,18 +176,19 @@ export function LinkIntelligencePanel({
       setError("");
       setMessage("");
       await invoke<EvidenceView>("marketing_link_evidence_add", {
-        input: { 
+        input: {
           linkId: selectedLink.id,
-        sourceType,
-        metricName: metricName.trim(),
-        metricValue: value,
-        observedAt: new Date(observedAt).toISOString(),
-        sourceLocator: sourceLocator.trim() || null,
-        provenance: evidenceProvenance,
-        metadataJson: JSON.stringify({
-          workspaceId,
-          metric: metricName.trim(),
-        }),
+          sourceType,
+          metricName: metricName.trim(),
+          metricValue: value,
+          observedAt: new Date(observedAt).toISOString(),
+          sourceLocator: sourceLocator.trim() || null,
+          provenance: evidenceProvenance,
+          metadataJson: JSON.stringify({
+            workspaceId,
+            metric: metricName.trim(),
+          }),
+        },
       });
       await loadEvidence(selectedLink.id);
       setMessage(
