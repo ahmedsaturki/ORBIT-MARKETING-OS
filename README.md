@@ -8,9 +8,7 @@ Current real connector coverage: Telegram has a native API path and LinkedIn has
 
 The production monorepo architecture is consolidated on `main`; the historical rebuild PRs remain in GitHub only as implementation history.
 
-The current production branch is:
-
-`main` (`08e0f61e881dc94901cfb280948a29f73508fd65`)
+The current production branch is the repository default branch `main`. The exact SHA is intentionally obtained from the current Git state rather than hard-coded in this overview.
 
 Universal Search is workspace-scoped and read-only, with deterministic ranking, bounded queries, explicit exclusion of credentials/sessions, and literal wildcard escaping coverage.
 
@@ -18,7 +16,7 @@ The rebuild is acceptance-driven: implementation is not considered complete unti
 
 ## Product boundary
 
-The product is designed around local ownership of sensitive data. The desktop/local runtime is the source of truth for private account state, campaigns, task queues, CRM records, and audit records. Native SQLite schema is versioned through v15, including the governed marketing operating model, research intelligence/evidence, persisted opportunities/insights, workspace-scoped task idempotency, and conservative startup crash recovery.
+The product is designed around local ownership of sensitive data. The desktop/local runtime is the source of truth for private account state, campaigns, task queues, CRM records, and audit records. Native SQLite schema is versioned through v16, including the governed marketing operating model, research intelligence/evidence, persisted opportunities/insights, workspace-scoped task idempotency, and conservative startup crash recovery.
 
 Platform integrations must remain user-authorized and platform-compliant. The product does not implement fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion, or concealed automation.
 
