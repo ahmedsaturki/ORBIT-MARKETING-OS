@@ -40,3 +40,4 @@ export * from "./research/index.js";
 export * from "./search/index.js";
 
 export * from "./platform/index.js";
+export * from "./platform/builtins.js";
