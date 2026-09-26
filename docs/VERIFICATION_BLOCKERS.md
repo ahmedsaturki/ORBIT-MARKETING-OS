@@ -4,34 +4,37 @@ Updated: 2026-09-26
 
 ## Current state
 
-The earlier hosted-runner pre-step failure is historical. Current GitHub-hosted CI executes real workflow steps and PR #47 completed CI, Desktop Native Validation and Mobile Validation successfully before merge.
+The current merged main is:
 
-PR #48's exact-head CI, Desktop Native Validation, and Mobile Validation all passed before merge. The remaining blockers are runtime/distribution/commercial evidence, not an unverified dispatcher implementation.
+`377e86d79c3c9718ca8ee4d9ce5161a5751f77a3`
+
+PR #71 and PR #72 are merged. Their final validated feature heads passed the required hosted CI/native/mobile gates; the Windows Native E2E run also passed after exposing and driving the Universal Search escaping fix.
+
+The remaining blockers are primarily production/runtime/external evidence, not missing core architecture.
 
 ## Vercel deployment evidence
 
-The Vercel project `orbit-marketing-os` is connected and has a READY production deployment.
+The connected `orbit-marketing-os` project is live and has a READY production deployment.
 
 Current verified facts:
+- public home/pricing/privacy paths respond successfully;
+- unknown routes return 404;
+- Arabic RTL markup is present;
+- selected seven-day runtime-error aggregation reports no runtime errors;
+- current READY deployment metadata reports `framework: vite` and empty Git metadata;
+- repository `vercel.json` expects Next.js static export to `packages/web/out`.
 
-- project metadata reports `framework: vite`;
-- repository deployment contract expects Next.js static export to `packages/web/out`;
-- latest READY production deployment has empty Git metadata;
-- the selected seven-day runtime error aggregation currently reports no runtime errors.
+The remaining Vercel blocker is configuration/provenance reconciliation plus a credential-backed current-main prebuilt deployment and rollback drill.
 
-The remaining Vercel blocker is therefore configuration/provenance reconciliation and a fresh rollback drill, not general web availability.
+PR #76 changes the GitHub deployment workflow to fail closed when its Vercel credentials are absent, eliminating the previous false-green behavior.
 
 ## Reproducible installation
 
-The canonical `pnpm-lock.yaml` and `packages/desktop/src-tauri/Cargo.lock` are present on the current main lineage and have passed frozen-install validation in hosted CI. No fabricated lockfile is part of the release process.
-
-## Local execution
-
-The developer shell's external network limitations are not treated as the primary release path. GitHub-hosted validation is the authoritative zero-cost automated verification path, with the repository's self-hosted workflow retained as a manual fallback.
+The canonical `pnpm-lock.yaml` and desktop `Cargo.lock` are present on main and frozen-install validation passes in hosted CI.
 
 ## Governance
 
-Live GitHub ruleset read currently returns an empty ruleset collection. Main-branch protection/direct-push enforcement therefore remains unverified and is kept as an open governance gate.
+The GitHub branch-protection endpoint is not accessible through the current integration and returns 403. Main-branch protection/ruleset enforcement therefore remains unverified.
 
 ## Release consequence
 
