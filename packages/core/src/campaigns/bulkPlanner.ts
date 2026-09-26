@@ -17,9 +17,7 @@ function assertPositiveInteger(
   max: number,
 ): void {
   if (!Number.isInteger(value) || value < 1 || value > max) {
-    throw new RangeError(
-      `${field} must be an integer between 1 and ${max}`,
-    );
+    throw new RangeError(`${field} must be an integer between 1 and ${max}`);
   }
 }
 
