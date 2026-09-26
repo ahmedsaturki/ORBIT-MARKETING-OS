@@ -3521,17 +3521,12 @@ fn content_upsert(
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
 
-    let existing_variants_json: Option<String> = connection
-        .query_row(
-            "SELECT variants_json FROM experiments WHERE id=?1 AND workspace_id=?2 AND status <> 'draft'",
-            params![&id, &workspace_id],
-            |row| row.get(0),
-        )
-        .optional()
-        .map_err(|error| error.to_string())?;
-    if existing_variants_json.as_deref().is_some_and(|existing| existing != variants_json) {
-        return Err("experiment_variants_immutable_after_start".to_string());
-    }
+    ensure_experiment_variants_immutable(
+        &connection,
+        &id,
+        &workspace_id,
+        &variants_json,
+    )?;
 
     let timestamp = chrono_like_timestamp();
     let changed = connection
@@ -9293,6 +9288,47 @@ fn append_experiment_operational_event(
     .map(|_| ())
 }
 
+fn ensure_experiment_variants_immutable(
+    connection: &Connection,
+    experiment_id: &str,
+    workspace_id: &str,
+    variants_json: &str,
+) -> Result<(), String> {
+    let existing_variants_json: Option<String> = connection
+        .query_row(
+            "SELECT variants_json FROM experiments WHERE id=?1 AND workspace_id=?2 AND status <> 'draft'",
+            params![experiment_id, workspace_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    if existing_variants_json
+        .as_deref()
+        .is_some_and(|existing| existing != variants_json)
+    {
+        return Err("experiment_variants_immutable_after_start".to_string());
+    }
+    Ok(())
+}
+
+fn validate_observation_variant_assignment(
+    workspace_id: &str,
+    experiment_id: &str,
+    subject_id: &str,
+    variants: &[ExperimentVariantInput],
+    variant_id: &str,
+) -> Result<(), String> {
+    if !variants.iter().any(|variant| variant.id == variant_id) {
+        return Err("observation variant is not declared by the experiment".to_string());
+    }
+    let expected_variant_id =
+        experiment_variant_for_subject(workspace_id, experiment_id, subject_id, variants)?;
+    if expected_variant_id != variant_id {
+        return Err("observation_variant_does_not_match_deterministic_assignment".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn experiment_upsert(
@@ -9551,14 +9587,13 @@ fn experiment_record_observation(
         .ok_or_else(|| "experiment not found in active workspace".to_string())?;
     let variants: Vec<ExperimentVariantInput> = serde_json::from_str(&variants_json)
         .map_err(|_| "stored experiment variants are invalid".to_string())?;
-    if !variants.iter().any(|variant| variant.id == variant_id) {
-        return Err("observation variant is not declared by the experiment".to_string());
-    }
-    let expected_variant_id =
-        experiment_variant_for_subject(&workspace_id, &experiment_id, &subject_id, &variants)?;
-    if expected_variant_id != variant_id {
-        return Err("observation_variant_does_not_match_deterministic_assignment".to_string());
-    }
+    validate_observation_variant_assignment(
+        &workspace_id,
+        &experiment_id,
+        &subject_id,
+        &variants,
+        &variant_id,
+    )?;
     let changed = connection
         .execute(
             "INSERT INTO experiment_observations(
@@ -12766,6 +12801,83 @@ mod experimentation_runtime_tests {
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("version");
         assert_eq!(version, 14);
+    }
+
+    #[test]
+    fn variant_definition_cannot_change_after_experiment_start() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection
+            .execute(
+                "CREATE TABLE experiments(
+                    id TEXT PRIMARY KEY,
+                    workspace_id TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    variants_json TEXT NOT NULL
+                 )",
+                [],
+            )
+            .expect("table");
+        connection
+            .execute(
+                "INSERT INTO experiments(id,workspace_id,status,variants_json)
+                 VALUES (?1,?2,'running',?3)",
+                params![
+                    "exp-1",
+                    "ws-1",
+                    r#"[{"id":"control","name":"Control","allocationPercent":50},{"id":"test","name":"Test","allocationPercent":50}]"#
+                ],
+            )
+            .expect("fixture");
+
+        let unchanged = r#"[{"id":"control","name":"Control","allocationPercent":50},{"id":"test","name":"Test","allocationPercent":50}]"#;
+        assert!(ensure_experiment_variants_immutable(
+            &connection, "exp-1", "ws-1", unchanged
+        )
+        .is_ok());
+
+        let changed = r#"[{"id":"control","name":"Control","allocationPercent":40},{"id":"test","name":"Test","allocationPercent":60}]"#;
+        assert_eq!(
+            ensure_experiment_variants_immutable(&connection, "exp-1", "ws-1", changed)
+                .unwrap_err(),
+            "experiment_variants_immutable_after_start"
+        );
+    }
+
+    #[test]
+    fn observation_variant_must_match_deterministic_assignment() {
+        let variants = vec![
+            ExperimentVariantInput {
+                id: "control".into(),
+                name: "Control".into(),
+                allocation_percent: 50.0,
+                content_id: None,
+                message: None,
+            },
+            ExperimentVariantInput {
+                id: "test".into(),
+                name: "Test".into(),
+                allocation_percent: 50.0,
+                content_id: None,
+                message: None,
+            },
+        ];
+        let subject = "subject-42";
+        let expected =
+            experiment_variant_for_subject("ws-1", "exp-1", subject, &variants)
+                .expect("assignment");
+        assert!(validate_observation_variant_assignment(
+            "ws-1", "exp-1", subject, &variants, &expected
+        )
+        .is_ok());
+
+        let wrong = if expected == "control" { "test" } else { "control" };
+        assert_eq!(
+            validate_observation_variant_assignment(
+                "ws-1", "exp-1", subject, &variants, wrong
+            )
+            .unwrap_err(),
+            "observation_variant_does_not_match_deterministic_assignment"
+        );
     }
 
     #[test]
