@@ -14036,6 +14036,7 @@ mod interrupted_restore_recovery_tests {
         connection
             .execute_batch(SCHEMA)
             .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
         connection
             .execute_batch(
                 r#"INSERT INTO workspaces(id, name, created_at)
