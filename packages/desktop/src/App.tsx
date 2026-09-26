@@ -224,6 +224,26 @@ async function callNative<T>(
   return invoke<T>(command, args);
 }
 
+const SEARCH_KIND_LABELS: Record<GlobalSearchResult["kind"], string> = {
+  account: "حساب",
+  campaign: "حملة",
+  content: "محتوى",
+  contact: "عميل",
+  conversation: "محادثة",
+  message: "رسالة",
+  opportunity: "فرصة",
+  work: "عمل",
+  strategy: "استراتيجية",
+  knowledge: "معرفة",
+  knowledge_source: "مصدر معرفة",
+  media_asset: "وسيط",
+  agent: "وكيل",
+  policy: "سياسة",
+  experiment: "تجربة",
+  research_brief: "موجز بحث",
+  research_finding: "نتيجة بحث",
+};
+
 export function App(): ReactElement {
   const [health, setHealth] = useState<Health | null>(null);
   const [workspaces, setWorkspaces] = useState<readonly WorkspaceView[]>([]);
@@ -1513,8 +1533,9 @@ export function App(): ReactElement {
               <Search size={20} /> البحث الموحد في ORBIT
             </h2>
             <p>
-              ابحث مرة واحدة داخل الحملات والمحتوى والعملاء والمحادثات والفرص
-              والمهام والاستراتيجية والمعرفة والوكلاء والسياسات والتجارب والبحث.
+              ابحث مرة واحدة داخل الحسابات والحملات والمحتوى والعملاء والمحادثات
+              والرسائل والفرص والمهام والاستراتيجية والمعرفة والوسائط والوكلاء
+              والسياسات والتجارب والبحث.
             </p>
           </div>
           <div className="account-meta">Ctrl+K / Cmd+K</div>
@@ -1533,7 +1554,7 @@ export function App(): ReactElement {
                   setGlobalSearchResults([]);
                 }
               }}
-              placeholder="ابحث عن حملة، عميل، محتوى، بحث، فرصة، مهمة، استراتيجية..."
+              placeholder="ابحث عن حساب، حملة، عميل، رسالة، محتوى، بحث، فرصة، مهمة..."
               maxLength={200}
               autoComplete="off"
             />
@@ -1551,7 +1572,7 @@ export function App(): ReactElement {
           <div className="result-list">
             {globalSearchResults.map((result) => (
               <article className="card" key={result.kind + ":" + result.id}>
-                <div className="eyebrow">{result.kind}</div>
+                <div className="eyebrow">{SEARCH_KIND_LABELS[result.kind] ?? result.kind}</div>
                 <strong>{result.title}</strong>
                 <p>{result.subtitle}</p>
               </article>
