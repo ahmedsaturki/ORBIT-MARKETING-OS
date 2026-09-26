@@ -59,9 +59,7 @@ export function buildTrackedUrl(input: LinkRegistryInput): string {
   const destinationUrl = normalizeDestinationUrl(input.destinationUrl);
   const url = new URL(destinationUrl);
 
-  const candidates: ReadonlyArray<
-    [string, string | null | undefined]
-  > = [
+  const candidates: ReadonlyArray<[string, string | null | undefined]> = [
     ["utm_source", input.source],
     ["utm_medium", input.medium],
     ["utm_campaign", input.campaign],
@@ -80,9 +78,7 @@ export function buildTrackedUrl(input: LinkRegistryInput): string {
   return url.toString();
 }
 
-export function createLinkRecord(
-  input: LinkRegistryInput,
-): LinkRegistryRecord {
+export function createLinkRecord(input: LinkRegistryInput): LinkRegistryRecord {
   const destinationUrl = normalizeDestinationUrl(input.destinationUrl);
   const trackedUrl = buildTrackedUrl(input);
   const tracking: Record<string, string> = {};
