@@ -54,16 +54,16 @@ describe("deterministic anomaly detection", () => {
     expect(reverse).toEqual(forward);
   });
 
-  it("rejects invalid configuration and points", () => {
+  it("rejects invalid configuration and follows canonical metric filtering", () => {
     expect(() =>
       detectMetricAnomalies("metric", series, { windowSize: 2 }),
     ).toThrow("anomaly_window_invalid");
     expect(() =>
       detectMetricAnomalies("metric", series, { threshold: 0 }),
     ).toThrow("anomaly_threshold_invalid");
-    expect(() =>
+    expect(
       detectMetricAnomalies("metric", [{ timestamp: "bad", value: 1 }]),
-    ).toThrow("metric_timestamp_invalid");
+    ).toEqual([]);
   });
 
   it("builds evidence-oriented anomaly insights without fake confidence", () => {
