@@ -12,7 +12,11 @@ import type { MarketingInsight } from "../outcomes/index.js";
 import type { Campaign } from "../types/index.js";
 
 export type ExperimentStatus =
-  "draft" | "running" | "paused" | "completed" | "archived";
+  | "draft"
+  | "running"
+  | "paused"
+  | "completed"
+  | "archived";
 
 export interface ExperimentVariant {
   readonly id: string;
@@ -515,7 +519,9 @@ export function buildExperimentObservationFromExecution(
   if (!evidence.variantId.trim() || !evidence.subjectId.trim()) {
     throw new Error("experiment_execution_identity_required");
   }
-  if (!experiment.variants.some((variant) => variant.id === evidence.variantId)) {
+  if (
+    !experiment.variants.some((variant) => variant.id === evidence.variantId)
+  ) {
     throw new Error("experiment_execution_unknown_variant");
   }
   assertObservationTimestamp(evidence.observedAt);
