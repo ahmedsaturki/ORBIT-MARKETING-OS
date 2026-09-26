@@ -4,11 +4,9 @@ Updated: 2026-09-26
 
 ## Current release line
 
-The consolidated production implementation is merged into main through the RC2.1 line and PR #47. The authoritative current main commit is `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
+The consolidated production implementation is merged into `main` through PR #48. The authoritative current main commit is `cea2873db9817d4930662747441b55e1660dd67d`.
 
-PR #45 established the RC2.1 native/release baseline. PR #47 added the governed Command Registry and Operational Event Spine on top of the current main lineage and passed all exact-head CI/native/mobile gates before merge.
-
-The current validation branch adds the Command Dispatcher on top of that verified lineage and is not considered releasable until its exact-head gates pass.
+PR #45 established the RC2.1 native/release baseline. PR #47 added the governed Command Registry and Operational Event Spine, and PR #48 added the governed Command Dispatcher. Both merged after exact-head validation.
 
 ## Verified execution baseline
 
