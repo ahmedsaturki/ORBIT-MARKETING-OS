@@ -9,6 +9,8 @@ import {
 
 const registry = new CommandRegistry();
 
+let legacyInitialized = false;
+
 const SERVER_NAME = "orbit-governed-surface";
 const SERVER_VERSION = "0.2.0";
 const MODERN_PROTOCOL_VERSION = "2026-07-28";
@@ -72,6 +74,11 @@ function modernMeta(params: Record<string, unknown>): ModernMeta | undefined {
   return isRecord(value) ? (value as ModernMeta) : undefined;
 }
 
+function isModernRequest(params: Record<string, unknown>): boolean {
+  return modernMeta(params)?.["io.modelcontextprotocol/protocolVersion"] ===
+    MODERN_PROTOCOL_VERSION;
+}
+
 function assertModernRequest(params: Record<string, unknown>): string | undefined {
   const meta = modernMeta(params);
   if (!meta) return "modern_meta_required";
@@ -120,6 +127,7 @@ async function handle(request: RpcRequest): Promise<void> {
       ? requestedVersion
       : LATEST_HANDSHAKE_PROTOCOL_VERSION;
 
+    legacyInitialized = true;
     write(request.id, {
       protocolVersion: selectedVersion,
       serverInfo: serverInfo(),
@@ -133,9 +141,15 @@ async function handle(request: RpcRequest): Promise<void> {
   if (request.method === "notifications/initialized") return;
 
   if (request.method === "tools/list") {
-    const modernError = assertModernRequest(request.params ?? {});
-    if (modernError) {
-      write(request.id, undefined, { code: -32602, message: modernError });
+    const params = request.params ?? {};
+    if (isModernRequest(params)) {
+      const modernError = assertModernRequest(params);
+      if (modernError) {
+        write(request.id, undefined, { code: -32602, message: modernError });
+        return;
+      }
+    } else if (!legacyInitialized) {
+      write(request.id, undefined, { code: -32602, message: "initialize_required" });
       return;
     }
 
@@ -175,9 +189,14 @@ async function handle(request: RpcRequest): Promise<void> {
 
   if (request.method === "tools/call") {
     const params = request.params ?? {};
-    const modernError = assertModernRequest(params);
-    if (modernError) {
-      write(request.id, undefined, { code: -32602, message: modernError });
+    if (isModernRequest(params)) {
+      const modernError = assertModernRequest(params);
+      if (modernError) {
+        write(request.id, undefined, { code: -32602, message: modernError });
+        return;
+      }
+    } else if (!legacyInitialized) {
+      write(request.id, undefined, { code: -32602, message: "initialize_required" });
       return;
     }
 
