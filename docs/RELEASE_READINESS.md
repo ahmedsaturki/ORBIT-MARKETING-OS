@@ -1,73 +1,72 @@
 # ORBIT Marketing OS — Release Readiness
 
-Updated: 2026-09-26
+Updated: 2026-09-26.
 
-## Canonical repository state
+## Canonical state
 
-- Current `main`: `1cb104647bc69cff114f430cab1ff9dc184ed864`
-- - PR #71 latest release-truth head: `5518e4489b90bf8f5c4050f44f114f9ab1877b86`
-- PR #72 latest Publishing Workbench / Competitive Watch lineage is tracked separately.
+- `main`: `377e86d79c3c9718ca8ee4d9ce5161a5751f77a3`
+- PR #71: merged — release truth / Universal Search hardening.
+- PR #72: merged — Publishing Workbench / Competitive Watch.
+- PR #76: open — fail-closed Vercel production credential gate.
 
-## Product baseline
+## Readiness rule
 
-ORBIT is being developed as a private, local-first Marketing Operating System rather than a standalone scheduler. The architecture centers one governed marketing graph across strategy, campaigns, content, approvals, execution, conversations, CRM, outcomes, analytics, research, knowledge, agents, and learning.
+ORBIT uses four levels:
 
-## Verification model
+- **L0 Designed**
+- **L1 Implemented**
+- **L2 Verified**
+- **L3 Production Proven**
 
-A capability is not considered complete from source inspection alone. Release evidence follows:
+A capability is not treated as production-proven from source inspection or a passing unit test alone. The acceptance chain is:
 
-SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFORMANCE → RECOVERY → REAL-WORLD EVIDENCE → DOCUMENTATION → RELEASE
+SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFORMANCE → RECOVERY → REAL-WORLD EVIDENCE → DOCUMENTATION → RELEASE.
 
-Readiness levels:
+Commercial Production Proven requires every release-critical gate to reach **L3**.
 
-- L0 Designed
-- L1 Implemented
-- L2 Verified
-- L3 Production Proven
+The machine-readable source of truth is `release/readiness.json`. Run:
 
-Commercial production readiness requires L3 evidence for all release-critical capabilities.
+`pnpm verify:readiness`
 
-## Verified / strongly evidenced
+For the commercial lane, run:
 
-- Core TypeScript/Rust architecture and local SQLite runtime.
-- React/ReactDOM are pinned at 19.2.8 across the release workspaces; mobile transitive advisories for `uuid` and `decode-uri-component` are mitigated in the lockfile via scoped pnpm overrides.
-- Workspace isolation and role-gated sensitive commands.
-- Queue/policy execution, retry, replay, simulation, audit, research intelligence, search, campaigns, CRM, content, media, agents, analytics and sync domains.
-- Web package is Next.js 16.3.6 static export.
-- Live Vercel web surface serves the rebuilt Next.js application with RTL Arabic UI.
-- Live public routes, manifest, service worker, security headers and 404 behavior have been checked.
-- Windows Native E2E exposed and drove a real Universal Search SQL escaping fix.
-- Bulk Planner logic is now extracted into a core pure function with bounded inputs and unit coverage.
-- Competitive Watch is workspace-namespaced and stores public source locators only.
+`pnpm verify:readiness -- --mode commercial`
 
-## Active release validation
+## Current state
 
-Fresh CI, Desktop Native Validation, and Mobile Validation runs are executed from the latest release-line heads. A run is only accepted after terminal success on the exact head under review.
+The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, workspace isolation, native desktop/mobile validation, and web quality.
 
-## Production blockers
+A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed and the corrected feature head subsequently passed CI, desktop native, mobile, and Windows Native E2E.
 
-- real Telegram authorization/delivery;
-- real LinkedIn authorization/publishing;
-- live multi-device CRDT network verification;
-- native restart/migration/crash-recovery evidence consolidation;
-- manual accessibility/WCAG/RTL audit;
+## Production gates still open
+
+- real Telegram authorization and controlled delivery;
+- real LinkedIn authorization and controlled publishing;
+- live multi-device CRDT verification;
+- dedicated restart/migration/crash recovery evidence consolidation;
+- manual WCAG/RTL audit;
 - 24-hour stability soak;
-- release-tag checksum/provenance drill;
-- desktop signing/notarization;
-- production Android/iOS signing and store distribution;
-- Vercel Project Settings reconciliation;
-- guarded Vercel production deployment with embedded Git SHA verification;
+- Vercel project settings reconciliation;
+- credential-backed Vercel prebuilt deployment with embedded Git SHA verification;
 - production rollback drill;
-- GitHub main branch protection/ruleset verification;
-- commercial payment/billing;
+- desktop signing/notarization;
+- Android/iOS production signing and store distribution;
+- GitHub main branch protection/rulesets;
+- commercial payment/billing activation;
 - final legal/commercial publication review.
+
+## Web production evidence
+
+The connected Vercel project is live and the public surface currently returns healthy responses for the home, pricing, and privacy paths, with a 404 for an unknown route and no grouped runtime errors in the selected seven-day query.
+
+The current production deployment, however, predates `main=377e86d` and does not expose the merged release SHA. It is therefore healthy live infrastructure, not yet canonical release provenance.
 
 ## Distribution posture
 
-- Desktop: technically buildable; unsigned distribution is not commercial signing evidence.
-- Mobile: debug validation artifact exists; store signing/distribution is separate.
-- Web: live production surface exists; current public deployment is not treated as release-proven until project settings and embedded SHA provenance are verified.
+Desktop artifacts are technically buildable on Windows/Linux/macOS architectures and the validation workflow generates checksums. Current releases remain validation/prerelease artifacts and are not commercial signed distribution.
+
+Mobile validation is passing, but production signing/store distribution remains a separate gate.
 
 ## Safety boundary
 
-ORBIT deliberately excludes fingerprint spoofing, CAPTCHA bypass, anti-abuse evasion, concealed automation, and unauthorized bulk messaging. External execution remains user-authorized, policy-governed, bounded and auditable.
+ORBIT intentionally excludes CAPTCHA bypass, fingerprint spoofing, anti-abuse evasion, concealed automation, and unauthorized bulk messaging. External execution remains user-authorized, policy-governed, bounded, and auditable.
