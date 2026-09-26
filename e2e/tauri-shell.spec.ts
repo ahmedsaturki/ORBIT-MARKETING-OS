@@ -534,6 +534,21 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       },
     );
 
+    await page!.evaluate(
+      (payload) =>
+        window.__TAURI_INTERNALS__.invoke("media_asset_upsert", payload),
+      {
+        id: "e2e-search-media-" + suffix,
+        kind: "image",
+        filename: "E2E Search Media.png",
+        mimeType: "image/png",
+        sizeBytes: 1,
+        sha256: null,
+        localPath: "C:/orbit-e2e-search-media.png",
+        tagsJson: JSON.stringify(["search"]),
+      },
+    );
+
     const sameWorkspace = (await page!.evaluate(
       (query) =>
         window.__TAURI_INTERNALS__.invoke("global_search", {
@@ -547,6 +562,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(sameWorkspace.some((item) => item.kind === "campaign")).toBe(true);
     expect(sameWorkspace.some((item) => item.kind === "account")).toBe(true);
     expect(sameWorkspace.some((item) => item.kind === "message")).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "knowledge_source")).toBe(
+      true,
+    );
+    expect(sameWorkspace.some((item) => item.kind === "media_asset")).toBe(true);
     const secretSearch = (await page!.evaluate(
       (query) =>
         window.__TAURI_INTERNALS__.invoke("global_search", {
