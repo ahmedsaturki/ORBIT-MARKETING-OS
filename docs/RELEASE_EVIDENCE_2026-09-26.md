@@ -2,9 +2,9 @@
 
 ## Canonical main
 
-Current `main` head: `cea2873db9817d4930662747441b55e1660dd67d`.
+Current `main` head: `d22b97aaca33d5331d6572b379020266044fbca3`.
 
-The current main commit contains the governed Command Dispatcher and reconciled release documentation.
+The current main commit contains the governed Command Dispatcher, the explicit Accessibility/RTL CI gate, and reconciled release documentation.
 
 ## Exact-head feature evidence
 
@@ -25,8 +25,8 @@ PR #47 — governed operational command/event spine:
 
 ## Current main continuous verification
 
-- CI run `36202057601` — success
-- Web Deploy run `36202057689` — success
+- CI run `36204143746` — success
+- Web Deploy run `36204143707` — success
 
 ## Current public web evidence
 
@@ -34,7 +34,7 @@ Vercel project: `orbit-marketing-os` (`prj_XL2WKssI4tzw4Wd5OQw4Pb1v6dMt`).
 
 Current production deployment:
 
-- `dpl_ArWWejDP95byUt84SM7HzN7kbFk3`
+- `dpl_ArWWejDP95byUt84SM7HzN7kbFk3` — READY, production alias active
 - READY
 - production alias: `orbit-marketing-os.vercel.app`
 - selected 7-day runtime error aggregation: no runtime errors
@@ -52,7 +52,7 @@ The following remain intentionally unclaimed until fresh evidence exists or the 
 - controlled real Telegram authorization/delivery;
 - controlled real LinkedIn authorization/publishing;
 - live multi-device CRDT network evidence;
-- dedicated accessibility audit beyond structural automated checks;
+- dedicated full accessibility/WCAG audit beyond the automated structural Accessibility/RTL CI gate;
 - completed 24-hour soak evidence;
 - final distributed release checksum/provenance drill;
 - desktop signing/notarization;

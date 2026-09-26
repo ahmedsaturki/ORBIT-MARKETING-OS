@@ -4,7 +4,7 @@ Updated: 2026-09-26
 
 ## Current state
 
-The production implementation is consolidated on `main` through PR #48. The authoritative current main commit is `cea2873db9817d4930662747441b55e1660dd67d`.
+The production implementation is consolidated on `main` through PR #50. The authoritative current main commit is `d22b97aaca33d5331d6572b379020266044fbca3`.
 
 PR #48 added the governed Command Dispatcher. Its exact head passed CI, Desktop Native Validation, and Mobile Validation before merge. No unsupported external connector capability is implied.
 
@@ -39,7 +39,7 @@ PR #48 exact head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed:
 - Desktop Native Validation run 36200698273;
 - Mobile Validation run 36200698316.
 
-The resulting `main` head is `cea2873db9817d4930662747441b55e1660dd67d`; its current CI run 36202057601 and Web Deploy run 36202057689 both passed.
+The resulting `main` head is `d22b97aaca33d5331d6572b379020266044fbca3`; current post-merge CI run 36204143746 and Web Deploy run 36204143707 both passed.
 
 ## Production web evidence
 
@@ -53,7 +53,7 @@ The effective Vercel project metadata still reports `framework: vite` while the 
 - controlled real Telegram authorization/delivery;
 - controlled real LinkedIn authorization/delivery;
 - live multi-device CRDT network verification;
-- dedicated accessibility/RTL audit;
+- dedicated full accessibility/RTL audit beyond the automated CI gate;
 - 24-hour stability soak;
 - release-tag checksum/provenance verification;
 - desktop signing/notarization;
