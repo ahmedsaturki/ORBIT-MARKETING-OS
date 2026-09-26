@@ -10,18 +10,16 @@ function runVerifier(mode) {
       encoding: "utf8",
       stdio: "pipe",
     });
-    throw new Error("verifier unexpectedly passed");
   } catch (error) {
-    if (error instanceof Error && error.message === "verifier unexpectedly passed") {
-      throw error;
-    }
     return {
       status: error?.status ?? -1,
       stdout: error?.stdout ?? "",
       stderr: error?.stderr ?? "",
     };
   }
-});
+
+  throw new Error("verifier unexpectedly passed");
+}
 
 describe("release readiness verifier", () => {
   it("fails closed for the commercial lane while any critical gate is below L3", () => {
@@ -37,4 +35,4 @@ describe("release readiness verifier", () => {
     expect(result.stdout).not.toContain("release-readiness=PASS");
     expect(result.stderr).toContain("Mode must be verification or commercial.");
   });
-}
+});
