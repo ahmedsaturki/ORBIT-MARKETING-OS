@@ -6,7 +6,7 @@ Updated: 2026-09-26
 
 The earlier hosted-runner pre-step failure is historical. Current GitHub-hosted CI executes real workflow steps and PR #47 completed CI, Desktop Native Validation and Mobile Validation successfully before merge.
 
-The current validation branch also has fresh hosted runs for the Command Dispatcher release candidate. Their exact-head outcomes must settle before merge.
+PR #48's exact-head CI, Desktop Native Validation, and Mobile Validation all passed before merge. The remaining blockers are runtime/distribution/commercial evidence, not an unverified dispatcher implementation.
 
 ## Vercel deployment evidence
 
