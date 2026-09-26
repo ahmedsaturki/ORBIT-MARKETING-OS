@@ -167,7 +167,9 @@ export function isExperimentActiveAt(
     throw new Error("invalid_now");
   }
 
-  const startTime = experiment.startsAt ? Date.parse(experiment.startsAt) : undefined;
+  const startTime = experiment.startsAt
+    ? Date.parse(experiment.startsAt)
+    : undefined;
   const endTime = experiment.endsAt ? Date.parse(experiment.endsAt) : undefined;
 
   if (startTime !== undefined && Number.isNaN(startTime)) {

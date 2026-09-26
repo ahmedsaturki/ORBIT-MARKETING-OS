@@ -106,7 +106,8 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
   {
     id: "experiment.assign",
     title: "Assign experiment variant",
-    description: "Deterministically assign a subject to a declared experiment variant.",
+    description:
+      "Deterministically assign a subject to a declared experiment variant.",
     risk: "low",
     scopes: ["experiment:read"],
     surfaces: ["desktop", "web", "mobile", "cli", "mcp", "agent"],
@@ -117,7 +118,8 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
   {
     id: "experiment.observe",
     title: "Record experiment observation",
-    description: "Persist a workspace-scoped experiment observation for later learning.",
+    description:
+      "Persist a workspace-scoped experiment observation for later learning.",
     risk: "medium",
     scopes: ["experiment:write"],
     surfaces: ["desktop", "web", "mobile", "cli", "mcp", "agent"],
@@ -128,7 +130,8 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
   {
     id: "experiment.summarize",
     title: "Summarize experiment",
-    description: "Read workspace-scoped experiment evidence without claiming statistical significance.",
+    description:
+      "Read workspace-scoped experiment evidence without claiming statistical significance.",
     risk: "low",
     scopes: ["experiment:read"],
     surfaces: ["desktop", "web", "mobile", "cli", "mcp", "agent"],

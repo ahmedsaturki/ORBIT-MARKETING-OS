@@ -7,8 +7,8 @@ Updated: 2026-09-26
 | Core domain                       | yes                | Main/PR exact-head typecheck/tests/coverage passed                                                  | VERIFIED        |
 | Mission Control + Strategy Studio | yes                | Desktop surfaces wired to workspace-local runtime state and governed strategy/outcome commands      | PARTIAL         |
 | Operating graph + governed work   | yes                | Core graph/decision/native persistence plus governed event/command controls through PR #47          | PARTIAL         |
-| Opportunities + insights          | yes                | v14 migration/validation exists; full product E2E remains                                                      | PARTIAL         |
-| Experimentation + Learning        | yes                | Core deterministic engine, native schema v14, Experiment Studio and governed command/event boundary               | PARTIAL         |
+| Opportunities + insights          | yes                | v14 migration/validation exists; full product E2E remains                                           | PARTIAL         |
+| Experimentation + Learning        | yes                | Core deterministic engine, native schema v14, Experiment Studio and governed command/event boundary | PARTIAL         |
 | Operational Event Spine           | yes                | Exact-head tests/native validation passed in PR #47                                                 | VERIFIED        |
 | Command Registry                  | yes                | Exact-head tests/native validation passed in PR #47                                                 | VERIFIED        |
 | Command Dispatcher                | yes                | PR #48 exact-head CI/native/mobile validation passed; current `main` contains the merged dispatcher | VERIFIED        |
