@@ -1,4 +1,5 @@
 mod license;
+mod links;
 
 use aes_gcm::{
     aead::{Aead, KeyInit},
@@ -1784,7 +1785,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
               metric_name TEXT NOT NULL,
               metric_value REAL NOT NULL CHECK(metric_value >= 0),
               observed_at TEXT NOT NULL,
-              source_locator TEXT,
+              source_locator TEXT NOT NULL DEFAULT '',
               provenance TEXT NOT NULL,
               metadata_json TEXT NOT NULL DEFAULT '{}',
               created_at TEXT NOT NULL,
