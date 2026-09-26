@@ -79,6 +79,7 @@ describe("experiment inference", () => {
     expect(conversion?.rateDifference).toBeCloseTo(-0.1, 10);
     expect(conversion?.lower).toBeLessThanOrEqual(conversion!.rateDifference);
     expect(conversion?.upper).toBeGreaterThanOrEqual(conversion!.rateDifference);
+    expect(conversion?.method).toBe("newcombe_wilson_difference");
     expect(conversion?.interpretation).toBe(
       "descriptive_uncertainty_interval",
     );
