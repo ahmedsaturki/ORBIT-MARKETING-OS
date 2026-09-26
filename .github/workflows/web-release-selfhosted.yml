@@ -51,6 +51,9 @@ jobs:
       - name: Release sanity
         run: pnpm verify:release
 
+      - name: Dependency audit
+        run: pnpm audit --audit-level=moderate
+
       - name: Secret scan
         run: pnpm security:scan
 
