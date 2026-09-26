@@ -9418,14 +9418,7 @@ fn experiment_assign_variant(
     require_workspace_role_for(
         &connection,
         &workspace_id,
-        &[
-            "owner",
-            "admin",
-            "editor",
-            "operator",
-            "reviewer",
-            "viewer",
-        ],
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
     )
     .map_err(|error| error.to_string())?;
     let (stored_workspace, status, starts_at, ends_at, variants_json): (
@@ -9604,14 +9597,7 @@ fn experiment_summary(
     require_workspace_role_for(
         &connection,
         &workspace_id,
-        &[
-            "owner",
-            "admin",
-            "editor",
-            "operator",
-            "reviewer",
-            "viewer",
-        ],
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
     )
     .map_err(|error| error.to_string())?;
     let variants_json: String = connection
