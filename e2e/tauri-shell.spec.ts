@@ -386,18 +386,13 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     try {
       await page!.evaluate(
         (payload) =>
-          window.__TAURI_INTERNALS__.invoke(
-            "research_finding_upsert",
-            payload,
-          ),
+          window.__TAURI_INTERNALS__.invoke("research_finding_upsert", payload),
         {
           id: "e2e-research-cross-" + suffix,
           briefId: brief.id,
           title: "Cross workspace",
           statement: "Must be rejected.",
-          sourceIdsJson: JSON.stringify([
-            "e2e-research-source-" + suffix,
-          ]),
+          sourceIdsJson: JSON.stringify(["e2e-research-source-" + suffix]),
           confidence: 0.8,
           observedAt: "2026-09-26T09:00:00Z",
           expiresAt: null,

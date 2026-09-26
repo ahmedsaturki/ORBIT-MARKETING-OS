@@ -164,7 +164,8 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
   {
     id: "research.finding.promote",
     title: "Promote research finding",
-    description: "Promote a validated research finding into workspace Knowledge.",
+    description:
+      "Promote a validated research finding into workspace Knowledge.",
     risk: "high",
     scopes: ["research:write", "knowledge:write"],
     surfaces: ["desktop", "web", "mobile", "cli", "mcp"],

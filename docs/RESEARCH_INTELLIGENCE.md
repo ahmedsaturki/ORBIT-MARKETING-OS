@@ -20,6 +20,7 @@ A brief captures the decision question, research kind, objectives, and lifecycle
 Every finding requires one or more workspace-local sources. Sources reuse the governed Knowledge Source boundary and may carry a locator such as a public URL, document reference, or interview note.
 
 The runtime rejects:
+
 - empty findings;
 - findings without sources;
 - cross-workspace source references;

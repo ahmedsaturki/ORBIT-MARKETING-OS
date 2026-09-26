@@ -198,7 +198,6 @@ Backups are encrypted locally and restore performs SQLite integrity validation b
 
 When an IPC command changes, update the desktop client, this API contract, and its integration tests together. Source inspection alone is not release evidence.
 
-
 ### Research Intelligence
 
 - `research_brief_upsert` / `research_brief_list` manage workspace-scoped research questions, type, objectives, and lifecycle.

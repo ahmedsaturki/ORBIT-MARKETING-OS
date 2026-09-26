@@ -72,14 +72,13 @@ function splitComma(value: string): string[] {
 
 function parseIds(value: string): string[] {
   const parsed: unknown = JSON.parse(value);
-  return Array.isArray(parsed) && parsed.every((item) => typeof item === "string")
+  return Array.isArray(parsed) &&
+    parsed.every((item) => typeof item === "string")
     ? parsed
     : [];
 }
 
-export function ResearchStudioPanel({
-  workspaceId,
-}: ResearchStudioProps) {
+export function ResearchStudioPanel({ workspaceId }: ResearchStudioProps) {
   const [sources, setSources] = useState<readonly KnowledgeSourceView[]>([]);
   const [briefs, setBriefs] = useState<readonly ResearchBriefView[]>([]);
   const [findings, setFindings] = useState<readonly ResearchFindingView[]>([]);
@@ -114,13 +113,15 @@ export function ResearchStudioPanel({
         native<ResearchBriefView[]>("research_brief_list"),
         native<ResearchFindingView[]>("research_finding_list", {}),
       ]);
-      setSources(nextSources.filter((source) => source.source_type === "research"));
+      setSources(
+        nextSources.filter((source) => source.source_type === "research"),
+      );
       setBriefs(nextBriefs);
       setFindings(nextFindings);
       setSelectedBriefId((current) =>
         current && nextBriefs.some((brief) => brief.id === current)
           ? current
-          : nextBriefs[0]?.id ?? "",
+          : (nextBriefs[0]?.id ?? ""),
       );
     } catch (caught: unknown) {
       setError(
@@ -165,7 +166,9 @@ export function ResearchStudioPanel({
   };
 
   const saveBrief = async (): Promise<void> => {
-    const id = "research-brief-" + (briefName.trim().toLowerCase().replace(/\s+/g, "-") || Date.now());
+    const id =
+      "research-brief-" +
+      (briefName.trim().toLowerCase().replace(/\s+/g, "-") || Date.now());
     if (!briefName.trim() || !briefQuestion.trim()) {
       setError("أدخل اسم البحث والسؤال الرئيسي.");
       return;
@@ -189,7 +192,9 @@ export function ResearchStudioPanel({
       await load();
       setMessage("تم حفظ Research Brief وربطه بالـworkspace الحالية.");
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل حفظ الـResearch Brief");
+      setError(
+        caught instanceof Error ? caught.message : "فشل حفظ الـResearch Brief",
+      );
     } finally {
       setBusy(false);
     }
@@ -251,7 +256,11 @@ export function ResearchStudioPanel({
       await native("research_publish_to_knowledge", { findingId: id });
       setMessage("تم نقل الـFinding إلى ORBIT Knowledge بعد التحقق من مصادره.");
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "فشل نشر الـFinding إلى Knowledge");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "فشل نشر الـFinding إلى Knowledge",
+      );
     } finally {
       setBusy(false);
     }
@@ -266,8 +275,9 @@ export function ResearchStudioPanel({
             <Search size={20} /> Research Studio
           </h2>
           <p>
-            طبقة بحث حقيقية فوق ORBIT Brain: سؤال → مصادر → Findings → Knowledge.
-            لا يتم اعتماد Finding بدون مصدر ولا تخرج بيانات خارج الـworkspace.
+            طبقة بحث حقيقية فوق ORBIT Brain: سؤال → مصادر → Findings →
+            Knowledge. لا يتم اعتماد Finding بدون مصدر ولا تخرج بيانات خارج
+            الـworkspace.
           </p>
         </div>
         <button
@@ -368,10 +378,16 @@ export function ResearchStudioPanel({
           <h3>
             <ShieldCheck size={18} /> Evidence Sources
           </h3>
-          <p>المصدر يُخزن كـresearch source، ويظل منفصلًا عن الأسرار وبيانات الحسابات.</p>
+          <p>
+            المصدر يُخزن كـresearch source، ويظل منفصلًا عن الأسرار وبيانات
+            الحسابات.
+          </p>
           <label>
             Source ID
-            <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+            <input
+              value={sourceId}
+              onChange={(event) => setSourceId(event.target.value)}
+            />
           </label>
           <label>
             عنوان المصدر
@@ -409,7 +425,9 @@ export function ResearchStudioPanel({
               </div>
             ))}
             {!sources.length ? (
-              <div className="result">أضف أول مصدر بحث ثم استخدمه في Finding.</div>
+              <div className="result">
+                أضف أول مصدر بحث ثم استخدمه في Finding.
+              </div>
             ) : null}
           </div>
         </div>
@@ -433,7 +451,10 @@ export function ResearchStudioPanel({
           </label>
           <label>
             Finding ID
-            <input value={findingId} onChange={(event) => setFindingId(event.target.value)} />
+            <input
+              value={findingId}
+              onChange={(event) => setFindingId(event.target.value)}
+            />
           </label>
           <label>
             العنوان
@@ -519,7 +540,8 @@ export function ResearchStudioPanel({
             return (
               <article className="card" key={finding.id}>
                 <div className="eyebrow">
-                  {finding.brief_id} • confidence {finding.confidence.toFixed(2)}
+                  {finding.brief_id} • confidence{" "}
+                  {finding.confidence.toFixed(2)}
                 </div>
                 <strong>{finding.title}</strong>
                 <p>{finding.statement}</p>

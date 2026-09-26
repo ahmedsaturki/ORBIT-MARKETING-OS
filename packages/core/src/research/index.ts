@@ -8,11 +8,7 @@ export type ResearchKind =
   | "customer_voice"
   | "general";
 
-export type ResearchStatus =
-  | "draft"
-  | "active"
-  | "completed"
-  | "archived";
+export type ResearchStatus = "draft" | "active" | "completed" | "archived";
 
 export interface ResearchBrief {
   readonly id: string;
@@ -67,9 +63,7 @@ export function validateResearchBrief(
   if (brief.objectives.some((item) => !item.trim())) {
     errors.push("invalid_objective");
   }
-  if (
-    !["draft", "active", "completed", "archived"].includes(brief.status)
-  ) {
+  if (!["draft", "active", "completed", "archived"].includes(brief.status)) {
     errors.push("invalid_status");
   }
   return { valid: errors.length === 0, errors };
@@ -88,10 +82,17 @@ export function validateResearchFinding(
   if (finding.sourceIds.some((id) => !id.trim())) {
     errors.push("invalid_source");
   }
-  if (!Number.isFinite(finding.confidence) || finding.confidence < 0 || finding.confidence > 1) {
+  if (
+    !Number.isFinite(finding.confidence) ||
+    finding.confidence < 0 ||
+    finding.confidence > 1
+  ) {
     errors.push("invalid_confidence");
   }
-  if (!finding.observedAt.trim() || Number.isNaN(Date.parse(finding.observedAt))) {
+  if (
+    !finding.observedAt.trim() ||
+    Number.isNaN(Date.parse(finding.observedAt))
+  ) {
     errors.push("invalid_observed_at");
   }
   if (finding.expiresAt && Number.isNaN(Date.parse(finding.expiresAt))) {

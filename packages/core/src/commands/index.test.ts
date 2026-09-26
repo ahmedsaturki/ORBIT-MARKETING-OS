@@ -87,21 +87,21 @@ describe("CommandRegistry", () => {
   });
 });
 
-  it("requires approval for research knowledge promotion", () => {
-    const registry = new CommandRegistry();
-    const invocation = {
-      commandId: "research.finding.promote",
-      workspaceId: "ws-1",
-      actorId: "user-1",
-      grantedScopes: ["research:write", "knowledge:write"],
-      approvalGranted: false,
-    };
+it("requires approval for research knowledge promotion", () => {
+  const registry = new CommandRegistry();
+  const invocation = {
+    commandId: "research.finding.promote",
+    workspaceId: "ws-1",
+    actorId: "user-1",
+    grantedScopes: ["research:write", "knowledge:write"],
+    approvalGranted: false,
+  };
 
-    expect(registry.decide(invocation, "desktop")).toEqual({
-      allowed: false,
-      reason: "approval_required",
-    });
-    expect(
-      registry.decide({ ...invocation, approvalGranted: true }, "desktop"),
-    ).toEqual({ allowed: true, reason: "approved" });
+  expect(registry.decide(invocation, "desktop")).toEqual({
+    allowed: false,
+    reason: "approval_required",
   });
+  expect(
+    registry.decide({ ...invocation, approvalGranted: true }, "desktop"),
+  ).toEqual({ allowed: true, reason: "approved" });
+});
