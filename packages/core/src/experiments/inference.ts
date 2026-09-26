@@ -204,6 +204,16 @@ export function inferExperiment(
       variant.allocationPercent / 100,
     ]),
   );
+  const summaryVariantIds = new Set<string>();
+  for (const variant of summary.variants) {
+    if (summaryVariantIds.has(variant.variantId)) {
+      throw new Error("experiment_inference_duplicate_variant");
+    }
+    summaryVariantIds.add(variant.variantId);
+    if (!targets.has(variant.variantId)) {
+      throw new Error("experiment_inference_unknown_variant");
+    }
+  }
   const totalExposures = summary.variants.reduce(
     (sum, variant) => sum + variant.exposureCount,
     0,
