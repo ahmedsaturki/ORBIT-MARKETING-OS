@@ -2,11 +2,7 @@ export interface ReportingEvidence {
   readonly id: string;
   readonly workspaceId: string;
   readonly sourceType:
-    | "analytics_event"
-    | "insight"
-    | "outcome"
-    | "research"
-    | "manual";
+    "analytics_event" | "insight" | "outcome" | "research" | "manual";
   readonly sourceId: string;
   readonly observedAt: string;
   readonly statement: string;
@@ -63,19 +59,17 @@ function assertMetricValue(metric: ReportingMetric): void {
   }
 }
 
-export function buildEvidenceReportingPack(
-  input: {
-    readonly id: string;
-    readonly workspaceId: string;
-    readonly title: string;
-    readonly periodStart: string;
-    readonly periodEnd: string;
-    readonly generatedAt: string;
-    readonly metrics: readonly ReportingMetric[];
-    readonly insights?: readonly string[];
-    readonly evidence: readonly ReportingEvidence[];
-  },
-): ReportingPack {
+export function buildEvidenceReportingPack(input: {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly title: string;
+  readonly periodStart: string;
+  readonly periodEnd: string;
+  readonly generatedAt: string;
+  readonly metrics: readonly ReportingMetric[];
+  readonly insights?: readonly string[];
+  readonly evidence: readonly ReportingEvidence[];
+}): ReportingPack {
   if (!input.workspaceId.trim()) {
     throw new Error("workspaceId is required");
   }
@@ -98,7 +92,9 @@ export function buildEvidenceReportingPack(
       throw new Error(`duplicate evidence id ${item.id}`);
     }
     if (item.workspaceId !== input.workspaceId) {
-      throw new Error(`evidence ${item.id} workspace does not match report workspace`);
+      throw new Error(
+        `evidence ${item.id} workspace does not match report workspace`,
+      );
     }
     const observedAt = assertDate(
       item.observedAt,
@@ -110,7 +106,9 @@ export function buildEvidenceReportingPack(
     evidenceIds.add(item.id);
     evidenceById.set(item.id, item);
     if (observedAt.getTime() > generated.getTime()) {
-      throw new Error(`evidence ${item.id} cannot be observed after generatedAt`);
+      throw new Error(
+        `evidence ${item.id} cannot be observed after generatedAt`,
+      );
     }
   }
 
