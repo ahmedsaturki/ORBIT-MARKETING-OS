@@ -46,7 +46,7 @@ jobs:
         run: pnpm security:scan
 
       - name: Dependency audit
-        run: pnpm audit --audit-level=high
+        run: pnpm audit --audit-level=moderate
 
       - name: Performance smoke
         run: pnpm test:performance
