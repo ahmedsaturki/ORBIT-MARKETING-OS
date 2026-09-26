@@ -60,15 +60,38 @@ fn validate_link_key(value: &str) -> Result<String, String> {
 }
 
 fn validate_http_url(value: &str, name: &str) -> Result<String, String> {
-    let url = validate_text(value, name, 4096)?;
-    let lower = url.to_ascii_lowercase();
-    if !(lower.starts_with("http://") || lower.starts_with("https://")) {
+    let raw = validate_text(value, name, 4096)?;
+    let parsed = reqwest::Url::parse(&raw)
+        .map_err(|_| format!("{name} is not a valid URL"))?;
+    if parsed.scheme() != "http" && parsed.scheme() != "https" {
         return Err(format!("{name} must use http or https"));
     }
-    if url.contains("\\") || url.contains("javascript:") || url.contains("data:") {
+    if parsed.username().is_empty().not() || parsed.password().is_some() {
+        return Err(format!("{name} must not contain URL credentials"));
+    }
+    if raw.contains("\\") || raw.contains("javascript:") || raw.contains("data:") {
         return Err(format!("{name} contains a disallowed URL form"));
     }
-    Ok(url)
+    Ok(raw)
+}
+
+fn validate_tracked_url(destination_url: &str, tracked_url: &str) -> Result<String, String> {
+    let destination = reqwest::Url::parse(destination_url)
+        .map_err(|_| "destination_url is not a valid URL".to_string())?;
+    let tracked = reqwest::Url::parse(tracked_url)
+        .map_err(|_| "tracked_url is not a valid URL".to_string())?;
+
+    if destination.scheme() != tracked.scheme()
+        || destination.host_str() != tracked.host_str()
+        || destination.port_or_known_default() != tracked.port_or_known_default()
+        || destination.path() != tracked.path()
+    {
+        return Err(
+            "tracked_url must preserve destination scheme, host, port, and path".to_string(),
+        );
+    }
+
+    Ok(tracked_url.to_string())
 }
 
 fn validate_json(value: &str, name: &str, max_len: usize) -> Result<String, String> {
@@ -157,6 +180,7 @@ pub(crate) fn marketing_link_upsert(
     let link_key = validate_link_key(&link_key)?;
     let destination_url = validate_http_url(&destination_url, "destination_url")?;
     let tracked_url = validate_http_url(&tracked_url, "tracked_url")?;
+    let tracked_url = validate_tracked_url(&destination_url, &tracked_url)?;
     let tracking_json = validate_json(&tracking_json, "tracking_json", 4096)?;
     let campaign_id = campaign_id
         .map(|value| validate_text(&value, "campaign_id", 200))
