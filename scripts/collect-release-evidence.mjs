@@ -5,7 +5,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 const args = process.argv.slice(2);
 const outputIndex = args.indexOf("--output");
 const output =
-  outputIndex >= 0 ? (args[outputIndex + 1] ?? ".artifacts/release-evidence.json") : ".artifacts/release-evidence.json";
+  outputIndex >= 0
+    ? (args[outputIndex + 1] ?? ".artifacts/release-evidence.json")
+    : ".artifacts/release-evidence.json";
 const modeIndex = args.indexOf("--mode");
 const mode =
   modeIndex >= 0 ? (args[modeIndex + 1] ?? "verification") : "verification";
@@ -18,7 +20,9 @@ function git(args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
 }
 
-const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+const packageJson = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
+);
 const readiness = JSON.parse(
   await readFile(new URL("../release/readiness.json", import.meta.url), "utf8"),
 );
@@ -57,7 +61,9 @@ const evidence = {
   releasePolicy: readiness.rule,
 };
 
-await mkdir(output.slice(0, output.lastIndexOf("/")) || ".", { recursive: true });
+await mkdir(output.slice(0, output.lastIndexOf("/")) || ".", {
+  recursive: true,
+});
 await writeFile(output, JSON.stringify(evidence, null, 2) + "\n", "utf8");
 
 console.log(
