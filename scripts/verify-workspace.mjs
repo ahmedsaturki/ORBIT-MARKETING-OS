@@ -724,9 +724,9 @@ const rootVercel = JSON.parse(
   await readFile(join(root, "vercel.json"), "utf8"),
 );
 await assertFile("scripts/verify-vercel-dry-run.mjs");
-if (rootVercel.framework !== null)
+if (!["nextjs", null].includes(rootVercel.framework))
   throw new Error(
-    "Root Vercel framework must be null/Other for the static export",
+    "Root Vercel framework must be Next.js/null for the static export",
   );
 if (rootVercel.outputDirectory !== "packages/web/out")
   throw new Error("Root Vercel output directory must be packages/web/out");
