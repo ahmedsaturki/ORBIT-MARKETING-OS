@@ -297,6 +297,111 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(proc!.killed).toBe(false);
   });
 
+  test("research intelligence stays workspace-scoped and evidence-backed", async () => {
+    const suffix = Date.now();
+    const workspaceA = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Research Workspace A",
+        }),
+      "e2e-research-a-" + suffix,
+    )) as { id: string };
+    await page!.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      workspaceA.id,
+    );
+
+    await page!.evaluate(
+      (payload) =>
+        window.__TAURI_INTERNALS__.invoke("knowledge_source_upsert", payload),
+      {
+        id: "e2e-research-source-" + suffix,
+        sourceType: "research",
+        title: "E2E research source",
+        locator: "https://example.com/research",
+      },
+    );
+
+    const brief = (await page!.evaluate(
+      (payload) =>
+        window.__TAURI_INTERNALS__.invoke("research_brief_upsert", payload),
+      {
+        id: "e2e-research-brief-" + suffix,
+        name: "E2E Research Brief",
+        kind: "competitor",
+        question: "What is changing?",
+        objectivesJson: JSON.stringify(["surface evidence"]),
+        status: "active",
+      },
+    )) as { id: string };
+
+    const finding = (await page!.evaluate(
+      (payload) =>
+        window.__TAURI_INTERNALS__.invoke("research_finding_upsert", payload),
+      {
+        id: "e2e-research-finding-" + suffix,
+        briefId: brief.id,
+        title: "Observed signal",
+        statement: "The source supports this bounded statement.",
+        sourceIdsJson: JSON.stringify(["e2e-research-source-" + suffix]),
+        confidence: 0.8,
+        observedAt: "2026-09-26T09:00:00Z",
+        expiresAt: "2026-10-26T09:00:00Z",
+        tagsJson: JSON.stringify(["e2e"]),
+      },
+    )) as { id: string };
+
+    expect(finding.id).toBe("e2e-research-finding-" + suffix);
+
+    const promoted = (await page!.evaluate(
+      (id) =>
+        window.__TAURI_INTERNALS__.invoke("research_publish_to_knowledge", {
+          findingId: id,
+        }),
+      finding.id,
+    )) as { id: string; trust: string };
+    expect(promoted.id).toBe("research:" + finding.id);
+    expect(promoted.trust).toBe("approved");
+
+    const workspaceB = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Research Workspace B",
+        }),
+      "e2e-research-b-" + suffix,
+    )) as { id: string };
+    await page!.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      workspaceB.id,
+    );
+
+    const isolated = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("research_finding_list", {}),
+    )) as Array<{ id: string }>;
+    expect(isolated).toEqual([]);
+
+    const crossWorkspace = await page!.evaluate(
+      (payload) =>
+        window.__TAURI_INTERNALS__.invoke("research_finding_upsert", payload),
+      {
+        id: "e2e-research-cross-" + suffix,
+        briefId: brief.id,
+        title: "Cross workspace",
+        statement: "Must be rejected.",
+        sourceIdsJson: JSON.stringify(["e2e-research-source-" + suffix]),
+        confidence: 0.8,
+        observedAt: "2026-09-26T09:00:00Z",
+        expiresAt: null,
+        tagsJson: JSON.stringify([]),
+      },
+    );
+    expect(crossWorkspace).toMatchObject({
+      code: expect.anything(),
+    });
+  });
+
   test("native runtime restart preserves selected workspace state", async () => {
     expect(page, "boot test must run first").not.toBeNull();
 
