@@ -176,7 +176,8 @@ export function LinkIntelligencePanel({
       setError("");
       setMessage("");
       await invoke<EvidenceView>("marketing_link_evidence_add", {
-        linkId: selectedLink.id,
+        input: { 
+          linkId: selectedLink.id,
         sourceType,
         metricName: metricName.trim(),
         metricValue: value,
