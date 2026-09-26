@@ -33,7 +33,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = current execution evi
 | Native runtime restart/migration/crash recovery | UNVERIFIED  | Dedicated full desktop runtime acceptance evidence remains                                                                                                    |
 | Real connector E2E                              | UNVERIFIED  | Telegram/LinkedIn live authorization/delivery evidence remains                                                                                                |
 | CRDT encrypted transport/convergence            | VERIFIED*   | Encrypted reconnect/convergence tests passed; live multi-device network evidence remains                                                                      |
-| Accessibility/RTL audit                         | UNVERIFIED  | Dedicated accessibility audit remains                                                                                                                         |
+| Accessibility/RTL audit                         | VERIFIED*   | Automated structural Accessibility/RTL audit passed in post-merge CI #1772; a full manual/WCAG conformance audit is not claimed                            |
 | 24h soak                                        | UNVERIFIED  | No completed 24-hour soak evidence yet                                                                                                                        |
 | Desktop signing/notarization                    | BLOCKED     | Signing identities/credentials are not configured                                                                                                             |
 | Mobile production signing/store distribution    | BLOCKED     | Current production-store prerequisite is not configured                                                                                                       |
@@ -53,7 +53,7 @@ PR #47 head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed:
 
 It was then merged to main as `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
 
-PR #48 exact head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed CI, Desktop Native Validation, and Mobile Validation before merge. Current `main` head is `cea2873db9817d4930662747441b55e1660dd67d`; its CI run 36202057601 and Web Deploy run 36202057689 both passed.
+PR #48 exact head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed CI, Desktop Native Validation, and Mobile Validation before merge. PR #50 then added the explicit automated Accessibility/RTL gate and merged after full fresh CI; current `main` head is `d22b97aaca33d5331d6572b379020266044fbca3` with post-merge CI 36204143746 and Web Deploy 36204143707 both successful.
 
 ## Current Vercel evidence
 
