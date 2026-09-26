@@ -3,6 +3,7 @@ import {
   assignExperimentVariant,
   buildExperimentLearningWriteback,
   compileExperimentCampaignWorkPlan,
+  buildExperimentObservationFromExecution,
   isExperimentActiveAt,
   observationsToLearningSignals,
   summarizeExperiment,
