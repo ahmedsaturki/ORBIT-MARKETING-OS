@@ -39,7 +39,7 @@ jobs:
       - name: Secret scan
         run: pnpm security:scan
       - name: Dependency audit
-        run: pnpm audit --audit-level=high
+        run: pnpm audit --audit-level=moderate
 
       - name: Typecheck
         run: pnpm typecheck

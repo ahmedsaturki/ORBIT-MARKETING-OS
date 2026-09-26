@@ -10,9 +10,11 @@ const features = [
   "سطح مكتبي للعمليات الحساسة",
 ];
 
+const releaseSha = process.env.NEXT_PUBLIC_ORBIT_RELEASE_SHA ?? "unreleased";
+
 export default function HomePage(): ReactElement {
   return (
-    <main data-release="0.2.0">
+    <main data-release="0.2.0" data-release-sha={releaseSha}>
       <header className="topbar">
         <div className="container nav">
           <strong>ORBIT</strong>

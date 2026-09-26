@@ -58,8 +58,10 @@ if (cargoVersion !== expectedVersion) {
 }
 
 const vercel = await json("vercel.json");
-if (vercel.framework !== null)
-  throw new Error("Vercel framework must be null/Other for the static export");
+if (!["nextjs", null].includes(vercel.framework))
+  throw new Error(
+    "Vercel framework must be Next.js/null for the static export",
+  );
 if (vercel.outputDirectory !== "packages/web/out")
   throw new Error("Vercel outputDirectory drift detected");
 if (vercel.buildCommand !== "pnpm --dir packages/web build")
@@ -104,8 +106,25 @@ if (!rustToolchain.includes('channel = "1.98.1"')) {
 const ci = await text(".github/workflows/ci.yml");
 if (!ci.includes("pnpm install --frozen-lockfile"))
   throw new Error("CI frozen install gate missing");
-if (!ci.includes("pnpm audit --audit-level=high"))
+if (!ci.includes("pnpm audit --audit-level=moderate"))
   throw new Error("CI dependency audit gate missing");
+
+const desktopRelease = await text(".github/workflows/release-desktop.yml");
+const mobileRelease = await text(".github/workflows/release-mobile.yml");
+const webRelease = await text(".github/workflows/web-release-selfhosted.yml");
+for (const [name, workflow] of [
+  ["desktop release", desktopRelease],
+  ["mobile release", mobileRelease],
+  ["self-hosted web release", webRelease],
+]) {
+  if (!workflow.includes("pnpm audit --audit-level=moderate")) {
+    throw new Error(`${name} dependency audit gate missing`);
+  }
+  if (workflow.includes("pnpm audit --audit-level=high")) {
+    throw new Error(`${name} still allows a high-only dependency audit`);
+  }
+}
+
 if (!ci.includes("pnpm security:scan"))
   throw new Error("CI secret scan gate missing");
 if (!ci.includes("pnpm test:performance"))

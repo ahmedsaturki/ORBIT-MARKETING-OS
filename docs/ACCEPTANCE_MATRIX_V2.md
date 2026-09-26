@@ -94,6 +94,14 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 - Any `FAIL` in SEC, DATA, QUE, CAMP, CONN, REL, SIM, REP, POL, CMD or EVENT blocks release.
 - Any `UNVERIFIED` runtime requirement blocks the claim "production ready".
 - Performance targets are measured, never inferred from code size.
-- Real-platform tests must be controlled and must not be used to claim immunity from platform enforcement.| RESEARCH-01 | Research briefs are workspace-scoped and lifecycle-validated | core validation tests + native persistence test |
-  | RESEARCH-02 | Research findings require workspace-local evidence and bounded confidence/freshness | native integrity E2E + core validation tests |
-  | RESEARCH-03 | Explicit finding promotion creates workspace-scoped Knowledge with auditable provenance | native publish integration test + audit verification |
+- Real-platform tests must be controlled and must not be used to claim immunity from platform enforcement.
+
+### Research Intelligence
+
+| RESEARCH-01 | Research briefs are workspace-scoped and lifecycle-validated | core validation tests + native persistence test |
+| RESEARCH-02 | Research findings require workspace-local evidence and bounded confidence/freshness | native integrity E2E + core validation tests |
+| RESEARCH-03 | Explicit finding promotion creates workspace-scoped Knowledge with auditable provenance | native publish integration test + audit verification |
+
+### Universal Search
+
+| SEARCH-01 | Universal Search is bounded, deterministic, workspace-scoped, read-only, and excludes secret/session records | core contract tests + native Tauri E2E |

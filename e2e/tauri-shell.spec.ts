@@ -408,6 +408,227 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     );
   });
 
+  test("global search is workspace-scoped and bounded", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+
+    const suffix = Date.now();
+    const workspaceA = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Search Workspace A",
+        }),
+      "e2e-search-a-" + suffix,
+    )) as { id: string; name: string };
+
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
+      workspaceA.id,
+    );
+
+    const account = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("account_upsert", {
+          id,
+          platform: "telegram",
+          displayName: "E2E Search Account",
+          username: null,
+          session: null,
+          password: null,
+        }),
+      "e2e-search-account-" + suffix,
+    )) as { id: string };
+
+    await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("vault_put", {
+        label: "e2e-search-secret-label",
+        plaintext: "E2E Search Secret",
+        password: "e2e-search-password",
+      }),
+    );
+
+    const conversation = (await page!.evaluate(
+      async ({ id, accountId }) =>
+        window.__TAURI_INTERNALS__.invoke("conversation_upsert", {
+          id,
+          accountId,
+          contactId: null,
+          platform: "telegram",
+          externalThreadId: "e2e-search-thread",
+          status: "new",
+        }),
+      {
+        id: "e2e-search-conversation-" + suffix,
+        accountId: account.id,
+      },
+    )) as { id: string };
+
+    await page!.evaluate(
+      ({ id, conversationId }) =>
+        window.__TAURI_INTERNALS__.invoke("message_add", {
+          id,
+          conversationId,
+          direction: "inbound",
+          body: "E2E Search Message 100%_!",
+        }),
+      {
+        id: "e2e-search-message-" + suffix,
+        conversationId: conversation.id,
+      },
+    );
+
+    await page!.evaluate(
+      ({ name, accountId }) =>
+        window.__TAURI_INTERNALS__.invoke("campaign_create", {
+          name,
+          accountIds: [accountId],
+        }),
+      {
+        name: "E2E Search Campaign " + suffix,
+        accountId: account.id,
+      },
+    );
+
+    const researchSourceId = "e2e-search-source-" + suffix;
+    await page!.evaluate(
+      (payload) =>
+        window.__TAURI_INTERNALS__.invoke("knowledge_source_upsert", payload),
+      {
+        id: researchSourceId,
+        sourceType: "research",
+        title: "E2E search research source",
+        locator: "https://example.com/search-research",
+      },
+    );
+
+    const brief = (await page!.evaluate(
+      (payload) =>
+        window.__TAURI_INTERNALS__.invoke("research_brief_upsert", payload),
+      {
+        id: "e2e-search-brief-" + suffix,
+        name: "E2E Search Research",
+        kind: "competitor",
+        question: "Which search signal matters?",
+        objectivesJson: JSON.stringify(["verify unified search"]),
+        status: "active",
+      },
+    )) as { id: string };
+
+    await page!.evaluate(
+      (payload) =>
+        window.__TAURI_INTERNALS__.invoke("research_finding_upsert", payload),
+      {
+        id: "e2e-search-finding-" + suffix,
+        briefId: brief.id,
+        title: "E2E Search Finding",
+        statement: "The research signal is searchable.",
+        sourceIdsJson: JSON.stringify([researchSourceId]),
+        confidence: 0.8,
+        observedAt: "2026-09-26T09:00:00Z",
+        expiresAt: "2026-10-26T09:00:00Z",
+        tagsJson: JSON.stringify(["search"]),
+      },
+    );
+
+    await page!.evaluate(
+      (payload) =>
+        window.__TAURI_INTERNALS__.invoke("media_asset_upsert", payload),
+      {
+        id: "e2e-search-media-" + suffix,
+        kind: "image",
+        filename: "E2E Search Media.png",
+        mimeType: "image/png",
+        sizeBytes: 1,
+        sha256: null,
+        localPath: "C:/orbit-e2e-search-media.png",
+        tagsJson: JSON.stringify(["search"]),
+      },
+    );
+
+    const sameWorkspace = (await page!.evaluate(
+      (query) =>
+        window.__TAURI_INTERNALS__.invoke("global_search", {
+          query,
+          limit: 500,
+        }),
+      "E2E Search",
+    )) as Array<{ kind: string; id: string; title: string }>;
+
+    expect(sameWorkspace.length).toBeLessThanOrEqual(50);
+    expect(sameWorkspace.some((item) => item.kind === "campaign")).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "account")).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "message")).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "knowledge_source")).toBe(
+      true,
+    );
+    expect(sameWorkspace.some((item) => item.kind === "media_asset")).toBe(
+      true,
+    );
+    const secretSearch = (await page!.evaluate(
+      (query) =>
+        window.__TAURI_INTERNALS__.invoke("global_search", {
+          query,
+          limit: 50,
+        }),
+      "E2E Search Secret",
+    )) as Array<{ kind: string; id: string; title: string }>;
+    expect(secretSearch).toEqual([]);
+
+    const wildcardSearch = (await page!.evaluate(
+      (query) =>
+        window.__TAURI_INTERNALS__.invoke("global_search", {
+          query,
+          limit: 50,
+        }),
+      "100%_!",
+    )) as Array<{ kind: string; id: string; title: string }>;
+    expect(wildcardSearch.some((item) => item.kind === "message")).toBe(true);
+
+    await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("vault_delete", {
+        label: "e2e-search-secret-label",
+      }),
+    );
+
+    expect(sameWorkspace.some((item) => item.kind === "research_brief")).toBe(
+      true,
+    );
+    expect(sameWorkspace.some((item) => item.kind === "research_finding")).toBe(
+      true,
+    );
+
+    const workspaceB = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Search Workspace B",
+        }),
+      "e2e-search-b-" + suffix,
+    )) as { id: string; name: string };
+
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
+      workspaceB.id,
+    );
+
+    const isolated = (await page!.evaluate(
+      (query) =>
+        window.__TAURI_INTERNALS__.invoke("global_search", {
+          query,
+          limit: 50,
+        }),
+      "E2E Search",
+    )) as Array<{ kind: string; id: string; title: string }>;
+
+    expect(isolated).toEqual([]);
+  });
+
   test("native runtime restart preserves selected workspace state", async () => {
     expect(page, "boot test must run first").not.toBeNull();
 

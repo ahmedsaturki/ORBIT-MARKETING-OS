@@ -2,11 +2,25 @@
 
 ## Canonical main
 
-Current `main` head: `d22b97aaca33d5331d6572b379020266044fbca3`.
+GitHub currently resolves the repository default branch `main` to:
 
-The current main commit contains the governed Command Dispatcher, the explicit Accessibility/RTL CI gate, and reconciled release documentation.
+`1cb104647bc69cff114f430cab1ff9dc184ed864`
 
-## Exact-head feature evidence
+This is the authoritative branch tip for this snapshot. The connected GitHub workflow lookup returned no PR-triggered workflow runs directly attached to this SHA, so no fresh CI result is attributed to this exact commit here.
+
+The most recent verified release-line evidence used by the repository history includes the governed Command Dispatcher, Accessibility/RTL structural gate, Research Intelligence, deterministic experimentation/learning, anomaly detection, governed agent operations, and the current Universal Search release branch.
+
+## Current release candidate
+
+PR #71 — `docs: reconcile current release truth`
+
+- base: `main` at `1cb104647bc69cff114f430cab1ff9dc184ed864`
+- current head: `5518e4489b90bf8f5c4050f44f114f9ab1877b86`
+- state: open
+- scope: release-truth reconciliation plus Universal Search, native search E2E coverage, and competitive-intelligence documentation including the RBM surfaces supplied for the project
+- current exact-head workflow runs are pending/queued; they must complete before this release line is treated as freshly validated
+
+## Exact-head historical feature evidence
 
 PR #48 — governed command execution dispatcher:
 
@@ -23,36 +37,32 @@ PR #47 — governed operational command/event spine:
 - Desktop Native Validation: run `36198100491` — success
 - Mobile Validation: run `36198100618` — success
 
-## Current main continuous verification
-
-- CI run `36204143746` — success
-- Web Deploy run `36204143707` — success
+These historical runs remain evidence for those exact heads. They are not silently re-attributed to the current `main` SHA.
 
 ## Current public web evidence
 
 Vercel project: `orbit-marketing-os` (`prj_XL2WKssI4tzw4Wd5OQw4Pb1v6dMt`).
 
-Current production deployment:
+Current observed production deployment:
 
-- `dpl_ArWWejDP95byUt84SM7HzN7kbFk3` — READY, production alias active
-- READY
+- `dpl_ArWWejDP95byUt84SM7HzN7kbFk3` — READY
 - production alias: `orbit-marketing-os.vercel.app`
-- selected 7-day runtime error aggregation: no runtime errors
-- live home fetch: HTTP 200
-- observed deployed document title: `ORBIT Marketing OS`
-- observed document language/direction: `ar` / `rtl`
+- the connected Vercel deployment metadata reports framework `vite`
+- the deployment metadata has empty Git provenance
+- the selected seven-day Vercel runtime-error query currently reports no runtime error clusters
 
-The Vercel project metadata still reports `framework: vite`, while the repository contract targets a Next.js static export under `packages/web/out`. The deployment metadata currently has empty Git provenance. This remains a provenance/configuration blocker rather than a web-availability failure.
+The deployment is therefore live, but it is not treated as proof that the canonical repository release path or current `main` SHA was the source of that production deployment.
 
 ## Still-open evidence
 
 The following remain intentionally unclaimed until fresh evidence exists or the external prerequisite is available:
 
+- exact-head CI/native/mobile validation for the current release candidate;
 - dedicated full native restart/migration/crash-recovery drill;
 - controlled real Telegram authorization/delivery;
 - controlled real LinkedIn authorization/publishing;
 - live multi-device CRDT network evidence;
-- dedicated full accessibility/WCAG audit beyond the automated structural Accessibility/RTL CI gate;
+- dedicated manual accessibility/WCAG conformance audit beyond automated structural checks;
 - completed 24-hour soak evidence;
 - final distributed release checksum/provenance drill;
 - desktop signing/notarization;

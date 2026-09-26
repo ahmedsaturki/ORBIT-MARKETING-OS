@@ -12,6 +12,8 @@ The current production branch is:
 
 `main`
 
+Universal Search is workspace-scoped and read-only, with deterministic ranking, bounded queries, and explicit exclusion of credentials, sessions, and other vault secrets.
+
 The rebuild is acceptance-driven: implementation is not considered complete until it has automated tests, integration evidence, security checks, performance evidence, documentation, and a releasable artifact where applicable.
 
 ## Product boundary

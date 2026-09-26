@@ -36,3 +36,5 @@ export * from "./commands/index.js";
 export * from "./commands/surfaces.js";
 export * from "./experiments/index.js";
 export * from "./research/index.js";
+
+export * from "./search/index.js";

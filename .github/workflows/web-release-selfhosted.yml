@@ -51,6 +51,9 @@ jobs:
       - name: Release sanity
         run: pnpm verify:release
 
+      - name: Dependency audit
+        run: pnpm audit --audit-level=moderate
+
       - name: Secret scan
         run: pnpm security:scan
 
@@ -88,6 +91,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          NEXT_PUBLIC_ORBIT_RELEASE_SHA: ${{ github.sha }}
         run: pnpm dlx vercel@59.23.1 build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy production
@@ -107,4 +111,5 @@ jobs:
       - name: Verify live rebuild
         env:
           ORBIT_LIVE_URL: ${{ steps.deploy.outputs.url }}
+          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
         run: node scripts/verify-live-web.mjs

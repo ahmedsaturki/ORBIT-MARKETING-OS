@@ -1,5 +1,6 @@
 const url = process.env.ORBIT_LIVE_URL?.trim();
 if (!url) throw new Error("ORBIT_LIVE_URL is required");
+const expectedReleaseSha = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
 
 const parsed = new URL(url);
 if (parsed.protocol !== "https:")
@@ -21,6 +22,15 @@ for (const fragment of ["ORBIT Marketing OS", "مركز تشغيل تسويقك"
   if (!body.includes(fragment)) {
     throw new Error(
       "Live ORBIT home is missing expected rebuild marker: " + fragment,
+    );
+  }
+}
+
+if (expectedReleaseSha) {
+  const releaseMatch = body.match(/data-release-sha="([^"]+)"/);
+  if (!releaseMatch || releaseMatch[1] !== expectedReleaseSha) {
+    throw new Error(
+      `Live ORBIT release provenance mismatch: expected ${expectedReleaseSha}, got ${releaseMatch?.[1] ?? "missing"}`,
     );
   }
 }

@@ -99,6 +99,7 @@ jobs:
         run: pnpm dlx vercel@59.23.1 build --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          NEXT_PUBLIC_ORBIT_RELEASE_SHA: ${{ github.sha }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
@@ -122,4 +123,5 @@ jobs:
         if: steps.gate.outputs.enabled == 'true'
         env:
           ORBIT_LIVE_URL: ${{ steps.deploy.outputs.url }}
+          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
         run: node scripts/verify-live-web.mjs
