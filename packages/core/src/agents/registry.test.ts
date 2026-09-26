@@ -70,9 +70,18 @@ describe("AgentRegistry", () => {
   });
 
   it("stores defensive copies and scopes listing by workspace", () => {
-    const input = agent();
+    const mutableScopes = ["content:write", "knowledge:read"];
+    const input = agent({
+      toolGrants: [
+        {
+          tool: "content.draft",
+          scopes: mutableScopes,
+          requiresApproval: false,
+        },
+      ],
+    });
     const registry = new AgentRegistry([input]);
-    input.toolGrants[0]!.scopes.push("mutated");
+    mutableScopes.push("mutated");
     const stored = registry.get("content-agent");
     expect(stored?.toolGrants[0]?.scopes).toEqual([
       "content:write",
