@@ -21,7 +21,7 @@ jobs:
           node-version: 22
       - run: pnpm install --frozen-lockfile
       - run: pnpm up -r react@19.2.8 react-dom@19.2.8
-      - run: pnpm test --run
+      - run: pnpm test
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
