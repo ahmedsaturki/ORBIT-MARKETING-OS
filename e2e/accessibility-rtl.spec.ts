@@ -57,6 +57,51 @@ test.describe("ORBIT accessibility and RTL", () => {
     }
   });
 
+  test("public routes pass the automated structural accessibility audit", async ({
+    page,
+  }) => {
+    for (const path of ["/", "/pricing/", "/legal/privacy/", "/legal/terms/"]) {
+      await page.goto(path);
+      await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+
+      const unnamedControls = await page.locator(
+        'button, input, textarea, select, [role="button"]',
+      ).evaluateAll((elements) =>
+        elements
+          .filter((element) => {
+            const label =
+              element.getAttribute("aria-label")?.trim() ??
+              element.getAttribute("title")?.trim() ??
+              "";
+            return !label && !element.textContent?.trim();
+          })
+          .map((element) => element.tagName),
+      );
+      expect(unnamedControls).toEqual([]);
+
+      const missingAlt = await page.locator("img").evaluateAll((images) =>
+        images
+          .filter((image) => !image.hasAttribute("alt"))
+          .map((image) => image.getAttribute("src") ?? "unknown"),
+      );
+      expect(missingAlt).toEqual([]);
+
+      const duplicateIds = await page.evaluate(() => {
+        const seen = new Map<string, number>();
+        for (const element of document.querySelectorAll("[id]")) {
+          const id = element.id.trim();
+          if (id) seen.set(id, (seen.get(id) ?? 0) + 1);
+        }
+        return [...seen.entries()]
+          .filter(([, count]) => count > 1)
+          .map(([id]) => id);
+      });
+      expect(duplicateIds).toEqual([]);
+    }
+  });
+
   test("page has no duplicate ids", async ({ page }) => {
     await page.goto("/");
     const duplicateIds = await page.evaluate(() => {
