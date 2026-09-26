@@ -10208,6 +10208,103 @@ mod tests {
     }
 
     #[test]
+    fn startup_recovery_requeues_sync_and_halts_external_work() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-1', 'One', '1');
+                 INSERT INTO accounts(
+                   id, workspace_id, platform, display_name, status, created_at, updated_at
+                 ) VALUES
+                   ('account-1', 'workspace-1', 'telegram', 'One', 'connected', '1', '1');
+                 INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                 VALUES ('campaign-1', 'workspace-1', 'One', 'scheduled', '1');
+                 INSERT INTO tasks(
+                   id, workspace_id, campaign_id, account_id, platform, kind, status,
+                   attempts, max_attempts, available_at, idempotency_key, created_at
+                 ) VALUES
+                   ('sync-task', 'workspace-1', 'campaign-1', 'account-1', 'telegram',
+                    'sync', 'running', 1, 3, '1', 'sync-key', '1'),
+                   ('publish-task', 'workspace-1', 'campaign-1', 'account-1', 'telegram',
+                    'publish', 'running', 1, 3, '1', 'publish-key', '1'),
+                   ('pending-task', 'workspace-1', 'campaign-1', 'account-1', 'telegram',
+                    'publish', 'pending', 0, 3, '1', 'pending-key', '1');",
+            )
+            .expect("recovery fixtures should be created");
+
+        let recovered =
+            recover_interrupted_tasks(&connection).expect("startup recovery should succeed");
+        assert_eq!(recovered, 2);
+
+        let states: Vec<(String, String)> = {
+            let mut statement = connection
+                .prepare("SELECT id, status FROM tasks ORDER BY id ASC")
+                .expect("task states should be queryable");
+            let rows = statement
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+                .expect("task state query should succeed");
+            rows.collect::<Result<Vec<_>, _>>()
+                .expect("task states should collect")
+        };
+        assert_eq!(
+            states,
+            vec![
+                ("pending-task".to_string(), "pending".to_string()),
+                (
+                    "publish-task".to_string(),
+                    "awaiting_user_action".to_string(),
+                ),
+                ("sync-task".to_string(), "pending".to_string()),
+            ]
+        );
+
+        let audit_count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM audit_events
+                 WHERE workspace_id='workspace-1' AND action='startup_recovery'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("recovery audit entries should be queryable");
+        assert_eq!(audit_count, 2);
+
+        assert!(verify_audit_chain(&connection, "workspace-1")
+            .expect("audit chain verification should succeed"));
+    }
+
+    #[test]
+    fn database_recovery_restores_missing_primary_and_cleans_transients() {
+        let root = std::env::temp_dir().join(format!("orbit-recovery-{}", uuid_like()));
+        fs::create_dir_all(root.join("backups")).expect("temp app data should be created");
+        let db_path = root.join("orbit.sqlite3");
+        let previous = root.join("orbit.previous.sqlite3");
+        let restore = root.join("orbit.restore.sqlite3");
+        let backup_source = root.join("backups/orbit-backup-source.sqlite3");
+
+        fs::write(&previous, "previous-db").expect("previous backup should be written");
+        fs::write(&restore, "stale-restore").expect("stale restore should be written");
+        fs::write(&backup_source, "stale-backup-source")
+            .expect("stale backup source should be written");
+
+        recover_database_before_open(&root, &db_path).expect("database recovery should succeed");
+
+        assert_eq!(
+            fs::read_to_string(&db_path).expect("restored database should be readable"),
+            "previous-db"
+        );
+        assert!(!previous.exists());
+        assert!(!restore.exists());
+        assert!(!backup_source.exists());
+
+        fs::remove_dir_all(root).expect("temporary recovery directory should be removed");
+    }
+
+    #[test]
     fn schema_v10_is_idempotent_after_upgrade() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
         connection
