@@ -1,4 +1,7 @@
-import { createMarketingInsight, type MarketingInsight } from "../outcomes/index.js";
+import {
+  createMarketingInsight,
+  type MarketingInsight,
+} from "../outcomes/index.js";
 import { buildMetricSeries, type MetricPoint } from "./metrics.js";
 
 export type AnomalyDirection = "spike" | "drop";
