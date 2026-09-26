@@ -19,6 +19,8 @@ try {
 
 if (
   document.schemaVersion !== 1 ||
+  !Array.isArray(document.readinessLevels) ||
+  document.readinessLevels.length === 0 ||
   !document.releaseCritical ||
   typeof document.releaseCritical !== "object"
 ) {
@@ -29,7 +31,13 @@ if (
 
 const entries = Object.entries(document.releaseCritical);
 const invalid = entries.filter(
-  ([, value]) => !value || !document.readinessLevels.includes(value.level),
+  ([, value]) =>
+    !value ||
+    typeof value !== "object" ||
+    !document.readinessLevels.includes(value.level) ||
+    !Array.isArray(value.evidence) ||
+    value.evidence.length === 0 ||
+    typeof value.notes !== "string",
 );
 if (invalid.length > 0) {
   console.error("release-readiness=FAIL");
