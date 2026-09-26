@@ -12767,7 +12767,8 @@ mod experimentation_runtime_tests {
         assert!(normalize_experiment_window(
             Some("2026-09-27T00:00:00Z".to_string()),
             Some("2026-09-28T00:00:00Z".to_string()),
-        ).is_ok());
+        )
+        .is_ok());
     }
 
     #[test]
