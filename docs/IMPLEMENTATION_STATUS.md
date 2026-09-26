@@ -48,7 +48,6 @@ The effective Vercel project metadata still reports `framework: vite` while the 
 
 ## Evidence still required
 
-- current Command Dispatcher exact-head CI/native verification;
 - dedicated native restart/migration/crash-recovery acceptance;
 - controlled real Telegram authorization/delivery;
 - controlled real LinkedIn authorization/delivery;
