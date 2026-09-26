@@ -442,6 +442,15 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       "e2e-search-account-" + suffix,
     )) as { id: string };
 
+    await page!.evaluate(
+      () =>
+        window.__TAURI_INTERNALS__.invoke("vault_put", {
+          label: "e2e-search-secret-label",
+          plaintext: "E2E Search Secret",
+          password: "e2e-search-password",
+        }),
+    );
+
     const conversation = (await page!.evaluate(
       async ({ id, accountId }) =>
         window.__TAURI_INTERNALS__.invoke("conversation_upsert", {
@@ -538,6 +547,22 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(sameWorkspace.some((item) => item.kind === "campaign")).toBe(true);
     expect(sameWorkspace.some((item) => item.kind === "account")).toBe(true);
     expect(sameWorkspace.some((item) => item.kind === "message")).toBe(true);
+    const secretSearch = (await page!.evaluate(
+      (query) =>
+        window.__TAURI_INTERNALS__.invoke("global_search", {
+          query,
+          limit: 50,
+        }),
+      "E2E Search Secret",
+    )) as Array<{ kind: string; id: string; title: string }>;
+    expect(secretSearch).toEqual([]);
+
+    await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("vault_delete", {
+        label: "e2e-search-secret-label",
+      }),
+    );
+
     expect(sameWorkspace.some((item) => item.kind === "research_brief")).toBe(
       true,
     );
