@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "product": "ORBIT Marketing OS",
+  "updated": "2026-09-26",
+  "readinessLevels": [
+    "L0_DESIGNED",
+    "L1_IMPLEMENTED",
+    "L2_VERIFIED",
+    "L3_PRODUCTION_PROVEN"
+  ],
+  "releaseCritical": {
+    "source_integrity": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "CI quality",
+        "SonarCloud",
+        "security scan"
+      ],
+      "notes": "No current evidence supports L3 commercial use."
+    },
+    "build": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "CI",
+        "Rust quality",
+        "desktop native builds",
+        "mobile validation"
+      ],
+      "notes": "Exact merged feature head passed all tracked checks."
+    },
+    "runtime": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "runtime smoke",
+        "queue/recovery tests",
+        "Windows native E2E"
+      ],
+      "notes": "24-hour soak and extended field stability are not yet proven."
+    },
+    "product_workflows": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "campaign/content/approval/CRM/inbox/search/publishing E2E"
+      ],
+      "notes": "Real external connector workflows remain separate gates."
+    },
+    "security_governance": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "RBAC",
+        "workspace isolation",
+        "vault",
+        "audit",
+        "policy tests"
+      ],
+      "notes": "GitHub main protection/ruleset live state is not verified."
+    },
+    "distribution": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "Windows/Linux/macOS artifacts",
+        "Android debug validation",
+        "checksums in validation release workflow"
+      ],
+      "notes": "Desktop signing/notarization and production mobile store distribution remain open."
+    },
+    "web_production": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "live 200/404/header/RTL checks",
+        "runtime error aggregation clean"
+      ],
+      "notes": "Current live deployment predates main=377e86; canonical Vercel SHA provenance is not yet proven."
+    },
+    "external_connectors": {
+      "level": "L1_IMPLEMENTED",
+      "evidence": [
+        "connector contracts/fixtures/challenge handling"
+      ],
+      "notes": "Real Telegram/LinkedIn authorization and delivery evidence is still required."
+    },
+    "sync_network": {
+      "level": "L1_IMPLEMENTED",
+      "evidence": [
+        "Yjs sync document layer and local tests"
+      ],
+      "notes": "Live multi-device CRDT network verification is still required."
+    },
+    "accessibility": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "automated RTL/accessibility tests"
+      ],
+      "notes": "Manual WCAG/RTL audit remains open."
+    },
+    "stability_soak": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "verified 10-minute soak harness/run"
+      ],
+      "notes": "24-hour soak evidence remains open."
+    },
+    "commercial_billing": {
+      "level": "L1_IMPLEMENTED",
+      "evidence": [
+        "pricing surface and commercial contract docs"
+      ],
+      "notes": "Payment/billing provider activation is not configured."
+    },
+    "legal_commercial": {
+      "level": "L1_IMPLEMENTED",
+      "evidence": [
+        "privacy/terms/refunds/EULA surfaces"
+      ],
+      "notes": "Final legal/commercial publication review remains open."
+    }
+  },
+  "rule": "Commercial Production Proven requires every release-critical gate to be L3_PRODUCTION_PROVEN."
+}
