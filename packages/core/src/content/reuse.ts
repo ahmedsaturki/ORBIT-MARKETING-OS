@@ -68,6 +68,11 @@ export function evaluateContentReuse(
     throw new Error("maxAgeDays must be a finite positive number");
   }
 
+  const candidateDate = new Date(candidate.createdAt);
+  if (Number.isNaN(candidateDate.getTime())) {
+    throw new Error("candidate.createdAt must be a valid date");
+  }
+
   const reasons: ContentReuseDecision["reasons"] = [];
   if (policy.requireApproval) {
     if (candidate.approvalStatus === "approved") reasons.push("approved");
@@ -100,7 +105,7 @@ export function evaluateContentReuse(
     reasons.push("cooldown_active");
   }
 
-  if (daysBetween(now, new Date(candidate.createdAt)) > policy.maxAgeDays) {
+  if (daysBetween(now, candidateDate) > policy.maxAgeDays) {
     reasons.push("stale");
   }
 
