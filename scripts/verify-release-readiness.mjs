@@ -2,7 +2,10 @@
 import fs from "node:fs";
 
 const modeIndex = process.argv.indexOf("--mode");
-const mode = modeIndex >= 0 ? process.argv[modeIndex + 1] ?? "verification" : "verification";
+const mode =
+  modeIndex >= 0
+    ? (process.argv[modeIndex + 1] ?? "verification")
+    : "verification";
 const path = new URL("../release/readiness.json", import.meta.url);
 let document;
 
@@ -14,22 +17,34 @@ try {
   process.exit(1);
 }
 
-if (document.schemaVersion !== 1 || !document.releaseCritical || typeof document.releaseCritical !== "object") {
+if (
+  document.schemaVersion !== 1 ||
+  !document.releaseCritical ||
+  typeof document.releaseCritical !== "object"
+) {
   console.error("release-readiness=FAIL");
   console.error("Invalid readiness schema.");
   process.exit(1);
 }
 
 const entries = Object.entries(document.releaseCritical);
-const invalid = entries.filter(([, value]) => !value || !document.readinessLevels.includes(value.level));
+const invalid = entries.filter(
+  ([, value]) => !value || !document.readinessLevels.includes(value.level),
+);
 if (invalid.length > 0) {
   console.error("release-readiness=FAIL");
-  console.error(`Invalid gate levels: ${invalid.map(([key]) => key).join(", ")}`);
+  console.error(
+    `Invalid gate levels: ${invalid.map(([key]) => key).join(", ")}`,
+  );
   process.exit(1);
 }
 
-const l3 = entries.filter(([, value]) => value.level === "L3_PRODUCTION_PROVEN");
-const blockers = entries.filter(([, value]) => value.level !== "L3_PRODUCTION_PROVEN");
+const l3 = entries.filter(
+  ([, value]) => value.level === "L3_PRODUCTION_PROVEN",
+);
+const blockers = entries.filter(
+  ([, value]) => value.level !== "L3_PRODUCTION_PROVEN",
+);
 
 console.log(`release-readiness=PASS mode=${mode}`);
 console.log(`release-critical-gates=${entries.length}`);

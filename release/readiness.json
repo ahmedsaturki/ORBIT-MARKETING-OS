@@ -11,11 +11,7 @@
   "releaseCritical": {
     "source_integrity": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "CI quality",
-        "SonarCloud",
-        "security scan"
-      ],
+      "evidence": ["CI quality", "SonarCloud", "security scan"],
       "notes": "No current evidence supports L3 commercial use."
     },
     "build": {
@@ -39,9 +35,7 @@
     },
     "product_workflows": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "campaign/content/approval/CRM/inbox/search/publishing E2E"
-      ],
+      "evidence": ["campaign/content/approval/CRM/inbox/search/publishing E2E"],
       "notes": "Real external connector workflows remain separate gates."
     },
     "security_governance": {
@@ -74,44 +68,32 @@
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",
-      "evidence": [
-        "connector contracts/fixtures/challenge handling"
-      ],
+      "evidence": ["connector contracts/fixtures/challenge handling"],
       "notes": "Real Telegram/LinkedIn authorization and delivery evidence is still required."
     },
     "sync_network": {
       "level": "L1_IMPLEMENTED",
-      "evidence": [
-        "Yjs sync document layer and local tests"
-      ],
+      "evidence": ["Yjs sync document layer and local tests"],
       "notes": "Live multi-device CRDT network verification is still required."
     },
     "accessibility": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "automated RTL/accessibility tests"
-      ],
+      "evidence": ["automated RTL/accessibility tests"],
       "notes": "Manual WCAG/RTL audit remains open."
     },
     "stability_soak": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "verified 10-minute soak harness/run"
-      ],
+      "evidence": ["verified 10-minute soak harness/run"],
       "notes": "24-hour soak evidence remains open."
     },
     "commercial_billing": {
       "level": "L1_IMPLEMENTED",
-      "evidence": [
-        "pricing surface and commercial contract docs"
-      ],
+      "evidence": ["pricing surface and commercial contract docs"],
       "notes": "Payment/billing provider activation is not configured."
     },
     "legal_commercial": {
       "level": "L1_IMPLEMENTED",
-      "evidence": [
-        "privacy/terms/refunds/EULA surfaces"
-      ],
+      "evidence": ["privacy/terms/refunds/EULA surfaces"],
       "notes": "Final legal/commercial publication review remains open."
     }
   },

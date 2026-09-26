@@ -17,6 +17,7 @@ The remaining blockers are primarily production/runtime/external evidence, not m
 The connected `orbit-marketing-os` project is live and has a READY production deployment.
 
 Current verified facts:
+
 - public home/pricing/privacy paths respond successfully;
 - unknown routes return 404;
 - Arabic RTL markup is present;

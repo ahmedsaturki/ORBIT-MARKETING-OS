@@ -16,6 +16,7 @@ PR #76 now makes missing credentials a hard gate instead of a soft-disable.
 ## B. Real connector verification
 
 Perform controlled user-authorized tests for:
+
 - Telegram authorization + one controlled delivery;
 - LinkedIn authorization + one controlled publish;
 - challenge/manual-intervention behavior;
