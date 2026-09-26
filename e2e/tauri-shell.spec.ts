@@ -204,7 +204,6 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       "utf8",
     ),
   );
-  // Exactly one grant: core:default — no fs/shell/http/clipboard/dialog/updater.
   expect(capability.permissions).toEqual(["core:default"]);
   expect(capability.windows).toEqual(["main"]);
   for (const perm of capability.permissions) {
@@ -221,7 +220,6 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     ),
   );
   const security = conf.app.security;
-  // Strict CSP: no unsafe-eval, no remote script origins, framed embedding off.
   expect(security.csp).toMatch(/default-src 'self'/);
   expect(security.csp).toMatch(/script-src 'self'/);
   expect(security.csp).not.toMatch(/script-src[^;]*unsafe-eval/);
@@ -230,6 +228,20 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
   expect(security.csp).toMatch(/frame-ancestors 'none'/);
   expect(security.freezePrototype).toBe(true);
   expect(security.dangerousDisableAssetCspModification).toBe(false);
+});
+
+test("native capability schema resolves to least privilege", () => {
+  test.skip(!exe, "native executable is required for generated capability verification");
+  const resolvedPath = join(
+    root,
+    "packages/desktop/src-tauri/gen/schemas/capabilities.json",
+  );
+  if (!existsSync(resolvedPath)) {
+    throw new Error("native capability schema is missing after native build");
+  }
+  const resolved = JSON.parse(readFileSync(resolvedPath, "utf8"));
+  expect(resolved.default.windows).toEqual(["main"]);
+  expect(resolved.default.permissions).toEqual(["core:default"]);
 });
 
 test("native capability schema resolves to least privilege", () => {
