@@ -9,11 +9,28 @@ import {
 
 const registry = new CommandRegistry();
 
+const SERVER_NAME = "orbit-governed-surface";
+const SERVER_VERSION = "0.2.0";
+const MODERN_PROTOCOL_VERSION = "2026-07-28";
+const LATEST_HANDSHAKE_PROTOCOL_VERSION = "2025-11-25";
+const HANDSHAKE_PROTOCOL_VERSIONS = [
+  "2024-11-05",
+  "2025-03-26",
+  "2025-06-18",
+  "2025-11-25",
+] as const;
+
 type RpcRequest = {
   readonly jsonrpc?: string;
   readonly id?: string | number | null;
   readonly method?: string;
   readonly params?: Record<string, unknown>;
+};
+
+type ModernMeta = {
+  readonly "io.modelcontextprotocol/protocolVersion"?: unknown;
+  readonly "io.modelcontextprotocol/clientCapabilities"?: unknown;
+  readonly "io.modelcontextprotocol/clientInfo"?: unknown;
 };
 
 function write(
@@ -46,17 +63,69 @@ function stringArrayParam(
     : [];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function modernMeta(params: Record<string, unknown>): ModernMeta | undefined {
+  const value = params._meta;
+  return isRecord(value) ? (value as ModernMeta) : undefined;
+}
+
+function assertModernRequest(params: Record<string, unknown>): string | undefined {
+  const meta = modernMeta(params);
+  if (!meta) return "modern_meta_required";
+  if (meta["io.modelcontextprotocol/protocolVersion"] !== MODERN_PROTOCOL_VERSION) {
+    return "unsupported_protocol_version";
+  }
+  if (!isRecord(meta["io.modelcontextprotocol/clientCapabilities"])) {
+    return "client_capabilities_required";
+  }
+  return undefined;
+}
+
+function serverInfo() {
+  return { name: SERVER_NAME, version: SERVER_VERSION };
+}
+
+function modernDiscoveryResult() {
+  return {
+    supportedVersions: [MODERN_PROTOCOL_VERSION],
+    capabilities: { tools: {} },
+    instructions:
+      "ORBIT exposes read-only command discovery and authorization previews. Execution remains inside the canonical governed runtime.",
+    _meta: {
+      "io.modelcontextprotocol/serverInfo": serverInfo(),
+    },
+  };
+}
+
 async function handle(request: RpcRequest): Promise<void> {
   if (request.jsonrpc !== "2.0") {
     write(request.id, undefined, { code: -32600, message: "invalid_jsonrpc" });
     return;
   }
 
+  if (request.method === "server/discover") {
+    write(request.id, modernDiscoveryResult());
+    return;
+  }
+
   if (request.method === "initialize") {
+    const params = request.params ?? {};
+    const requestedVersion = stringParam(params, "protocolVersion");
+    const selectedVersion = HANDSHAKE_PROTOCOL_VERSIONS.includes(
+      requestedVersion as (typeof HANDSHAKE_PROTOCOL_VERSIONS)[number],
+    )
+      ? requestedVersion
+      : LATEST_HANDSHAKE_PROTOCOL_VERSION;
+
     write(request.id, {
-      protocolVersion: "2024-11-05",
-      serverInfo: { name: "orbit-governed-surface", version: "0.2.0" },
+      protocolVersion: selectedVersion,
+      serverInfo: serverInfo(),
       capabilities: { tools: {} },
+      instructions:
+        "ORBIT exposes read-only command discovery and authorization previews. Execution remains inside the canonical governed runtime.",
     });
     return;
   }
@@ -64,6 +133,12 @@ async function handle(request: RpcRequest): Promise<void> {
   if (request.method === "notifications/initialized") return;
 
   if (request.method === "tools/list") {
+    const modernError = assertModernRequest(request.params ?? {});
+    if (modernError) {
+      write(request.id, undefined, { code: -32602, message: modernError });
+      return;
+    }
+
     write(request.id, {
       tools: [
         {
@@ -100,13 +175,15 @@ async function handle(request: RpcRequest): Promise<void> {
 
   if (request.method === "tools/call") {
     const params = request.params ?? {};
+    const modernError = assertModernRequest(params);
+    if (modernError) {
+      write(request.id, undefined, { code: -32602, message: modernError });
+      return;
+    }
+
     const name = stringParam(params, "name");
     const args =
-      typeof params.arguments === "object" &&
-      params.arguments !== null &&
-      !Array.isArray(params.arguments)
-        ? (params.arguments as Record<string, unknown>)
-        : {};
+      isRecord(params.arguments) ? params.arguments : {};
 
     if (name === "orbit.commands.list") {
       write(request.id, {
