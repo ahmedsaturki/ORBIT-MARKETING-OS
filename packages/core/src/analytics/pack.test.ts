@@ -61,7 +61,23 @@ describe("evidence reporting packs", () => {
   });
 
   it("rejects currency metrics without a valid currency", () => {
-    for (const currency of [undefined, "usd", "US", "USDD"]) {
+    expect(() =>
+      buildEvidenceReportingPack({
+        ...base,
+        metrics: [
+          {
+            key: "revenue",
+            label: "Revenue",
+            value: 100,
+            unit: "currency",
+            evidenceIds: ["ev-1"],
+          },
+        ],
+        evidence,
+      }),
+    ).toThrow("requires a three-letter uppercase currency");
+
+    for (const currency of ["usd", "US", "USDD"]) {
       expect(() =>
         buildEvidenceReportingPack({
           ...base,
@@ -148,7 +164,16 @@ describe("evidence reporting packs", () => {
       buildEvidenceReportingPack({
         ...base,
         metrics: [],
-        evidence: [{ ...evidence[0], observedAt: "invalid" }],
+        evidence: [
+          {
+            id: "ev-invalid-date",
+            workspaceId: "workspace-001",
+            sourceType: "analytics_event",
+            sourceId: "evt-invalid-date",
+            observedAt: "invalid",
+            statement: "Invalid date evidence.",
+          },
+        ],
       }),
     ).toThrow("observedAt must be a valid date");
 
@@ -156,7 +181,16 @@ describe("evidence reporting packs", () => {
       buildEvidenceReportingPack({
         ...base,
         metrics: [],
-        evidence: [{ ...evidence[0], statement: "   " }],
+        evidence: [
+          {
+            id: "ev-blank",
+            workspaceId: "workspace-001",
+            sourceType: "analytics_event",
+            sourceId: "evt-blank",
+            observedAt: "2026-09-26T10:00:00Z",
+            statement: "   ",
+          },
+        ],
       }),
     ).toThrow("statement is required");
 
@@ -166,8 +200,12 @@ describe("evidence reporting packs", () => {
         metrics: [],
         evidence: [
           {
-            ...evidence[0],
+            id: "ev-future",
+            workspaceId: "workspace-001",
+            sourceType: "analytics_event",
+            sourceId: "evt-future",
             observedAt: "2026-09-26T13:00:01Z",
+            statement: "Future evidence.",
           },
         ],
       }),
@@ -181,8 +219,12 @@ describe("evidence reporting packs", () => {
         metrics: [],
         evidence: [
           {
-            ...evidence[0],
+            id: "ev-cross-workspace",
             workspaceId: "workspace-002",
+            sourceType: "analytics_event",
+            sourceId: "evt-cross-workspace",
+            observedAt: "2026-09-26T10:00:00Z",
+            statement: "Cross-workspace evidence.",
           },
         ],
       }),
