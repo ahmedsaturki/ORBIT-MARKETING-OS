@@ -24,37 +24,60 @@ export interface AnomalyDetectionOptions {
 }
 
 function median(values: readonly number[]): number {
-  if (values.length === 0) throw new Error("median_requires_values");
-  const sorted = [...values].sort((a,b)=>a-b);
-  const middle=Math.floor(sorted.length/2);
-  return sorted.length%2===0 ? (sorted[middle-1]!+sorted[middle]!)/2 : sorted[middle]!;
+  if (values.length === 0) {
+    throw new Error("median_requires_values");
+  }
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+
+  if (sorted.length % 2 === 0) {
+    return (sorted[middle - 1]! + sorted[middle]!) / 2;
+  }
+
+  return sorted[middle]!;
 }
 
 function validatePoint(point: MetricPoint): void {
-  if (!Number.isFinite(point.value)) throw new Error("metric_value_must_be_finite");
+  if (!Number.isFinite(point.value)) {
+    throw new Error("metric_value_must_be_finite");
+  }
+
   if (!point.timestamp.trim() || Number.isNaN(Date.parse(point.timestamp))) {
     throw new Error("metric_timestamp_invalid");
   }
 }
 
-function normalizedOptions(options: AnomalyDetectionOptions): Required<AnomalyDetectionOptions> {
-  const windowSize=options.windowSize ?? 7;
-  const threshold=options.threshold ?? 3.5;
-  const minAbsoluteDelta=options.minAbsoluteDelta ?? 0;
-  const maxResults=options.maxResults ?? 50;
+function normalizedOptions(
+  options: AnomalyDetectionOptions,
+): Required<AnomalyDetectionOptions> {
+  const windowSize = options.windowSize ?? 7;
+  const threshold = options.threshold ?? 3.5;
+  const minAbsoluteDelta = options.minAbsoluteDelta ?? 0;
+  const maxResults = options.maxResults ?? 50;
+
   if (!Number.isInteger(windowSize) || windowSize < 3 || windowSize > 365) {
     throw new Error("anomaly_window_invalid");
   }
+
   if (!Number.isFinite(threshold) || threshold <= 0 || threshold > 100) {
     throw new Error("anomaly_threshold_invalid");
   }
+
   if (!Number.isFinite(minAbsoluteDelta) || minAbsoluteDelta < 0) {
     throw new Error("anomaly_min_absolute_delta_invalid");
   }
+
   if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 1000) {
     throw new Error("anomaly_max_results_invalid");
   }
-  return { windowSize, threshold, minAbsoluteDelta, maxResults };
+
+  return {
+    windowSize,
+    threshold,
+    minAbsoluteDelta,
+    maxResults,
+  };
 }
 
 /**
@@ -69,51 +92,70 @@ export function detectMetricAnomalies(
   points: readonly MetricPoint[],
   options: AnomalyDetectionOptions = {},
 ): readonly MetricAnomaly[] {
-  if (!metric.trim()) throw new Error("anomaly_metric_required");
-  const config=normalizedOptions(options);
-  const ordered=points.map((point)=>({ ...point })).sort(
-    (left,right)=>Date.parse(left.timestamp)-Date.parse(right.timestamp),
-  );
+  if (!metric.trim()) {
+    throw new Error("anomaly_metric_required");
+  }
+
+  const config = normalizedOptions(options);
+  const ordered = points
+    .map((point) => ({ ...point }))
+    .sort(
+      (left, right) =>
+        Date.parse(left.timestamp) - Date.parse(right.timestamp),
+    );
   ordered.forEach(validatePoint);
 
-  const anomalies: MetricAnomaly[]=[];
-  for(let index=config.windowSize; index<ordered.length; index+=1){
-    const current=ordered[index]!;
-    const baseline=ordered.slice(index-config.windowSize,index).map((point)=>point.value);
-    const baselineMedian=median(baseline);
-    const deviations=baseline.map((value)=>Math.abs(value-baselineMedian));
-    const baselineMad=median(deviations);
-    const absoluteDelta=Math.abs(current.value-baselineMedian);
-    if(absoluteDelta < config.minAbsoluteDelta) continue;
+  const anomalies: MetricAnomaly[] = [];
 
-    let modifiedZScore:number|null=null;
-    let isAnomaly=false;
-    if(baselineMad===0){
-      isAnomaly=current.value!==baselineMedian;
-    } else {
-      modifiedZScore=0.67448975*(current.value-baselineMedian)/baselineMad;
-      isAnomaly=Math.abs(modifiedZScore)>=config.threshold;
+  for (let index = config.windowSize; index < ordered.length; index += 1) {
+    const current = ordered[index]!;
+    const baselineValues = ordered
+      .slice(index - config.windowSize, index)
+      .map((point) => point.value);
+    const baselineMedian = median(baselineValues);
+    const baselineMad = median(
+      baselineValues.map((value) => Math.abs(value - baselineMedian)),
+    );
+    const absoluteDelta = Math.abs(current.value - baselineMedian);
+
+    if (absoluteDelta < config.minAbsoluteDelta) {
+      continue;
     }
-    if(!isAnomaly) continue;
+
+    const modifiedZScore =
+      baselineMad === 0
+        ? null
+        : (0.67448975 * (current.value - baselineMedian)) / baselineMad;
+    const isAnomaly =
+      baselineMad === 0
+        ? current.value !== baselineMedian
+        : Math.abs(modifiedZScore!) >= config.threshold;
+
+    if (!isAnomaly) {
+      continue;
+    }
 
     anomalies.push({
       metric,
-      timestamp:current.timestamp,
-      value:current.value,
+      timestamp: current.timestamp,
+      value: current.value,
       baselineMedian,
       baselineMad,
       absoluteDelta,
-      direction:current.value>=baselineMedian ? "spike" : "drop",
+      direction: current.value >= baselineMedian ? "spike" : "drop",
       modifiedZScore,
-      method:"rolling_median_mad",
-      interpretation:"descriptive_anomaly_signal",
+      method: "rolling_median_mad",
+      interpretation: "descriptive_anomaly_signal",
     });
   }
 
   return anomalies
-    .sort((left,right)=>Date.parse(right.timestamp)-Date.parse(left.timestamp))
-    .slice(0,config.maxResults)
-    .map((anomaly)=>({ ...anomaly }));
+    .sort(
+      (left, right) =>
+        Date.parse(right.timestamp) - Date.parse(left.timestamp),
+    )
+    .slice(0, config.maxResults)
+    .map((anomaly) => ({ ...anomaly }));
 }
 
 export function buildAnomalyInsights(
@@ -121,35 +163,37 @@ export function buildAnomalyInsights(
   anomalies: readonly MetricAnomaly[],
   now: string,
 ): readonly MarketingInsight[] {
-  if (!workspaceId.trim()) throw new Error("anomaly_workspace_required");
+  if (!workspaceId.trim()) {
+    throw new Error("anomaly_workspace_required");
+  }
+
   if (!now.trim() || Number.isNaN(Date.parse(now))) {
     throw new Error("anomaly_insight_timestamp_invalid");
   }
 
-  return anomalies.map((anomaly)=>({
-    id:
-      "anomaly:" +
-      workspaceId +
-      ":" +
-      anomaly.metric +
-      ":" +
-      new Date(anomaly.timestamp).toISOString(),
-    workspaceId,
-    kind:"anomaly" as const,
-    title:
-      (anomaly.direction==="spike" ? "Spike detected: " : "Drop detected: ") +
-      anomaly.metric,
-    summary:
-      anomaly.metric +
-      " changed by " +
-      anomaly.absoluteDelta.toFixed(4) +
-      " versus its preceding rolling median. This is a descriptive anomaly signal; causality and statistical significance are not claimed.",
-    metric:anomaly.metric,
-    value:anomaly.value,
-    confidence:0,
-    sourceIds:[ "metric:" + anomaly.metric + ":" + new Date(anomaly.timestamp).toISOString() ],
-    observedAt:anomaly.timestamp,
-    createdAt:now,
-    updatedAt:now,
-  }));
+  return anomalies.map((anomaly) => {
+    const timestamp = new Date(anomaly.timestamp).toISOString();
+
+    return {
+      id: "anomaly:" + workspaceId + ":" + anomaly.metric + ":" + timestamp,
+      workspaceId,
+      kind: "anomaly" as const,
+      title:
+        (anomaly.direction === "spike" ? "Spike detected: " : "Drop detected: ") +
+        anomaly.metric,
+      summary:
+        anomaly.metric +
+        " changed by " +
+        anomaly.absoluteDelta.toFixed(4) +
+        " versus its preceding rolling median. This is a descriptive anomaly " +
+        "signal; causality and statistical significance are not claimed.",
+      metric: anomaly.metric,
+      value: anomaly.value,
+      confidence: 0,
+      sourceIds: ["metric:" + anomaly.metric + ":" + timestamp],
+      observedAt: anomaly.timestamp,
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
 }
