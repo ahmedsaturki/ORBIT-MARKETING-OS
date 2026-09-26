@@ -1,5 +1,5 @@
 use rusqlite::{params, Connection};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 
 use crate::{
@@ -20,6 +20,18 @@ pub(crate) struct MarketingLinkView {
     pub provenance: String,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct MarketingLinkEvidenceInput {
+    pub link_id: String,
+    pub source_type: String,
+    pub metric_name: String,
+    pub metric_value: f64,
+    pub observed_at: String,
+    pub source_locator: Option<String>,
+    pub provenance: String,
+    pub metadata_json: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -307,15 +319,18 @@ pub(crate) fn marketing_link_list(app: AppHandle) -> Result<Vec<MarketingLinkVie
 #[tauri::command]
 pub(crate) fn marketing_link_evidence_add(
     app: AppHandle,
-    link_id: String,
-    source_type: String,
-    metric_name: String,
-    metric_value: f64,
-    observed_at: String,
-    source_locator: Option<String>,
-    provenance: String,
-    metadata_json: String,
+    input: MarketingLinkEvidenceInput,
 ) -> Result<MarketingLinkEvidenceView, String> {
+    let MarketingLinkEvidenceInput {
+        link_id,
+        source_type,
+        metric_name,
+        metric_value,
+        observed_at,
+        source_locator,
+        provenance,
+        metadata_json,
+    } = input;
     let workspace_id = active_workspace_id_for_module();
     let link_id = validate_text(&link_id, "link_id", 300)?;
     let source_type = validate_observed_source(&source_type)?;
