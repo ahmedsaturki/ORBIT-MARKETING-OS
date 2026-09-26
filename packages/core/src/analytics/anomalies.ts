@@ -57,6 +57,10 @@ function classifyAnomaly(
   };
 }
 
+function assertOption(condition: boolean, errorCode: string): void {
+  if (!condition) throw new Error(errorCode);
+}
+
 function normalizedOptions(
   options: AnomalyDetectionOptions,
 ): Required<AnomalyDetectionOptions> {
@@ -64,18 +68,23 @@ function normalizedOptions(
   const threshold = options.threshold ?? 3.5;
   const minAbsoluteDelta = options.minAbsoluteDelta ?? 0;
   const maxResults = options.maxResults ?? 50;
-  if (!Number.isInteger(windowSize) || windowSize < 3 || windowSize > 365) {
-    throw new Error("anomaly_window_invalid");
-  }
-  if (!Number.isFinite(threshold) || threshold <= 0 || threshold > 100) {
-    throw new Error("anomaly_threshold_invalid");
-  }
-  if (!Number.isFinite(minAbsoluteDelta) || minAbsoluteDelta < 0) {
-    throw new Error("anomaly_min_absolute_delta_invalid");
-  }
-  if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 1000) {
-    throw new Error("anomaly_max_results_invalid");
-  }
+
+  assertOption(
+    Number.isInteger(windowSize) && windowSize >= 3 && windowSize <= 365,
+    "anomaly_window_invalid",
+  );
+  assertOption(
+    Number.isFinite(threshold) && threshold > 0 && threshold <= 100,
+    "anomaly_threshold_invalid",
+  );
+  assertOption(
+    Number.isFinite(minAbsoluteDelta) && minAbsoluteDelta >= 0,
+    "anomaly_min_absolute_delta_invalid",
+  );
+  assertOption(
+    Number.isInteger(maxResults) && maxResults >= 1 && maxResults <= 1000,
+    "anomaly_max_results_invalid",
+  );
   return {
     windowSize,
     threshold,
@@ -158,9 +167,17 @@ export function buildAnomalyInsights(
   }
   return anomalies.map((anomaly) => {
     const timestamp = new Date(anomaly.timestamp).toISOString();
-    return createMarketingInsight({
-      id: "anomaly:" + workspaceId + ":" + anomaly.metric + ":" + timestamp,
+    const base = {
       workspaceId,
+      confidence: 0,
+      sourceIds: ["metric:" + anomaly.metric + ":" + timestamp],
+      observedAt: anomaly.timestamp,
+      createdAt: now,
+      updatedAt: now,
+    };
+    return createMarketingInsight({
+      ...base,
+      id: "anomaly:" + workspaceId + ":" + anomaly.metric + ":" + timestamp,
       kind: "anomaly",
       title:
         (anomaly.direction === "spike"
@@ -174,11 +191,6 @@ export function buildAnomalyInsights(
         "signal; causality and statistical significance are not claimed.",
       metric: anomaly.metric,
       value: anomaly.value,
-      confidence: 0,
-      sourceIds: ["metric:" + anomaly.metric + ":" + timestamp],
-      observedAt: anomaly.timestamp,
-      createdAt: now,
-      updatedAt: now,
     });
   });
 }
