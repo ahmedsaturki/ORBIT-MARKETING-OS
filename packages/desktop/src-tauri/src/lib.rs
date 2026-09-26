@@ -13830,7 +13830,11 @@ pub fn run() {
             audit_verify,
             license::license_install,
             license::license_status,
-            license::license_delete
+            license::license_delete,
+            links::marketing_link_upsert,
+            links::marketing_link_list,
+            links::marketing_link_evidence_add,
+            links::marketing_link_evidence_list
         ])
         .run(context);
 
