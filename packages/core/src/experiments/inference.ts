@@ -72,7 +72,9 @@ function normalizedConfidenceLevel(value: number): number {
 }
 
 function criticalValue(confidenceLevel: number): number {
-  return CRITICAL_VALUES[normalizedConfidenceLevel(confidenceLevel).toFixed(2)]!;
+  return CRITICAL_VALUES[
+    normalizedConfidenceLevel(confidenceLevel).toFixed(2)
+  ]!;
 }
 
 function validateCount(name: string, value: number): number {
@@ -143,12 +145,16 @@ function differenceInterval(
   right: ProportionInterval,
 ): { lower: number; upper: number } {
   return {
-    lower: left.estimate - right.estimate -
+    lower:
+      left.estimate -
+      right.estimate -
       Math.sqrt(
         (left.estimate - left.lower) ** 2 +
           (right.upper - right.estimate) ** 2,
       ),
-    upper: left.estimate - right.estimate +
+    upper:
+      left.estimate -
+      right.estimate +
       Math.sqrt(
         (left.upper - left.estimate) ** 2 +
           (right.estimate - right.lower) ** 2,
