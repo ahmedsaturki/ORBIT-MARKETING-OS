@@ -193,7 +193,7 @@ export function ResearchStudioPanel({ workspaceId }: ResearchStudioProps) {
       setError("");
       setMessage("");
       await native("knowledge_source_upsert", {
-        id: competitor.id,
+        id: `${workspaceId}:${competitor.id}`,
         sourceType: "research",
         title: `Competitor: ${competitor.name}`,
         locator: competitor.locator,
