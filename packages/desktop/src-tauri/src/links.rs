@@ -66,7 +66,7 @@ fn validate_http_url(value: &str, name: &str) -> Result<String, String> {
     if parsed.scheme() != "http" && parsed.scheme() != "https" {
         return Err(format!("{name} must use http or https"));
     }
-    if parsed.username().is_empty().not() || parsed.password().is_some() {
+    if !parsed.username().is_empty() || parsed.password().is_some() {
         return Err(format!("{name} must not contain URL credentials"));
     }
     if raw.contains("\\") || raw.contains("javascript:") || raw.contains("data:") {
