@@ -53,7 +53,7 @@ PR #47 head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed:
 
 It was then merged to main as `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
 
-The current validation branch adds the governed Command Dispatcher on top of that verified main lineage; its own exact-head CI/native/mobile gates are required before merge.
+PR #48 exact head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed CI, Desktop Native Validation, and Mobile Validation before merge. Current `main` head is `cea2873db9817d4930662747441b55e1660dd67d`; its CI run 36202057601 and Web Deploy run 36202057689 both passed.
 
 ## Current Vercel evidence
 
