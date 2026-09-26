@@ -24,6 +24,8 @@ A subject is assigned using a deterministic FNV-1a bucket derived from:
 
 The same subject therefore receives the same variant for the same experiment/workspace across supported runtimes.
 
+Once an experiment leaves `draft`, its variant definition is immutable. Recorded observations must also use the deterministic assignment for their workspace/experiment/subject; otherwise the observation is rejected rather than contaminating the evidence set.
+
 ## Observation model
 
 Observations are scoped by both experiment ID and workspace ID.
