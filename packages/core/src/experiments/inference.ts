@@ -6,6 +6,7 @@
  */
 
 import type {
+  ExperimentDefinition,
   ExperimentSummary,
   ExperimentVariantSummary,
 } from "./index.js";
@@ -157,6 +158,8 @@ function differenceInterval(
 
 function inferVariant(
   variant: ExperimentVariantSummary,
+  targetShare: number,
+  totalExposures: number,
   confidenceLevel: number,
 ): ExperimentVariantInference {
   return {
@@ -173,33 +176,46 @@ function inferVariant(
       confidenceLevel,
     ),
     totalValue: variant.totalValue,
-    allocationTargetShare: 0,
-    observedExposureShare: 0,
-    allocationDrift: 0,
+    allocationTargetShare: targetShare,
+    observedExposureShare:
+      totalExposures === 0 ? 0 : variant.exposureCount / totalExposures,
+    allocationDrift:
+      (totalExposures === 0 ? 0 : variant.exposureCount / totalExposures) -
+      targetShare,
   };
 }
 
 export function inferExperiment(
+  experiment: ExperimentDefinition,
   summary: ExperimentSummary,
   confidenceLevel = 0.95,
 ): ExperimentInference {
   const level = normalizedConfidenceLevel(confidenceLevel);
+  if (
+    experiment.id !== summary.experimentId ||
+    experiment.workspaceId !== summary.workspaceId
+  ) {
+    throw new Error("experiment_inference_identity_mismatch");
+  }
+
+  const targets = new Map(
+    experiment.variants.map((variant) => [
+      variant.id,
+      variant.allocationPercent / 100,
+    ]),
+  );
   const totalExposures = summary.variants.reduce(
     (sum, variant) => sum + variant.exposureCount,
     0,
   );
-  const variants = summary.variants.map((variant, index) => {
-    const inferred = inferVariant(variant, level);
-    const targetShare = 0; // replaced from the declaration-independent summary shape below
-    const observedExposureShare =
-      totalExposures === 0 ? 0 : variant.exposureCount / totalExposures;
-    return {
-      ...inferred,
-      allocationTargetShare: targetShare,
-      observedExposureShare,
-      allocationDrift: observedExposureShare - targetShare,
-    };
-  });
+  const variants = summary.variants.map((variant) =>
+    inferVariant(
+      variant,
+      targets.get(variant.variantId) ?? 0,
+      totalExposures,
+      level,
+    ),
+  );
   const comparisons: ExperimentRateComparison[] = [];
 
   for (let leftIndex = 0; leftIndex < variants.length; leftIndex += 1) {
