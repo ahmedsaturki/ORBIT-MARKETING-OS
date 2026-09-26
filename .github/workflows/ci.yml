@@ -43,6 +43,9 @@ jobs:
       - name: Release sanity
         run: pnpm verify:release
 
+      - name: Readiness contract
+        run: pnpm verify:readiness -- --mode verification
+
       - name: Secret scan
         run: pnpm security:scan
 
