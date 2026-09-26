@@ -176,7 +176,7 @@ export function buildAnomalyInsights(
   return anomalies.map((anomaly) => {
     const timestamp = new Date(anomaly.timestamp).toISOString();
 
-    return createMarketingInsight(return {
+    return createMarketingInsight({
       id: "anomaly:" + workspaceId + ":" + anomaly.metric + ":" + timestamp,
       workspaceId,
       kind: "anomaly" as const,
@@ -198,5 +198,5 @@ export function buildAnomalyInsights(
       createdAt: now,
       updatedAt: now,
     });
-  }); });
+  });
 }
