@@ -5730,6 +5730,439 @@ fn validate_strategy_reference_ids(
 // This command keeps a deliberate one-argument-per-field IPC contract for explicit, typed desktop operations.
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
+#[derive(Debug, Serialize)]
+struct ResearchBriefView {
+    id: String,
+    name: String,
+    kind: String,
+    question: String,
+    objectives_json: String,
+    status: String,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ResearchFindingView {
+    id: String,
+    brief_id: String,
+    title: String,
+    statement: String,
+    source_ids_json: String,
+    confidence: f64,
+    observed_at: String,
+    expires_at: Option<String>,
+    tags_json: String,
+    created_at: String,
+    updated_at: String,
+}
+
+fn validate_research_kind(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if [
+        "competitor",
+        "market",
+        "audience",
+        "content",
+        "channel",
+        "offer",
+        "customer_voice",
+        "general",
+    ]
+    .contains(&value.as_str())
+    {
+        Ok(value)
+    } else {
+        Err("unsupported research kind".to_string())
+    }
+}
+
+fn validate_research_status(value: &str) -> Result<String, String> {
+    let value = value.trim().to_lowercase();
+    if ["draft", "active", "completed", "archived"].contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err("unsupported research status".to_string())
+    }
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn research_brief_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    name: String,
+    kind: String,
+    question: String,
+    objectives_json: Option<String>,
+    status: String,
+) -> Result<ResearchBriefView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let kind = validate_research_kind(&kind)?;
+    let question = question.trim().to_string();
+    if question.is_empty() || question.len() > 20_000 {
+        return Err("research question is invalid".to_string());
+    }
+    let objectives_json = validate_json_string_array(objectives_json, "objectives_json", 100)?;
+    let status = validate_research_status(&status)?;
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO research_briefs(
+               id, workspace_id, name, kind, question, objectives_json, status,
+               created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name,
+               kind=excluded.kind,
+               question=excluded.question,
+               objectives_json=excluded.objectives_json,
+               status=excluded.status,
+               updated_at=excluded.updated_at
+             WHERE research_briefs.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                name,
+                kind,
+                question,
+                objectives_json,
+                status,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("research brief id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "research",
+        "brief_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(ResearchBriefView {
+        id,
+        name,
+        kind,
+        question,
+        objectives_json,
+        status,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn research_brief_list(app: tauri::AppHandle) -> Result<Vec<ResearchBriefView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, kind, question, objectives_json, status, created_at, updated_at
+             FROM research_briefs
+             WHERE workspace_id=?1
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(ResearchBriefView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                kind: row.get(2)?,
+                question: row.get(3)?,
+                objectives_json: row.get(4)?,
+                status: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn research_finding_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    brief_id: String,
+    title: String,
+    statement: String,
+    source_ids_json: Option<String>,
+    confidence: f64,
+    observed_at: String,
+    expires_at: Option<String>,
+    tags_json: Option<String>,
+) -> Result<ResearchFindingView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let brief_id = validate_label(&brief_id).map_err(|error| error.to_string())?;
+    let title = validate_label(&title).map_err(|error| error.to_string())?;
+    let statement = statement.trim().to_string();
+    if statement.is_empty() || statement.len() > 20_000 {
+        return Err("research finding statement is invalid".to_string());
+    }
+    if !confidence.is_finite() || !(0.0..=1.0).contains(&confidence) {
+        return Err("research finding confidence must be between 0 and 1".to_string());
+    }
+    let source_ids_json = validate_json_string_array(source_ids_json, "source_ids_json", 100)?;
+    if source_ids_json == "[]" {
+        return Err("research finding requires at least one source".to_string());
+    }
+    let tags_json = validate_json_string_array(tags_json, "tags_json", 100)?;
+    let observed_at = normalize_rfc3339_utc(&observed_at)?;
+    let expires_at = expires_at
+        .map(|value| normalize_rfc3339_utc(&value))
+        .transpose()?;
+    if let Some(expiry) = expires_at.as_deref() {
+        if expiry < observed_at.as_str() {
+            return Err("research finding expiry precedes observation".to_string());
+        }
+    }
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let brief_workspace: Option<String> = connection
+        .query_row(
+            "SELECT workspace_id FROM research_briefs WHERE id=?1",
+            params![&brief_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    if brief_workspace.as_deref() != Some(workspace_id.as_str()) {
+        return Err("research brief is not in active workspace".to_string());
+    }
+
+    validate_workspace_source_ids(&connection, &workspace_id, &source_ids_json)?;
+
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO research_findings(
+               id, workspace_id, brief_id, title, statement, source_ids_json,
+               confidence, observed_at, expires_at, tags_json, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)
+             ON CONFLICT(id) DO UPDATE SET
+               brief_id=excluded.brief_id,
+               title=excluded.title,
+               statement=excluded.statement,
+               source_ids_json=excluded.source_ids_json,
+               confidence=excluded.confidence,
+               observed_at=excluded.observed_at,
+               expires_at=excluded.expires_at,
+               tags_json=excluded.tags_json,
+               updated_at=excluded.updated_at
+             WHERE research_findings.workspace_id=excluded.workspace_id",
+            params![
+                id,
+                workspace_id,
+                brief_id,
+                title,
+                statement,
+                source_ids_json,
+                confidence,
+                observed_at,
+                expires_at,
+                tags_json,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("research finding id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "research",
+        "finding_upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(ResearchFindingView {
+        id,
+        brief_id,
+        title,
+        statement,
+        source_ids_json,
+        confidence,
+        observed_at,
+        expires_at,
+        tags_json,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn research_finding_list(
+    app: tauri::AppHandle,
+    brief_id: Option<String>,
+) -> Result<Vec<ResearchFindingView>, String> {
+    let workspace_id = active_workspace_id();
+    let brief_id = brief_id
+        .map(|value| validate_label(&value))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut statement = connection
+        .prepare(
+            "SELECT id, brief_id, title, statement, source_ids_json, confidence,
+                    observed_at, expires_at, tags_json, created_at, updated_at
+             FROM research_findings
+             WHERE workspace_id=?1
+               AND (?2 IS NULL OR brief_id=?2)
+             ORDER BY confidence DESC, observed_at DESC, updated_at DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![workspace_id, brief_id], |row| {
+            Ok(ResearchFindingView {
+                id: row.get(0)?,
+                brief_id: row.get(1)?,
+                title: row.get(2)?,
+                statement: row.get(3)?,
+                source_ids_json: row.get(4)?,
+                confidence: row.get(5)?,
+                observed_at: row.get(6)?,
+                expires_at: row.get(7)?,
+                tags_json: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn research_publish_to_knowledge(
+    app: tauri::AppHandle,
+    finding_id: String,
+) -> Result<KnowledgeItemView, String> {
+    let workspace_id = active_workspace_id();
+    let finding_id = validate_label(&finding_id).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let finding: Option<(String, String, String, f64, Option<String>)> = connection
+        .query_row(
+            "SELECT statement, source_ids_json, id, confidence, expires_at
+             FROM research_findings
+             WHERE id=?1 AND workspace_id=?2",
+            params![&finding_id, &workspace_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    let Some((statement, source_ids_json, id, confidence, expires_at)) = finding else {
+        return Err("research finding not found in active workspace".to_string());
+    };
+
+    validate_workspace_source_ids(&connection, &workspace_id, &source_ids_json)?;
+
+    let tags_json = serde_json::to_string(&["research"]).map_err(|error| error.to_string())?;
+    let knowledge_id = format!("research:{id}");
+    let trust = if confidence >= 0.9 {
+        "verified"
+    } else if confidence >= 0.7 {
+        "approved"
+    } else {
+        "observed"
+    };
+    let timestamp = chrono_like_timestamp();
+    let changed = connection
+        .execute(
+            "INSERT INTO knowledge_items(
+               id, workspace_id, statement, source_ids_json, trust, tags_json, expires_at,
+               created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+             ON CONFLICT(id) DO UPDATE SET
+               statement=excluded.statement,
+               source_ids_json=excluded.source_ids_json,
+               trust=excluded.trust,
+               tags_json=excluded.tags_json,
+               expires_at=excluded.expires_at,
+               updated_at=excluded.updated_at
+             WHERE knowledge_items.workspace_id=excluded.workspace_id",
+            params![
+                knowledge_id,
+                workspace_id,
+                statement,
+                source_ids_json,
+                trust,
+                tags_json,
+                expires_at,
+                timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("knowledge item id already belongs to another workspace".to_string());
+    }
+
+    write_audit(
+        &connection,
+        "research",
+        "publish_to_knowledge",
+        "success",
+        "user",
+        Some(&finding_id),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(KnowledgeItemView {
+        id: knowledge_id,
+        statement,
+        source_ids_json,
+        trust: trust.to_string(),
+        tags_json,
+        expires_at,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
+    })
+}
+
 fn objective_upsert(
     app: tauri::AppHandle,
     id: String,
