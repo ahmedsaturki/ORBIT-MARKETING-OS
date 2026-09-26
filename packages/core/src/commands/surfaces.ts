@@ -20,15 +20,17 @@ export function listCommandsForSurface(
   surface: CommandSurface,
   registry: CommandRegistry = new CommandRegistry(),
 ): readonly CommandDefinition[] {
-  return registry.list().filter((command) => command.surfaces.includes(surface));
+  return registry
+    .list()
+    .filter((command) => command.surfaces.includes(surface));
 }
 
 /**
  * Read-only authorization preview for CLI/MCP/agent clients.
  *
  * Previewing never executes a handler, dispatches a connector, or mutates state.
- * Actual execution must still go through the canonical CommandDispatcher owned by
- * the runtime.
+ * Actual execution must still go through the canonical CommandDispatcher owned
+ * by the runtime.
  */
 export function previewCommandInvocation(input: {
   readonly commandId: string;
