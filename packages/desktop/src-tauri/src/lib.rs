@@ -1889,6 +1889,66 @@ BEGIN
   SELECT RAISE(ABORT, 'experiment observation workspace mismatch');
 END;
 
+CREATE TRIGGER IF NOT EXISTS orbit_research_briefs_insert_workspace
+BEFORE INSERT ON research_briefs
+WHEN NOT EXISTS (
+  SELECT 1 FROM workspaces w WHERE w.id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'research brief workspace mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_research_briefs_update_workspace
+BEFORE UPDATE OF workspace_id ON research_briefs
+WHEN NOT EXISTS (
+  SELECT 1 FROM workspaces w WHERE w.id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'research brief workspace mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_research_findings_insert_workspace
+BEFORE INSERT ON research_findings
+WHEN NOT EXISTS (
+  SELECT 1 FROM research_briefs b
+  WHERE b.id = NEW.brief_id
+    AND b.workspace_id = NEW.workspace_id
+)
+OR EXISTS (
+  SELECT 1
+  FROM json_each(NEW.source_ids_json) src
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM knowledge_sources ks
+    WHERE ks.id = src.value
+      AND ks.workspace_id = NEW.workspace_id
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'research finding workspace/reference mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_research_findings_update_workspace
+BEFORE UPDATE OF workspace_id, brief_id, source_ids_json ON research_findings
+WHEN NOT EXISTS (
+  SELECT 1 FROM research_briefs b
+  WHERE b.id = NEW.brief_id
+    AND b.workspace_id = NEW.workspace_id
+)
+OR EXISTS (
+  SELECT 1
+  FROM json_each(NEW.source_ids_json) src
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM knowledge_sources ks
+    WHERE ks.id = src.value
+      AND ks.workspace_id = NEW.workspace_id
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'research finding workspace/reference mismatch');
+END;
+
 CREATE TRIGGER IF NOT EXISTS orbit_opportunities_insert_workspace
 BEFORE INSERT ON opportunities
 WHEN NOT EXISTS (
@@ -12532,7 +12592,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 14);
+        assert_eq!(version, 15);
     }
 
     #[test]
@@ -13290,6 +13350,11 @@ pub fn run() {
             work_dependency_upsert,
             work_dependency_list,
             knowledge_source_list,
+            research_brief_upsert,
+            research_brief_list,
+            research_finding_upsert,
+            research_finding_list,
+            research_publish_to_knowledge,
             knowledge_item_upsert,
             knowledge_item_list,
             knowledge_evidence_add,
@@ -13390,7 +13455,7 @@ mod experimentation_runtime_tests {
     }
 
     #[test]
-    fn schema_migrates_to_v14() {
+    fn schema_migrates_to_v15() {
         let connection = Connection::open_in_memory().expect("sqlite");
         connection.execute_batch(SCHEMA).expect("schema");
         migrate_schema(&connection).expect("migration");
