@@ -946,7 +946,10 @@ fn validate_operational_event_kind(value: &str) -> Result<&str, AppError> {
         | "human.intervention_required"
         | "approval.requested"
         | "approval.decided"
-        | "insight.recorded" => Ok(value.trim()),
+        | "insight.recorded"
+        | "experiment.updated"
+        | "experiment.assignment"
+        | "experiment.observation_recorded" => Ok(value.trim()),
         _ => Err(AppError::InvalidPayload),
     }
 }
