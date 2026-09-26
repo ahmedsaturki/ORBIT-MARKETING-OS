@@ -125,5 +125,4 @@ test.describe("ORBIT public web surface", () => {
     expect(body.releaseSha).toMatch(/^(unreleased|[0-9a-f]{40})$/);
     expect(body.releaseProvenance.source).toBe("NEXT_PUBLIC_ORBIT_RELEASE_SHA");
   });
-
 });
