@@ -28,7 +28,7 @@ describe("canonical database schema contract", () => {
       "experiment_observations",
     ]) {
       expect(DATABASE_SCHEMA_SQL).toContain(
-              `CREATE TABLE IF NOT EXISTS ${table}`,
+        `CREATE TABLE IF NOT EXISTS ${table}`,
       );
     }
   });
