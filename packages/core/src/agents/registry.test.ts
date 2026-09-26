@@ -64,8 +64,8 @@ describe("AgentRegistry", () => {
       }),
     );
     expect(result.errors).toEqual([
-      "duplicate_tool_grant",
       "duplicate_tool_scope",
+      "duplicate_tool_grant",
     ]);
   });
 
