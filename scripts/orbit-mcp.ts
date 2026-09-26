@@ -251,6 +251,7 @@ async function handle(request: RpcRequest): Promise<void> {
       });
 
       write(request.id, {
+        ...(isModernRequest(params) ? { _meta: modernResponseMeta() } : {}),
         content: [{ type: "text", text: JSON.stringify(preview) }],
         isError: !preview.decision.allowed,
       });
