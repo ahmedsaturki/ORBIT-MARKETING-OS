@@ -397,19 +397,20 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     let crossWorkspaceError = "";
     try {
       await page!.evaluate(
-        (payload) =>
-          window.__TAURI_INTERNALS__.invoke("research_finding_upsert", payload),
-        {
-          id: "e2e-research-cross-" + suffix,
-          briefId: brief.id,
-          title: "Cross workspace",
-          statement: "Must be rejected.",
-          sourceIdsJson: JSON.stringify(["e2e-research-source-" + suffix]),
-          confidence: 0.8,
-          observedAt: "2026-09-26T09:00:00Z",
-          expiresAt: null,
-          tagsJson: JSON.stringify([]),
-        },
+        (linkId) =>
+          window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
+            input: {
+              linkId,
+              sourceType: "manual",
+              metricName: "clicks",
+              metricValue: 1,
+              observedAt: "2026-09-26T18:00:00Z",
+              sourceLocator: null,
+              provenance: "manual_observation",
+              metadataJson: JSON.stringify({ test: true }),
+            },
+          }),
+        link.id,
       );
     } catch (caught: unknown) {
       crossWorkspaceError =
@@ -521,13 +522,14 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
         window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
           input: {
             linkId,
-          sourceType: "manual",
-          metricName: "clicks",
-          metricValue: 14,
-          observedAt: "2026-09-26T18:00:00Z",
-          sourceLocator: null,
-          provenance: "manual_observation",
-          metadataJson: JSON.stringify({ test: true }),
+            sourceType: "manual",
+            metricName: "clicks",
+            metricValue: 14,
+            observedAt: "2026-09-26T18:00:00Z",
+            sourceLocator: null,
+            provenance: "manual_observation",
+            metadataJson: JSON.stringify({ test: true }),
+          },
         }),
       link.id,
     )) as { id: string; metric_value: number };
