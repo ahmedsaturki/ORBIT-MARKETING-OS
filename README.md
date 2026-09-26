@@ -10,9 +10,9 @@ The production monorepo architecture is consolidated on `main`; the historical r
 
 The current production branch is:
 
-`main`
+`main` (`08e0f61e881dc94901cfb280948a29f73508fd65`)
 
-Universal Search is workspace-scoped and read-only, with deterministic ranking, bounded queries, and explicit exclusion of credentials, sessions, and other vault secrets.
+Universal Search is workspace-scoped and read-only, with deterministic ranking, bounded queries, explicit exclusion of credentials/sessions, and literal wildcard escaping coverage.
 
 The rebuild is acceptance-driven: implementation is not considered complete until it has automated tests, integration evidence, security checks, performance evidence, documentation, and a releasable artifact where applicable.
 
@@ -39,6 +39,7 @@ pnpm install --frozen-lockfile
 Core checks:
 
 ```bash
+pnpm verify:readiness
 pnpm typecheck
 pnpm lint
 pnpm test
@@ -67,6 +68,8 @@ Product north star: [docs/TARGET_PRODUCT_BLUEPRINT.md](docs/TARGET_PRODUCT_BLUEP
 Operating control: [docs/OPERATING_CONTROL.md](docs/OPERATING_CONTROL.md) defines the deterministic Simulation, Replay, and Policy Pack layer used to preview, explain, and govern execution without creating a second execution system. The governed operator boundary is documented in [docs/CLI_MCP_SURFACES.md](docs/CLI_MCP_SURFACES.md).
 
 Launch control: `docs/LAUNCH_SCORECARD.md`
+
+Executable release truth: `pnpm verify:readiness` for verification and `pnpm verify:readiness -- --mode commercial` for the fail-closed commercial gate.
 
 Canonical release evidence snapshot: `docs/RELEASE_EVIDENCE_2026-09-26.md`
 
