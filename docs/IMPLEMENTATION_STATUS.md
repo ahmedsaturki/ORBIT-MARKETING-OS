@@ -4,9 +4,9 @@ Updated: 2026-09-26
 
 ## Current state
 
-The production implementation is consolidated on main through PR #47. The authoritative current main commit is `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
+The production implementation is consolidated on `main` through PR #48. The authoritative current main commit is `cea2873db9817d4930662747441b55e1660dd67d`.
 
-The current validation branch adds the governed Command Dispatcher on top of that verified lineage. No unsupported external connector capability is implied.
+PR #48 added the governed Command Dispatcher. Its exact head passed CI, Desktop Native Validation, and Mobile Validation before merge. No unsupported external connector capability is implied.
 
 ## Product surface
 
