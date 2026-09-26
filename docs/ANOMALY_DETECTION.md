@@ -23,9 +23,8 @@ The detector never looks ahead, never mutates runtime state, and never dispatche
 an external connector. Its result is a descriptive anomaly signal, not a causal
 conclusion, forecast, or statistical-significance claim.
 
-The governed `analytics.detect_anomalies` command is read-only and uses the same
-command registry and authorization boundary exposed to Desktop/Web/Mobile/CLI/MCP/
-Agents.
+The detector is a core read-only primitive. A future governed command/agent adapter must
+use the canonical CommandDispatcher rather than creating a second execution system.
 
 ## Bounded configuration
 
