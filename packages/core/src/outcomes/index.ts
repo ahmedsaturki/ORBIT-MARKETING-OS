@@ -1,18 +1,8 @@
 export type OpportunityStage =
-  | "new"
-  | "qualified"
-  | "proposal"
-  | "negotiation"
-  | "won"
-  | "lost"
-  | "nurture";
+  "new" | "qualified" | "proposal" | "negotiation" | "won" | "lost" | "nurture";
 
 export type InsightKind =
-  | "performance"
-  | "anomaly"
-  | "learning"
-  | "trend"
-  | "recommendation";
+  "performance" | "anomaly" | "learning" | "trend" | "recommendation";
 
 export interface MarketingOpportunity {
   readonly id: string;
@@ -62,20 +52,6 @@ const INSIGHT_KINDS: readonly InsightKind[] = [
   "trend",
   "recommendation",
 ];
-
-export interface MarketingInsightInput
-  extends Omit<MarketingInsight, "sourceIds"> {
-  readonly sourceIds: readonly string[];
-}
-
-export function createMarketingInsight(
-  input: MarketingInsightInput,
-): MarketingInsight {
-  return {
-    ...input,
-    sourceIds: [...input.sourceIds],
-  };
-}
 
 export function validateOpportunity(
   opportunity: MarketingOpportunity,
