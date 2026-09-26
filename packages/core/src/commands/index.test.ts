@@ -10,6 +10,7 @@ describe("CommandRegistry", () => {
     expect(ids).toContain("execution.replay");
     expect(ids).toContain("experiment.define");
     expect(ids).toContain("experiment.summarize");
+    expect(ids).toContain("analytics.detect_anomalies");
   });
 
   it("rejects externally visible mutable commands without approval", () => {
