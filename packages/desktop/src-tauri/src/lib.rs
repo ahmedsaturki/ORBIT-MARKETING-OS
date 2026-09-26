@@ -9234,8 +9234,6 @@ fn operational_event_append(
     .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
-#[tauri::command]
 fn append_experiment_operational_event(
     connection: &mut Connection,
     workspace_id: &str,
