@@ -37,6 +37,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Require main release ref
+        run: test "$GITHUB_REF" = "refs/heads/main"
+
       - name: Verify release authorization
         env:
           CONFIRM: ${{ inputs.confirm }}
