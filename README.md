@@ -66,6 +66,8 @@ Operating control: [docs/OPERATING_CONTROL.md](docs/OPERATING_CONTROL.md) define
 
 Launch control: `docs/LAUNCH_SCORECARD.md`
 
+Canonical release evidence snapshot: `docs/RELEASE_EVIDENCE_2026-09-26.md`
+
 The current web product is live on Vercel; desktop artifacts and Android validation artifacts are built by GitHub Actions. Commercial launch remains gated by signing, real connector E2E, soak/rollback, and billing evidence.
 
 Zero-cost technical verification fallback: `docs/SELF_HOSTED_VERIFICATION.md`
