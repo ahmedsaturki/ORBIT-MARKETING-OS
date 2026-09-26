@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  AgentRegistry,
-  validateAgentDefinition,
-} from "./registry.js";
+import { AgentRegistry, validateAgentDefinition } from "./registry.js";
 import type { AgentDefinition } from "./index.js";
 
 function agent(overrides: Partial<AgentDefinition> = {}): AgentDefinition {
