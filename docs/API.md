@@ -204,3 +204,11 @@ When an IPC command changes, update the desktop client, this API contract, and i
 - `research_finding_upsert` / `research_finding_list` manage evidence-backed findings. Every finding requires at least one workspace-local knowledge source and a bounded confidence value.
 - `research_publish_to_knowledge` explicitly promotes a finding into ORBIT Knowledge after source/workspace validation. This action is user-triggered and produces an auditable write.
 - Research operations do not execute external connectors and do not read vault/session secrets.
+
+
+### Universal Search
+
+- `global_search` — read-only, active-workspace-scoped discovery across campaign, content, contact, conversation, opportunity, work, strategy, knowledge, agent, policy, experiment, research brief, and research finding records.
+- The native command accepts a query up to 200 characters and a result limit capped at 50.
+- Exact/prefix/substring matching is deterministically ranked; SQL wildcards are escaped before parameter binding.
+- It never reads or returns vault records, session payloads, passwords, tokens, or API keys.
