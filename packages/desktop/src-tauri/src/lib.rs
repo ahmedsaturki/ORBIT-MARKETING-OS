@@ -12772,12 +12772,27 @@ mod interrupted_restore_recovery_tests {
             .execute_batch("PRAGMA foreign_keys = ON; PRAGMA user_version = 12;")
             .expect("version fixture should initialize");
 
-        migrate_schema(&connection).expect("v13 migration should succeed");
+        migrate_schema(&connection).expect("schema migrations should succeed");
 
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 13);
+        assert_eq!(version, 14);
+
+        let experiment_tables: Vec<String> = {
+            let mut statement = connection
+                .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('experiments', 'experiment_observations') ORDER BY name")
+                .expect("experiment tables should be queryable");
+            let rows = statement
+                .query_map([], |row| row.get::<_, String>(0))
+                .expect("experiment tables should be readable");
+            rows.collect::<Result<Vec<_>, _>>()
+                .expect("experiment tables should collect")
+        };
+        assert_eq!(
+            experiment_tables,
+            vec!["experiment_observations".to_string(), "experiments".to_string()]
+        );
 
         let columns: Vec<String> = {
             let mut statement = connection
@@ -12793,6 +12808,7 @@ mod interrupted_restore_recovery_tests {
         assert!(columns.contains(&"sequence".to_string()));
         assert!(columns.contains(&"actor_id".to_string()));
         assert!(columns.contains(&"payload_json".to_string()));
+        assert!(columns.contains(&"sequence".to_string()));
     }
 
     #[test]
