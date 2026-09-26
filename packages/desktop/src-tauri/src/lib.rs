@@ -12642,7 +12642,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 14);
+        assert_eq!(version, 15);
     }
 
     #[test]
@@ -12901,7 +12901,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 14);
+        assert_eq!(version, 15);
     }
 
     #[test]
@@ -13466,11 +13466,31 @@ mod experimentation_runtime_tests {
     fn schema_migrates_to_v15() {
         let connection = Connection::open_in_memory().expect("sqlite");
         connection.execute_batch(SCHEMA).expect("schema");
-        migrate_schema(&connection).expect("migration");
+        connection
+            .execute_batch(
+                "DROP TABLE IF EXISTS research_findings;
+                 DROP TABLE IF EXISTS research_briefs;
+                 PRAGMA user_version = 14;",
+            )
+            .expect("v14 fixture should be prepared");
+
+        migrate_schema(&connection).expect("v14 to v15 migration should succeed");
+
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("version");
-        assert_eq!(version, 14);
+        assert_eq!(version, 15);
+
+        for table in ["research_briefs", "research_findings"] {
+            let exists: i64 = connection
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+                    params![table],
+                    |row| row.get(0),
+                )
+                .expect("research table query should work");
+            assert_eq!(exists, 1, "expected migrated research table {table}");
+        }
     }
 
     #[test]
@@ -13717,7 +13737,7 @@ mod interrupted_restore_recovery_tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 14);
+        assert_eq!(version, 15);
 
         let experiment_tables: Vec<String> = {
             let mut statement = connection
