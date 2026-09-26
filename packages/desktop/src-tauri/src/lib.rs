@@ -9334,6 +9334,7 @@ fn experiment_upsert(
     if changed != 1 {
         return Err("experiment id already belongs to another workspace".to_string());
     }
+    let actor_id = local_user_id(&connection).map_err(|error| error.to_string())?;
     write_audit_for_workspace(
         &connection,
         &workspace_id,
@@ -9344,7 +9345,6 @@ fn experiment_upsert(
         Some(&id),
     )
     .map_err(|error| error.to_string())?;
-    let actor_id = "desktop-user".to_string();
     let mut connection = connection;
     append_experiment_operational_event(
         &mut connection,
@@ -9474,6 +9474,7 @@ fn experiment_assign_variant(
         .map_err(|_| "stored experiment variants are invalid".to_string())?;
     let variant_id =
         experiment_variant_for_subject(&workspace_id, &experiment_id, &subject_id, &variants)?;
+    let actor_id = local_user_id(&connection).map_err(|error| error.to_string())?;
     let assignment = ExperimentAssignmentView {
         experiment_id,
         workspace_id: workspace_id.clone(),
@@ -9494,7 +9495,7 @@ fn experiment_assign_variant(
         "experiment.assignment",
         "succeeded",
         "user",
-        "desktop-user",
+        &actor_id,
         Some("experiment"),
         Some(&assignment.experiment_id),
         None,
