@@ -11,7 +11,9 @@ describe("command operator surfaces", () => {
     for (const surface of ["cli", "mcp"] as const) {
       const commands = listCommandsForSurface(surface, registry);
       expect(commands.length).toBeGreaterThan(0);
-      expect(commands.every((command) => command.surfaces.includes(surface))).toBe(true);
+      expect(
+        commands.every((command) => command.surfaces.includes(surface)),
+      ).toBe(true);
     }
   });
 
@@ -24,7 +26,10 @@ describe("command operator surfaces", () => {
       surface: "mcp",
     });
     expect(preview.command.id).toBe("task.execute");
-    expect(preview.decision).toEqual({ allowed: false, reason: "approval_required" });
+    expect(preview.decision).toEqual({
+      allowed: false,
+      reason: "approval_required",
+    });
   });
 
   it("uses the canonical registry for unknown commands", () => {
@@ -35,7 +40,10 @@ describe("command operator surfaces", () => {
       grantedScopes: [],
       surface: "cli",
     });
-    expect(preview.decision).toEqual({ allowed: false, reason: "unknown_command" });
+    expect(preview.decision).toEqual({
+      allowed: false,
+      reason: "unknown_command",
+    });
   });
 
   it("preserves scope denial for a known command", () => {
@@ -46,6 +54,9 @@ describe("command operator surfaces", () => {
       grantedScopes: [],
       surface: "cli",
     });
-    expect(preview.decision).toEqual({ allowed: false, reason: "scope_denied" });
+    expect(preview.decision).toEqual({
+      allowed: false,
+      reason: "scope_denied",
+    });
   });
 });
