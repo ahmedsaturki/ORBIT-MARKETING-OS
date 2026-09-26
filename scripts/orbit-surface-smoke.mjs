@@ -139,7 +139,16 @@ const modernLines = runMcp(
     jsonrpc: "2.0",
     id: 3,
     method: "server/discover",
-    params: {},
+    params: {
+      _meta: {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities": {},
+        "io.modelcontextprotocol/clientInfo": {
+          name: "orbit-smoke",
+          version: "1.0.0",
+        },
+      },
+    },
   }) +
     "\n" +
     JSON.stringify({
