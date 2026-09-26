@@ -13015,7 +13015,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 15);
+        assert_eq!(version, 16);
     }
 
     #[test]
@@ -13879,7 +13879,7 @@ mod experimentation_runtime_tests {
     }
 
     #[test]
-    fn schema_migrates_to_v15() {
+    fn schema_migrates_to_v16() {
         let connection = Connection::open_in_memory().expect("sqlite");
         connection.execute_batch(SCHEMA).expect("schema");
         connection
@@ -13890,14 +13890,19 @@ mod experimentation_runtime_tests {
             )
             .expect("v14 fixture should be prepared");
 
-        migrate_schema(&connection).expect("v14 to v15 migration should succeed");
+        migrate_schema(&connection).expect("v14 to v16 migration should succeed");
 
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("version");
         assert_eq!(version, 15);
 
-        for table in ["research_briefs", "research_findings"] {
+        for table in [
+            "research_briefs",
+            "research_findings",
+            "marketing_links",
+            "marketing_link_evidence",
+        ] {
             let exists: i64 = connection
                 .query_row(
                     "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
