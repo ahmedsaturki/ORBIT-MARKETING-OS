@@ -6,7 +6,7 @@ use aes_gcm::{
 };
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{named_params, params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -719,6 +719,15 @@ struct AccountView {
     username: Option<String>,
     status: String,
     has_encrypted_session: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct GlobalSearchResultView {
+    kind: String,
+    id: String,
+    title: String,
+    subtitle: String,
+    score: i64,
 }
 
 fn validate_telegram_token(token: &str) -> Result<String, AppError> {
@@ -6972,6 +6981,206 @@ fn outcome_analytics(app: tauri::AppHandle) -> Result<OutcomeAnalyticsView, Stri
     })
 }
 
+
+#[tauri::command]
+fn global_search(
+    app: tauri::AppHandle,
+    query: String,
+    limit: Option<i64>,
+) -> Result<Vec<GlobalSearchResultView>, String> {
+    let workspace_id = active_workspace_id();
+    let query = query.trim().to_string();
+    if query.is_empty() {
+        return Err("global search query is required".to_string());
+    }
+    if query.chars().count() > 200 {
+        return Err("global search query is too long".to_string());
+    }
+    if query.chars().any(|character| character.is_control()) {
+        return Err("global search query contains invalid control characters".to_string());
+    }
+    let limit = limit.unwrap_or(25).clamp(1, 50);
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let escaped = query
+        .replace('\\\\', "\\\\\\\\")
+        .replace('%', "\\\\%")
+        .replace('_', "\\\\_");
+    let sql = r#"
+      SELECT kind, id, title, subtitle, score
+      FROM (
+        SELECT 'campaign' AS kind, id, name AS title, status AS subtitle,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               ELSE 70 END AS score
+        FROM campaigns
+        WHERE workspace_id = :workspace
+          AND lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+
+        UNION ALL
+        SELECT 'content', id, title,
+          CASE WHEN length(body) > 180 THEN substr(body, 1, 180) || '…' ELSE body END,
+          CASE WHEN lower(title) = lower(:q) THEN 100
+               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               WHEN lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\' THEN 70
+               ELSE 25 END
+        FROM content_items
+        WHERE workspace_id = :workspace
+          AND (lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(body) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\')
+
+        UNION ALL
+        SELECT 'contact', id, display_name,
+          COALESCE(email, COALESCE(phone, status)),
+          CASE WHEN lower(display_name) = lower(:q) THEN 100
+               WHEN lower(display_name) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               ELSE 70 END
+        FROM contacts
+        WHERE workspace_id = :workspace
+          AND (lower(display_name) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(COALESCE(email, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(COALESCE(phone, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\')
+
+        UNION ALL
+        SELECT 'conversation', id, platform || ' conversation',
+          COALESCE(external_thread_id, status),
+          CASE WHEN lower(COALESCE(external_thread_id, '')) = lower(:q) THEN 100
+               WHEN lower(COALESCE(external_thread_id, '')) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               ELSE 60 END
+        FROM conversations
+        WHERE workspace_id = :workspace
+          AND (lower(COALESCE(external_thread_id, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(platform) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(status) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\')
+
+        UNION ALL
+        SELECT 'opportunity', id, name, stage || ' • ' || currency,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               ELSE 70 END
+        FROM opportunities
+        WHERE workspace_id = :workspace
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(stage) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\')
+
+        UNION ALL
+        SELECT 'work', id, title, status,
+          CASE WHEN lower(title) = lower(:q) THEN 100
+               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               ELSE 70 END
+        FROM work_items
+        WHERE workspace_id = :workspace
+          AND lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+
+        UNION ALL
+        SELECT 'strategy', id, 'Strategy v' || version,
+          CASE WHEN length(positioning) > 180 THEN substr(positioning, 1, 180) || '…' ELSE positioning END,
+          CASE WHEN lower(positioning) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 80 ELSE 60 END
+        FROM strategy_documents
+        WHERE workspace_id = :workspace
+          AND lower(positioning) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+
+        UNION ALL
+        SELECT 'knowledge', id,
+          CASE WHEN length(statement) > 120 THEN substr(statement, 1, 120) || '…' ELSE statement END,
+          trust,
+          CASE trust WHEN 'verified' THEN 80 WHEN 'approved' THEN 70 WHEN 'observed' THEN 60 ELSE 20 END
+        FROM knowledge_items
+        WHERE workspace_id = :workspace
+          AND lower(statement) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+
+        UNION ALL
+        SELECT 'agent', id, name,
+          role || ' • ' || CASE WHEN enabled = 1 THEN 'enabled' ELSE 'disabled' END,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               ELSE 70 END
+        FROM agent_definitions
+        WHERE workspace_id = :workspace
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(goal) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\')
+
+        UNION ALL
+        SELECT 'policy', id, name, mode,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               ELSE 70 END
+        FROM marketing_policies
+        WHERE workspace_id = :workspace
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(mode) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\')
+
+        UNION ALL
+        SELECT 'experiment', id, name, status || ' • ' || objective_metric,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               ELSE 70 END
+        FROM experiments
+        WHERE workspace_id = :workspace
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(hypothesis) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(objective_metric) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\')
+
+        UNION ALL
+        SELECT 'research_brief', id, name,
+          kind || ' • ' || status || ' • ' || CASE WHEN length(question) > 160 THEN substr(question, 1, 160) || '…' ELSE question END,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               WHEN lower(question) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\' THEN 75
+               ELSE 60 END
+        FROM research_briefs
+        WHERE workspace_id = :workspace
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(question) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(kind) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\')
+
+        UNION ALL
+        SELECT 'research_finding', id, title,
+          CASE WHEN length(statement) > 180 THEN substr(statement, 1, 180) || '…' ELSE statement END,
+          CASE WHEN lower(title) = lower(:q) THEN 100
+               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\\\\' THEN 90
+               WHEN lower(statement) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\' THEN 75
+               ELSE 60 END
+        FROM research_findings
+        WHERE workspace_id = :workspace
+          AND (lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(statement) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\'
+            OR lower(tags_json) LIKE '%' || lower(:q) || '%' ESCAPE '\\\\')
+      )
+      ORDER BY score DESC, lower(title) ASC, kind ASC, id ASC
+      LIMIT :limit
+    "#;
+
+    let mut statement = connection.prepare(sql).map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(
+            named_params! {
+                ":q": escaped,
+                ":workspace": workspace_id,
+                ":limit": limit,
+            },
+            |row| {
+                Ok(GlobalSearchResultView {
+                    kind: row.get(0)?,
+                    id: row.get(1)?,
+                    title: row.get(2)?,
+                    subtitle: row.get(3)?,
+                    score: row.get(4)?,
+                })
+            },
+        )
+        .map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
+}
 #[tauri::command]
 fn insight_list(app: tauri::AppHandle) -> Result<Vec<InsightView>, String> {
     let workspace_id = active_workspace_id();
@@ -13321,6 +13530,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_health,
+            global_search,
             workspace_list,
             workspace_current,
             workspace_create,
@@ -13771,6 +13981,45 @@ mod interrupted_restore_recovery_tests {
         assert!(columns.contains(&"sequence".to_string()));
         assert!(columns.contains(&"actor_id".to_string()));
         assert!(columns.contains(&"payload_json".to_string()));
+    }
+
+
+    #[test]
+    fn global_search_is_workspace_scoped_and_bounded() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-1', 'One', '1'), ('workspace-2', 'Two', '1');
+                 INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                 VALUES ('campaign-1', 'workspace-1', 'Alpha Campaign', 'draft', '1'),
+                        ('campaign-2', 'workspace-2', 'Alpha Campaign', 'draft', '1');
+                 INSERT INTO research_briefs(id, workspace_id, name, kind, question, objectives_json, status, created_at, updated_at)
+                 VALUES ('brief-1', 'workspace-1', 'Alpha Research', 'market', 'How should Alpha grow?', '[]', 'active', '1', '1');
+                 INSERT INTO research_findings(id, workspace_id, brief_id, title, statement, source_ids_json, confidence, observed_at, expires_at, tags_json, created_at, updated_at)
+                 VALUES ('finding-1', 'workspace-1', 'brief-1', 'Alpha Finding', 'Alpha evidence', '["source-1"]', 0.8, '2026-09-26T00:00:00Z', NULL, '["alpha"]', '1', '1');
+                 INSERT INTO knowledge_sources(id, workspace_id, kind, label, locator, created_at)
+                 VALUES ('source-1', 'workspace-1', 'url', 'Source', 'https://example.com', '1');",
+            )
+            .expect("search fixture should be created");
+        let escaped = "Alpha".replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
+        let sql = "SELECT kind, id FROM campaigns WHERE workspace_id=?1 AND lower(name) LIKE '%' || lower(?2) || '%' ESCAPE '\\'";
+        let rows: Vec<(String, String)> = connection
+            .prepare(sql)
+            .expect("search query should prepare")
+            .query_map(params!["workspace-1", escaped], |row| Ok((row.get(0)?, row.get(1)?)))
+            .expect("search query should run")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("search rows should collect");
+        assert_eq!(rows, vec![("campaign".to_string(), "campaign-1".to_string())]);
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM research_findings WHERE workspace_id='workspace-1'", [], |row| row.get(0))
+            .expect("finding should be queryable");
+        assert_eq!(count, 1);
     }
 
     #[test]
