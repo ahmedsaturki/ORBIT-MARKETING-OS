@@ -15,6 +15,8 @@ Updated: 2026-09-26.
 - PR #84: merged — SHA-independent release documentation.
 - PR #85: merged — web release health/provenance checks.
 - PR #86: merged — evidence-backed reporting packs.
+- PR #88: merged — encrypted sync-network convergence proof.
+- PR #89: merged — auditable release evidence bundle.
 
 ## Readiness rule
 
@@ -48,7 +50,6 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 ## Production gates still open
 
 - real Telegram authorization and controlled delivery;
-- real LinkedIn authorization and controlled publishing;
 - real LinkedIn authorization and controlled publishing;
 - live multi-device CRDT verification;
 - dedicated restart/migration/crash recovery evidence consolidation;
