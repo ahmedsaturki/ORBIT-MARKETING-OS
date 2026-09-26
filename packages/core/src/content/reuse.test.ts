@@ -132,6 +132,32 @@ describe("content reuse policy", () => {
     ).toThrow("candidate.createdAt must be a valid date");
   });
 
+  it("rejects invalid current and history dates", () => {
+    expect(() =>
+      evaluateContentReuse(
+        base,
+        [],
+        policy,
+        new Date("not-a-date"),
+      ),
+    ).toThrow("now must be a valid date");
+
+    expect(() =>
+      evaluateContentReuse(
+        base,
+        [
+          {
+            contentId: base.contentId,
+            platform: base.platform,
+            publishedAt: "invalid",
+          },
+        ],
+        policy,
+        new Date("2026-09-26T00:00:00Z"),
+      ),
+    ).toThrow("history.publishedAt must be a valid date");
+  });
+
   it("keeps approval requirement deterministic", () => {
     const result = evaluateContentReuse(
       { ...base, approvalStatus: "draft" },
