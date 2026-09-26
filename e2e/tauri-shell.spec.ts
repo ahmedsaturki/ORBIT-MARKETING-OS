@@ -263,6 +263,23 @@ test("native capability schema resolves to least privilege", () => {
       return out;
     });
 
+
+test("native capability schema resolves to least privilege", () => {
+  test.skip(
+    !exe,
+    "native executable is required for generated capability verification",
+  );
+  const resolvedPath = join(
+    root,
+    "packages/desktop/src-tauri/gen/schemas/capabilities.json",
+  );
+  if (!existsSync(resolvedPath)) {
+    throw new Error("native capability schema is missing after native build");
+  }
+  const resolved = JSON.parse(readFileSync(resolvedPath, "utf8"));
+  expect(resolved.default.windows).toEqual(["main"]);
+  expect(resolved.default.permissions).toEqual(["core:default"]);
+});
     for (const cmd of ["plugin:window|destroy", "plugin:fs|read_text_file"]) {
       expect(denied[cmd].ok, `${cmd} must be denied by the ACL`).toBe(false);
       expect(denied[cmd].error).toContain("not allowed by ACL");
