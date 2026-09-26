@@ -2,9 +2,7 @@ import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { Layers3, ShieldCheck } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
-import { buildBulkPlan } from "@orbit/core";
-import { buildBulkPlan } from "@orbit/core";
-import type { BulkPlanItem } from "@orbit/core";
+import { buildBulkPlan, type BulkPlanItem } from "@orbit/core";
 
 interface AccountOption {
   readonly id: string;
@@ -65,13 +63,14 @@ export function BulkPlannerPanel({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<readonly BulkPlanItem[]>([]);
+  const [planSeed, setPlanSeed] = useState(() => `bulk-${Date.now()}`);
 
   const selectedContent = useMemo(
     () => contentItems.find((item) => item.id === contentId),
     [contentId, contentItems],
   );
 
-  const buildPlan = (): readonly PlannedTask[] | null => {
+  const buildPlan = (): readonly BulkPlanItem[] | null => {
     try {
       const plan = buildBulkPlan({
         startAt: new Date(startAt).toISOString(),
@@ -82,7 +81,9 @@ export function BulkPlannerPanel({
       return plan;
     } catch (caught: unknown) {
       setError(
-        caught instanceof Error ? caught.message : "خطة النشر الجماعي غير صالحة.",
+        caught instanceof Error
+          ? caught.message
+          : "خطة النشر الجماعي غير صالحة.",
       );
       return null;
     }
