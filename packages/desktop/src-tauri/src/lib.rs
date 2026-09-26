@@ -412,7 +412,7 @@ CREATE TABLE IF NOT EXISTS marketing_link_evidence (
   metric_name TEXT NOT NULL,
   metric_value REAL NOT NULL CHECK(metric_value >= 0),
   observed_at TEXT NOT NULL,
-  source_locator TEXT,
+  source_locator TEXT NOT NULL DEFAULT '',
   provenance TEXT NOT NULL,
   metadata_json TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL,
@@ -13057,7 +13057,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 15);
+        assert_eq!(version, 16);
     }
 
     #[test]
@@ -13316,7 +13316,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 15);
+        assert_eq!(version, 16);
     }
 
     #[test]
@@ -13895,7 +13895,7 @@ mod experimentation_runtime_tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("version");
-        assert_eq!(version, 15);
+        assert_eq!(version, 16);
 
         for table in [
             "research_briefs",
@@ -14158,7 +14158,7 @@ mod interrupted_restore_recovery_tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 15);
+        assert_eq!(version, 16);
 
         let experiment_tables: Vec<String> = {
             let mut statement = connection
