@@ -4,72 +4,78 @@
 
 GitHub currently resolves the repository default branch `main` to:
 
-`1cb104647bc69cff114f430cab1ff9dc184ed864`
+`377e86d79c3c9718ca8ee4d9ce5161a5751f77a3`
 
-This is the authoritative branch tip for this snapshot. The connected GitHub workflow lookup returned no PR-triggered workflow runs directly attached to this SHA, so no fresh CI result is attributed to this exact commit here.
+This signed merge commit contains the verified Release Truth / Universal Search hardening from PR #71 and the verified Publishing Workbench / Competitive Watch tranche from PR #72.
 
-The most recent verified release-line evidence used by the repository history includes the governed Command Dispatcher, Accessibility/RTL structural gate, Research Intelligence, deterministic experimentation/learning, anomaly detection, governed agent operations, and the current Universal Search release branch.
+## Exact-head verified feature evidence
 
-## Current release candidate
+### PR #71 — Release Truth / Universal Search
 
-PR #71 — `docs: reconcile current release truth`
+- merged to `main` as `b53728ad9697b12c6ce3e2fbf18f5d5d732afc2e`;
+- CI, Rust quality, Mobile Validation and the corrected Windows Native E2E evidence were completed on the release line;
+- Windows Native E2E exposed a real SQLite LIKE escaping defect; the fix switched to a portable `!` escape character and added literal wildcard regression coverage.
 
-- base: `main` at `1cb104647bc69cff114f430cab1ff9dc184ed864`
-- current head: `5518e4489b90bf8f5c4050f44f114f9ab1877b86`
-- state: open
-- scope: release-truth reconciliation plus Universal Search, native search E2E coverage, and competitive-intelligence documentation including the RBM surfaces supplied for the project
-- current exact-head workflow runs are pending/queued; they must complete before this release line is treated as freshly validated
+### PR #72 — Publishing Workbench / Competitive Watch
 
-## Exact-head historical feature evidence
+Feature head:
 
-PR #48 — governed command execution dispatcher:
+`d24aab486866b20c69b74c2f4cde9ab6e463b0b6`
 
-- head: `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301`
-- CI: run `36200698291` — success
-- Desktop Native Validation: run `36200698273` — success
-- Mobile Validation: run `36200698316` — success
+Terminal exact-head evidence:
 
-PR #47 — governed operational command/event spine:
+- CI: success;
+- Rust quality: success;
+- Desktop Native Validation: success;
+- Mobile Validation: success;
+- Windows Native E2E: success;
+- Linux x64 desktop build: success;
+- Windows x64 desktop build: success;
+- macOS x64 desktop build: success;
+- macOS ARM64 desktop build: success;
+- SonarCloud: success;
+- vulnerability analysis: neutral.
 
-- head: `d48f00e93a60d9c85e191099419f659bc94e64c9`
-- merged to main as `bd174e7e52a6ba69b4c54618e7a635e90bace611`
-- CI: run `36198100587` — success
-- Desktop Native Validation: run `36198100491` — success
-- Mobile Validation: run `36198100618` — success
+Merged to `main` as:
 
-These historical runs remain evidence for those exact heads. They are not silently re-attributed to the current `main` SHA.
+`377e86d79c3c9718ca8ee4d9ce5161a5751f77a3`
+
+## Product additions now on main
+
+- queue-backed Publishing Calendar;
+- governed Bulk Planner with bounded inputs and approval enforcement;
+- Competitive Watch for RBM Cloud, RBM Tools, RBM WhatsApp Cloud, Buffer, Metricool and Publer;
+- workspace-namespaced competitor source identities;
+- Universal Search hardening and wildcard regression coverage.
 
 ## Current public web evidence
 
-Vercel project: `orbit-marketing-os` (`prj_XL2WKssI4tzw4Wd5OQw4Pb1v6dMt`).
+Connected Vercel project: `orbit-marketing-os`.
 
-Current observed production deployment:
+The public surface currently responds successfully for the home, pricing and privacy routes, returns 404 for an unknown route, uses Arabic RTL markup, and the selected seven-day runtime-error aggregation is clean.
 
-- `dpl_ArWWejDP95byUt84SM7HzN7kbFk3` — READY
-- production alias: `orbit-marketing-os.vercel.app`
-- the connected Vercel deployment metadata reports framework `vite`
-- the deployment metadata has empty Git provenance
-- the selected seven-day Vercel runtime-error query currently reports no runtime error clusters
+The current READY production deployment predates `main=377e86d` and does not expose the merged release SHA in its deployment metadata. Therefore live availability is verified, but current-main production provenance is not.
 
-The deployment is therefore live, but it is not treated as proof that the canonical repository release path or current `main` SHA was the source of that production deployment.
+## Current release gate correction
 
-## Still-open evidence
+PR #76 changes the Vercel workflow from soft-disable to fail-closed when `VERCEL_TOKEN`, `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` is absent. This prevents a false green from being interpreted as a real deployment.
 
-The following remain intentionally unclaimed until fresh evidence exists or the external prerequisite is available:
+## Remaining evidence
 
-- exact-head CI/native/mobile validation for the current release candidate;
-- dedicated full native restart/migration/crash-recovery drill;
-- controlled real Telegram authorization/delivery;
-- controlled real LinkedIn authorization/publishing;
+- current-main Vercel credential-backed prebuilt deployment and embedded SHA verification;
+- Vercel project settings reconciliation;
+- production rollback drill;
+- real Telegram authorization/delivery;
+- real LinkedIn authorization/publishing;
 - live multi-device CRDT network evidence;
-- dedicated manual accessibility/WCAG conformance audit beyond automated structural checks;
-- completed 24-hour soak evidence;
-- final distributed release checksum/provenance drill;
+- consolidated native recovery evidence;
+- manual WCAG/RTL audit;
+- 24-hour stability soak;
+- final release checksum/provenance drill;
 - desktop signing/notarization;
-- production mobile signing/store distribution;
-- Vercel project-setting reconciliation and rollback drill;
-- GitHub main branch protection/ruleset enforcement;
-- commercial billing/payment configuration;
+- production Android/iOS signing and store distribution;
+- GitHub main branch protection/rulesets;
+- commercial payment/billing;
 - final legal/commercial publication review.
 
 ## Rule
