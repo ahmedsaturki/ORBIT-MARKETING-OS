@@ -248,7 +248,9 @@ export function App(): ReactElement {
   const [backupStatus, setBackupStatus] = useState("");
   const [campaigns, setCampaigns] = useState<readonly CampaignView[]>([]);
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
-  const [globalSearchResults, setGlobalSearchResults] = useState<readonly GlobalSearchResult[]>([]);
+  const [globalSearchResults, setGlobalSearchResults] = useState<
+    readonly GlobalSearchResult[]
+  >([]);
   const [globalSearchBusy, setGlobalSearchBusy] = useState(false);
   const [campaignName, setCampaignName] = useState("");
   const [campaignAccountId, setCampaignAccountId] = useState("");
