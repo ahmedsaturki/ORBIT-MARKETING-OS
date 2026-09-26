@@ -14,6 +14,7 @@ for (const script of [
   "test:performance",
   "test:e2e",
   "soak",
+  "release:evidence",
 ]) {
   if (typeof rootPackage.scripts?.[script] !== "string") {
     throw new Error("Root package script is missing: " + script);
