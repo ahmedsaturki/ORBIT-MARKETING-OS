@@ -15,7 +15,7 @@ The most recent verified release-line evidence used by the repository history in
 PR #71 — `docs: reconcile current release truth`
 
 - base: `main` at `1cb104647bc69cff114f430cab1ff9dc184ed864`
-- current head: `07a0754255ee490574242ac3dbbc0ecb6cdfec6a`
+- current head: `7105abfe4a4eb94d2a62f790ee1e0c0ca99e6fa1`
 - state: open
 - scope: release-truth reconciliation plus Universal Search, native search E2E coverage, and competitive-intelligence documentation including the RBM surfaces supplied for the project
 - current exact-head workflow runs are pending/queued; they must complete before this release line is treated as freshly validated
