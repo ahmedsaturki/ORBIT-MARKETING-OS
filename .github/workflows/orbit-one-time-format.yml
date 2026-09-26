@@ -1,0 +1,38 @@
+name: ORBIT One-Time Canonical Format
+
+on:
+  push:
+    branches:
+      - feat/experimentation-runtime-studio-v2-20260926
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: "!contains(github.event.head_commit.message, '[auto-format]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Format canonical files
+        run: |
+          pnpm exec prettier --write             docs/PRODUCT_SURFACE_MATRIX.md             packages/core/src/commands/index.ts             packages/core/src/experiments/index.ts             packages/desktop/src/components/ExperimentStudioPanel.tsx
+      - name: Commit formatted files
+        run: |
+          if git diff --quiet --             docs/PRODUCT_SURFACE_MATRIX.md             packages/core/src/commands/index.ts             packages/core/src/experiments/index.ts             packages/desktop/src/components/ExperimentStudioPanel.tsx; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add             docs/PRODUCT_SURFACE_MATRIX.md             packages/core/src/commands/index.ts             packages/core/src/experiments/index.ts             packages/desktop/src/components/ExperimentStudioPanel.tsx
+          git commit -m "style: canonical prettier format [auto-format]"
+          git push
