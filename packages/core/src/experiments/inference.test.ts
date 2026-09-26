@@ -62,12 +62,27 @@ describe("experiment inference", () => {
   });
 
   it("builds pairwise descriptive uncertainty comparisons", () => {
-    const inferred = inferExperiment(summary(), 0.95);
+    const experiment: Parameters<typeof inferExperiment>[0] = {
+      id: "exp-1",
+      workspaceId: "ws-1",
+      name: "Test",
+      hypothesis: "Benefit improves conversion",
+      objectiveMetric: "conversion_rate",
+      status: "running",
+      variants: [
+        { id: "control", name: "Control", allocationPercent: 50 },
+        { id: "benefit", name: "Benefit", allocationPercent: 50 },
+      ],
+    };
+    const inferred = inferExperiment(experiment, summary(), 0.95);
 
     expect(inferred.experimentId).toBe("exp-1");
     expect(inferred.workspaceId).toBe("ws-1");
     expect(inferred.variants).toHaveLength(2);
     expect(inferred.variants[1]?.conversion.estimate).toBeCloseTo(0.2, 10);
+    expect(inferred.variants[0]?.allocationTargetShare).toBe(0.5);
+    expect(inferred.variants[1]?.observedExposureShare).toBe(0.5);
+    expect(inferred.maxAbsoluteAllocationDrift).toBe(0);
 
     const conversion = inferred.comparisons.find(
       (comparison) =>
@@ -85,7 +100,73 @@ describe("experiment inference", () => {
     );
   });
 
+
+  it("rejects summary identity mismatch", () => {
+    const experiment: Parameters<typeof inferExperiment>[0] = {
+      id: "exp-1",
+      workspaceId: "ws-1",
+      name: "Test",
+      hypothesis: "Benefit improves conversion",
+      objectiveMetric: "conversion_rate",
+      status: "running",
+      variants: [
+        { id: "control", name: "Control", allocationPercent: 50 },
+        { id: "benefit", name: "Benefit", allocationPercent: 50 },
+      ],
+    };
+    expect(() =>
+      inferExperiment(
+        experiment,
+        { ...summary(), workspaceId: "other-workspace" },
+      ),
+    ).toThrow("experiment_inference_identity_mismatch");
+  });
+
+  it("reports allocation drift from observed exposure", () => {
+    const experiment: Parameters<typeof inferExperiment>[0] = {
+      id: "exp-1",
+      workspaceId: "ws-1",
+      name: "Test",
+      hypothesis: "Benefit improves conversion",
+      objectiveMetric: "conversion_rate",
+      status: "running",
+      variants: [
+        { id: "control", name: "Control", allocationPercent: 50 },
+        { id: "benefit", name: "Benefit", allocationPercent: 50 },
+      ],
+    };
+    const inferred = inferExperiment(
+      experiment,
+      {
+        ...summary(),
+        variants: [
+          { ...summary().variants[0]!, exposureCount: 70 },
+          { ...summary().variants[1]!, exposureCount: 30 },
+        ],
+      },
+    );
+    expect(inferred.variants[0]?.allocationDrift).toBeCloseTo(
+      0.2,
+      10,
+    );
+    expect(inferred.maxAbsoluteAllocationDrift).toBeCloseTo(0.2, 10);
+  });
+
   it("uses stable confidence levels in the returned contract", () => {
-    expect(inferExperiment(summary(), 0.99).confidenceLevel).toBe(0.99);
+    const experiment: Parameters<typeof inferExperiment>[0] = {
+      id: "exp-1",
+      workspaceId: "ws-1",
+      name: "Test",
+      hypothesis: "Benefit improves conversion",
+      objectiveMetric: "conversion_rate",
+      status: "running",
+      variants: [
+        { id: "control", name: "Control", allocationPercent: 50 },
+        { id: "benefit", name: "Benefit", allocationPercent: 50 },
+      ],
+    };
+    expect(inferExperiment(experiment, summary(), 0.99).confidenceLevel).toBe(
+      0.99,
+    );
   });
 });
