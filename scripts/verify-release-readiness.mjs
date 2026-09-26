@@ -46,6 +46,7 @@ const blockers = entries.filter(
   ([, value]) => value.level !== "L3_PRODUCTION_PROVEN",
 );
 
+
 console.log(`release-readiness=PASS mode=${mode}`);
 console.log(`release-critical-gates=${entries.length}`);
 console.log(`production-proven=${l3.length}`);
