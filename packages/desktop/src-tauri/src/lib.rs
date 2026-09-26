@@ -7027,12 +7027,12 @@ fn global_search(
         SELECT 'account', id, display_name,
           platform || ' • ' || status,
           CASE WHEN lower(display_name) = lower(:q) THEN 100
-               WHEN lower(display_name) LIKE lower(:q) || '%' ESCAPE '\ THEN 90
+               WHEN lower(display_name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
                ELSE 70 END
         FROM accounts
         WHERE workspace_id = :workspace
           AND (lower(display_name) LIKE '%' || lower(:q) || '%' ESCAPE '\
-            OR lower(COALESCE(username, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\)
+            OR lower(COALESCE(username, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\')
 
         UNION ALL
         SELECT 'content', id, title,
@@ -7074,7 +7074,7 @@ fn global_search(
         SELECT 'message', m.id, c.platform || ' message',
           CASE WHEN length(m.body) > 180 THEN substr(m.body, 1, 180) || '…' ELSE m.body END,
           CASE WHEN lower(m.body) = lower(:q) THEN 100
-               WHEN lower(m.body) LIKE lower(:q) || '%' ESCAPE '\ THEN 90
+               WHEN lower(m.body) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
                ELSE 70 END
         FROM messages AS m
         INNER JOIN conversations AS c ON c.id = m.conversation_id
@@ -7121,13 +7121,13 @@ fn global_search(
         SELECT 'knowledge_source', id, title,
           type || CASE WHEN locator IS NOT NULL THEN ' • ' || locator ELSE '' END,
           CASE WHEN lower(title) = lower(:q) THEN 90
-               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\ THEN 80
-               WHEN lower(COALESCE(locator, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\ THEN 70
+               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\' THEN 80
+               WHEN lower(COALESCE(locator, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\' THEN 70
                ELSE 60 END
         FROM knowledge_sources
         WHERE workspace_id = :workspace
           AND (lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\
-            OR lower(COALESCE(locator, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\)
+            OR lower(COALESCE(locator, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\')
 
         UNION ALL
         SELECT 'agent', id, name,
@@ -7165,13 +7165,13 @@ fn global_search(
         SELECT 'media_asset', id, filename,
           kind || ' • ' || mime_type,
           CASE WHEN lower(filename) = lower(:q) THEN 90
-               WHEN lower(filename) LIKE lower(:q) || '%' ESCAPE '\ THEN 80
-               WHEN lower(filename) LIKE '%' || lower(:q) || '%' ESCAPE '\ THEN 70
+               WHEN lower(filename) LIKE lower(:q) || '%' ESCAPE '\' THEN 80
+               WHEN lower(filename) LIKE '%' || lower(:q) || '%' ESCAPE '\' THEN 70
                ELSE 60 END
         FROM media_assets
         WHERE workspace_id = :workspace
           AND (lower(filename) LIKE '%' || lower(:q) || '%' ESCAPE '\
-            OR lower(COALESCE(tags_json, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\)
+            OR lower(COALESCE(tags_json, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\')
 
         UNION ALL
         SELECT 'research_brief', id, name,
