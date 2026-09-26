@@ -102,6 +102,30 @@ const COMPETITOR_WATCHLIST = [
     locator: "https://publer.com/help/en/article/15kxhoi/",
     focus: "Bulk scheduling، إعادة استخدام، AutoSchedule وMedia Library.",
   },
+  {
+    id: "competitor-postiz",
+    name: "Postiz",
+    locator: "https://postiz.com/",
+    focus: "Agentic social scheduling، 30+ platforms، MCP، calendar، analytics، media وAI.",
+  },
+  {
+    id: "competitor-highlevel",
+    name: "HighLevel",
+    locator: "https://help.gohighlevel.com/",
+    focus: "Social Planner، bulk CSV/XLSX، recurring/evergreen/RSS workflows، approvals وCRM.",
+  },
+  {
+    id: "competitor-respond-io",
+    name: "respond.io",
+    locator: "https://respond.io/omnichannel-ai-crm-conversation-platform",
+    focus: "Omnichannel inbox، AI Agents، CRM context، routing وconversation-to-revenue workflows.",
+  },
+  {
+    id: "competitor-mixpost",
+    name: "Mixpost",
+    locator: "https://docs.mixpost.app/",
+    focus: "Self-hosted social media management، scheduling، privacy وAPI/extensibility.",
+  },
 ] as const;
 
 function splitComma(value: string): string[] {
