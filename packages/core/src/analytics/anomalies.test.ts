@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildAnomalyInsights, detectMetricAnomalies } from "./anomalies.js";
 
 const series = Array.from({ length: 9 }, (_, index) => ({
-  timestamp:
-    `2026-09-${String(index + 1).padStart(2, "0")}T00:00:00Z`,
+  timestamp: `2026-09-${String(index + 1).padStart(2, "0")}T00:00:00Z`,
   value: index === 8 ? 30 : 10,
 }));
 

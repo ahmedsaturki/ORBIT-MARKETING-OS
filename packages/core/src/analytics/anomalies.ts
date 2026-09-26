@@ -51,8 +51,7 @@ function classifyAnomaly(
     };
   }
 
-  const modifiedZScore =
-    (0.67448975 * (value - baselineMedian)) / baselineMad;
+  const modifiedZScore = (0.67448975 * (value - baselineMedian)) / baselineMad;
 
   return {
     isAnomaly: Math.abs(modifiedZScore) >= threshold,
@@ -155,8 +154,7 @@ export function detectMetricAnomalies(
 
   return anomalies
     .sort(
-      (left, right) =>
-        Date.parse(right.timestamp) - Date.parse(left.timestamp),
+      (left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp),
     )
     .slice(0, config.maxResults)
     .map((anomaly) => ({ ...anomaly }));
@@ -183,8 +181,9 @@ export function buildAnomalyInsights(
       workspaceId,
       kind: "anomaly" as const,
       title:
-        (anomaly.direction === "spike" ? "Spike detected: " : "Drop detected: ") +
-        anomaly.metric,
+        (anomaly.direction === "spike"
+          ? "Spike detected: "
+          : "Drop detected: ") + anomaly.metric,
       summary:
         anomaly.metric +
         " changed by " +
