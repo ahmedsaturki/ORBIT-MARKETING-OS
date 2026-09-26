@@ -3521,12 +3521,7 @@ fn content_upsert(
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
 
-    ensure_experiment_variants_immutable(
-        &connection,
-        &id,
-        &workspace_id,
-        &variants_json,
-    )?;
+    ensure_experiment_variants_immutable(&connection, &id, &workspace_id, &variants_json)?;
 
     let timestamp = chrono_like_timestamp();
     let changed = connection
@@ -12830,10 +12825,9 @@ mod experimentation_runtime_tests {
             .expect("fixture");
 
         let unchanged = r#"[{"id":"control","name":"Control","allocationPercent":50},{"id":"test","name":"Test","allocationPercent":50}]"#;
-        assert!(ensure_experiment_variants_immutable(
-            &connection, "exp-1", "ws-1", unchanged
-        )
-        .is_ok());
+        assert!(
+            ensure_experiment_variants_immutable(&connection, "exp-1", "ws-1", unchanged).is_ok()
+        );
 
         let changed = r#"[{"id":"control","name":"Control","allocationPercent":40},{"id":"test","name":"Test","allocationPercent":60}]"#;
         assert_eq!(
@@ -12862,20 +12856,21 @@ mod experimentation_runtime_tests {
             },
         ];
         let subject = "subject-42";
-        let expected =
-            experiment_variant_for_subject("ws-1", "exp-1", subject, &variants)
-                .expect("assignment");
+        let expected = experiment_variant_for_subject("ws-1", "exp-1", subject, &variants)
+            .expect("assignment");
         assert!(validate_observation_variant_assignment(
             "ws-1", "exp-1", subject, &variants, &expected
         )
         .is_ok());
 
-        let wrong = if expected == "control" { "test" } else { "control" };
+        let wrong = if expected == "control" {
+            "test"
+        } else {
+            "control"
+        };
         assert_eq!(
-            validate_observation_variant_assignment(
-                "ws-1", "exp-1", subject, &variants, wrong
-            )
-            .unwrap_err(),
+            validate_observation_variant_assignment("ws-1", "exp-1", subject, &variants, wrong)
+                .unwrap_err(),
             "observation_variant_does_not_match_deterministic_assignment"
         );
     }
