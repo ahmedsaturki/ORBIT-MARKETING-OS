@@ -15,7 +15,6 @@
 - [Acceptance matrix](ACCEPTANCE_MATRIX_V2.md)
 - [Connector matrix](CONNECTOR_MATRIX.md)
 - [Product surface matrix](PRODUCT_SURFACE_MATRIX.md)
-- [Competitive intelligence](COMPETITIVE_INTELLIGENCE.md)
 - [Distribution](DISTRIBUTION.md)
 - [Launch scorecard](LAUNCH_SCORECARD.md)
 - [Release scorecard](RELEASE_SCORECARD.md)
