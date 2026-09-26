@@ -31,6 +31,7 @@ describe("content reuse policy", () => {
   it("blocks reuse during cooldown", () => {
     const history = [
       {
+        workspaceId: base.workspaceId,
         contentId: "content-001",
         platform: "linkedin" as const,
         publishedAt: "2026-09-25T12:00:00Z",
@@ -48,6 +49,7 @@ describe("content reuse policy", () => {
 
   it("blocks when the reuse count is exhausted", () => {
     const history = [0, 1, 2].map((index) => ({
+      workspaceId: base.workspaceId,
       contentId: "content-001",
       platform: "linkedin" as const,
       publishedAt: `2026-08-0${index + 1}T00:00:00Z`,
