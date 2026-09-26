@@ -115,6 +115,62 @@ Sources:
 - https://publer.com/
 - https://publer.com/help/
 
+### Postiz
+
+Current public product material covers:
+
+- agentic social scheduling;
+- MCP integration for AI clients;
+- 30+ social channels;
+- calendar, scheduling, publishing and analytics;
+- media/image/video workflows.
+
+Source:
+
+- https://postiz.com/
+
+### HighLevel
+
+Current public product/help material covers:
+
+- centralized Social Planner;
+- bulk CSV/XLSX scheduling;
+- recurring and evergreen queues;
+- RSS posting;
+- approvals and performance tracking;
+- CRM integration.
+
+Source:
+
+- https://help.gohighlevel.com/
+
+### respond.io
+
+Current public product material covers:
+
+- omnichannel inbox;
+- CRM context across conversations;
+- AI Agents for qualification/routing;
+- human escalation;
+- lifecycle and revenue visibility.
+
+Source:
+
+- https://respond.io/omnichannel-ai-crm-conversation-platform
+
+### Mixpost
+
+Current public documentation covers:
+
+- self-hosted social media management;
+- scheduling and content organization;
+- privacy/data ownership positioning;
+- API/extensibility.
+
+Source:
+
+- https://docs.mixpost.app/
+
 ## Capability map for ORBIT
 
 The competitor observations translate into these ORBIT workstreams:
