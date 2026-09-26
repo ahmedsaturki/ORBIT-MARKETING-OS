@@ -323,7 +323,9 @@ describe("experiment operating bindings and learning write-back", () => {
       "learning",
     ]);
     expect(plan.steps.every((step) => step.workspaceId === "ws-1")).toBe(true);
-    expect(plan.steps.filter((step) => step.kind === "execution")).toEqual(
+    expect(
+      plan.steps.filter((step) => step.kind === "execution"),
+    ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           variantId: "control",
@@ -483,7 +485,9 @@ describe("experiment operating bindings and learning write-back", () => {
     );
     expect(
       writeback.insights.every((insight) =>
-        insight.summary.includes("statistical significance is not claimed"),
+        insight.summary.includes(
+          "statistical significance is not claimed",
+        ),
       ),
     ).toBe(true);
   });
