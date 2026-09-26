@@ -19,7 +19,7 @@ PR #48 added the governed Command Dispatcher. Its exact head passed CI, Desktop 
 - encrypted backup/restore;
 - content, media, CRM, inbox, campaigns and analytics;
 - approval workflow and audit integrity;
-- marketing operating graph, outcomes and insights;
+- marketing operating graph, outcomes, insights and experimentation;
 - Mission Control, Strategy Studio, Simulation, Replay and Policy Packs;
 - Operational Event Spine and Command Registry;
 - Governed Command Dispatcher in the shared control spine;
