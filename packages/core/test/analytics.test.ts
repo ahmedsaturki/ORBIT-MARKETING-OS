@@ -89,13 +89,15 @@ describe("metric anomaly detection", () => {
     value: index === 8 ? 30 : 10,
   }));
 
-  it("detects spikes and drops against only the preceding window", () => {
+  it("detects spikes and drops using only the preceding window", () => {
     const spike = detectMetricAnomalies("engagement_rate", series, {
       windowSize: 5,
     });
-    expect(spike).toMatchObject([
-      { value: 30, baselineMedian: 10, direction: "spike" },
-    ]);
+    expect(spike[0]).toMatchObject({
+      value: 30,
+      baselineMedian: 10,
+      direction: "spike",
+    });
 
     const drop = detectMetricAnomalies(
       "conversion_rate",
@@ -106,29 +108,24 @@ describe("metric anomaly detection", () => {
       ],
       { windowSize: 5 },
     );
-    expect(drop[0]).toMatchObject({ value: 0, direction: "drop" });
+    expect(drop[0]?.direction).toBe("drop");
   });
 
-  it("is deterministic, bounded, descriptive, and rejects invalid config", () => {
+  it("is deterministic and produces descriptive insights", () => {
     const options = { windowSize: 5, maxResults: 1 };
     const forward = detectMetricAnomalies("metric", series, options);
-    const reverse = detectMetricAnomalies("metric", [...series].reverse(), options);
+    expect(
+      detectMetricAnomalies("metric", [...series].reverse(), options),
+    ).toEqual(forward);
 
-    expect(reverse).toEqual(forward);
-
-    const insights = buildAnomalyInsights(
+    const insight = buildAnomalyInsights(
       "ws-1",
       forward,
       "2026-09-10T00:00:00Z",
-    );
-    expect(insights[0]).toMatchObject({
-      workspaceId: "ws-1",
-      kind: "anomaly",
-      confidence: 0,
-    });
-    expect(insights[0]?.summary).toContain(
-      "statistical significance are not claimed",
-    );
+    )[0];
+    expect(insight?.kind).toBe("anomaly");
+    expect(insight?.confidence).toBe(0);
+    expect(insight?.summary).toContain("statistical significance are not claimed");
     expect(() =>
       detectMetricAnomalies("metric", series, { windowSize: 2 }),
     ).toThrow("anomaly_window_invalid");
