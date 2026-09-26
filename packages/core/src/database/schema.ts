@@ -1,4 +1,4 @@
-export const DATABASE_SCHEMA_VERSION = 14;
+export const DATABASE_SCHEMA_VERSION = 15;
 
 export const DATABASE_SCHEMA_SQL = `
 PRAGMA foreign_keys = ON;
@@ -329,6 +329,39 @@ CREATE TABLE IF NOT EXISTS knowledge_evidence (
   PRIMARY KEY(item_id, source_id, excerpt_hash)
 );
 
+CREATE TABLE IF NOT EXISTS research_briefs (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  question TEXT NOT NULL,
+  objectives_json TEXT NOT NULL DEFAULT '[]',
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_research_briefs_workspace_status
+  ON research_briefs(workspace_id, status, updated_at);
+
+CREATE TABLE IF NOT EXISTS research_findings (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  brief_id TEXT NOT NULL REFERENCES research_briefs(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  statement TEXT NOT NULL,
+  source_ids_json TEXT NOT NULL DEFAULT '[]',
+  confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+  observed_at TEXT NOT NULL,
+  expires_at TEXT,
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_research_findings_workspace_brief
+  ON research_findings(workspace_id, brief_id, observed_at, updated_at);
+
 CREATE TABLE IF NOT EXISTS agent_definitions (
   id TEXT PRIMARY KEY,
   workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
@@ -584,6 +617,6 @@ CREATE INDEX IF NOT EXISTS idx_experiment_observations_workspace_experiment
 CREATE INDEX IF NOT EXISTS idx_experiment_observations_variant
   ON experiment_observations(workspace_id, experiment_id, variant_id, observed_at);
 
-PRAGMA user_version = 14;
+PRAGMA user_version = 15;
 
 `;

@@ -197,3 +197,10 @@ Backups are encrypted locally and restore performs SQLite integrity validation b
 ## Compatibility rule
 
 When an IPC command changes, update the desktop client, this API contract, and its integration tests together. Source inspection alone is not release evidence.
+
+### Research Intelligence
+
+- `research_brief_upsert` / `research_brief_list` manage workspace-scoped research questions, type, objectives, and lifecycle.
+- `research_finding_upsert` / `research_finding_list` manage evidence-backed findings. Every finding requires at least one workspace-local knowledge source and a bounded confidence value.
+- `research_publish_to_knowledge` explicitly promotes a finding into ORBIT Knowledge after source/workspace validation. This action is user-triggered and produces an auditable write.
+- Research operations do not execute external connectors and do not read vault/session secrets.

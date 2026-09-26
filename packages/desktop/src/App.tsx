@@ -17,6 +17,7 @@ import { OperatingGraphPanel } from "./components/OperatingGraphPanel";
 import { OperationalEventTimelinePanel } from "./components/OperationalEventTimelinePanel";
 import { StrategyStudioPanel } from "./components/StrategyStudioPanel";
 import { ExperimentStudioPanel } from "./components/ExperimentStudioPanel";
+import { ResearchStudioPanel } from "./components/ResearchStudioPanel";
 import {
   analyzeLocalImage,
   DEFAULT_RUNTIME_URL,
@@ -2562,6 +2563,10 @@ export function App(): ReactElement {
 
       {activeWorkspace ? (
         <StrategyStudioPanel workspaceId={activeWorkspace.id} />
+      ) : null}
+
+      {activeWorkspace ? (
+        <ResearchStudioPanel workspaceId={activeWorkspace.id} />
       ) : null}
 
       {activeWorkspace ? (
