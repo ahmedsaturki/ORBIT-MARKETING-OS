@@ -30,6 +30,11 @@ if (
 }
 
 const entries = Object.entries(document.releaseCritical);
+if (!["verification", "commercial"].includes(mode)) {
+  console.error("release-readiness=FAIL");
+  console.error("Mode must be verification or commercial.");
+  process.exit(1);
+}
 const invalid = entries.filter(
   ([, value]) =>
     !value ||
@@ -53,7 +58,6 @@ const l3 = entries.filter(
 const blockers = entries.filter(
   ([, value]) => value.level !== "L3_PRODUCTION_PROVEN",
 );
-
 
 console.log(`release-readiness=PASS mode=${mode}`);
 console.log(`release-critical-gates=${entries.length}`);
