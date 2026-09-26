@@ -64,19 +64,39 @@ const mcp = spawnSync(
         jsonrpc: "2.0",
         id: 1,
         method: "initialize",
-        params: {},
+        params: {
+          protocolVersion: "2025-11-25",
+          capabilities: {},
+          clientInfo: { name: "orbit-smoke", version: "1.0.0" },
+        },
       }) +
       "\n" +
       JSON.stringify({
         jsonrpc: "2.0",
         id: 2,
-        method: "tools/list",
+        method: "server/discover",
         params: {},
       }) +
       "\n" +
       JSON.stringify({
         jsonrpc: "2.0",
         id: 3,
+        method: "tools/list",
+        params: {
+          _meta: {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {},
+            "io.modelcontextprotocol/clientInfo": {
+              name: "orbit-smoke",
+              version: "1.0.0",
+            },
+          },
+        },
+      }) +
+      "\n" +
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 4,
         method: "tools/call",
         params: {
           name: "orbit.command.preview",
@@ -87,9 +107,18 @@ const mcp = spawnSync(
             grantedScopes: ["task:execute"],
             approvalGranted: false,
           },
+          _meta: {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {},
+          },
         },
       }) +
-      "\n",
+        params: {},
+      }) +
+      "\n" +
+      JSON.stringify({
+        jsonrpc: "2.0",
+
   },
 );
 if (mcp.status !== 0) {
@@ -104,14 +133,22 @@ const mcpLines = mcp.stdout
   .map((line) => JSON.parse(line));
 
 const initialize = mcpLines.find((entry) => entry.id === 1);
-const tools = mcpLines.find((entry) => entry.id === 2);
-const call = mcpLines.find((entry) => entry.id === 3);
+const discovery = mcpLines.find((entry) => entry.id === 2);
+const tools = mcpLines.find((entry) => entry.id === 3);
+const call = mcpLines.find((entry) => entry.id === 4);
 
 if (
   initialize?.result?.serverInfo?.name !== "orbit-governed-surface" ||
   initialize?.result?.capabilities?.tools === undefined
 ) {
   throw new Error("orbit_mcp_initialize_smoke_failed");
+}
+
+if (
+  discovery?.result?.supportedVersions?.includes("2026-07-28") !== true ||
+  discovery?.result?._meta?.["io.modelcontextprotocol/serverInfo"]?.name !== "orbit-governed-surface"
+) {
+  throw new Error("orbit_mcp_discovery_smoke_failed");
 }
 
 if (
