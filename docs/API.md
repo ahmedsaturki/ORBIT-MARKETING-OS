@@ -90,7 +90,7 @@ Optional session material is encrypted locally before persistence.
 - `content_variant_list`
 - `analytics_summary`
 
-Content variants are workspace-scoped through their parent content item. Analytics can be scoped to a campaign and is derived from persisted task outcomes.
+Content variants are workspace-scoped through their parent content item. Analytics can be scoped to a campaign and is derived from persisted task outcomes. The core anomaly detector is read-only and uses a preceding rolling median/MAD baseline; it emits descriptive anomaly signals only and does not claim causality or statistical significance.
 
 ### Media and automation
 
