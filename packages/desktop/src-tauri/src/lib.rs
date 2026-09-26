@@ -12722,6 +12722,7 @@ mod experimentation_runtime_tests {
     fn rejects_cross_workspace_observation_reference() {
         let connection = Connection::open_in_memory().expect("sqlite");
         connection.execute_batch(SCHEMA).expect("schema");
+        migrate_schema(&connection).expect("migrations");
         create_integrity_triggers(&connection).expect("triggers");
         connection.execute_batch(
             "INSERT INTO workspaces(id,name,created_at) VALUES ('ws-a','A','1'),('ws-b','B','1');
