@@ -104,7 +104,7 @@ if (!rustToolchain.includes('channel = "1.98.1"')) {
 const ci = await text(".github/workflows/ci.yml");
 if (!ci.includes("pnpm install --frozen-lockfile"))
   throw new Error("CI frozen install gate missing");
-if (!ci.includes("pnpm audit --audit-level=high"))
+if (!ci.includes("pnpm audit --audit-level=moderate"))
   throw new Error("CI dependency audit gate missing");
 if (!ci.includes("pnpm security:scan"))
   throw new Error("CI secret scan gate missing");
