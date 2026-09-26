@@ -14055,7 +14055,10 @@ mod interrupted_restore_recovery_tests {
             .replace('\\', "\\\\")
             .replace('%', "\\%")
             .replace('_', "\\_");
-        let sql = "SELECT kind, id FROM campaigns WHERE workspace_id=?1 AND lower(name) LIKE '%' || lower(?2) || '%' ESCAPE '\";
+        let sql = r#"SELECT 'campaign' AS kind, id
+                     FROM campaigns
+                     WHERE workspace_id=?1
+                       AND lower(name) LIKE '%' || lower(?2) || '%' ESCAPE '\\'"#;
         let rows: Vec<(String, String)> = connection
             .prepare(sql)
             .expect("search query should prepare")
