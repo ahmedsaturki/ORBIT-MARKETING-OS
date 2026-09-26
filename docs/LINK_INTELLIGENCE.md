@@ -12,6 +12,7 @@ Link Intelligence is a local-first, workspace-scoped registry for deterministic 
 - A tracked URL must preserve the destination scheme, host, port, and path.
 - Evidence records require an allowed source type and bounded provenance.
 - Evidence is deduplicated by workspace, link, source, metric, observation time, and source locator.
+- Observation times are normalized to canonical UTC RFC3339 before persistence and deduplication, so equivalent timezone offsets represent the same observation.
 - Metrics are not treated as verified external facts unless their source/provenance says so.
 - Writes are role-gated and auditable.
 
