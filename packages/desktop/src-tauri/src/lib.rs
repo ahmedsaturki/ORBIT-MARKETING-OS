@@ -3704,8 +3704,8 @@ fn validate_experiment_status(status: &str) -> Result<String, String> {
 }
 
 fn normalize_experiment_variants_json(value: &str) -> Result<String, String> {
-    let mut variants: Vec<ExperimentVariantInput> = serde_json::from_str(value)
-        .map_err(|_| "variants_json must be valid JSON".to_string())?;
+    let mut variants: Vec<ExperimentVariantInput> =
+        serde_json::from_str(value).map_err(|_| "variants_json must be valid JSON".to_string())?;
     if variants.len() < 2 || variants.len() > 50 {
         return Err("experiment requires between 2 and 50 variants".to_string());
     }
@@ -3738,8 +3738,7 @@ fn normalize_experiment_variants_json(value: &str) -> Result<String, String> {
     if (allocation - 100.0).abs() > 0.000001 {
         return Err("experiment variant allocation must equal 100".to_string());
     }
-    serde_json::to_string(&variants)
-        .map_err(|_| "failed to normalize variants_json".to_string())
+    serde_json::to_string(&variants).map_err(|_| "failed to normalize variants_json".to_string())
 }
 
 fn normalize_experiment_window(
@@ -3789,9 +3788,10 @@ fn experiment_variant_for_subject(
     subject_id: &str,
     variants: &[ExperimentVariantInput],
 ) -> Result<String, String> {
-    let bucket =
-        f64::from(fnv1a_bucket(&format!("{}:{}:{}", workspace_id, experiment_id, subject_id)))
-            / 100.0;
+    let bucket = f64::from(fnv1a_bucket(&format!(
+        "{}:{}:{}",
+        workspace_id, experiment_id, subject_id
+    ))) / 100.0;
     let mut cumulative = 0.0;
     for variant in variants {
         cumulative += variant.allocation_percent;
@@ -9295,8 +9295,7 @@ fn experiment_upsert(
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let name = validate_label(&name).map_err(|error| error.to_string())?;
     let hypothesis = hypothesis.trim().to_string();
-    let objective_metric =
-        validate_label(&objective_metric).map_err(|error| error.to_string())?;
+    let objective_metric = validate_label(&objective_metric).map_err(|error| error.to_string())?;
     if hypothesis.is_empty() || hypothesis.len() > 10_000 {
         return Err("invalid experiment hypothesis".to_string());
     }
@@ -9307,8 +9306,9 @@ fn experiment_upsert(
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
     let timestamp = chrono_like_timestamp();
-    let changed = connection.execute(
-        "INSERT INTO experiments(
+    let changed = connection
+        .execute(
+            "INSERT INTO experiments(
            id, workspace_id, name, hypothesis, objective_metric, status,
            variants_json, starts_at, ends_at, created_at, updated_at
          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)
@@ -9318,20 +9318,20 @@ fn experiment_upsert(
            variants_json=excluded.variants_json, starts_at=excluded.starts_at,
            ends_at=excluded.ends_at, updated_at=excluded.updated_at
          WHERE experiments.workspace_id=excluded.workspace_id",
-        params![
-            &id,
-            &workspace_id,
-            &name,
-            &hypothesis,
-            &objective_metric,
-            &status,
-            &variants_json,
-            &starts_at,
-            &ends_at,
-            &timestamp
-        ],
-    )
-    .map_err(|error| error.to_string())?;
+            params![
+                &id,
+                &workspace_id,
+                &name,
+                &hypothesis,
+                &objective_metric,
+                &status,
+                &variants_json,
+                &starts_at,
+                &ends_at,
+                &timestamp
+            ],
+        )
+        .map_err(|error| error.to_string())?;
     if changed != 1 {
         return Err("experiment id already belongs to another workspace".to_string());
     }
@@ -9375,14 +9375,7 @@ fn experiment_list(app: tauri::AppHandle) -> Result<Vec<ExperimentView>, String>
     require_workspace_role_for(
         &connection,
         &workspace_id,
-        &[
-            "owner",
-            "admin",
-            "editor",
-            "operator",
-            "reviewer",
-            "viewer",
-        ],
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
     )
     .map_err(|error| error.to_string())?;
     let mut statement = connection
@@ -9553,27 +9546,28 @@ fn experiment_record_observation(
     if !variants.iter().any(|variant| variant.id == variant_id) {
         return Err("observation variant is not declared by the experiment".to_string());
     }
-    let changed = connection.execute(
-        "INSERT INTO experiment_observations(
+    let changed = connection
+        .execute(
+            "INSERT INTO experiment_observations(
            id, workspace_id, experiment_id, variant_id, subject_id, observed_at,
            exposed, engaged, converted, value, created_at
          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
          ON CONFLICT(id) DO NOTHING",
-        params![
-            &id,
-            &workspace_id,
-            &experiment_id,
-            &variant_id,
-            &subject_id,
-            &observed_at,
-            if exposed { 1 } else { 0 },
-            if engaged { 1 } else { 0 },
-            if converted { 1 } else { 0 },
-            &value,
-            &observed_at,
-        ],
-    )
-    .map_err(|error| error.to_string())?;
+            params![
+                &id,
+                &workspace_id,
+                &experiment_id,
+                &variant_id,
+                &subject_id,
+                &observed_at,
+                if exposed { 1 } else { 0 },
+                if engaged { 1 } else { 0 },
+                if converted { 1 } else { 0 },
+                &value,
+                &observed_at,
+            ],
+        )
+        .map_err(|error| error.to_string())?;
     if changed == 0 {
         return Ok(false);
     }
@@ -12733,7 +12727,8 @@ mod experimentation_runtime_tests {
         assert!(normalize_experiment_window(
             Some("2026-09-26T03:00:00+03:00".to_string()),
             Some("2026-09-26T04:00:00+03:00".to_string()),
-        ).is_ok());
+        )
+        .is_ok());
         assert!(normalize_experiment_window(Some("not-a-date".to_string()), None).is_err());
     }
 
@@ -12760,7 +12755,9 @@ mod experimentation_runtime_tests {
         let connection = Connection::open_in_memory().expect("sqlite");
         connection.execute_batch(SCHEMA).expect("schema");
         migrate_schema(&connection).expect("migration");
-        let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0)).expect("version");
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("version");
         assert_eq!(version, 14);
     }
 
@@ -12776,11 +12773,25 @@ mod experimentation_runtime_tests {
     #[test]
     fn assignment_is_deterministic() {
         let variants = vec![
-            ExperimentVariantInput { id:"control".into(), name:"Control".into(), allocation_percent:50.0, content_id:None, message:None },
-            ExperimentVariantInput { id:"test".into(), name:"Test".into(), allocation_percent:50.0, content_id:None, message:None },
+            ExperimentVariantInput {
+                id: "control".into(),
+                name: "Control".into(),
+                allocation_percent: 50.0,
+                content_id: None,
+                message: None,
+            },
+            ExperimentVariantInput {
+                id: "test".into(),
+                name: "Test".into(),
+                allocation_percent: 50.0,
+                content_id: None,
+                message: None,
+            },
         ];
-        let first = experiment_variant_for_subject("ws-1","exp-1","subject-42",&variants).expect("assignment");
-        let second = experiment_variant_for_subject("ws-1","exp-1","subject-42",&variants).expect("assignment");
+        let first = experiment_variant_for_subject("ws-1", "exp-1", "subject-42", &variants)
+            .expect("assignment");
+        let second = experiment_variant_for_subject("ws-1", "exp-1", "subject-42", &variants)
+            .expect("assignment");
         assert_eq!(first, second);
     }
 }
@@ -12930,7 +12941,10 @@ mod interrupted_restore_recovery_tests {
         };
         assert_eq!(
             experiment_tables,
-            vec!["experiment_observations".to_string(), "experiments".to_string()]
+            vec![
+                "experiment_observations".to_string(),
+                "experiments".to_string()
+            ]
         );
 
         let columns: Vec<String> = {
