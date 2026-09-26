@@ -1347,13 +1347,14 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
         window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
           input: {
             linkId,
-          sourceType: "manual",
-          metricName: "clicks",
-          metricValue: 14,
-          observedAt: "2026-09-26T18:00:00Z",
-          sourceLocator: null,
-          provenance: "manual_observation",
-          metadataJson: JSON.stringify({ test: true }),
+            sourceType: "manual",
+            metricName: "clicks",
+            metricValue: 14,
+            observedAt: "2026-09-26T18:00:00Z",
+            sourceLocator: null,
+            provenance: "manual_observation",
+            metadataJson: JSON.stringify({ test: true }),
+          },
         }),
       link.id,
     )) as { id: string; metric_value: number };
