@@ -1,6 +1,9 @@
 name: ORBIT Stability Soak
 
 on:
+  push:
+    branches:
+      - ops/soak-trigger-20260926
   workflow_dispatch:
     inputs:
       hours:
@@ -21,13 +24,13 @@ concurrency:
 
 jobs:
   soak:
-    if: github.actor == 'ahmedsaturki' && github.event.inputs.ref == 'main'
+    if: github.actor == 'ahmedsaturki' && (github.event_name == 'push' || github.event.inputs.ref == 'main')
     runs-on: [self-hosted, x64, linux]
     timeout-minutes: 1500
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.event.inputs.ref }}
+          ref: ${{ github.event.inputs.ref || 'main' }}
           fetch-depth: 0
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
@@ -56,7 +59,7 @@ jobs:
         run: pnpm build
 
       - name: Run stability soak
-        run: pnpm exec tsx scripts/soak.ts --hours "${{ github.event.inputs.hours }}"
+        run: pnpm exec tsx scripts/soak.ts --hours "${{ github.event.inputs.hours || '24' }}"
 
       - name: Upload soak evidence
         if: always()
