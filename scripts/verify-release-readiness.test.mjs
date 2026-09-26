@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const script = "scripts/verify-release-readiness.mjs";
 
-function runVerifier(mode: string): { status: number; stdout: string; stderr: string } {
+function runVerifier(mode) {
   try {
     execFileSync(process.execPath, [script, "--mode", mode], {
       cwd: process.cwd(),
@@ -11,18 +11,14 @@ function runVerifier(mode: string): { status: number; stdout: string; stderr: st
       stdio: "pipe",
     });
     throw new Error("verifier unexpectedly passed");
-  } catch (error: unknown) {
-    const result = error as {
-      status?: number;
-      stdout?: string;
-      stderr?: string;
-      message?: string;
-    };
-    if (result.message === "verifier unexpectedly passed") throw error;
+  } catch (error) {
+    if (error instanceof Error && error.message === "verifier unexpectedly passed") {
+      throw error;
+    }
     return {
-      status: result.status ?? -1,
-      stdout: result.stdout ?? "",
-      stderr: result.stderr ?? "",
+      status: error?.status ?? -1,
+      stdout: error?.stdout ?? "",
+      stderr: error?.stderr ?? "",
     };
   }
 }
