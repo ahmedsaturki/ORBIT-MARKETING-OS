@@ -85,4 +85,44 @@ test.describe("ORBIT public web surface", () => {
     const response = await request.get("/this-path-does-not-exist/");
     expect(response.status()).toBe(404);
   });
+  test("release health endpoint is non-cacheable and schema-stable", async ({
+    request,
+  }) => {
+    const response = await request.get("/api/health");
+    expect(response.status()).toBe(200);
+    expect(response.headers()["cache-control"]).toBe("no-store");
+    const body = (await response.json()) as {
+      status: string;
+      service: string;
+      version: string;
+      releaseSha: string;
+      provenance: string;
+    };
+    expect(body.status).toBe("ok");
+    expect(body.service).toBe("ORBIT Marketing OS Web");
+    expect(body.version).toBe("0.2.0");
+    expect(body.releaseSha).toMatch(/^(unreleased|[0-9a-f]{40})$/);
+    expect(["unproven", "declared"]).toContain(body.provenance);
+  });
+
+  test("release provenance endpoint is non-cacheable and public-safe", async ({
+    request,
+  }) => {
+    const response = await request.get("/api/release");
+    expect(response.status()).toBe(200);
+    expect(response.headers()["cache-control"]).toBe("no-store");
+    const body = (await response.json()) as {
+      application: string;
+      version: string;
+      releaseSha: string;
+      releaseProvenance: {
+        declaredByEnvironment: boolean;
+        source: string;
+      };
+    };
+    expect(body.application).toBe("ORBIT Marketing OS");
+    expect(body.version).toBe("0.2.0");
+    expect(body.releaseSha).toMatch(/^(unreleased|[0-9a-f]{40})$/);
+    expect(body.releaseProvenance.source).toBe("NEXT_PUBLIC_ORBIT_RELEASE_SHA");
+  });
 });

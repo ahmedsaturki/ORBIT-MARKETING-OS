@@ -35,6 +35,47 @@ if (expectedReleaseSha) {
   }
 }
 
+const releaseHealth = await get("/api/health", "application/json");
+if (!releaseHealth.ok) {
+  throw new Error(
+    "Live ORBIT health endpoint returned HTTP " + releaseHealth.status,
+  );
+}
+const healthBody = await releaseHealth.json();
+if (
+  healthBody?.status !== "ok" ||
+  healthBody?.service !== "ORBIT Marketing OS Web"
+) {
+  throw new Error("Live ORBIT health endpoint schema mismatch");
+}
+if (expectedReleaseSha && healthBody?.releaseSha !== expectedReleaseSha) {
+  throw new Error(
+    `Live ORBIT health release provenance mismatch: expected ${expectedReleaseSha}, got ${healthBody?.releaseSha ?? "missing"}`,
+  );
+}
+
+const releaseIdentity = await get("/api/release", "application/json");
+if (!releaseIdentity.ok) {
+  throw new Error(
+    "Live ORBIT release endpoint returned HTTP " + releaseIdentity.status,
+  );
+}
+const releaseBody = await releaseIdentity.json();
+if (releaseBody?.application !== "ORBIT Marketing OS") {
+  throw new Error("Live ORBIT release identity schema mismatch");
+}
+if (expectedReleaseSha && releaseBody?.releaseSha !== expectedReleaseSha) {
+  throw new Error(
+    `Live ORBIT release endpoint provenance mismatch: expected ${expectedReleaseSha}, got ${releaseBody?.releaseSha ?? "missing"}`,
+  );
+}
+if (
+  releaseBody?.releaseProvenance?.declaredByEnvironment !==
+  Boolean(expectedReleaseSha)
+) {
+  throw new Error("Live ORBIT release provenance declaration mismatch");
+}
+
 if (body.includes("Orbit Marketing OS - منصة تشغيل وتسويق وأتمتة شاملة")) {
   throw new Error(
     "Live ORBIT page is still serving the legacy main/Vite surface",
