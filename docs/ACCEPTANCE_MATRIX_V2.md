@@ -33,6 +33,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | MEDIA-02 | Local media file import with streaming SHA-256                                                                 | native file-hash integration test                     |
 | AN-02    | Outcome analytics never aggregate monetary values across currencies                                            | native multi-currency analytics test                  |
 | AN-01    | Campaign analytics remain campaign-scoped                                                                      | analytics isolation tests                             |
+| ANOM-01 | Metric anomaly signals use only preceding observations and remain descriptive/read-only                   | anomaly detector tests + no-future-data/read-only command evidence |
 | AUTO-01  | Enabled external automation rules require confirmation                                                         | rule-pack validation tests                            |
 | AUTO-02  | Enabled Rule Pack lifecycle is persisted and bounded                                                           | native lifecycle integration test                     |
 | UI-01    | Mission Control reflects current workspace operational state without server-side secrets                       | desktop smoke/E2E evidence                            |
