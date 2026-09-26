@@ -9279,6 +9279,7 @@ fn append_experiment_operational_event(
     .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
 fn experiment_upsert(
     app: tauri::AppHandle,
     id: String,
