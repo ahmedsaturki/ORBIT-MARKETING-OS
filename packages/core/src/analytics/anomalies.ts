@@ -1,7 +1,4 @@
-import {
-  createMarketingInsight,
-  type MarketingInsight,
-} from "../outcomes/index.js";
+import type { MarketingInsight } from "../outcomes/index.js";
 import { buildMetricSeries, type MetricPoint } from "./metrics.js";
 
 export type AnomalyDirection = "spike" | "drop";
@@ -60,6 +57,26 @@ function classifyAnomaly(
 function assertOption(condition: boolean, errorCode: string): void {
   if (!condition) throw new Error(errorCode);
 }
+
+function insightMetadata(
+  workspaceId: string,
+  sourceId: string,
+  observedAt: string,
+  now: string,
+): Pick<
+  MarketingInsight,
+  "workspaceId" | "confidence" | "sourceIds" | "observedAt" | "createdAt" | "updatedAt"
+> {
+  return {
+    workspaceId,
+    confidence: 0,
+    sourceIds: [sourceId],
+    observedAt,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 
 function normalizedOptions(
   options: AnomalyDetectionOptions,
@@ -167,16 +184,13 @@ export function buildAnomalyInsights(
   }
   return anomalies.map((anomaly) => {
     const timestamp = new Date(anomaly.timestamp).toISOString();
-    const base = {
-      workspaceId,
-      confidence: 0,
-      sourceIds: ["metric:" + anomaly.metric + ":" + timestamp],
-      observedAt: anomaly.timestamp,
-      createdAt: now,
-      updatedAt: now,
-    };
-    return createMarketingInsight({
-      ...base,
+    return {
+      ...insightMetadata(
+        workspaceId,
+        "metric:" + anomaly.metric + ":" + timestamp,
+        anomaly.timestamp,
+        now,
+      ),
       id: "anomaly:" + workspaceId + ":" + anomaly.metric + ":" + timestamp,
       kind: "anomaly",
       title:
@@ -191,6 +205,6 @@ export function buildAnomalyInsights(
         "signal; causality and statistical significance are not claimed.",
       metric: anomaly.metric,
       value: anomaly.value,
-    });
+    };
   });
 }
