@@ -76,7 +76,7 @@ Status meanings:
 | PERF-02 Memory budget          | UNVERIFIED               | Measurement pending                                                                      |
 | QA-01 Coverage threshold       | VERIFIED                 | Hosted coverage gate passed                                                              |
 | QA-02 Critical E2E             | VERIFIED*                | Main browser E2E plus exact-head native E2E passed                                       |
-| DOC-01 Product docs match      | PENDING                  | Release docs are being reconciled to the post-PR47 current line                          |
+| DOC-01 Product docs match      | VERIFIED                 | Release evidence is reconciled to current main `cea2873db9817d4930662747441b55e1660dd67d` |
 | DOC-02 Security model          | IMPLEMENTED / UNVERIFIED | Threat model/security gates exist; dedicated security review remains                     |
 
 ## External / commercial prerequisites
