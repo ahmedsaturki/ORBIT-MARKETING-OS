@@ -2,51 +2,55 @@
 
 Updated: 2026-09-26.
 
-Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evidence exists; UNVERIFIED = required runtime evidence is still missing; PARTIAL = mixed evidence; BLOCKED = external prerequisite prevents completion.
+Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evidence exists; UNVERIFIED = required runtime evidence is missing; PARTIAL = mixed evidence; BLOCKED = external prerequisite prevents completion.
 
-| Gate                                            | State       | Evidence / blocker                                                                                                                                                                      |
-| ----------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Core domain/security                            | IMPLEMENTED | Typed domain, queue, policy, RBAC, encryption/redaction, audit integrity                                                                                                                |
-| Queue invariants                                | IMPLEMENTED | Workspace-scoped idempotency, UTC scheduling, bounded retries, defensive copies                                                                                                         |
-| Execution orchestrator                          | IMPLEMENTED | Policy → confirmation → connector → audit → queue                                                                                                                                       |
-| Workspace isolation                             | IMPLEMENTED | Persisted active workspace, membership checks and scoped vault                                                                                                                          |
-| SQLite integrity                                | IMPLEMENTED | FK enforcement, migrations and workspace integrity triggers                                                                                                                             |
-| Migration path                                  | IMPLEMENTED | Versioned schema through v15 with research model and transactional migrations                                                                                                           |
-| Operating graph/outcomes                        | IMPLEMENTED | Strategy/work graph, opportunities, insights, governed links and bounded agent context                                                                                                  |
-| Mission Control/control layer                   | IMPLEMENTED | Next actions, simulation, replay, policy packs, campaign plans and grounded knowledge context                                                                                           |
-| Research Intelligence                           | IMPLEMENTED | Research briefs/findings, source/evidence links, confidence/freshness rules, native persistence and Research Studio                                                                     |
-| Experimentation/Learning                        | IMPLEMENTED | Deterministic assignment, evidence aggregation, uncertainty intervals, allocation-drift checks and governed learning bridge                                                             |
-| Anomaly detection                               | IMPLEMENTED | Read-only rolling median/MAD descriptive anomaly signal                                                                                                                                 |
-| Agent governance                                | IMPLEMENTED | Workspace-scoped definitions, tool grants, knowledge scope, autonomy modes and step budgets                                                                                             |
-| Command/Event control spine                     | VERIFIED    | Governed Command Registry, Operational Event Spine and Command Dispatcher passed exact-head CI/native/mobile validation on their merge lines                                            |
-| Universal Search                                | VERIFIED*   | Bounded, deterministic, workspace-scoped search with native E2E; current exact-head release gate is still active                                                                        |
-| Desktop UI                                      | IMPLEMENTED | Workspace, content, approvals, tasks, CRM, inbox, research, strategy, backup, license, audit and control surfaces                                                                       |
-| Web product/PWA                                 | VERIFIED    | CI/build/E2E and live production route checks passed                                                                                                                                    |
-| Runtime perimeter                               | VERIFIED    | Local-runtime auth/origin/rate-limit and bounded local-AI smoke gates passed                                                                                                            |
-| Local AI defaults                               | VERIFIED    | Local Ollama runtime contract and smoke validation passed                                                                                                                               |
-| Mobile monitoring/control surface               | VERIFIED    | Expo validation passed on validated release line                                                                                                                                        |
-| Clean install                                   | VERIFIED    | Frozen install with committed lockfiles                                                                                                                                                 |
-| Typecheck/lint/tests/coverage/build             | VERIFIED    | Hosted CI gates passed on current development lineage                                                                                                                                   |
-| Rust quality                                    | VERIFIED    | Rust fmt/check/test/clippy gates passed on validated release lines                                                                                                                      |
-| Security/dependency audit                       | VERIFIED    | Hosted security/dependency gates passed                                                                                                                                                 |
-| Performance smoke                               | VERIFIED    | Hosted performance smoke passed                                                                                                                                                         |
-| Browser E2E                                     | VERIFIED    | Playwright/browser gates passed                                                                                                                                                         |
-| Production web deployment                       | VERIFIED*   | Current Vercel production deployment is READY; deployment provenance/settings remain separate gates                                                                                     |
-| Native desktop packaging                        | VERIFIED    | Native packaging matrix has passed validated release lines                                                                                                                              |
-| Android debug validation                        | VERIFIED    | Mobile validation has produced a validated debug artifact                                                                                                                               |
-| Native runtime restart/migration/crash recovery | PARTIAL     | Native recovery tests exist and Search E2E exercises restart plus interrupted queue recovery; consolidated release evidence remains                                                     |
-| Real Telegram connector E2E                     | UNVERIFIED  | Controlled real-account authorization/delivery evidence is still required                                                                                                               |
-| Real LinkedIn connector E2E                     | UNVERIFIED  | Controlled real-account authorization/publish evidence is still required                                                                                                                |
-| CRDT encrypted transport/convergence            | VERIFIED*   | Automated encrypted reconnect/convergence evidence exists; live multi-device network evidence remains                                                                                   |
-| Accessibility/RTL                               | VERIFIED*   | Automated structural checks passed; manual/WCAG conformance audit is not claimed                                                                                                        |
-| 24h stability soak                              | UNVERIFIED  | No completed 24-hour evidence                                                                                                                                                           |
-| Desktop signing/notarization                    | BLOCKED     | Signing identity/credentials are not configured                                                                                                                                         |
-| Mobile production signing/store distribution    | BLOCKED     | Production store credentials/configuration are not configured                                                                                                                           |
-| Vercel project/provenance reconciliation        | PARTIAL     | Project metadata has reported framework vite while repo contract expects Next.js static export; recent READY deployments include both provenance-bearing and empty-metadata deployments |
-| Vercel rollback drill                           | UNVERIFIED  | Procedure exists; fresh drill evidence remains                                                                                                                                          |
-| Governance/main branch protection               | UNVERIFIED  | GitHub ruleset/branch protection state not yet verified                                                                                                                                 |
-| Billing/payment                                 | BLOCKED     | No verified commercial billing provider configured                                                                                                                                      |
-| Production/commercial launch                    | BLOCKED     | Release-critical runtime, live connector, signing/distribution, provenance, governance and commercial gates remain                                                                      |
+| Gate | State | Evidence / blocker |
+| --- | --- | --- |
+| Core domain/security | VERIFIED | Core architecture, security controls and current hosted quality/native evidence |
+| Queue invariants | VERIFIED | Workspace-scoped idempotency, UTC scheduling, bounded retries and defensive handling |
+| Execution orchestrator | VERIFIED | Policy → confirmation → connector → audit → queue controls covered by core/native validation |
+| Workspace isolation | VERIFIED | Persisted active workspace, membership checks and scoped sensitive data |
+| SQLite integrity | VERIFIED | FK enforcement, migrations and workspace integrity controls |
+| Migration path | VERIFIED | Versioned schema through v15 with research model |
+| Operating graph/outcomes | VERIFIED | Strategy/work graph, opportunities, insights and bounded context |
+| Mission Control/control layer | VERIFIED | Next actions, simulation, replay, policy packs and grounded knowledge |
+| Research Intelligence | VERIFIED | Research briefs/findings, source/evidence rules and native persistence |
+| Experimentation/Learning | VERIFIED | Deterministic assignment, aggregation and governed learning bridge |
+| Anomaly detection | VERIFIED | Deterministic descriptive rolling median/MAD signal |
+| Agent governance | VERIFIED | Workspace-scoped definitions, grants, knowledge scope and autonomy controls |
+| Command/Event control spine | VERIFIED | Exact-head CI/native/mobile evidence passed before merge |
+| Universal Search | VERIFIED | Exact-head Windows Native E2E passed after real SQLite escaping fix |
+| Publishing Calendar | VERIFIED | Exact-head desktop/native/mobile validation passed |
+| Bulk Planner | VERIFIED | Approval-gated bounded planner logic and validated native feature head |
+| Competitive Watch | VERIFIED | Workspace-namespaced sources and public locators only |
+| Desktop UI | VERIFIED | Current desktop feature surface plus native validation |
+| Web product/PWA | VERIFIED | Web quality/build/E2E and live route checks |
+| Runtime perimeter | VERIFIED | Local runtime auth/origin/rate-limit and local-AI smoke |
+| Local AI defaults | VERIFIED | Ollama-local runtime smoke |
+| Mobile monitoring/control surface | VERIFIED | Mobile validation passed on validated release line |
+| Clean install | VERIFIED | Frozen install with committed lockfiles |
+| Typecheck/lint/tests/coverage/build | VERIFIED | Hosted CI gates passed on current merged feature lineage |
+| Rust quality | VERIFIED | Rust fmt/check/test/clippy passed on validated release line |
+| Security/dependency audit | VERIFIED | Hosted security and dependency checks passed |
+| Performance smoke | VERIFIED | Queue throughput smoke passed |
+| Browser E2E | VERIFIED | Playwright/browser gates passed |
+| Production web availability | VERIFIED | READY production deployment and live route/header/runtime checks |
+| Production web provenance | UNVERIFIED | Current READY deployment predates main=377e86d and current project metadata/provenance still requires reconciliation |
+| Native desktop packaging | VERIFIED | All four desktop packaging targets passed on PR #72 exact head |
+| Android debug validation | VERIFIED | Mobile validation produced validated debug artifact |
+| Native recovery | PARTIAL | Restart/queue recovery E2E exists; consolidated production evidence remains open |
+| Real Telegram connector E2E | UNVERIFIED | Real-account authorization/delivery evidence required |
+| Real LinkedIn connector E2E | UNVERIFIED | Real-account authorization/publish evidence required |
+| CRDT multi-device network | UNVERIFIED | Live multi-device network evidence required |
+| Accessibility/RTL | PARTIAL | Automated structural checks pass; manual/WCAG audit remains |
+| 24h stability soak | UNVERIFIED | No completed 24-hour evidence |
+| Desktop signing/notarization | BLOCKED | Signing identities/credentials not configured |
+| Mobile production signing/store distribution | BLOCKED | Store credentials/configuration not configured |
+| Vercel project/settings provenance | PARTIAL | Repository contract says Next.js/root/out; connected metadata currently reports Vite/empty provenance |
+| Vercel rollback drill | UNVERIFIED | Procedure exists; fresh drill evidence missing |
+| Governance/main branch protection | UNVERIFIED | Live protection state cannot be verified with current GitHub integration |
+| Billing/payment | BLOCKED | No verified commercial billing provider configured |
+| Production/commercial launch | BLOCKED | Multiple release-critical L3 gates remain open |
 
 ## Release rule
 
