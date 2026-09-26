@@ -110,6 +110,22 @@ if (
   throw new Error("orbit_mcp_legacy_tools_smoke_failed");
 }
 
+const invalidModernLines = runMcp(
+  JSON.stringify({
+    jsonrpc: "2.0",
+    id: 99,
+    method: "tools/list",
+    params: {},
+  }),
+);
+const invalidModern = invalidModernLines.find((entry) => entry.id === 99);
+if (
+  invalidModern?.error?.code !== -32602 ||
+  invalidModern?.error?.message !== "initialize_required"
+) {
+  throw new Error("orbit_mcp_preinit_guard_smoke_failed");
+}
+
 const modernLines = runMcp(
   JSON.stringify({
     jsonrpc: "2.0",
@@ -169,6 +185,8 @@ if (
 }
 
 if (
+  modernTools?.result?._meta?.["io.modelcontextprotocol/serverInfo"]?.name !==
+    "orbit-governed-surface" ||
   !Array.isArray(modernTools?.result?.tools) ||
   !modernTools.result.tools.some(
     (tool) => tool.name === "orbit.command.preview",
@@ -180,6 +198,8 @@ if (
 const callText = call?.result?.content?.[0]?.text;
 const callPayload = typeof callText === "string" ? JSON.parse(callText) : null;
 if (
+  call?.result?._meta?.["io.modelcontextprotocol/serverInfo"]?.name !==
+    "orbit-governed-surface" ||
   callPayload?.decision?.allowed !== false ||
   callPayload?.decision?.reason !== "approval_required" ||
   call?.result?.isError !== true
