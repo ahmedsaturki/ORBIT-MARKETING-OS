@@ -28,6 +28,8 @@ describe("canonical database schema contract", () => {
       "experiment_observations",
       "marketing_links",
       "marketing_link_evidence",
+      "marketing_links",
+      "marketing_link_evidence",
     ]) {
       expect(DATABASE_SCHEMA_SQL).toContain(
         `CREATE TABLE IF NOT EXISTS ${table}`,
