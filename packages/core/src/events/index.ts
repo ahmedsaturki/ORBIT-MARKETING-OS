@@ -14,7 +14,10 @@ export type OperationalEventKind =
   | "human.intervention_required"
   | "approval.requested"
   | "approval.decided"
-  | "insight.recorded";
+  | "insight.recorded"
+  | "experiment.updated"
+  | "experiment.assignment"
+  | "experiment.observation_recorded";
 
 export interface OperationalEvent {
   readonly id: string;
