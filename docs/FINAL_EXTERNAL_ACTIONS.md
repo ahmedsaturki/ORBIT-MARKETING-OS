@@ -8,7 +8,7 @@ The merged core is now strongly verified at L2 across the main product domains. 
 
 1. Confirm the connected Vercel Project Settings match the repository contract: repository root, Next.js, Node 22.x, build `pnpm --dir packages/web build`, output `packages/web/out`.
 2. Provide the Vercel deployment credentials to the guarded GitHub release environment.
-3. Produce a current-main prebuilt production deployment with `NEXT_PUBLIC_ORBIT_RELEASE_SHA=377e86d...` and retain the live verification output.
+3. Produce a current-main prebuilt production deployment with `NEXT_PUBLIC_ORBIT_RELEASE_SHA=08e0f61...` and retain the live verification output.
 4. Exercise rollback to the previous verified production deployment and retain evidence.
 
 PR #76 now makes missing credentials a hard gate instead of a soft-disable.
