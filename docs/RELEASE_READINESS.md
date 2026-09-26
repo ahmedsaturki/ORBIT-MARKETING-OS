@@ -5,7 +5,7 @@ Updated: 2026-09-26
 ## Canonical repository state
 
 - Current `main`: `1cb104647bc69cff114f430cab1ff9dc184ed864`
-- - PR #71 latest release-truth head: `7105abfe4a4eb94d2a62f790ee1e0c0ca99e6fa1`
+- - PR #71 latest release-truth head: `5518e4489b90bf8f5c4050f44f114f9ab1877b86`
 - PR #72 latest Publishing Workbench / Competitive Watch lineage is tracked separately.
 
 ## Product baseline
