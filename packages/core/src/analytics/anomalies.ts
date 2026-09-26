@@ -145,4 +145,3 @@ export function detectMetricAnomalies(
     .slice(0, config.maxResults)
     .map((anomaly) => ({ ...anomaly }));
 }
-
