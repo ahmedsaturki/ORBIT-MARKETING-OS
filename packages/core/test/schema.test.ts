@@ -6,7 +6,7 @@ import {
 
 describe("database schema contract", () => {
   it("uses the current schema version", () => {
-    expect(DATABASE_SCHEMA_VERSION).toBe(15);
+    expect(DATABASE_SCHEMA_VERSION).toBe(16);
   });
 
   it("enforces tenant ownership on core records", () => {
@@ -38,6 +38,19 @@ describe("database schema contract", () => {
       "previous_hash TEXT NOT NULL DEFAULT 'GENESIS'",
     );
     expect(DATABASE_SCHEMA_SQL).toContain("hash TEXT NOT NULL DEFAULT ''");
+  });
+
+  it("has persistent local link intelligence and evidence", () => {
+    expect(DATABASE_SCHEMA_SQL).toContain(
+      "CREATE TABLE IF NOT EXISTS marketing_links",
+    );
+    expect(DATABASE_SCHEMA_SQL).toContain(
+      "CREATE TABLE IF NOT EXISTS marketing_link_evidence",
+    );
+    expect(DATABASE_SCHEMA_SQL).toContain("UNIQUE(workspace_id, link_key)");
+    expect(DATABASE_SCHEMA_SQL).toContain(
+      "source_locator TEXT NOT NULL DEFAULT ''",
+    );
   });
 
   it("has first-class approval and conversation primitives", () => {
