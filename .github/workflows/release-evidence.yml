@@ -1,0 +1,70 @@
+name: ORBIT Release Evidence Bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to verify"
+        required: true
+        default: "main"
+      mode:
+        description: "Verification lane"
+        required: true
+        default: "verification"
+        type: choice
+        options:
+          - verification
+          - commercial
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orbit-release-evidence
+  cancel-in-progress: false
+
+jobs:
+  evidence:
+    if: github.actor == 'ahmedsaturki'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Reproducible install
+        run: pnpm install --frozen-lockfile
+      - name: Workspace gate
+        run: pnpm verify:workspace
+      - name: IPC gate
+        run: pnpm verify:ipc
+      - name: Release sanity
+        run: pnpm verify:release
+      - name: Security scan
+        run: pnpm security:scan
+      - name: Runtime smoke
+        run: pnpm test:runtime
+      - name: Performance smoke
+        run: pnpm test:performance
+      - name: Readiness policy
+        run: pnpm verify:readiness -- --mode "${{ inputs.mode }}"
+      - name: Evidence bundle
+        run: >-
+          node scripts/collect-release-evidence.mjs --mode "${{ inputs.mode }}"
+          --output .artifacts/release-evidence.json
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: orbit-release-evidence-${{ github.run_id }}
+          path: .artifacts/release-evidence.json
+          if-no-files-found: error
+          retention-days: 30
