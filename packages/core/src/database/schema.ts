@@ -649,7 +649,7 @@ CREATE TABLE IF NOT EXISTS marketing_link_evidence (
   metric_name TEXT NOT NULL,
   metric_value REAL NOT NULL CHECK(metric_value >= 0),
   observed_at TEXT NOT NULL,
-  source_locator TEXT,
+  source_locator TEXT NOT NULL DEFAULT '',
   provenance TEXT NOT NULL,
   metadata_json TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL,
