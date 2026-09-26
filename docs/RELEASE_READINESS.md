@@ -59,7 +59,7 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 The connected Vercel project is live and the public surface currently returns healthy responses for the home, pricing, and privacy paths, with a 404 for an unknown route and no grouped runtime errors in the selected seven-day query.
 
-The current production deployment, however, predates `main=377e86d` and does not expose the merged release SHA. It is therefore healthy live infrastructure, not yet canonical release provenance.
+The current production deployment, however, predates the current `main` release state and does not expose the merged release SHA. It is therefore healthy live infrastructure, not yet canonical release provenance.
 
 ## Distribution posture
 
