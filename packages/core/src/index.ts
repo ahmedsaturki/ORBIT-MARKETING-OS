@@ -41,3 +41,6 @@ export * from "./search/index.js";
 export * from "./links/index.js";
 export * from "./platform/index.js";
 export * from "./platform/builtins.js";
+
+export { evaluateContentReuse } from "./content/reuse.js";
+export type { ContentReuseCandidate, ContentReuseDecision, ContentReuseHistory, ContentReusePolicy } from "./content/reuse.js";
