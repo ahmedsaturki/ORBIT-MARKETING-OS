@@ -49,7 +49,7 @@ export interface PlatformValidationResult {
   readonly errors: readonly string[];
 }
 
-const VERSION_PATTERN = /^\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 const EXTENSION_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{1,63}$/;
 
 function requiredText(value: string, error: string, errors: string[]): void {
