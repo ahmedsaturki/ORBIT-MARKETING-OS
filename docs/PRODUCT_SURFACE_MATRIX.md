@@ -10,7 +10,7 @@ Updated: 2026-09-26
 | Opportunities + insights          | yes                | v13 migration/validation exists; full product E2E remains                                                | PARTIAL         |
 | Operational Event Spine           | yes                | Exact-head tests/native validation passed in PR #47                                                      | VERIFIED        |
 | Command Registry                  | yes                | Exact-head tests/native validation passed in PR #47                                                      | VERIFIED        |
-| Command Dispatcher                | yes                | New dispatcher tests are added on the current validation branch; exact-head runtime verification pending | PENDING         |
+| Command Dispatcher                | yes                | PR #48 exact-head CI/native/mobile validation passed; current `main` contains the merged dispatcher | VERIFIED        |
 | Desktop Tauri shell               | yes                | Desktop bundles + Windows native E2E passed on PR #47 exact head                                         | VERIFIED        |
 | Desktop SQLite/vault/backup       | yes                | Rust/native quality gates passed; dedicated real-instance recovery drill remains                         | PARTIAL         |
 | Desktop campaigns/tasks/CRM/inbox | yes                | Main unit/integration coverage passed; full real-instance scenario remains                               | PARTIAL         |
