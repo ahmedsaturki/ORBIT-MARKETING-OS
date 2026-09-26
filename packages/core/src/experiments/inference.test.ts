@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { inferExperiment, proportionInterval } from "./inference.js";
-import type { ExperimentSummary } from "./index.js";
+import type { ExperimentDefinition, ExperimentSummary } from "./index.js";
 
 function summary(): ExperimentSummary {
   return {
