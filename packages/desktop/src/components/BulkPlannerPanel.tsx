@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
-import { Layers3, ShieldCheck } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { Layers3, ShieldCheck } from "lucide-react";
 import { buildBulkPlan, type BulkPlanItem } from "@orbit/core";
 
 interface AccountOption {
@@ -21,6 +21,13 @@ interface ContentOption {
   readonly approval_status: string;
 }
 
+interface BulkPlannerProps {
+  readonly accounts: readonly AccountOption[];
+  readonly campaigns: readonly CampaignOption[];
+  readonly contentItems: readonly ContentOption[];
+  readonly onTasksChanged: () => Promise<void>;
+}
+
 function parsePositiveInteger(
   value: string,
   fallback: number,
@@ -32,15 +39,10 @@ function parsePositiveInteger(
 }
 
 function toLocalInputValue(date: Date): string {
-  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  const adjusted = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60000,
+  );
   return adjusted.toISOString().slice(0, 16);
-}
-
-interface BulkPlannerProps {
-  readonly accounts: readonly AccountOption[];
-  readonly campaigns: readonly CampaignOption[];
-  readonly contentItems: readonly ContentOption[];
-  readonly onTasksChanged: () => Promise<void>;
 }
 
 export function BulkPlannerPanel({
@@ -65,24 +67,23 @@ export function BulkPlannerPanel({
   const [preview, setPreview] = useState<readonly BulkPlanItem[]>([]);
   const [planSeed, setPlanSeed] = useState(() => `bulk-${Date.now()}`);
 
-  const invalidatePreview = (): void => {
-    setPreview([]);
-  };
-
   const selectedContent = useMemo(
     () => contentItems.find((item) => item.id === contentId),
     [contentId, contentItems],
   );
 
+  const invalidatePreview = (): void => {
+    setPreview([]);
+  };
+
   const buildPlan = (): readonly BulkPlanItem[] | null => {
     try {
-      const plan = buildBulkPlan({
+      return buildBulkPlan({
         startAt: new Date(startAt).toISOString(),
         intervalMinutes: Number(intervalMinutes),
         count: Number(count),
         seed: planSeed,
       });
-      return plan;
     } catch (caught: unknown) {
       setError(
         caught instanceof Error
@@ -209,7 +210,10 @@ export function BulkPlannerPanel({
           الحملة
           <select
             value={campaignId}
-            onChange={(event) => {\n              setCampaignId(event.target.value);\n              invalidatePreview();\n            }}
+            onChange={(event) => {
+              setCampaignId(event.target.value);
+              invalidatePreview();
+            }}
           >
             <option value="">اختر حملة</option>
             {campaigns.map((campaign) => (
@@ -224,7 +228,10 @@ export function BulkPlannerPanel({
           الحساب
           <select
             value={accountId}
-            onChange={(event) => {\n              setAccountId(event.target.value);\n              invalidatePreview();\n            }}
+            onChange={(event) => {
+              setAccountId(event.target.value);
+              invalidatePreview();
+            }}
           >
             <option value="">اختر حساباً</option>
             {accounts.map((account) => (
@@ -239,7 +246,10 @@ export function BulkPlannerPanel({
           المحتوى المعتمد
           <select
             value={contentId}
-            onChange={(event) => {\n              setContentId(event.target.value);\n              invalidatePreview();\n            }}
+            onChange={(event) => {
+              setContentId(event.target.value);
+              invalidatePreview();
+            }}
           >
             <option value="">اختر محتوى</option>
             {contentItems.map((content) => (
@@ -254,7 +264,10 @@ export function BulkPlannerPanel({
           الوجهة
           <input
             value={destinationId}
-            onChange={(event) => {\n              setDestinationId(event.target.value);\n              invalidatePreview();\n            }}
+            onChange={(event) => {
+              setDestinationId(event.target.value);
+              invalidatePreview();
+            }}
             placeholder="page-or-channel-001"
           />
         </label>
@@ -264,7 +277,10 @@ export function BulkPlannerPanel({
           <input
             type="datetime-local"
             value={startAt}
-            onChange={(event) => {\n              setStartAt(event.target.value);\n              invalidatePreview();\n            }}
+            onChange={(event) => {
+              setStartAt(event.target.value);
+              invalidatePreview();
+            }}
           />
         </label>
 
@@ -273,7 +289,10 @@ export function BulkPlannerPanel({
           <input
             inputMode="numeric"
             value={intervalMinutes}
-            onChange={(event) => {\n              setIntervalMinutes(event.target.value);\n              invalidatePreview();\n            }}
+            onChange={(event) => {
+              setIntervalMinutes(event.target.value);
+              invalidatePreview();
+            }}
           />
         </label>
 
@@ -283,7 +302,10 @@ export function BulkPlannerPanel({
             inputMode="numeric"
             max={50}
             value={count}
-            onChange={(event) => {\n              setCount(event.target.value);\n              invalidatePreview();\n            }}
+            onChange={(event) => {
+              setCount(event.target.value);
+              invalidatePreview();
+            }}
           />
         </label>
 
@@ -293,7 +315,10 @@ export function BulkPlannerPanel({
             inputMode="numeric"
             max={100}
             value={priority}
-            onChange={(event) => {\n              setPriority(event.target.value);\n              invalidatePreview();\n            }}
+            onChange={(event) => {
+              setPriority(event.target.value);
+              invalidatePreview();
+            }}
           />
         </label>
       </div>
