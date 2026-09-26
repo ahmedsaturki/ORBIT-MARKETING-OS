@@ -4,7 +4,7 @@ Updated: 2026-09-26
 
 ## Current release line
 
-The consolidated production implementation is merged into `main` through PR #48. The authoritative current main commit is `cea2873db9817d4930662747441b55e1660dd67d`.
+The consolidated production implementation is merged into `main` through PR #50. The authoritative current main commit is `d22b97aaca33d5331d6572b379020266044fbca3`.
 
 PR #45 established the RC2.1 native/release baseline. PR #47 added the governed Command Registry and Operational Event Spine, and PR #48 added the governed Command Dispatcher. Both merged after exact-head validation.
 
@@ -18,7 +18,7 @@ PR #48 exact head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed:
 - Desktop Native Validation run 36200698273;
 - Mobile Validation run 36200698316.
 
-The resulting `main` head `cea2873db9817d4930662747441b55e1660dd67d` also has passing CI run 36202057601 and Web Deploy run 36202057689.
+The resulting `main` head `d22b97aaca33d5331d6572b379020266044fbca3` has passing post-merge CI run 36204143746 and Web Deploy run 36204143707.
 
 ## Verified production web
 
@@ -32,7 +32,7 @@ Current runtime error aggregation for the selected 7-day period reports no runti
 - controlled real Telegram authorization/delivery evidence;
 - controlled real LinkedIn authorization/delivery evidence;
 - live multi-device CRDT network verification;
-- dedicated accessibility/RTL audit;
+- dedicated full accessibility/RTL audit beyond the automated CI gate;
 - 24-hour stability soak;
 - release-tag checksum/provenance verification;
 - desktop signing/notarization;
