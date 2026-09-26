@@ -24,17 +24,18 @@ export interface ContentReusePolicy {
   readonly requireApproval: boolean;
 }
 
+export type ContentReuseReason =
+  | "approved"
+  | "approval_required"
+  | "platform_excluded"
+  | "cooldown_active"
+  | "reuse_limit_reached"
+  | "stale"
+  | "duplicate_variant";
+
 export interface ContentReuseDecision {
   readonly allowed: boolean;
-  readonly reasons: readonly (
-    | "approved"
-    | "approval_required"
-    | "platform_excluded"
-    | "cooldown_active"
-    | "reuse_limit_reached"
-    | "stale"
-    | "duplicate_variant"
-  )[];
+  readonly reasons: readonly ContentReuseReason[];
 }
 
 function hoursBetween(later: Date, earlier: Date): number {
@@ -72,8 +73,11 @@ export function evaluateContentReuse(
   if (Number.isNaN(candidateDate.getTime())) {
     throw new Error("candidate.createdAt must be a valid date");
   }
+  if (Number.isNaN(now.getTime())) {
+    throw new Error("now must be a valid date");
+  }
 
-  const reasons: ContentReuseDecision["reasons"] = [];
+  const reasons: ContentReuseReason[] = [];
   if (policy.requireApproval) {
     if (candidate.approvalStatus === "approved") reasons.push("approved");
     else reasons.push("approval_required");
@@ -85,13 +89,20 @@ export function evaluateContentReuse(
     reasons.push("platform_excluded");
   }
 
-  const published = history
-    .filter((item) => item.contentId === candidate.contentId)
-    .sort(
-      (a, b) =>
-        new Date(b.publishedAt).getTime() -
-        new Date(a.publishedAt).getTime(),
-    );
+  const relevantHistory = history.filter(
+    (item) => item.contentId === candidate.contentId,
+  );
+  for (const item of relevantHistory) {
+    if (Number.isNaN(new Date(item.publishedAt).getTime())) {
+      throw new Error("history.publishedAt must be a valid date");
+    }
+  }
+
+  const published = relevantHistory.sort(
+    (a, b) =>
+      new Date(b.publishedAt).getTime() -
+      new Date(a.publishedAt).getTime(),
+  );
 
   if (published.length >= policy.maxReuseCount) {
     reasons.push("reuse_limit_reached");
@@ -110,6 +121,12 @@ export function evaluateContentReuse(
   }
 
   const candidateVariant = normalize(candidate.body);
+  for (const item of history) {
+    if (Number.isNaN(new Date(item.publishedAt).getTime())) {
+      throw new Error("history.publishedAt must be a valid date");
+    }
+  }
+
   const duplicate = history.some(
     (item) =>
       item.contentId !== candidate.contentId &&
