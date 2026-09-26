@@ -40,6 +40,21 @@ describe("database schema contract", () => {
     expect(DATABASE_SCHEMA_SQL).toContain("hash TEXT NOT NULL DEFAULT ''");
   });
 
+  it("has persistent local link intelligence and evidence", () => {
+    expect(DATABASE_SCHEMA_SQL).toContain(
+      "CREATE TABLE IF NOT EXISTS marketing_links",
+    );
+    expect(DATABASE_SCHEMA_SQL).toContain(
+      "CREATE TABLE IF NOT EXISTS marketing_link_evidence",
+    );
+    expect(DATABASE_SCHEMA_SQL).toContain(
+      "UNIQUE(workspace_id, link_key)",
+    );
+    expect(DATABASE_SCHEMA_SQL).toContain(
+      "source_locator TEXT NOT NULL DEFAULT ''",
+    );
+  });
+
   it("has first-class approval and conversation primitives", () => {
     expect(DATABASE_SCHEMA_SQL).toContain(
       "CREATE TABLE IF NOT EXISTS approvals",
