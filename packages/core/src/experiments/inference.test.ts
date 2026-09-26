@@ -121,6 +121,30 @@ describe("experiment inference", () => {
     ).toThrow("experiment_inference_identity_mismatch");
   });
 
+  it("rejects malformed variant summaries", () => {
+    const experiment: Parameters<typeof inferExperiment>[0] = {
+      id: "exp-1",
+      workspaceId: "ws-1",
+      name: "Test",
+      hypothesis: "Benefit improves conversion",
+      objectiveMetric: "conversion_rate",
+      status: "running",
+      variants: [
+        { id: "control", name: "Control", allocationPercent: 50 },
+        { id: "benefit", name: "Benefit", allocationPercent: 50 },
+      ],
+    };
+    expect(() =>
+      inferExperiment(experiment, {
+        ...summary(),
+        variants: [
+          ...summary().variants,
+          { ...summary().variants[1]!, variantId: "unexpected" },
+        ],
+      }),
+    ).toThrow("experiment_inference_unknown_variant");
+  });
+
   it("reports allocation drift from observed exposure", () => {
     const experiment: Parameters<typeof inferExperiment>[0] = {
       id: "exp-1",
