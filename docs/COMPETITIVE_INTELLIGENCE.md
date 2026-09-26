@@ -6,9 +6,12 @@ Updated: 2026-09-26.
 
 This is the public-surface competitor watchlist for ORBIT Marketing OS.
 
-It records observable capabilities only. It is a product-planning input, not a claim about private implementation.
+It records observable capabilities only. It is a product-planning input, not a
+claim about private implementation.
 
-ORBIT keeps its own architecture, data model, policies, runtime, and UX. It does not copy proprietary source code, private APIs, private data, or protected assets.
+ORBIT keeps its own architecture, data model, policies, runtime, and UX. It
+does not copy proprietary source code, private APIs, private data, or protected
+assets.
 
 ## Watchlist
 
@@ -52,7 +55,8 @@ Source: https://rbmwhats.tools/
 
 ### RBM Tools
 
-The public anonymous surface currently exposes a login interface. No private feature set is inferred from it.
+The public anonymous surface currently exposes a login interface. No private
+feature set is inferred from it.
 
 Source: https://rbm.tools/
 
@@ -117,9 +121,11 @@ The competitor observations translate into these ORBIT workstreams:
 
 ### Publishing Workbench
 
-Calendar, multi-channel variants, bulk planning, reusable drafts/templates, preview, approval, queueing, and execution evidence.
+Calendar, multi-channel variants, bulk planning, reusable drafts/templates,
+preview, approval, queueing, and execution evidence.
 
-The calendar must remain a read/query surface over the canonical ORBIT queue. It must not create a second scheduler.
+The calendar must remain a read/query surface over the canonical ORBIT queue.
+It must not create a second scheduler.
 
 ### Brand and Media Intelligence
 
@@ -152,7 +158,8 @@ Governed flow:
 
 source → variant → QA → approval → scheduled reuse
 
-Rules should cover cooldowns, reuse limits, platform exclusions, freshness, duplicate detection, and configurable human approval.
+Rules should cover cooldowns, reuse limits, platform exclusions, freshness,
+duplicate detection, and configurable human approval.
 
 ### Reporting Packs
 
@@ -179,10 +186,12 @@ Each observation should retain its source URL and verification date.
 ## Product principles
 
 - Public competitor claims are observations, not proof of internal implementation.
-- Feature parity never overrides ORBIT safety, authorization, or platform compliance.
+- Feature parity never overrides ORBIT safety, authorization, or platform
+  compliance.
 - Local-first ownership remains a core architectural boundary.
 - External connectors must remain user-authorized and policy-governed.
-- Competitive research must feed product decisions and measurable acceptance criteria.
+- Competitive research must feed product decisions and measurable acceptance
+  criteria.
 
 ## Current ORBIT delivery sequence
 
@@ -192,4 +201,5 @@ Each observation should retain its source URL and verification date.
 4. Local Link Registry and measurable-link provenance.
 5. Governed Content Reuse Engine.
 6. Evidence-backed Reporting Packs.
-7. Automated competitor observation refresh through the existing Research layer, subject to source availability and compliance.
+7. Automated competitor observation refresh through the existing Research layer,
+   subject to source availability and compliance.
