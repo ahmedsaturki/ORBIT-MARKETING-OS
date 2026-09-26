@@ -500,14 +500,14 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       (linkId) =>
         window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
           input: {
-            linkId,
-            sourceType: "manual",
-            metricName: "clicks",
-            metricValue: 12,
-            observedAt: "2026-09-26T18:00:00Z",
-            sourceLocator: null,
+            link_id: linkId,
+            source_type: "manual",
+            metric_name: "clicks",
+            metric_value: 12,
+            observed_at: "2026-09-26T18:00:00Z",
+            source_locator: null,
             provenance: "manual_observation",
-            metadataJson: JSON.stringify({ test: true }),
+            metadata_json: JSON.stringify({ test: true }),
           },
         }),
       link.id,
@@ -572,14 +572,14 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
         (linkId) =>
           window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
             input: {
-              linkId,
-              sourceType: "manual",
-              metricName: "clicks",
-              metricValue: 1,
-              observedAt: "2026-09-26T18:00:00Z",
-              sourceLocator: null,
+              link_id: linkId,
+              source_type: "manual",
+              metric_name: "clicks",
+              metric_value: 1,
+              observed_at: "2026-09-26T18:00:00Z",
+              source_locator: null,
               provenance: "manual_observation",
-              metadataJson: JSON.stringify({ test: true }),
+              metadata_json: JSON.stringify({ test: true }),
             },
           }),
         link.id,
