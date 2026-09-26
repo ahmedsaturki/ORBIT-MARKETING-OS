@@ -483,6 +483,74 @@ export interface ExperimentLearningWriteback {
   readonly insights: readonly MarketingInsight[];
 }
 
+export interface ExperimentExecutionEvidence {
+  readonly experimentId: string;
+  readonly workspaceId: string;
+  readonly variantId: string;
+  readonly subjectId: string;
+  readonly observedAt: string;
+  readonly outcome: {
+    readonly status: "succeeded" | "blocked" | "failed";
+    readonly externalId?: string;
+  };
+  readonly engagementObserved?: boolean;
+  readonly conversionObserved?: boolean;
+  readonly value?: number;
+}
+
+function assertObservationTimestamp(observedAt: string): void {
+  if (!observedAt.trim() || Number.isNaN(Date.parse(observedAt))) {
+    throw new Error("invalid_observation_timestamp");
+  }
+}
+
+export function buildExperimentObservationFromExecution(
+  experiment: ExperimentDefinition,
+  evidence: ExperimentExecutionEvidence,
+): ExperimentObservation {
+  if (
+    experiment.id !== evidence.experimentId ||
+    experiment.workspaceId !== evidence.workspaceId
+  ) {
+    throw new Error("experiment_execution_workspace_mismatch");
+  }
+  if (!evidence.variantId.trim() || !evidence.subjectId.trim()) {
+    throw new Error("experiment_execution_identity_required");
+  }
+  if (!experiment.variants.some((variant) => variant.id === evidence.variantId)) {
+    throw new Error("experiment_execution_unknown_variant");
+  }
+  assertObservationTimestamp(evidence.observedAt);
+
+  const exposed = evidence.outcome.status === "succeeded";
+  const engaged = evidence.engagementObserved ?? false;
+  const converted = evidence.conversionObserved ?? false;
+
+  if (!exposed && (engaged || converted)) {
+    throw new Error("experiment_execution_outcome_without_exposure");
+  }
+  if (
+    evidence.value !== undefined &&
+    (!Number.isFinite(evidence.value) || evidence.value < 0)
+  ) {
+    throw new Error("experiment_execution_invalid_value");
+  }
+
+  return {
+    experimentId: experiment.id,
+    workspaceId: experiment.workspaceId,
+    variantId: evidence.variantId,
+    subjectId: evidence.subjectId,
+    observedAt: evidence.observedAt,
+    exposed,
+    engaged,
+    converted,
+    ...(exposed && evidence.value !== undefined
+      ? { value: evidence.value }
+      : {}),
+  };
+}
+
 function assertLearningTimestamp(now: string): void {
   if (!now.trim() || Number.isNaN(Date.parse(now))) {
     throw new Error("invalid_learning_timestamp");
