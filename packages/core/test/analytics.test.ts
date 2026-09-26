@@ -3,7 +3,10 @@ import {
   aggregateCampaignMetrics,
   buildMetricSeries,
 } from "../src/analytics/metrics.js";
-import { buildAnomalyInsights, detectMetricAnomalies } from "../src/analytics/anomalies.js";
+import {
+  buildAnomalyInsights,
+  detectMetricAnomalies,
+} from "../src/analytics/anomalies.js";
 
 describe("analytics primitives", () => {
   it("aggregates execution outcomes", () => {
@@ -79,7 +82,6 @@ describe("analytics primitives", () => {
     ]);
   });
 });
-
 
 describe("metric anomaly detection", () => {
   const series = Array.from({ length: 9 }, (_, index) => ({
