@@ -207,7 +207,7 @@ When an IPC command changes, update the desktop client, this API contract, and i
 
 ### Universal Search
 
-- `global_search` — read-only, active-workspace-scoped discovery across campaign, content, contact, conversation, opportunity, work, strategy, knowledge, agent, policy, experiment, research brief, and research finding records.
+- `global_search` — read-only, active-workspace-scoped discovery across account, campaign, content, contact, conversation, message, opportunity, work, strategy, knowledge item/source, media asset, agent, policy, experiment, research brief, and research finding records.
 - The native command accepts a query up to 200 characters and a result limit capped at 50.
 - Exact/prefix/substring matching is deterministically ranked; SQL wildcards are escaped before parameter binding.
 - It never reads or returns vault records, session payloads, passwords, tokens, or API keys.
