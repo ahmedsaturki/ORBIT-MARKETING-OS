@@ -198,50 +198,51 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
   });
 
   test("capability files are deny-by-default and least-privilege (capability review)", () => {
-    const capability = JSON.parse(
-      readFileSync(
-        join(root, "packages/desktop/src-tauri/capabilities/default.json"),
-        "utf8",
-      ),
+  const capability = JSON.parse(
+    readFileSync(
+      join(root, "packages/desktop/src-tauri/capabilities/default.json"),
+      "utf8",
+    ),
+  );
+  // Exactly one grant: core:default — no fs/shell/http/clipboard/dialog/updater.
+  expect(capability.permissions).toEqual(["core:default"]);
+  expect(capability.windows).toEqual(["main"]);
+  for (const perm of capability.permissions) {
+    expect(perm).not.toMatch(/\*/);
+    expect(perm).not.toMatch(
+      /^(fs|shell|http|clipboard|dialog|updater|process|path:allow-write)/,
     );
-    // Exactly one grant: core:default — no fs/shell/http/clipboard/dialog/updater.
-    expect(capability.permissions).toEqual(["core:default"]);
-    expect(capability.windows).toEqual(["main"]);
-    for (const perm of capability.permissions) {
-      expect(perm).not.toMatch(/\*/);
-      expect(perm).not.toMatch(
-        /^(fs|shell|http|clipboard|dialog|updater|process|path:allow-write)/,
-      );
-    }
+  }
 
-    // Native builds resolve this generated schema; source-only CI may not have generated it yet.
-    const resolvedPath = join(
-      root,
-      "packages/desktop/src-tauri/gen/schemas/capabilities.json",
-    );
-    if (existsSync(resolvedPath)) {
-      const resolved = JSON.parse(readFileSync(resolvedPath, "utf8"));
-      expect(resolved.default.windows).toEqual(["main"]);
-      expect(resolved.default.permissions).toEqual(["core:default"]);
-    }
+  const conf = JSON.parse(
+    readFileSync(
+      join(root, "packages/desktop/src-tauri/tauri.conf.json"),
+      "utf8",
+    ),
+  );
+  const security = conf.app.security;
+  // Strict CSP: no unsafe-eval, no remote script origins, framed embedding off.
+  expect(security.csp).toMatch(/default-src 'self'/);
+  expect(security.csp).toMatch(/script-src 'self'/);
+  expect(security.csp).not.toMatch(/script-src[^;]*unsafe-eval/);
+  expect(security.csp).not.toMatch(/script-src[^;]*https?:/);
+  expect(security.csp).toMatch(/object-src 'none'/);
+  expect(security.csp).toMatch(/frame-ancestors 'none'/);
+  expect(security.freezePrototype).toBe(true);
+  expect(security.dangerousDisableAssetCspModification).toBe(false);
+});
 
-    const conf = JSON.parse(
-      readFileSync(
-        join(root, "packages/desktop/src-tauri/tauri.conf.json"),
-        "utf8",
-      ),
-    );
-    const security = conf.app.security;
-    // Strict CSP: no unsafe-eval, no remote script origins, framed embedding off.
-    expect(security.csp).toMatch(/default-src 'self'/);
-    expect(security.csp).toMatch(/script-src 'self'/);
-    expect(security.csp).not.toMatch(/script-src[^;]*unsafe-eval/);
-    expect(security.csp).not.toMatch(/script-src[^;]*https?:/);
-    expect(security.csp).toMatch(/object-src 'none'/);
-    expect(security.csp).toMatch(/frame-ancestors 'none'/);
-    expect(security.freezePrototype).toBe(true);
-    expect(security.dangerousDisableAssetCspModification).toBe(false);
-  });
+test("native capability schema resolves to least privilege", () => {
+  test.skip(!exe, "native executable is required for generated capability verification");
+  const resolved = JSON.parse(
+    readFileSync(
+      join(root, "packages/desktop/src-tauri/gen/schemas/capabilities.json"),
+      "utf8",
+    ),
+  );
+  expect(resolved.default.windows).toEqual(["main"]);
+  expect(resolved.default.permissions).toEqual(["core:default"]);
+});;
 
   test("renderer boots in the isolated shell and IPC positive control works", async () => {
     try {
