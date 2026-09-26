@@ -39,7 +39,7 @@ Status meanings:
 | CRM-01 Conversation/contact linking | VERIFIED       | Native relational checks passed                                             |
 | SYNC-01 Offline persistence         | VERIFIED       | Encrypted reconnect/convergence tests passed                                |
 | SYNC-02 Convergence                 | VERIFIED*      | Simulation/test evidence passed; live multi-device network remains separate |
-| CMD-01 Command dispatcher           | PENDING        | Dispatcher implementation is on current validation branch                   |
+| CMD-01 Command dispatcher           | VERIFIED       | PR #48 exact-head CI/native/mobile validation passed before merge; current `main` contains the merged dispatcher |
 | EVENT-01 Operational event spine    | VERIFIED       | PR #47 exact-head tests/native validation passed                            |
 
 ## Connectors
