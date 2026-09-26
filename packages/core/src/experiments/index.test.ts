@@ -285,7 +285,11 @@ describe("experiment execution evidence bridge", () => {
         variantId: "benefit",
         subjectId: "lead-42",
         observedAt: "2026-09-26T12:00:00Z",
-        outcome: { status: "succeeded", externalId: "post-1" },
+        outcome: {
+          status: "succeeded",
+          externalId: "post-1",
+          message: "delivered",
+        },
       },
     );
     expect(observation).toMatchObject({
@@ -304,7 +308,7 @@ describe("experiment execution evidence bridge", () => {
         variantId: "benefit",
         subjectId: "lead-42",
         observedAt: "2026-09-26T12:01:00Z",
-        outcome: { status: "succeeded" },
+        outcome: { status: "succeeded", message: "delivered" },
         engagementObserved: true,
         conversionObserved: true,
         value: 125,
@@ -327,7 +331,10 @@ describe("experiment execution evidence bridge", () => {
           variantId: "benefit",
           subjectId: "lead-42",
           observedAt: "2026-09-26T12:02:00Z",
-          outcome: { status },
+          outcome:
+            status === "blocked"
+              ? { status, reason: "platform_challenge", message: "blocked" }
+              : { status, message: "failed" },
         }).exposed,
       ).toBe(false);
     }
@@ -341,7 +348,11 @@ describe("experiment execution evidence bridge", () => {
         variantId: "benefit",
         subjectId: "lead-42",
         observedAt: "2026-09-26T12:03:00Z",
-        outcome: { status: "blocked" },
+        outcome: {
+          status: "blocked",
+          reason: "platform_challenge",
+          message: "challenge",
+        },
         conversionObserved: true,
       }),
     ).toThrow("experiment_execution_outcome_without_exposure");
@@ -355,7 +366,7 @@ describe("experiment execution evidence bridge", () => {
         variantId: "benefit",
         subjectId: "lead-42",
         observedAt: "2026-09-26T12:04:00Z",
-        outcome: { status: "succeeded" },
+        outcome: { status: "succeeded", message: "delivered" },
       }),
     ).toThrow("experiment_execution_workspace_mismatch");
 
@@ -366,7 +377,7 @@ describe("experiment execution evidence bridge", () => {
         variantId: "unknown",
         subjectId: "lead-42",
         observedAt: "2026-09-26T12:04:00Z",
-        outcome: { status: "succeeded" },
+        outcome: { status: "succeeded", message: "delivered" },
       }),
     ).toThrow("experiment_execution_unknown_variant");
   });
