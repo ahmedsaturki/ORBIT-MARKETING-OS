@@ -3,6 +3,7 @@ import {
   aggregateCampaignMetrics,
   buildMetricSeries,
 } from "../src/analytics/metrics.js";
+import { buildAnomalyInsights, detectMetricAnomalies } from "../src/analytics/anomalies.js";
 
 describe("analytics primitives", () => {
   it("aggregates execution outcomes", () => {
