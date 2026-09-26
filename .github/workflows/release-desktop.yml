@@ -52,6 +52,8 @@ jobs:
         run: pnpm test
       - name: Release sanity
         run: pnpm verify:release
+      - name: Release readiness contract
+        run: pnpm verify:readiness -- --mode verification
 
       - name: Core coverage
         run: pnpm --filter @orbit/core test:coverage
