@@ -126,6 +126,15 @@ async function handle(request: RpcRequest): Promise<void> {
   }
 
   if (request.method === "server/discover") {
+    const params = request.params ?? {};
+    const modernError = assertModernRequest(params);
+    if (modernError) {
+      write(request.id, undefined, {
+        code: -32602,
+        message: modernError,
+      });
+      return;
+    }
     write(request.id, modernDiscoveryResult());
     return;
   }
