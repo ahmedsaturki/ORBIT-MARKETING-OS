@@ -13,13 +13,26 @@ describe("global search contract", () => {
     ).toEqual({ query: "campaign", limit: MAX_GLOBAL_SEARCH_RESULTS });
   });
 
-  it("rejects empty and oversized queries", () => {
+  it("rejects empty, oversized and control-character queries", () => {
     expect(() => normalizeGlobalSearchQuery({ query: "   " })).toThrow(
       "global_search_query_required",
     );
     expect(() =>
       normalizeGlobalSearchQuery({ query: "x".repeat(201) }),
     ).toThrow("global_search_query_too_long");
+    expect(() =>
+      normalizeGlobalSearchQuery({ query: "line\nfeed" }),
+    ).toThrow("global_search_query_invalid_control_character");
+  });
+
+  it("counts Unicode code points and rejects invalid limits", () => {
+    const emojiQuery = "🙂".repeat(150);
+    expect(normalizeGlobalSearchQuery({ query: emojiQuery }).query).toBe(
+      emojiQuery,
+    );
+    expect(() =>
+      normalizeGlobalSearchQuery({ query: "campaign", limit: Number.NaN }),
+    ).toThrow("global_search_limit_invalid");
   });
 
   it("produces deterministic ranking independent of input order", () => {
