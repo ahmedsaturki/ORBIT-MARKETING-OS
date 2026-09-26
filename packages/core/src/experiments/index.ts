@@ -77,7 +77,9 @@ export function validateExperiment(
   if (!experiment.workspaceId.trim()) errors.push("workspace_required");
   if (!experiment.name.trim()) errors.push("name_required");
   if (!experiment.hypothesis.trim()) errors.push("hypothesis_required");
-  if (!experiment.objectiveMetric.trim()) errors.push("objective_metric_required");
+  if (!experiment.objectiveMetric.trim()) {
+    errors.push("objective_metric_required");
+  }
 
   if (experiment.variants.length < 2) {
     errors.push("at_least_two_variants_required");
@@ -103,16 +105,31 @@ export function validateExperiment(
     allocation += variant.allocationPercent;
   }
 
-  if (experiment.variants.length >= 2 && Math.abs(allocation - 100) > 0.000001) {
+  if (
+    experiment.variants.length >= 2 &&
+    Math.abs(allocation - 100) > 0.000001
+  ) {
     errors.push("allocation_must_equal_100");
   }
 
-  const startTime = experiment.startsAt ? Date.parse(experiment.startsAt) : undefined;
-  const endTime = experiment.endsAt ? Date.parse(experiment.endsAt) : undefined;
-  if (experiment.startsAt && startTime !== undefined && Number.isNaN(startTime)) {
+  const startTime = experiment.startsAt
+    ? Date.parse(experiment.startsAt)
+    : undefined;
+  const endTime = experiment.endsAt
+    ? Date.parse(experiment.endsAt)
+    : undefined;
+  if (
+    experiment.startsAt &&
+    startTime !== undefined &&
+    Number.isNaN(startTime)
+  ) {
     errors.push("invalid_start_time");
   }
-  if (experiment.endsAt && endTime !== undefined && Number.isNaN(endTime)) {
+  if (
+    experiment.endsAt &&
+    endTime !== undefined &&
+    Number.isNaN(endTime)
+  ) {
     errors.push("invalid_end_time");
   }
   if (
@@ -155,7 +172,9 @@ export function assignExperimentVariant(
     throw new Error("subject_required");
   }
 
-  const bucket = stableBucket(`${experiment.workspaceId}:${experiment.id}:${subjectId}`);
+  const bucket = stableBucket(
+    `${experiment.workspaceId}:${experiment.id}:${subjectId}`,
+  );
   const threshold = bucket / 100;
 
   let cumulative = 0;
@@ -182,8 +201,11 @@ export function summarizeExperiment(
       observation.workspaceId === experiment.workspaceId,
   );
 
-  const variants = experiment.variants.map<ExperimentVariantSummary>((variant) => {
-    const rows = scoped.filter((observation) => observation.variantId === variant.id);
+  const variants = experiment.variants.map<ExperimentVariantSummary>(
+    (variant) => {
+    const rows = scoped.filter(
+      (observation) => observation.variantId === variant.id,
+    );
     const exposureCount = rows.filter((observation) => observation.exposed).length;
     const engagementCount = rows.filter(
       (observation) => observation.exposed && observation.engaged,
@@ -192,7 +214,8 @@ export function summarizeExperiment(
       (observation) => observation.exposed && observation.converted,
     ).length;
     const totalValue = rows.reduce(
-      (sum, observation) => sum + (Number.isFinite(observation.value) ? observation.value ?? 0 : 0),
+      (sum, observation) =>
+        sum + (Number.isFinite(observation.value) ? observation.value ?? 0 : 0),
       0,
     );
 
@@ -202,8 +225,10 @@ export function summarizeExperiment(
       engagementCount,
       conversionCount,
       totalValue,
-      engagementRate: exposureCount === 0 ? 0 : engagementCount / exposureCount,
-      conversionRate: exposureCount === 0 ? 0 : conversionCount / exposureCount,
+      engagementRate:
+        exposureCount === 0 ? 0 : engagementCount / exposureCount,
+      conversionRate:
+        exposureCount === 0 ? 0 : conversionCount / exposureCount,
     };
   });
 
@@ -238,7 +263,9 @@ export function observationsToLearningSignals(
   }
 
   if (valueLeader.totalValue !== 0) {
-    signals.push(`value_leader:${valueLeader.variantId}:${valueLeader.totalValue.toFixed(2)}`);
+    signals.push(
+      `value_leader:${valueLeader.variantId}:${valueLeader.totalValue.toFixed(2)}`,
+    );
   }
 
   // Deliberately factual: this is a learning signal, not a statistical-significance claim.
