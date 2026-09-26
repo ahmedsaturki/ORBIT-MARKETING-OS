@@ -621,7 +621,7 @@ export function buildExperimentLearningWriteback(
         valueLeader.variantId +
         " accumulated observed exposed value of " +
         valueLeader.totalValue.toFixed(2) +
-        ". This is descriptive evidence only; causal attribution and statistical significance are not claimed.",
+        ". This is descriptive evidence only; statistical significance is not claimed, and causal attribution is not claimed.",
       metric: "observed_value",
       value: valueLeader.totalValue,
       confidence: 0,
