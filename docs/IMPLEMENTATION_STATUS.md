@@ -4,7 +4,7 @@ Updated: 2026-09-26
 
 ## Current state
 
-The production implementation is consolidated on `main` through PR #48. The authoritative current main commit is `cea2873db9817d4930662747441b55e1660dd67d`.
+The production implementation is consolidated on `main` through PR #66. The authoritative current main commit is `cea2873db9817d4930662747441b55e1660dd67d`.
 
 PR #48 added the governed Command Dispatcher. Its exact head passed CI, Desktop Native Validation, and Mobile Validation before merge. No unsupported external connector capability is implied.
 
@@ -28,7 +28,9 @@ PR #48 added the governed Command Dispatcher. Its exact head passed CI, Desktop 
 - local Ollama runtime;
 - Next.js static Web/PWA surface;
 - Expo mobile monitoring surface;
-- core experimentation/learning primitives with deterministic assignment and workspace-scoped evidence summaries (persistence/UI integration is intentionally still pending).
+- core experimentation/learning primitives with deterministic assignment and workspace-scoped evidence summaries;
+- Research Intelligence domain with workspace-scoped briefs/findings and explicit evidence-bound Knowledge promotion;
+- Universal Search contract and local native discovery across the operating graph, including Research entities.
 
 ## Exact verified execution baseline
 
