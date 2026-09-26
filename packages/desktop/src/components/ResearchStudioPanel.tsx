@@ -68,7 +68,8 @@ const COMPETITOR_WATCHLIST = [
     id: "competitor-rbm-cloud",
     name: "RBM Cloud",
     locator: "https://rbmcloud.com/",
-    focus: "جدولة ونشر متعدد القنوات، تقويم، فرق، تحليلات، مكتبة وسائط، watermark وروابط.",
+    focus:
+      "جدولة ونشر متعدد القنوات، تقويم، فرق، تحليلات، مكتبة وسائط، watermark وروابط.",
   },
   {
     id: "competitor-rbm-tools",
@@ -80,7 +81,8 @@ const COMPETITOR_WATCHLIST = [
     id: "competitor-rbm-whatsapp-cloud",
     name: "RBM WhatsApp Cloud",
     locator: "https://rbmwhats.tools/",
-    focus: "جدولة، bulk posts، تقويم، مكتبة وسائط، watermark، analytics وauto reposting.",
+    focus:
+      "جدولة، bulk posts، تقويم، مكتبة وسائط، watermark، analytics وauto reposting.",
   },
   {
     id: "competitor-buffer",
@@ -175,11 +177,12 @@ export function ResearchStudioPanel({ workspaceId }: ResearchStudioProps) {
     if (workspaceId) void load();
   }, [load, workspaceId]);
 
-
   const addCompetitorSource = async (
     competitor: (typeof COMPETITOR_WATCHLIST)[number],
   ): Promise<void> => {
-    const existing = sources.some((source) => source.locator === competitor.locator);
+    const existing = sources.some(
+      (source) => source.locator === competitor.locator,
+    );
     if (existing) {
       setMessage(`المصدر موجود بالفعل: ${competitor.name}`);
       return;
@@ -389,7 +392,10 @@ export function ResearchStudioPanel({ workspaceId }: ResearchStudioProps) {
             <article className="card" key={competitor.id}>
               <strong>{competitor.name}</strong>
               <p>{competitor.focus}</p>
-              <div className="account-meta" style={{ overflowWrap: "anywhere" }}>
+              <div
+                className="account-meta"
+                style={{ overflowWrap: "anywhere" }}
+              >
                 {competitor.locator}
               </div>
               <button
