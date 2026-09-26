@@ -8,11 +8,7 @@
  */
 
 export type ExperimentStatus =
-  | "draft"
-  | "running"
-  | "paused"
-  | "completed"
-  | "archived";
+  "draft" | "running" | "paused" | "completed" | "archived";
 
 export interface ExperimentVariant {
   readonly id: string;
@@ -115,9 +111,7 @@ export function validateExperiment(
   const startTime = experiment.startsAt
     ? Date.parse(experiment.startsAt)
     : undefined;
-  const endTime = experiment.endsAt
-    ? Date.parse(experiment.endsAt)
-    : undefined;
+  const endTime = experiment.endsAt ? Date.parse(experiment.endsAt) : undefined;
   if (
     experiment.startsAt &&
     startTime !== undefined &&
@@ -125,11 +119,7 @@ export function validateExperiment(
   ) {
     errors.push("invalid_start_time");
   }
-  if (
-    experiment.endsAt &&
-    endTime !== undefined &&
-    Number.isNaN(endTime)
-  ) {
+  if (experiment.endsAt && endTime !== undefined && Number.isNaN(endTime)) {
     errors.push("invalid_end_time");
   }
   if (
