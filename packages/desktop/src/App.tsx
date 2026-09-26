@@ -1572,7 +1572,9 @@ export function App(): ReactElement {
           <div className="result-list">
             {globalSearchResults.map((result) => (
               <article className="card" key={result.kind + ":" + result.id}>
-                <div className="eyebrow">{SEARCH_KIND_LABELS[result.kind] ?? result.kind}</div>
+                <div className="eyebrow">
+                  {SEARCH_KIND_LABELS[result.kind] ?? result.kind}
+                </div>
                 <strong>{result.title}</strong>
                 <p>{result.subtitle}</p>
               </article>

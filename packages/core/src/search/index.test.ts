@@ -20,9 +20,9 @@ describe("global search contract", () => {
     expect(() =>
       normalizeGlobalSearchQuery({ query: "x".repeat(201) }),
     ).toThrow("global_search_query_too_long");
-    expect(() =>
-      normalizeGlobalSearchQuery({ query: "line\nfeed" }),
-    ).toThrow("global_search_query_invalid_control_character");
+    expect(() => normalizeGlobalSearchQuery({ query: "line\nfeed" })).toThrow(
+      "global_search_query_invalid_control_character",
+    );
   });
 
   it("counts Unicode code points and rejects invalid limits", () => {

@@ -442,13 +442,12 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       "e2e-search-account-" + suffix,
     )) as { id: string };
 
-    await page!.evaluate(
-      () =>
-        window.__TAURI_INTERNALS__.invoke("vault_put", {
-          label: "e2e-search-secret-label",
-          plaintext: "E2E Search Secret",
-          password: "e2e-search-password",
-        }),
+    await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("vault_put", {
+        label: "e2e-search-secret-label",
+        plaintext: "E2E Search Secret",
+        password: "e2e-search-password",
+      }),
     );
 
     const conversation = (await page!.evaluate(
@@ -565,7 +564,9 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(sameWorkspace.some((item) => item.kind === "knowledge_source")).toBe(
       true,
     );
-    expect(sameWorkspace.some((item) => item.kind === "media_asset")).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "media_asset")).toBe(
+      true,
+    );
     const secretSearch = (await page!.evaluate(
       (query) =>
         window.__TAURI_INTERNALS__.invoke("global_search", {
