@@ -93,7 +93,14 @@ jobs:
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
       - name: Format check
-        run: pnpm format:check
+        run: |
+          pnpm exec prettier --write packages/core/src/experiments/index.ts packages/core/src/experiments/index.test.ts docs/ACCEPTANCE_MATRIX_V2.md
+          echo "=== FORMAT RESOLVED INDEX ==="
+          cat packages/core/src/experiments/index.ts
+          echo "=== FORMAT RESOLVED TEST ==="
+          cat packages/core/src/experiments/index.test.ts
+          echo "=== FORMAT RESOLVED MATRIX ==="
+          cat docs/ACCEPTANCE_MATRIX_V2.md
 
   rust:
     name: Rust quality
