@@ -59,7 +59,9 @@ if (cargoVersion !== expectedVersion) {
 
 const vercel = await json("vercel.json");
 if (!["nextjs", null].includes(vercel.framework))
-  throw new Error("Vercel framework must be Next.js/null for the static export");
+  throw new Error(
+    "Vercel framework must be Next.js/null for the static export",
+  );
 if (vercel.outputDirectory !== "packages/web/out")
   throw new Error("Vercel outputDirectory drift detected");
 if (vercel.buildCommand !== "pnpm --dir packages/web build")
@@ -124,7 +126,6 @@ for (const [name, workflow] of [
 }
 
 if (!ci.includes("pnpm security:scan"))
-
   throw new Error("CI secret scan gate missing");
 if (!ci.includes("pnpm test:performance"))
   throw new Error("CI performance smoke gate missing");
