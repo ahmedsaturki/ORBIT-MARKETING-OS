@@ -20,6 +20,7 @@ import { StrategyStudioPanel } from "./components/StrategyStudioPanel";
 import { ExperimentStudioPanel } from "./components/ExperimentStudioPanel";
 import { ResearchStudioPanel } from "./components/ResearchStudioPanel";
 import { ContentCalendarPanel } from "./components/ContentCalendarPanel";
+import { BulkPlannerPanel } from "./components/BulkPlannerPanel";
 import {
   analyzeLocalImage,
   DEFAULT_RUNTIME_URL,
@@ -1518,6 +1519,13 @@ export function App(): ReactElement {
           priority: task.priority,
           availableAt: task.available_at,
         }))}
+      />
+
+      <BulkPlannerPanel
+        accounts={accounts}
+        campaigns={campaigns}
+        contentItems={contentItems}
+        onTasksChanged={loadTasks}
       />
 
       <header className="hero">
