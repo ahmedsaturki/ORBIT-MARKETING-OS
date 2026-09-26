@@ -61,7 +61,7 @@ jobs:
         run: pnpm verify:readiness -- --mode "${{ inputs.mode || 'verification' }}"
       - name: Evidence bundle
         run: >-
-          node scripts/collect-release-evidence.mjs --mode "${{ inputs.mode }}"
+          node scripts/collect-release-evidence.mjs --mode "${{ inputs.mode || 'verification' }}"
           --output .artifacts/release-evidence.json
       - name: Upload evidence
         if: always()
