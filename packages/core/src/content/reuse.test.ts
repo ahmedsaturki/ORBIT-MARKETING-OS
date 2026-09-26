@@ -93,6 +93,24 @@ describe("content reuse policy", () => {
     expect(result.reasons).toContain("stale");
   });
 
+  it("blocks duplicate variants when the platform body matches", () => {
+    const result = evaluateContentReuse(
+      base,
+      [
+        {
+          contentId: "content-999",
+          platform: "linkedin",
+          publishedAt: "2026-09-01T00:00:00Z",
+          body: " A useful   marketing idea ",
+        },
+      ],
+      policy,
+      new Date("2026-09-26T00:00:00Z"),
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.reasons).toContain("duplicate_variant");
+  });
+
   it("keeps approval requirement deterministic", () => {
     const result = evaluateContentReuse(
       { ...base, approvalStatus: "draft" },
