@@ -9233,6 +9233,35 @@ fn operational_event_append(
 
 #[tauri::command]
 #[tauri::command]
+fn append_experiment_operational_event(
+    connection: &mut Connection,
+    workspace_id: &str,
+    actor_id: &str,
+    kind: &str,
+    entity_id: &str,
+) -> Result<(), String> {
+    let timestamp = chrono_like_timestamp();
+    let payload = serde_json::json!({
+        "source": "experiment_studio",
+        "domain": "experimentation",
+    }).to_string();
+    append_operational_event(
+        connection,
+        workspace_id,
+        None,
+        &timestamp,
+        kind,
+        "succeeded",
+        "user",
+        actor_id,
+        Some("experiment"),
+        Some(entity_id),
+        None,
+        None,
+        Some(&payload),
+    ).map_err(|error| error.to_string())
+}
+
 fn experiment_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -9277,6 +9306,15 @@ fn experiment_upsert(
     }
     write_audit_for_workspace(&connection, &workspace_id, "experiment", "upsert", "success", "user", Some(&id))
         .map_err(|error| error.to_string())?;
+    let actor_id = local_user_id(&connection).map_err(|error| error.to_string())?;
+    let mut connection = connection;
+    append_experiment_operational_event(
+        &mut connection,
+        &workspace_id,
+        &actor_id,
+        "experiment.updated",
+        &id,
+    )?;
     Ok(ExperimentView {
         id, name, hypothesis, objective_metric, status, variants_json, starts_at, ends_at,
         created_at: timestamp.clone(), updated_at: timestamp,
@@ -9380,8 +9418,26 @@ fn experiment_record_observation(
         ],
     ).map_err(|error| error.to_string())?;
     if changed == 0 { return Ok(false); }
-    write_audit_for_workspace(&connection, &workspace_id, "experiment", "observation_recorded", "success", "user", Some(&id))
-        .map_err(|error| error.to_string())?;
+    let actor_id = local_user_id(&connection).map_err(|error| error.to_string())?;
+    let audit_result = write_audit_for_workspace(
+        &connection,
+        &workspace_id,
+        "experiment",
+        "observation_recorded",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+    let mut connection = connection;
+    append_experiment_operational_event(
+        &mut connection,
+        &workspace_id,
+        &actor_id,
+        "experiment.observation_recorded",
+        &id,
+    )?;
+    let _ = audit_result;
     Ok(true)
 }
 
@@ -9406,8 +9462,9 @@ fn experiment_summary(
     let mut summaries = Vec::with_capacity(variants.len());
     let mut observation_count = 0_i64;
     for variant in variants {
-        let (exposure_count, engagement_count, conversion_count, total_value): (i64, i64, i64, f64) = connection.query_row(
+        let (observation_count_for_variant, exposure_count, engagement_count, conversion_count, total_value): (i64, i64, i64, i64, f64) = connection.query_row(
             "SELECT
+               COUNT(*),
                COALESCE(SUM(CASE WHEN exposed=1 THEN 1 ELSE 0 END),0),
                COALESCE(SUM(CASE WHEN exposed=1 AND engaged=1 THEN 1 ELSE 0 END),0),
                COALESCE(SUM(CASE WHEN exposed=1 AND converted=1 THEN 1 ELSE 0 END),0),
@@ -9415,9 +9472,15 @@ fn experiment_summary(
              FROM experiment_observations
              WHERE workspace_id=?1 AND experiment_id=?2 AND variant_id=?3",
             params![&workspace_id, &experiment_id, &variant.id],
-            |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?)),
+            |row| Ok((
+                row.get(0)?,
+                row.get(1)?,
+                row.get(2)?,
+                row.get(3)?,
+                row.get(4)?,
+            )),
         ).map_err(|error| error.to_string())?;
-        observation_count += exposure_count;
+        observation_count += observation_count_for_variant;
         summaries.push(ExperimentVariantSummaryView {
             variant_id: variant.id,
             exposure_count,
