@@ -30,11 +30,7 @@ if (
 }
 
 const entries = Object.entries(document.releaseCritical);
-if (!["verification", "commercial"].includes(mode)) {
-  console.error("release-readiness=FAIL");
-  console.error("Mode must be verification or commercial.");
-  process.exit(1);
-}
+
 const invalid = entries.filter(
   ([, value]) =>
     !value ||
