@@ -12729,7 +12729,7 @@ mod experimentation_runtime_tests {
         ).expect("valid variants");
         assert!(variants.contains("allocationPercent"));
         assert!(validate_experiment_status("running").is_ok());
-        assert!(normalize_experiment_status("unknown").is_err());
+        assert!(validate_experiment_status("unknown").is_err());
         assert!(normalize_experiment_window(
             Some("2026-09-26T03:00:00+03:00".to_string()),
             Some("2026-09-26T04:00:00+03:00".to_string()),
