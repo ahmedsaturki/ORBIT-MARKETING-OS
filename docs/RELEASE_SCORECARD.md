@@ -30,17 +30,17 @@ Status meanings:
 
 ## Product workflows
 
-| Gate                                | Current status | Evidence                                                                    |
-| ----------------------------------- | -------------- | --------------------------------------------------------------------------- |
-| CAMP-01 Campaign → tasks            | VERIFIED       | Native commands and core tests passed                                       |
-| CAMP-02 Account membership          | VERIFIED       | Workspace checks/triggers validated                                         |
-| CAMP-03 Approval gates              | VERIFIED       | Approval policy/persistence tests passed                                    |
-| INBOX-01 Unified inbox              | VERIFIED       | Native inbox model/tests passed                                             |
-| CRM-01 Conversation/contact linking | VERIFIED       | Native relational checks passed                                             |
-| SYNC-01 Offline persistence         | VERIFIED       | Encrypted reconnect/convergence tests passed                                |
-| SYNC-02 Convergence                 | VERIFIED*      | Simulation/test evidence passed; live multi-device network remains separate |
-| CMD-01 Command dispatcher           | PENDING        | Dispatcher implementation is on current validation branch                   |
-| EVENT-01 Operational event spine    | VERIFIED       | PR #47 exact-head tests/native validation passed                            |
+| Gate                                | Current status | Evidence                                                                                                         |
+| ----------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------- |
+| CAMP-01 Campaign → tasks            | VERIFIED       | Native commands and core tests passed                                                                            |
+| CAMP-02 Account membership          | VERIFIED       | Workspace checks/triggers validated                                                                              |
+| CAMP-03 Approval gates              | VERIFIED       | Approval policy/persistence tests passed                                                                         |
+| INBOX-01 Unified inbox              | VERIFIED       | Native inbox model/tests passed                                                                                  |
+| CRM-01 Conversation/contact linking | VERIFIED       | Native relational checks passed                                                                                  |
+| SYNC-01 Offline persistence         | VERIFIED       | Encrypted reconnect/convergence tests passed                                                                     |
+| SYNC-02 Convergence                 | VERIFIED*      | Simulation/test evidence passed; live multi-device network remains separate                                      |
+| CMD-01 Command dispatcher           | VERIFIED       | PR #48 exact-head CI/native/mobile validation passed before merge; current `main` contains the merged dispatcher |
+| EVENT-01 Operational event spine    | VERIFIED       | PR #47 exact-head tests/native validation passed                                                                 |
 
 ## Connectors
 
@@ -64,20 +64,20 @@ Status meanings:
 
 ## Release / Operations
 
-| Gate                           | Current status           | Evidence                                                                                 |
-| ------------------------------ | ------------------------ | ---------------------------------------------------------------------------------------- |
-| REL-01 Reproducible install    | VERIFIED                 | Committed pnpm-lock.yaml and desktop Cargo.lock; hosted frozen install passed            |
-| REL-02 Signed desktop artifact | UNVERIFIED               | Artifacts are unsigned until signing identities are configured                           |
-| REL-03 Checksum verification   | IMPLEMENTED / UNVERIFIED | SHA-256 release verification is implemented; fresh distributed artifact evidence remains |
-| LIC-01 Offline license         | PARTIAL                  | Token/constraint tests pass; distribution verification remains                           |
-| OPS-01 Crash/restart recovery  | UNVERIFIED               | Forced-termination acceptance drill pending                                              |
-| OPS-02 24h soak                | UNVERIFIED               | No completed 24-hour evidence                                                            |
-| PERF-01 Startup budget         | UNVERIFIED               | Measurement pending                                                                      |
-| PERF-02 Memory budget          | UNVERIFIED               | Measurement pending                                                                      |
-| QA-01 Coverage threshold       | VERIFIED                 | Hosted coverage gate passed                                                              |
-| QA-02 Critical E2E             | VERIFIED*                | Main browser E2E plus exact-head native E2E passed                                       |
-| DOC-01 Product docs match      | PENDING                  | Release docs are being reconciled to the post-PR47 current line                          |
-| DOC-02 Security model          | IMPLEMENTED / UNVERIFIED | Threat model/security gates exist; dedicated security review remains                     |
+| Gate                           | Current status           | Evidence                                                                                  |
+| ------------------------------ | ------------------------ | ----------------------------------------------------------------------------------------- |
+| REL-01 Reproducible install    | VERIFIED                 | Committed pnpm-lock.yaml and desktop Cargo.lock; hosted frozen install passed             |
+| REL-02 Signed desktop artifact | UNVERIFIED               | Artifacts are unsigned until signing identities are configured                            |
+| REL-03 Checksum verification   | IMPLEMENTED / UNVERIFIED | SHA-256 release verification is implemented; fresh distributed artifact evidence remains  |
+| LIC-01 Offline license         | PARTIAL                  | Token/constraint tests pass; distribution verification remains                            |
+| OPS-01 Crash/restart recovery  | UNVERIFIED               | Forced-termination acceptance drill pending                                               |
+| OPS-02 24h soak                | UNVERIFIED               | No completed 24-hour evidence                                                             |
+| PERF-01 Startup budget         | UNVERIFIED               | Measurement pending                                                                       |
+| PERF-02 Memory budget          | UNVERIFIED               | Measurement pending                                                                       |
+| QA-01 Coverage threshold       | VERIFIED                 | Hosted coverage gate passed                                                               |
+| QA-02 Critical E2E             | VERIFIED*                | Main browser E2E plus exact-head native E2E passed                                        |
+| DOC-01 Product docs match      | VERIFIED                 | Release evidence is reconciled to current main `cea2873db9817d4930662747441b55e1660dd67d` |
+| DOC-02 Security model          | IMPLEMENTED / UNVERIFIED | Threat model/security gates exist; dedicated security review remains                      |
 
 ## External / commercial prerequisites
 

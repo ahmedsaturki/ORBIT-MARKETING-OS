@@ -4,21 +4,21 @@ Updated: 2026-09-26
 
 ## Current release line
 
-The consolidated production implementation is merged into main through the RC2.1 line and PR #47. The authoritative current main commit is `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
+The consolidated production implementation is merged into `main` through PR #48. The authoritative current main commit is `cea2873db9817d4930662747441b55e1660dd67d`.
 
-PR #45 established the RC2.1 native/release baseline. PR #47 added the governed Command Registry and Operational Event Spine on top of the current main lineage and passed all exact-head CI/native/mobile gates before merge.
-
-The current validation branch adds the Command Dispatcher on top of that verified lineage and is not considered releasable until its exact-head gates pass.
+PR #45 established the RC2.1 native/release baseline. PR #47 added the governed Command Registry and Operational Event Spine, and PR #48 added the governed Command Dispatcher. Both merged after exact-head validation.
 
 ## Verified execution baseline
 
-PR #47 exact head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed:
+PR #47 exact head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed CI/native/mobile and merged as `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
 
-- CI run 36198100587;
-- Desktop Native Validation run 36198100491;
-- Mobile Validation run 36198100618.
+PR #48 exact head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed:
 
-The merged main tree therefore has fresh exact-head evidence for the governed control-plane merge.
+- CI run 36200698291;
+- Desktop Native Validation run 36200698273;
+- Mobile Validation run 36200698316.
+
+The resulting `main` head `cea2873db9817d4930662747441b55e1660dd67d` also has passing CI run 36202057601 and Web Deploy run 36202057689.
 
 ## Verified production web
 
@@ -28,7 +28,6 @@ Current runtime error aggregation for the selected 7-day period reports no runti
 
 ## Remaining release gates
 
-- current Command Dispatcher exact-head verification;
 - dedicated native runtime restart/migration/crash-recovery acceptance;
 - controlled real Telegram authorization/delivery evidence;
 - controlled real LinkedIn authorization/delivery evidence;

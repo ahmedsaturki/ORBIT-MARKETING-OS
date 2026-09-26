@@ -88,6 +88,10 @@ jobs:
         timeout-minutes: 5
         run: pnpm test:e2e
 
+      - name: Accessibility and RTL audit
+        timeout-minutes: 5
+        run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
+
       - name: Format check
         run: pnpm format:check
 
