@@ -1,12 +1,10 @@
 # Implementation Status
 
-Updated: 2026-09-26
+Updated: 2026-09-26.
 
 ## Current state
 
-The production implementation is consolidated on `main` through PR #66. The authoritative current main commit is `1cb104647bc69cff114f430cab1ff9dc184ed864`.
-
-PR #48 added the governed Command Dispatcher. Its exact head passed CI, Desktop Native Validation, and Mobile Validation before merge. No unsupported external connector capability is implied.
+The production implementation is consolidated on the current main lineage. Recent work has expanded the system from its original social-operations foundation into Research Intelligence, deterministic experimentation and learning, anomaly detection, governed agent operations, Universal Search, and the first Platform SDK and vertical-pack foundation.
 
 ## Product surface
 
@@ -19,51 +17,47 @@ PR #48 added the governed Command Dispatcher. Its exact head passed CI, Desktop 
 - encrypted backup/restore;
 - content, media, CRM, inbox, campaigns and analytics;
 - approval workflow and audit integrity;
-- marketing operating graph, outcomes, insights and experimentation;
+- marketing operating graph, outcomes and insights;
+- Research Intelligence and Research Studio;
+- deterministic experimentation, uncertainty intervals and learning bridge;
+- anomaly detection;
 - Mission Control, Strategy Studio, Simulation, Replay and Policy Packs;
+- Agent Registry and bounded agent authorization;
 - Operational Event Spine and Command Registry;
-- Governed Command Dispatcher in the shared control spine;
+- governed Command Dispatcher;
+- Universal Search with workspace-scoped native search and Mission Control keyboard controls;
 - Telegram native API path;
 - LinkedIn text publishing connector;
 - local Ollama runtime;
 - Next.js static Web/PWA surface;
-- Expo mobile monitoring surface;
-- core experimentation/learning primitives with deterministic assignment and workspace-scoped evidence summaries;
-- Research Intelligence domain with workspace-scoped briefs/findings and explicit evidence-bound Knowledge promotion;
-- Universal Search contract and local native discovery across the operating graph, including Research entities.
+- Expo mobile monitoring/control surface;
+- governed CLI and MCP read-only operator previews;
+- Platform SDK foundation with connector manifests and reusable vertical packs;
 
-## Exact verified execution baseline
+## Evidence model
 
-PR #47 exact head `d48f00e93a60d9c85e191099419f659bc94e64c9` passed CI, Desktop Native Validation, and Mobile Validation and was merged to main as `bd174e7e52a6ba69b4c54618e7a635e90bace611`.
+Implementation is intentionally separated from runtime proof:
 
-PR #48 exact head `6dccbe5c4efcfeb77c5ff87bda3d5d707b5b0301` passed:
+`IMPLEMENTED` → source capability exists.
+`VERIFIED` → fresh tests/runtime evidence exists.
+`PRODUCTION PROVEN` → release artifact, real-world operation and operational evidence have been demonstrated.
 
-- CI run 36200698291;
-- Desktop Native Validation run 36200698273;
-- Mobile Validation run 36200698316.
-
-The resulting `main` head is `cea2873db9817d4930662747441b55e1660dd67d`; its current CI run 36202057601 and Web Deploy run 36202057689 both passed.
-
-## Production web evidence
-
-The Vercel project `orbit-marketing-os` currently has a READY production deployment and no grouped runtime error clusters in the selected seven-day window. Public routes, PWA assets, 404 behavior and security headers were previously verified live.
-
-The effective Vercel project metadata still reports `framework: vite` while the repository contract targets a Next.js static export to `packages/web/out`. The latest READY production deployment has empty Git metadata, so repository deployment provenance remains unverified.
+No unsupported external connector capability is implied by contracts or fixtures.
 
 ## Evidence still required
 
-- dedicated native restart/migration/crash-recovery acceptance;
+- final exact-head native validation for the current Universal Search release line;
 - controlled real Telegram authorization/delivery;
-- controlled real LinkedIn authorization/delivery;
+- controlled real LinkedIn authorization/publish;
 - live multi-device CRDT network verification;
-- dedicated accessibility/RTL audit;
-- 24-hour stability soak;
+- dedicated manual accessibility/RTL conformance audit;
+- completed 24-hour stability soak;
 - release-tag checksum/provenance verification;
 - desktop signing/notarization;
 - production mobile signing/store distribution;
-- Vercel settings/provenance reconciliation and rollback drill;
+- Vercel project-setting reconciliation and rollback drill;
 - main branch-protection/ruleset verification;
 - commercial billing/payment;
-- final legal/commercial publication review.
+- final legal/commercial publication review;
 
 Implementation and green CI are substantial evidence, but they do not by themselves establish commercial release readiness.
