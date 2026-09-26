@@ -62,7 +62,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ACCEPTANCE_MATRIX_V2.md]
 
 Product north star: [docs/TARGET_PRODUCT_BLUEPRINT.md](docs/TARGET_PRODUCT_BLUEPRINT.md) defines the Strategy → Campaign → Content → Execution → CRM/Inbox → Analytics → Learning operating graph and the staged platform roadmap. The Desktop currently exposes Mission Control, Strategy Studio, Outcomes/Learning, and the Operating Graph as governed local workspace surfaces.
 
-Operating control: [docs/OPERATING_CONTROL.md](docs/OPERATING_CONTROL.md) defines the deterministic Simulation, Replay, and Policy Pack layer used to preview, explain, and govern execution without creating a second execution system.
+Operating control: [docs/OPERATING_CONTROL.md](docs/OPERATING_CONTROL.md) defines the deterministic Simulation, Replay, and Policy Pack layer used to preview, explain, and govern execution without creating a second execution system. The governed operator boundary is documented in [docs/CLI_MCP_SURFACES.md](docs/CLI_MCP_SURFACES.md).
 
 Launch control: `docs/LAUNCH_SCORECARD.md`
 
