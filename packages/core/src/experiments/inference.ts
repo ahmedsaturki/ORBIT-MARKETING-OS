@@ -25,6 +25,9 @@ export interface ExperimentVariantInference {
   readonly engagement: ProportionInterval;
   readonly conversion: ProportionInterval;
   readonly totalValue: number;
+  readonly allocationTargetShare: number;
+  readonly observedExposureShare: number;
+  readonly allocationDrift: number;
 }
 
 export interface ExperimentRateComparison {
@@ -45,6 +48,7 @@ export interface ExperimentInference {
   readonly confidenceLevel: number;
   readonly variants: readonly ExperimentVariantInference[];
   readonly comparisons: readonly ExperimentRateComparison[];
+  readonly maxAbsoluteAllocationDrift: number;
 }
 
 const CRITICAL_VALUES: Readonly<Record<string, number>> = {
@@ -169,6 +173,9 @@ function inferVariant(
       confidenceLevel,
     ),
     totalValue: variant.totalValue,
+    allocationTargetShare: 0,
+    observedExposureShare: 0,
+    allocationDrift: 0,
   };
 }
 
@@ -177,9 +184,22 @@ export function inferExperiment(
   confidenceLevel = 0.95,
 ): ExperimentInference {
   const level = normalizedConfidenceLevel(confidenceLevel);
-  const variants = summary.variants.map((variant) =>
-    inferVariant(variant, level),
+  const totalExposures = summary.variants.reduce(
+    (sum, variant) => sum + variant.exposureCount,
+    0,
   );
+  const variants = summary.variants.map((variant, index) => {
+    const inferred = inferVariant(variant, level);
+    const targetShare = 0; // replaced from the declaration-independent summary shape below
+    const observedExposureShare =
+      totalExposures === 0 ? 0 : variant.exposureCount / totalExposures;
+    return {
+      ...inferred,
+      allocationTargetShare: targetShare,
+      observedExposureShare,
+      allocationDrift: observedExposureShare - targetShare,
+    };
+  });
   const comparisons: ExperimentRateComparison[] = [];
 
   for (let leftIndex = 0; leftIndex < variants.length; leftIndex += 1) {
