@@ -82,7 +82,7 @@ export function BulkPlannerPanel({
     return Array.from({ length: quantity }, (_, index) => ({
       index: index + 1,
       availableAt: new Date(start.getTime() + index * interval * 60_000).toISOString(),
-      idempotencyKey: `${base}-${String(index + 1).padStart(2, "2")}`,
+      idempotencyKey: `${base}-${String(index + 1).padStart(2, "0")}`,
     }));
   };
 
