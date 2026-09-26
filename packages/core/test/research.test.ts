@@ -94,6 +94,6 @@ describe("research intelligence primitives", () => {
       rankResearchFindings([...findings].reverse()),
     );
     expect(rankResearchFindings(findings)[0]?.id).toBe("a");
-    expect(researchFindingToKnowledgeStatement(findings[1]!)).toBe("B");
+    expect(researchFindingToKnowledgeStatement(findings[0]!)).toBe("B");
   });
 });
