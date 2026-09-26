@@ -41,6 +41,12 @@ describe("experimentation", () => {
     });
     expect(malformed.errors).toContain("invalid_start_time");
 
+    const malformedEnd = validateExperiment({
+      ...experiment,
+      endsAt: "not-a-date",
+    });
+    expect(malformedEnd.errors).toContain("invalid_end_time");
+
     const inverted = validateExperiment({
       ...experiment,
       startsAt: "2026-09-27T00:00:00Z",
@@ -55,12 +61,19 @@ describe("experimentation", () => {
     expect(second.id).toBe(first.id);
   });
 
-  it("keeps assignment workspace-scoped", () => {
-    const other = assignExperimentVariant(
+  it("keeps assignment deterministic but workspace-scoped", () => {
+    const first = assignExperimentVariant(experiment, "subject-42");
+    const second = assignExperimentVariant(
       { ...experiment, workspaceId: "ws-2" },
       "subject-42",
     );
-    expect(["control", "benefit"]).toContain(other.id);
+    expect(["control", "benefit"]).toContain(second.id);
+    expect(first.id).toBe(
+      assignExperimentVariant(
+        { ...experiment, workspaceId: "ws-1" },
+        "subject-42",
+      ).id,
+    );
   });
 
   it("summarizes only same-workspace observations", () => {
@@ -115,6 +128,56 @@ describe("experimentation", () => {
         conversionRate: 1,
       }),
     ]);
+  });
+
+  it("excludes unknown variants from observation evidence", () => {
+    const summary = summarizeExperiment(experiment, [
+      {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "unknown",
+        subjectId: "u",
+        observedAt: "2026-09-26T00:00:00Z",
+        exposed: true,
+        engaged: true,
+        converted: true,
+        value: 999,
+      },
+    ]);
+    expect(summary.observationCount).toBe(0);
+    expect(summary.variants.every((variant) => variant.exposureCount === 0)).toBe(true);
+  });
+
+  it("attributes value only to exposed observations", () => {
+    const summary = summarizeExperiment(experiment, [
+      {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "control",
+        subjectId: "hidden",
+        observedAt: "2026-09-26T00:00:00Z",
+        exposed: false,
+        engaged: false,
+        converted: false,
+        value: 9999,
+      },
+      {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "benefit",
+        subjectId: "exposed",
+        observedAt: "2026-09-26T00:00:00Z",
+        exposed: true,
+        engaged: true,
+        converted: false,
+        value: 10,
+      },
+    ]);
+    const control = summary.variants.find((variant) => variant.variantId === "control");
+    const benefit = summary.variants.find((variant) => variant.variantId === "benefit");
+    expect(control?.totalValue).toBe(0);
+    expect(benefit?.totalValue).toBe(10);
+    expect(observationsToLearningSignals(summary)).toContain("value_leader:benefit:10.00");
   });
 
   it("emits bounded learning signals without claiming significance", () => {
