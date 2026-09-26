@@ -35,6 +35,7 @@ export interface ExperimentRateComparison {
   readonly lower: number;
   readonly upper: number;
   readonly confidenceLevel: number;
+  readonly method: "newcombe_wilson_difference";
   readonly interpretation: "descriptive_uncertainty_interval";
 }
 
@@ -127,13 +128,26 @@ export function proportionInterval(
   };
 }
 
+/**
+ * Newcombe's interval for the difference of two independent proportions,
+ * constructed from the component Wilson intervals. The result is returned
+ * as a descriptive uncertainty interval, not as an automatic causal claim.
+ */
 function differenceInterval(
   left: ProportionInterval,
   right: ProportionInterval,
 ): { lower: number; upper: number } {
   return {
-    lower: left.lower - right.upper,
-    upper: left.upper - right.lower,
+    lower: left.estimate - right.estimate -
+      Math.sqrt(
+        (left.estimate - left.lower) ** 2 +
+          (right.upper - right.estimate) ** 2,
+      ),
+    upper: left.estimate - right.estimate +
+      Math.sqrt(
+        (left.upper - left.estimate) ** 2 +
+          (right.estimate - right.lower) ** 2,
+      ),
   };
 }
 
@@ -184,11 +198,11 @@ export function inferExperiment(
           rightVariantId: right.variantId,
           metric:
             metric === "engagement" ? "engagement_rate" : "conversion_rate",
-          rateDifference:
-            left[metric].estimate - right[metric].estimate,
-          lower: interval.lower,
-          upper: interval.upper,
+          rateDifference: left[metric].estimate - right[metric].estimate,
+          lower: Math.max(-1, interval.lower),
+          upper: Math.min(1, interval.upper),
           confidenceLevel: level,
+          method: "newcombe_wilson_difference",
           interpretation: "descriptive_uncertainty_interval",
         });
       }
