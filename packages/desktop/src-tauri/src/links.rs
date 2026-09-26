@@ -1,6 +1,7 @@
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
+use time::{format_description::well_known::Rfc3339, OffsetDateTime, UtcOffset};
 
 use crate::{
     active_workspace_id_for_module, append_audit_event_for_module, chrono_like_timestamp,
@@ -110,6 +111,16 @@ fn validate_json(value: &str, name: &str, max_len: usize) -> Result<String, Stri
     serde_json::from_str::<serde_json::Value>(&normalized)
         .map_err(|_| format!("{name} must be valid JSON"))?;
     Ok(normalized)
+}
+
+fn normalize_observed_at(value: &str) -> Result<String, String> {
+    let normalized = validate_text(value, "observed_at", 80)?;
+    let parsed = OffsetDateTime::parse(&normalized, &Rfc3339)
+        .map_err(|_| "observed_at must be a valid RFC3339 timestamp".to_string())?;
+    parsed
+        .to_offset(UtcOffset::UTC)
+        .format(&Rfc3339)
+        .map_err(|_| "observed_at could not be normalized".to_string())
 }
 
 fn validate_provenance(value: &str) -> Result<String, String> {
@@ -335,7 +346,7 @@ pub(crate) fn marketing_link_evidence_add(
     let link_id = validate_text(&link_id, "link_id", 300)?;
     let source_type = validate_observed_source(&source_type)?;
     let metric_name = validate_text(&metric_name, "metric_name", 100)?;
-    let observed_at = validate_text(&observed_at, "observed_at", 80)?;
+    let observed_at = normalize_observed_at(&observed_at)?;
     let provenance = validate_provenance(&provenance)?;
     let metadata_json = validate_json(&metadata_json, "metadata_json", 8192)?;
     let source_locator = source_locator
@@ -547,6 +558,19 @@ mod tests {
             "https://evil.example/path?utm_source=orbit",
         )
         .is_err());
+    }
+
+    #[test]
+    fn normalizes_observation_timestamps_to_utc() {
+        assert_eq!(
+            normalize_observed_at("2026-09-26T18:00:00+00:00").expect("valid"),
+            "2026-09-26T18:00:00Z"
+        );
+        assert_eq!(
+            normalize_observed_at("2026-09-26T20:00:00+02:00").expect("valid"),
+            "2026-09-26T18:00:00Z"
+        );
+        assert!(normalize_observed_at("not-a-timestamp").is_err());
     }
 
     #[test]
