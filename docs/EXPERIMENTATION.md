@@ -82,11 +82,4 @@ Still remaining:
 - an explicit statistical inference methodology with documented assumptions;
 - agent exposure through the same command boundary; CLI/MCP now expose governed registry and authorization previews. Executable actions remain bound to the canonical CommandDispatcher.
 
-No external action should become possible merely by enabling experimentation.
-
-
-## Descriptive uncertainty inference
-
-The core experimentation package now exposes bounded Wilson proportion intervals for engagement and conversion rates plus Newcombe–Wilson difference intervals for pairwise rate comparisons. It also reports the difference between declared allocation and observed exposure share so a broken assignment/exposure pipeline can be detected before learning is trusted. These are descriptive uncertainty intervals for the observed evidence set. ORBIT does not turn an interval into an automatic significance, causal, or platform-enforcement claim; those claims require a separately reviewed inference methodology and appropriate experimental design.
-
-Supported confidence levels are 80%, 90%, 95%, 98%, and 99%. Zero-exposure variants return an empty evidence interval [0, 0] rather than inventing certainty.
+No external action should become possible merely by enabling experimentation.\n\n## Descriptive uncertainty inference\n\nThe core experimentation package exposes bounded Wilson proportion intervals for engagement and conversion rates, plus Newcombe–Wilson difference intervals for pairwise rate comparisons. It also reports declared allocation versus observed exposure share so an assignment or exposure pipeline can be checked before learning is trusted.\n\nThese are descriptive uncertainty intervals for the observed evidence set. ORBIT does not turn an interval into an automatic significance, causal, or platform-enforcement claim.\n\nSupported confidence levels are 80%, 90%, 95%, 98%, and 99%. Zero-exposure variants return an empty evidence interval [0, 0] rather than inventing certainty.\n
