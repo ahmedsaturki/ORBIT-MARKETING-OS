@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { Layers3, ShieldCheck } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { buildBulkPlan } from "@orbit/core";
+import type { BulkPlanItem } from "@orbit/core";
 
 interface AccountOption {
   readonly id: string;
@@ -19,6 +20,23 @@ interface ContentOption {
   readonly id: string;
   readonly title: string;
   readonly approval_status: string;
+}
+
+function parsePositiveInteger(
+  value: string,
+  fallback: number,
+  max: number,
+): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
+}
+
+function toLocalInputValue(date: Date): string {
+  const adjusted = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60000,
+  );
+  return adjusted.toISOString().slice(0, 16);
 }
 
 interface BulkPlannerProps {
@@ -47,7 +65,7 @@ export function BulkPlannerPanel({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [preview, setPreview] = useState<readonly PlannedTask[]>([]);
+  const [preview, setPreview] = useState<readonly BulkPlanItem[]>([]);
 
   const selectedContent = useMemo(
     () => contentItems.find((item) => item.id === contentId),
