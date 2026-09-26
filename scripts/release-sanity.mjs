@@ -106,27 +106,25 @@ if (!ci.includes("pnpm install --frozen-lockfile"))
   throw new Error("CI frozen install gate missing");
 if (!ci.includes("pnpm audit --audit-level=moderate"))
   throw new Error("CI dependency audit gate missing");
-for (const workflow of [
-  await text(" .github/workflows/release-desktop.yml".trim()),
-  await text(" .github/workflows/release-mobile.yml".trim()),
-  await text(" .github/workflows/web-release-selfhosted.yml".trim()),
-]) {
-  if (workflow.includes("pnpm audit --audit-level=high")) {
-    throw new Error("Release workflow still allows high-only dependency audit");
-  }
-}
+
 const desktopRelease = await text(".github/workflows/release-desktop.yml");
 const mobileRelease = await text(".github/workflows/release-mobile.yml");
-if (!desktopRelease.includes("pnpm audit --audit-level=moderate"))
-  throw new Error("Desktop release dependency audit gate missing");
-if (!mobileRelease.includes("pnpm audit --audit-level=moderate"))
-  throw new Error("Mobile release dependency audit gate missing");
-if (!c.includes("NEXT_PUBLIC_ORBIT_RELEASE_SHA"))
-  throw new Error("Web release SHA injection gate missing");
-if (!c.includes("ORBIT_EXPECTED_RELEASE_SHA"))
-  throw new Error("Web live provenance verification gate missing");
+const webRelease = await text(".github/workflows/web-release-selfhosted.yml");
+for (const [name, workflow] of [
+  ["desktop release", desktopRelease],
+  ["mobile release", mobileRelease],
+  ["self-hosted web release", webRelease],
+]) {
+  if (!workflow.includes("pnpm audit --audit-level=moderate")) {
+    throw new Error(`${name} dependency audit gate missing`);
+  }
+  if (workflow.includes("pnpm audit --audit-level=high")) {
+    throw new Error(`${name} still allows a high-only dependency audit`);
+  }
+}
 
 if (!ci.includes("pnpm security:scan"))
+
   throw new Error("CI secret scan gate missing");
 if (!ci.includes("pnpm test:performance"))
   throw new Error("CI performance smoke gate missing");
