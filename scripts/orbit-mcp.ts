@@ -75,8 +75,10 @@ function modernMeta(params: Record<string, unknown>): ModernMeta | undefined {
 }
 
 function isModernRequest(params: Record<string, unknown>): boolean {
-  return modernMeta(params)?.["io.modelcontextprotocol/protocolVersion"] ===
-    MODERN_PROTOCOL_VERSION;
+  return (
+    modernMeta(params)?.["io.modelcontextprotocol/protocolVersion"] ===
+    MODERN_PROTOCOL_VERSION
+  );
 }
 
 function assertModernRequest(
@@ -85,8 +87,7 @@ function assertModernRequest(
   const meta = modernMeta(params);
   if (!meta) return "modern_meta_required";
   if (
-    meta["io.modelcontextprotocol/protocolVersion"] !==
-    MODERN_PROTOCOL_VERSION
+    meta["io.modelcontextprotocol/protocolVersion"] !== MODERN_PROTOCOL_VERSION
   ) {
     return "unsupported_protocol_version";
   }
@@ -211,11 +212,17 @@ async function handle(request: RpcRequest): Promise<void> {
     if (isModernRequest(params)) {
       const modernError = assertModernRequest(params);
       if (modernError) {
-        write(request.id, undefined, { code: -32602, message: modernError });
+        write(request.id, undefined, {
+        code: -32602,
+        message: modernError,
+      });
         return;
       }
     } else if (!legacyInitialized) {
-      write(request.id, undefined, { code: -32602, message: "initialize_required" });
+      write(request.id, undefined, {
+        code: -32602,
+        message: "initialize_required",
+      });
       return;
     }
 
@@ -224,9 +231,7 @@ async function handle(request: RpcRequest): Promise<void> {
 
     if (name === "orbit.commands.list") {
       write(request.id, {
-        ...(isModernRequest(params)
-          ? { _meta: modernResponseMeta() }
-          : {}),
+        ...(isModernRequest(params) ? { _meta: modernResponseMeta() } : {}),
         content: [
           {
             type: "text",
