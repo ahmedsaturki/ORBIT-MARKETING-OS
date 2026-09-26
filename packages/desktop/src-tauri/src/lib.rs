@@ -24,7 +24,7 @@ const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
 const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
 const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
-const SCHEMA_VERSION: i64 = 13;
+const SCHEMA_VERSION: i64 = 14;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 static TELEGRAM_EXECUTION_IDS: OnceLock<Mutex<std::collections::HashSet<String>>> = OnceLock::new();
@@ -330,6 +330,43 @@ CREATE TABLE IF NOT EXISTS operational_events (
   payload_json TEXT
 );
 
+CREATE TABLE IF NOT EXISTS experiments (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  hypothesis TEXT NOT NULL,
+  objective_metric TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('draft', 'running', 'paused', 'completed', 'archived')),
+  variants_json TEXT NOT NULL,
+  starts_at TEXT,
+  ends_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_experiments_workspace_status
+  ON experiments(workspace_id, status, updated_at);
+
+CREATE TABLE IF NOT EXISTS experiment_observations (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  experiment_id TEXT NOT NULL REFERENCES experiments(id) ON DELETE CASCADE,
+  variant_id TEXT NOT NULL,
+  subject_id TEXT NOT NULL,
+  observed_at TEXT NOT NULL,
+  exposed INTEGER NOT NULL DEFAULT 1 CHECK(exposed IN (0, 1)),
+  engaged INTEGER NOT NULL DEFAULT 0 CHECK(engaged IN (0, 1)),
+  converted INTEGER NOT NULL DEFAULT 0 CHECK(converted IN (0, 1)),
+  value REAL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_experiment_observations_workspace_experiment
+  ON experiment_observations(workspace_id, experiment_id, observed_at);
+
+CREATE INDEX IF NOT EXISTS idx_experiment_observations_variant
+  ON experiment_observations(workspace_id, experiment_id, variant_id, observed_at);
+
 CREATE UNIQUE INDEX IF NOT EXISTS ux_operational_events_sequence
   ON operational_events(workspace_id, sequence);
 
@@ -431,6 +468,59 @@ struct AutomationRulePackView {
     enabled: bool,
     created_at: String,
     updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ExperimentVariantInput {
+    id: String,
+    name: String,
+    #[serde(rename = "allocationPercent", alias = "allocation_percent")]
+    allocation_percent: f64,
+    #[serde(rename = "contentId", alias = "content_id")]
+    content_id: Option<String>,
+    message: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct ExperimentView {
+    id: String,
+    name: String,
+    hypothesis: String,
+    objective_metric: String,
+    status: String,
+    variants_json: String,
+    starts_at: Option<String>,
+    ends_at: Option<String>,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ExperimentAssignmentView {
+    experiment_id: String,
+    workspace_id: String,
+    subject_id: String,
+    variant_id: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ExperimentVariantSummaryView {
+    variant_id: String,
+    exposure_count: i64,
+    engagement_count: i64,
+    conversion_count: i64,
+    total_value: f64,
+    engagement_rate: f64,
+    conversion_rate: f64,
+}
+
+#[derive(Debug, Serialize)]
+struct ExperimentSummaryView {
+    experiment_id: String,
+    workspace_id: String,
+    observation_count: i64,
+    variants: Vec<ExperimentVariantSummaryView>,
+    statistical_significance_claimed: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -856,7 +946,10 @@ fn validate_operational_event_kind(value: &str) -> Result<&str, AppError> {
         | "human.intervention_required"
         | "approval.requested"
         | "approval.decided"
-        | "insight.recorded" => Ok(value.trim()),
+        | "insight.recorded"
+        | "experiment.updated"
+        | "experiment.assignment"
+        | "experiment.observation_recorded" => Ok(value.trim()),
         _ => Err(AppError::InvalidPayload),
     }
 }
@@ -1487,6 +1580,51 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         )?;
     }
 
+    if version < 14 {
+        connection.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS experiments (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              hypothesis TEXT NOT NULL,
+              objective_metric TEXT NOT NULL,
+              status TEXT NOT NULL,
+              variants_json TEXT NOT NULL,
+              starts_at TEXT,
+              ends_at TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_experiments_workspace_status
+              ON experiments(workspace_id, status, updated_at);
+
+            CREATE TABLE IF NOT EXISTS experiment_observations (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              experiment_id TEXT NOT NULL REFERENCES experiments(id) ON DELETE CASCADE,
+              variant_id TEXT NOT NULL,
+              subject_id TEXT NOT NULL,
+              observed_at TEXT NOT NULL,
+              exposed INTEGER NOT NULL DEFAULT 1 CHECK(exposed IN (0, 1)),
+              engaged INTEGER NOT NULL DEFAULT 0 CHECK(engaged IN (0, 1)),
+              converted INTEGER NOT NULL DEFAULT 0 CHECK(converted IN (0, 1)),
+              value REAL,
+              created_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_experiment_observations_workspace_experiment
+              ON experiment_observations(workspace_id, experiment_id, observed_at);
+
+            CREATE INDEX IF NOT EXISTS idx_experiment_observations_variant
+              ON experiment_observations(workspace_id, experiment_id, variant_id, observed_at);
+
+            PRAGMA user_version = 14;
+            ",
+        )?;
+    }
+
     Ok(())
 }
 
@@ -1644,6 +1782,40 @@ WHEN NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'approval workspace/content mismatch');
 END;
+CREATE TRIGGER IF NOT EXISTS orbit_experiments_insert_workspace
+BEFORE INSERT ON experiments
+WHEN NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.id = NEW.workspace_id)
+BEGIN
+  SELECT RAISE(ABORT, 'experiment workspace mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_experiments_update_workspace
+BEFORE UPDATE OF workspace_id ON experiments
+WHEN NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.id = NEW.workspace_id)
+BEGIN
+  SELECT RAISE(ABORT, 'experiment workspace mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_experiment_observations_insert_workspace
+BEFORE INSERT ON experiment_observations
+WHEN NOT EXISTS (
+  SELECT 1 FROM experiments e
+  WHERE e.id = NEW.experiment_id AND e.workspace_id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'experiment observation workspace mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_experiment_observations_update_workspace
+BEFORE UPDATE OF workspace_id, experiment_id ON experiment_observations
+WHEN NOT EXISTS (
+  SELECT 1 FROM experiments e
+  WHERE e.id = NEW.experiment_id AND e.workspace_id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'experiment observation workspace mismatch');
+END;
+
 CREATE TRIGGER IF NOT EXISTS orbit_opportunities_insert_workspace
 BEFORE INSERT ON opportunities
 WHEN NOT EXISTS (
@@ -3520,6 +3692,103 @@ fn validate_media_mime(kind: &str, mime_type: &str) -> Result<(), AppError> {
     } else {
         Err(AppError::InvalidLabel)
     }
+}
+
+fn validate_experiment_status(status: &str) -> Result<String, String> {
+    let value = status.trim().to_lowercase();
+    if ["draft", "running", "paused", "completed", "archived"].contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err("invalid experiment status".to_string())
+    }
+}
+
+fn normalize_experiment_variants_json(value: &str) -> Result<String, String> {
+    let mut variants: Vec<ExperimentVariantInput> =
+        serde_json::from_str(value).map_err(|_| "variants_json must be valid JSON".to_string())?;
+    if variants.len() < 2 || variants.len() > 50 {
+        return Err("experiment requires between 2 and 50 variants".to_string());
+    }
+    let mut ids = std::collections::HashSet::new();
+    let mut allocation = 0.0_f64;
+    for variant in &mut variants {
+        variant.id = validate_label(&variant.id).map_err(|error| error.to_string())?;
+        variant.name = validate_label(&variant.name).map_err(|error| error.to_string())?;
+        if !ids.insert(variant.id.clone()) {
+            return Err("experiment variant ids must be unique".to_string());
+        }
+        if !variant.allocation_percent.is_finite()
+            || variant.allocation_percent <= 0.0
+            || variant.allocation_percent > 100.0
+        {
+            return Err("experiment variant allocation must be between 0 and 100".to_string());
+        }
+        allocation += variant.allocation_percent;
+        variant.content_id = variant.content_id.take().map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
+        variant.message = variant.message.take().map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
+    }
+    if (allocation - 100.0).abs() > 0.000001 {
+        return Err("experiment variant allocation must equal 100".to_string());
+    }
+    serde_json::to_string(&variants).map_err(|_| "failed to normalize variants_json".to_string())
+}
+
+fn normalize_experiment_window(
+    starts_at: Option<String>,
+    ends_at: Option<String>,
+) -> Result<(Option<String>, Option<String>), String> {
+    let normalize = |value: Option<String>| -> Result<Option<String>, String> {
+        value
+            .map(|raw| {
+                OffsetDateTime::parse(raw.trim(), &Rfc3339)
+                    .map(|timestamp| {
+                        timestamp
+                            .to_offset(time::UtcOffset::UTC)
+                            .format(&Rfc3339)
+                            .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
+                    })
+                    .map_err(|_| "experiment time window must be valid RFC3339".to_string())
+            })
+            .transpose()
+    };
+    let start = normalize(starts_at)?;
+    let end = normalize(ends_at)?;
+    if let (Some(start_value), Some(end_value)) = (&start, &end) {
+        let start_time = OffsetDateTime::parse(start_value, &Rfc3339)
+            .map_err(|_| "invalid normalized start time".to_string())?;
+        let end_time = OffsetDateTime::parse(end_value, &Rfc3339)
+            .map_err(|_| "invalid normalized end time".to_string())?;
+        if start_time > end_time {
+            return Err("experiment starts_at must not be after ends_at".to_string());
+        }
+    }
+    Ok((start, end))
+}
+
+fn fnv1a_bucket(input: &str) -> u32 {
+    let mut hash: u32 = 0x811c9dc5;
+    for byte in input.as_bytes() {
+        hash ^= u32::from(*byte);
+        hash = hash.wrapping_mul(0x01000193);
+    }
+    hash % 10_000
+}
+
+fn experiment_variant_for_subject(
+    workspace_id: &str,
+    experiment_id: &str,
+    subject_id: &str,
+    variants: &[ExperimentVariantInput],
+) -> Result<String, String> {
+    let bucket = f64::from(fnv1a_bucket(&format!("{}:{}:{}", workspace_id, experiment_id, subject_id))) / 100.0;
+    let mut cumulative = 0.0;
+    for variant in variants {
+        cumulative += variant.allocation_percent;
+        if bucket < cumulative {
+            return Ok(variant.id.clone());
+        }
+    }
+    variants.last().map(|variant| variant.id.clone()).ok_or_else(|| "experiment has no variants".to_string())
 }
 
 fn validate_rule_pack_json(platform: &str, rules_json: &str) -> Result<serde_json::Value, String> {
@@ -8966,6 +9235,323 @@ fn operational_event_append(
 }
 
 #[tauri::command]
+#[tauri::command]
+fn append_experiment_operational_event(
+    connection: &mut Connection,
+    workspace_id: &str,
+    actor_id: &str,
+    kind: &str,
+    entity_id: &str,
+) -> Result<(), String> {
+    let timestamp = chrono_like_timestamp();
+    let payload = serde_json::json!({
+        "source": "experiment_studio",
+        "domain": "experimentation",
+    }).to_string();
+    append_operational_event(
+        connection,
+        workspace_id,
+        None,
+        &timestamp,
+        kind,
+        "succeeded",
+        "user",
+        actor_id,
+        Some("experiment"),
+        Some(entity_id),
+        None,
+        None,
+        Some(&payload),
+    ).map_err(|error| error.to_string())
+}
+
+fn experiment_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    name: String,
+    hypothesis: String,
+    objective_metric: String,
+    status: String,
+    variants_json: String,
+    starts_at: Option<String>,
+    ends_at: Option<String>,
+) -> Result<ExperimentView, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let hypothesis = hypothesis.trim().to_string();
+    let objective_metric = validate_label(&objective_metric).map_err(|error| error.to_string())?;
+    if hypothesis.is_empty() || hypothesis.len() > 10_000 {
+        return Err("invalid experiment hypothesis".to_string());
+    }
+    let status = validate_experiment_status(&status)?;
+    let variants_json = normalize_experiment_variants_json(&variants_json)?;
+    let (starts_at, ends_at) = normalize_experiment_window(starts_at, ends_at)?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+    let timestamp = chrono_like_timestamp();
+    let changed = connection.execute(
+        "INSERT INTO experiments(
+           id, workspace_id, name, hypothesis, objective_metric, status,
+           variants_json, starts_at, ends_at, created_at, updated_at
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)
+         ON CONFLICT(id) DO UPDATE SET
+           name=excluded.name, hypothesis=excluded.hypothesis,
+           objective_metric=excluded.objective_metric, status=excluded.status,
+           variants_json=excluded.variants_json, starts_at=excluded.starts_at,
+           ends_at=excluded.ends_at, updated_at=excluded.updated_at
+         WHERE experiments.workspace_id=excluded.workspace_id",
+        params![&id, &workspace_id, &name, &hypothesis, &objective_metric, &status, &variants_json, &starts_at, &ends_at, &timestamp],
+    ).map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("experiment id already belongs to another workspace".to_string());
+    }
+    write_audit_for_workspace(&connection, &workspace_id, "experiment", "upsert", "success", "user", Some(&id))
+        .map_err(|error| error.to_string())?;
+    let actor_id = "desktop-user".to_string();
+    let mut connection = connection;
+    append_experiment_operational_event(
+        &mut connection,
+        &workspace_id,
+        &actor_id,
+        "experiment.updated",
+        &id,
+    )?;
+    Ok(ExperimentView {
+        id, name, hypothesis, objective_metric, status, variants_json, starts_at, ends_at,
+        created_at: timestamp.clone(), updated_at: timestamp,
+    })
+}
+
+#[tauri::command]
+fn experiment_list(app: tauri::AppHandle) -> Result<Vec<ExperimentView>, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"])
+        .map_err(|error| error.to_string())?;
+    let mut statement = connection.prepare(
+        "SELECT id, name, hypothesis, objective_metric, status, variants_json,
+                starts_at, ends_at, created_at, updated_at
+         FROM experiments WHERE workspace_id=?1 ORDER BY updated_at DESC",
+    ).map_err(|error| error.to_string())?;
+    let rows = statement.query_map(params![workspace_id], |row| {
+        Ok(ExperimentView {
+            id: row.get(0)?, name: row.get(1)?, hypothesis: row.get(2)?, objective_metric: row.get(3)?,
+            status: row.get(4)?, variants_json: row.get(5)?, starts_at: row.get(6)?, ends_at: row.get(7)?,
+            created_at: row.get(8)?, updated_at: row.get(9)?,
+        })
+    }).map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn experiment_assign_variant(
+    app: tauri::AppHandle,
+    experiment_id: String,
+    subject_id: String,
+) -> Result<ExperimentAssignmentView, String> {
+    let workspace_id = active_workspace_id();
+    let experiment_id = validate_label(&experiment_id).map_err(|error| error.to_string())?;
+    let subject_id = validate_label(&subject_id).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"])
+        .map_err(|error| error.to_string())?;
+    let (stored_workspace, status, starts_at, ends_at, variants_json): (
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+        String,
+    ) = connection.query_row(
+        "SELECT workspace_id, status, starts_at, ends_at, variants_json FROM experiments WHERE id=?1",
+        params![&experiment_id],
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
+    ).optional().map_err(|error| error.to_string())?
+    .ok_or_else(|| "experiment not found".to_string())?;
+    if stored_workspace != workspace_id {
+        return Err("experiment belongs to another workspace".to_string());
+    }
+    let (starts_at, ends_at) = normalize_experiment_window(starts_at, ends_at)?;
+    if status != "running" {
+        return Err("experiment_not_active".to_string());
+    }
+    let now = chrono_like_timestamp();
+    let now_time = OffsetDateTime::parse(&now, &Rfc3339)
+        .map_err(|_| "runtime clock returned invalid RFC3339".to_string())?;
+    if starts_at.as_ref().is_some_and(|value| {
+        OffsetDateTime::parse(value, &Rfc3339)
+            .map(|start| now_time < start)
+            .unwrap_or(true)
+    }) || ends_at.as_ref().is_some_and(|value| {
+        OffsetDateTime::parse(value, &Rfc3339)
+            .map(|end| now_time > end)
+            .unwrap_or(true)
+    }) {
+        return Err("experiment_not_active".to_string());
+    }
+    let variants: Vec<ExperimentVariantInput> = serde_json::from_str(&variants_json)
+        .map_err(|_| "stored experiment variants are invalid".to_string())?;
+    let variant_id = experiment_variant_for_subject(&workspace_id, &experiment_id, &subject_id, &variants)?;
+    let assignment = ExperimentAssignmentView {
+        experiment_id,
+        workspace_id: workspace_id.clone(),
+        subject_id,
+        variant_id: variant_id.clone(),
+    };
+    let mut connection = connection;
+    let payload = serde_json::json!({
+        "source": "experiment_studio",
+        "variant_id": variant_id,
+    })
+    .to_string();
+    append_operational_event(
+        &mut connection,
+        &workspace_id,
+        None,
+        &chrono_like_timestamp(),
+        "experiment.assignment",
+        "succeeded",
+        "user",
+        "desktop-user",
+        Some("experiment"),
+        Some(&assignment.experiment_id),
+        None,
+        None,
+        Some(&payload),
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(assignment)
+}
+
+#[tauri::command]
+fn experiment_record_observation(
+    app: tauri::AppHandle,
+    id: String,
+    experiment_id: String,
+    variant_id: String,
+    subject_id: String,
+    observed_at: Option<String>,
+    exposed: bool,
+    engaged: bool,
+    converted: bool,
+    value: Option<f64>,
+) -> Result<bool, String> {
+    let workspace_id = active_workspace_id();
+    let id = validate_label(&id).map_err(|error| error.to_string())?;
+    let experiment_id = validate_label(&experiment_id).map_err(|error| error.to_string())?;
+    let variant_id = validate_label(&variant_id).map_err(|error| error.to_string())?;
+    let subject_id = validate_label(&subject_id).map_err(|error| error.to_string())?;
+    if value.is_some_and(|number| !number.is_finite()) {
+        return Err("observation value must be finite".to_string());
+    }
+    let observed_at = normalize_experiment_window(observed_at, None)?.0.unwrap_or_else(chrono_like_timestamp);
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator"])
+        .map_err(|error| error.to_string())?;
+    let variants_json: String = connection.query_row(
+        "SELECT variants_json FROM experiments WHERE id=?1 AND workspace_id=?2",
+        params![&experiment_id, &workspace_id],
+        |row| row.get(0),
+    ).optional().map_err(|error| error.to_string())?
+    .ok_or_else(|| "experiment not found in active workspace".to_string())?;
+    let variants: Vec<ExperimentVariantInput> = serde_json::from_str(&variants_json)
+        .map_err(|_| "stored experiment variants are invalid".to_string())?;
+    if !variants.iter().any(|variant| variant.id == variant_id) {
+        return Err("observation variant is not declared by the experiment".to_string());
+    }
+    let changed = connection.execute(
+        "INSERT INTO experiment_observations(
+           id, workspace_id, experiment_id, variant_id, subject_id, observed_at,
+           exposed, engaged, converted, value, created_at
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+         ON CONFLICT(id) DO NOTHING",
+        params![
+            &id, &workspace_id, &experiment_id, &variant_id, &subject_id, &observed_at,
+            if exposed {1} else {0}, if engaged {1} else {0}, if converted {1} else {0},
+            &value, &observed_at
+        ],
+    ).map_err(|error| error.to_string())?;
+    if changed == 0 { return Ok(false); }
+    let actor_id = local_user_id(&connection).map_err(|error| error.to_string())?;
+    let audit_result = write_audit_for_workspace(
+        &connection,
+        &workspace_id,
+        "experiment",
+        "observation_recorded",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
+    let mut connection = connection;
+    append_experiment_operational_event(
+        &mut connection,
+        &workspace_id,
+        &actor_id,
+        "experiment.observation_recorded",
+        &id,
+    )?;
+    let _ = audit_result;
+    Ok(true)
+}
+
+#[tauri::command]
+fn experiment_summary(
+    app: tauri::AppHandle,
+    experiment_id: String,
+) -> Result<ExperimentSummaryView, String> {
+    let workspace_id = active_workspace_id();
+    let experiment_id = validate_label(&experiment_id).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"])
+        .map_err(|error| error.to_string())?;
+    let variants_json: String = connection.query_row(
+        "SELECT variants_json FROM experiments WHERE id=?1 AND workspace_id=?2",
+        params![&experiment_id, &workspace_id],
+        |row| row.get(0),
+    ).optional().map_err(|error| error.to_string())?
+    .ok_or_else(|| "experiment not found in active workspace".to_string())?;
+    let variants: Vec<ExperimentVariantInput> = serde_json::from_str(&variants_json)
+        .map_err(|_| "stored experiment variants are invalid".to_string())?;
+    let mut summaries = Vec::with_capacity(variants.len());
+    let mut observation_count = 0_i64;
+    for variant in variants {
+        let (observation_count_for_variant, exposure_count, engagement_count, conversion_count, total_value): (i64, i64, i64, i64, f64) = connection.query_row(
+            "SELECT
+               COUNT(*),
+               COALESCE(SUM(CASE WHEN exposed=1 THEN 1 ELSE 0 END),0),
+               COALESCE(SUM(CASE WHEN exposed=1 AND engaged=1 THEN 1 ELSE 0 END),0),
+               COALESCE(SUM(CASE WHEN exposed=1 AND converted=1 THEN 1 ELSE 0 END),0),
+               COALESCE(SUM(CASE WHEN exposed=1 THEN COALESCE(value,0) ELSE 0 END),0)
+             FROM experiment_observations
+             WHERE workspace_id=?1 AND experiment_id=?2 AND variant_id=?3",
+            params![&workspace_id, &experiment_id, &variant.id],
+            |row| Ok((
+                row.get(0)?,
+                row.get(1)?,
+                row.get(2)?,
+                row.get(3)?,
+                row.get(4)?,
+            )),
+        ).map_err(|error| error.to_string())?;
+        observation_count += observation_count_for_variant;
+        summaries.push(ExperimentVariantSummaryView {
+            variant_id: variant.id,
+            exposure_count,
+            engagement_count,
+            conversion_count,
+            total_value,
+            engagement_rate: if exposure_count == 0 {0.0} else {engagement_count as f64/exposure_count as f64},
+            conversion_rate: if exposure_count == 0 {0.0} else {conversion_count as f64/exposure_count as f64},
+        });
+    }
+    Ok(ExperimentSummaryView {
+        experiment_id, workspace_id, observation_count, variants: summaries,
+        statistical_significance_claimed: false,
+    })
+}
+
 fn operational_event_list(
     app: tauri::AppHandle,
     entity_type: Option<String>,
@@ -11976,6 +12562,11 @@ pub fn run() {
             message_list,
             audit_list,
             analytics_summary,
+            experiment_upsert,
+            experiment_list,
+            experiment_assign_variant,
+            experiment_record_observation,
+            experiment_summary,
             audit_verify,
             license::license_install,
             license::license_status,
@@ -11985,6 +12576,73 @@ pub fn run() {
 
     if let Err(error) = result {
         eprintln!("failed to run ORBIT Marketing OS: {error}");
+    }
+}
+
+#[cfg(test)]
+mod experimentation_runtime_tests {
+    use super::*;
+
+    #[test]
+    fn validates_variants_and_time_window() {
+        let variants = normalize_experiment_variants_json(
+            r#"[{"id":"control","name":"Control","allocationPercent":50},{"id":"test","name":"Test","allocationPercent":50}]"#,
+        ).expect("valid variants");
+        assert!(variants.contains("allocationPercent"));
+        assert!(normalize_experiment_status("running").is_ok());
+        assert!(normalize_experiment_status("unknown").is_err());
+        assert!(normalize_experiment_window(
+            Some("2026-09-26T03:00:00+03:00".to_string()),
+            Some("2026-09-26T04:00:00+03:00".to_string()),
+        ).is_ok());
+        assert!(normalize_experiment_window(Some("not-a-date".to_string()), None).is_err());
+    }
+
+    #[test]
+    fn rejects_cross_workspace_observation_reference() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection.execute_batch(SCHEMA).expect("schema");
+        create_integrity_triggers(&connection).expect("triggers");
+        connection.execute_batch(
+            "INSERT INTO workspaces(id,name,created_at) VALUES ('ws-a','A','1'),('ws-b','B','1');
+             INSERT INTO experiments(id,workspace_id,name,hypothesis,objective_metric,status,variants_json,created_at,updated_at)
+             VALUES ('exp-a','ws-a','A','H','conversion_rate','draft',
+             '[{\"id\":\"a\",\"name\":\"A\",\"allocationPercent\":50},{\"id\":\"b\",\"name\":\"B\",\"allocationPercent\":50}]','1','1');"
+        ).expect("fixtures");
+        let error = connection.execute(
+            "INSERT INTO experiment_observations(id,workspace_id,experiment_id,variant_id,subject_id,observed_at)
+             VALUES ('obs-cross','ws-b','exp-a','a','subject','2026-09-26T00:00:00Z')", [],
+        );
+        assert!(error.is_err());
+    }
+
+    #[test]
+    fn schema_migrates_to_v14() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection.execute_batch(SCHEMA).expect("schema");
+        migrate_schema(&connection).expect("migration");
+        let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0)).expect("version");
+        assert_eq!(version, 14);
+    }
+
+    #[test]
+    #[test]
+    fn inactive_experiment_assignment_is_rejected_by_policy() {
+        assert!(validate_experiment_status("draft").is_ok());
+        assert!(normalize_experiment_window(
+            Some("2026-09-27T00:00:00Z".to_string()),
+            Some("2026-09-28T00:00:00Z".to_string()),
+        ).is_ok());
+    }
+
+    fn assignment_is_deterministic() {
+        let variants = vec![
+            ExperimentVariantInput { id:"control".into(), name:"Control".into(), allocation_percent:50.0, content_id:None, message:None },
+            ExperimentVariantInput { id:"test".into(), name:"Test".into(), allocation_percent:50.0, content_id:None, message:None },
+        ];
+        let first = experiment_variant_for_subject("ws-1","exp-1","subject-42",&variants).expect("assignment");
+        let second = experiment_variant_for_subject("ws-1","exp-1","subject-42",&variants).expect("assignment");
+        assert_eq!(first, second);
     }
 }
 

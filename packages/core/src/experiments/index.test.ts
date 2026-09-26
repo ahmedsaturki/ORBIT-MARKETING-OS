@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assignExperimentVariant,
+  isExperimentActiveAt,
   observationsToLearningSignals,
   summarizeExperiment,
   validateExperiment,
@@ -59,6 +60,43 @@ describe("experimentation", () => {
     const first = assignExperimentVariant(experiment, "subject-42");
     const second = assignExperimentVariant(experiment, "subject-42");
     expect(second.id).toBe(first.id);
+  });
+
+  it("only assigns while a running experiment is within its time window", () => {
+    expect(isExperimentActiveAt(experiment, "2026-09-26T00:00:00Z")).toBe(true);
+    expect(
+      isExperimentActiveAt(
+        { ...experiment, status: "draft" },
+        "2026-09-26T00:00:00Z",
+      ),
+    ).toBe(false);
+    expect(
+      isExperimentActiveAt(
+        {
+          ...experiment,
+          startsAt: "2026-09-27T00:00:00Z",
+        },
+        "2026-09-26T00:00:00Z",
+      ),
+    ).toBe(false);
+    expect(
+      isExperimentActiveAt(
+        {
+          ...experiment,
+          endsAt: "2026-09-25T23:59:59Z",
+        },
+        "2026-09-26T00:00:00Z",
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects invalid experiment status", () => {
+    expect(
+      validateExperiment({
+        ...experiment,
+        status: "unknown" as ExperimentDefinition["status"],
+      }).errors,
+    ).toContain("invalid_status");
   });
 
   it("keeps assignment deterministic but workspace-scoped", () => {
