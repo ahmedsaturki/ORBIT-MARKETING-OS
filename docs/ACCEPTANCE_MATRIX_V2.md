@@ -83,6 +83,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | QA-02    | Critical E2E paths                                                                                             | Playwright report                                   |
 | DOC-01   | User guide matches product                                                                                     | documentation review                                |
 | DOC-02   | Security model documented                                                                                      | security review                                     |
+
 ## Gate rules
 
 - Any `FAIL` in SEC, DATA, QUE, CAMP, CONN, REL, SIM, REP, POL, CMD or EVENT blocks release.
