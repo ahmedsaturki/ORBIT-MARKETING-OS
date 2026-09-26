@@ -9514,10 +9514,9 @@ fn experiment_record_observation(
     if value.is_some_and(|number| !number.is_finite()) {
         return Err("observation value must be finite".to_string());
     }
-    let observed_at =
-        normalize_experiment_window(observed_at, None)?
-            .0
-            .unwrap_or_else(chrono_like_timestamp);
+    let observed_at = normalize_experiment_window(observed_at, None)?
+        .0
+        .unwrap_or_else(chrono_like_timestamp);
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(
         &connection,
