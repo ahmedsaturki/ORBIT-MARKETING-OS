@@ -16,6 +16,7 @@ import { MissionControlPanel } from "./components/MissionControlPanel";
 import { OperatingGraphPanel } from "./components/OperatingGraphPanel";
 import { OperationalEventTimelinePanel } from "./components/OperationalEventTimelinePanel";
 import { StrategyStudioPanel } from "./components/StrategyStudioPanel";
+import { ExperimentStudioPanel } from "./components/ExperimentStudioPanel";
 import {
   analyzeLocalImage,
   DEFAULT_RUNTIME_URL,
@@ -1436,6 +1437,10 @@ export function App(): ReactElement {
           analytics={analyticsSummary}
           runtimeOnline={runtimeHealth?.status === "ok"}
         />
+      ) : null}
+
+      {activeWorkspace ? (
+        <ExperimentStudioPanel workspaceId={activeWorkspace.id} />
       ) : null}
 
       <header className="hero">
