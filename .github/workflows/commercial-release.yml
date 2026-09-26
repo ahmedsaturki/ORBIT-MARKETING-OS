@@ -1,4 +1,4 @@
-name: ORBIT Commercial Release
+name: ORBIT Commercial Release Gate
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   readiness:
-    name: Commercial readiness gate
+    name: Commercial production gate
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -65,13 +65,5 @@ jobs:
       - name: Verify commercial readiness
         run: pnpm verify:readiness -- --mode commercial
 
-  publish:
-    name: Publish commercial release
-    needs: readiness
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - name: Stop
-        run: |
-          echo "Commercial readiness passed. Attach the signed/notarized, store-approved and provenance-verified release artifacts before enabling this publish step."
-          exit 1
+      - name: Record gate
+        run: echo "commercial-release-gate=PASS"
