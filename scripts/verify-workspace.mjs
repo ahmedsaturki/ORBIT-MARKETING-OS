@@ -157,7 +157,7 @@ const requiredRootScripts = {
   "test:e2e": "playwright test",
   "preflight:runner": "bash scripts/self-hosted-preflight.sh",
   "security:scan": "node scripts/security-scan.mjs",
-  "orbit": "tsx scripts/orbit-cli.ts",
+  orbit: "tsx scripts/orbit-cli.ts",
   "orbit:mcp": "tsx scripts/orbit-mcp.ts",
   "test:surface": "node scripts/orbit-surface-smoke.mjs",
 };
