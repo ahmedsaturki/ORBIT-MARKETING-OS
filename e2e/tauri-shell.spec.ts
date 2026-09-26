@@ -382,24 +382,35 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     )) as Array<{ id: string }>;
     expect(isolated).toEqual([]);
 
-    const crossWorkspace = await page!.evaluate(
-      (payload) =>
-        window.__TAURI_INTERNALS__.invoke("research_finding_upsert", payload),
-      {
-        id: "e2e-research-cross-" + suffix,
-        briefId: brief.id,
-        title: "Cross workspace",
-        statement: "Must be rejected.",
-        sourceIdsJson: JSON.stringify(["e2e-research-source-" + suffix]),
-        confidence: 0.8,
-        observedAt: "2026-09-26T09:00:00Z",
-        expiresAt: null,
-        tagsJson: JSON.stringify([]),
-      },
+    let crossWorkspaceError = "";
+    try {
+      await page!.evaluate(
+        (payload) =>
+          window.__TAURI_INTERNALS__.invoke(
+            "research_finding_upsert",
+            payload,
+          ),
+        {
+          id: "e2e-research-cross-" + suffix,
+          briefId: brief.id,
+          title: "Cross workspace",
+          statement: "Must be rejected.",
+          sourceIdsJson: JSON.stringify([
+            "e2e-research-source-" + suffix,
+          ]),
+          confidence: 0.8,
+          observedAt: "2026-09-26T09:00:00Z",
+          expiresAt: null,
+          tagsJson: JSON.stringify([]),
+        },
+      );
+    } catch (caught: unknown) {
+      crossWorkspaceError =
+        caught instanceof Error ? caught.message : String(caught);
+    }
+    expect(crossWorkspaceError).toContain(
+      "research brief is not in active workspace",
     );
-    expect(crossWorkspace).toMatchObject({
-      code: expect.anything(),
-    });
   });
 
   test("native runtime restart preserves selected workspace state", async () => {
