@@ -85,7 +85,6 @@ function normalizedOptions(
   return { windowSize, threshold, minAbsoluteDelta, maxResults };
 }
 
-
 /**
  * Detects point anomalies against a preceding rolling baseline.
  *
