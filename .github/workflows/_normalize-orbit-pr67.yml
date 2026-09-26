@@ -1,0 +1,82 @@
+name: ORBIT PR67 normalization
+on:
+  push:
+    branches:
+      - feat/orbit-unified-search-research-20260926
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Fix Rust search fixture
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("packages/desktop/src-tauri/src/lib.rs")
+          text = path.read_text(encoding="utf-8")
+
+          start = '            .execute_batch(\n                "INSERT INTO workspaces(id, name, created_at)'
+          marker = '            )\n            .expect("search fixture should be created");'
+          start_i = text.find(start)
+          if start_i == -1:
+              raise SystemExit("search fixture start not found")
+
+          end_i = text.find(marker, start_i)
+          if end_i == -1:
+              raise SystemExit("search fixture end not found")
+
+          block = text[start_i:end_i]
+          if 'r#"INSERT INTO workspaces' in block:
+              raise SystemExit(0)
+
+          quote_start = block.find('"INSERT INTO workspaces')
+          quote_end = block.rfind('",')
+          if quote_start == -1 or quote_end == -1 or quote_end <= quote_start:
+              raise SystemExit("search fixture string boundaries not found")
+
+          replacement = 'r#' + block[quote_start:quote_end] + '#'
+          block = block[:quote_start] + replacement + block[quote_end:]
+          text = text[:start_i] + block + text[end_i:]
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Rust format
+        working-directory: packages/desktop/src-tauri
+        run: cargo fmt --all
+
+      - name: Prettier changed surfaces
+        run: pnpm exec prettier --write           docs/ACCEPTANCE_MATRIX_V2.md           docs/API.md           docs/LAUNCH_SCORECARD.md           docs/PRODUCT_SURFACE_MATRIX.md           e2e/tauri-shell.spec.ts           packages/desktop/src/App.tsx
+
+      - name: Commit normalized tree
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/_normalize-orbit-pr67.yml
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No normalization changes required."
+            exit 0
+          fi
+          git commit -m "fix: normalize search branch formatting and fixture"
+          git push
