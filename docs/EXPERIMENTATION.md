@@ -24,6 +24,8 @@ A subject is assigned using a deterministic FNV-1a bucket derived from:
 
 The same subject therefore receives the same variant for the same experiment/workspace across supported runtimes.
 
+Variant delivery is explicit. A campaign-bound experiment must map each variant to a unique content item already attached to the campaign, or to a unique message source. The compiler rejects cross-workspace bindings, unattached content, and duplicate delivery sources.
+
 ## Observation model
 
 Observations are scoped by both experiment ID and workspace ID.
@@ -65,11 +67,16 @@ Current implemented layers:
 - governed Command Registry entries;
 - desktop Experiment Studio control surface.
 
-Remaining product layers:
+Implemented next layer:
+
+- campaign/content binding that compiles experiment variants into deterministic, dependency-ordered governed work;
+- experiment learning write-back artifacts for observed conversion/value signals and insufficient-evidence states;
+- learning artifacts are workspace-scoped and explicitly descriptive; the current core does not claim causality or statistical significance.
+
+Still remaining:
 
 - automatic observations from real connector outcomes;
-- campaign/content binding that compiles experiments into governed work;
-- experiment-aware analytics and insight/strategy write-back;
+- persisted native write-back through the outcome/strategy command surfaces;
 - an explicit statistical inference methodology with documented assumptions;
 - CLI/MCP/agent exposure through the same command boundary.
 
