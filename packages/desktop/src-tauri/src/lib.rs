@@ -9688,6 +9688,7 @@ fn experiment_summary(
     })
 }
 
+#[tauri::command]
 fn operational_event_list(
     app: tauri::AppHandle,
     entity_type: Option<String>,
