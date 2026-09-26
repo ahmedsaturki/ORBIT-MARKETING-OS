@@ -1558,7 +1558,9 @@ export function App(): ReactElement {
             ))}
           </div>
         ) : globalSearchQuery.trim() && !globalSearchBusy ? (
-          <div className="account-meta">لا توجد نتائج ضمن مساحة العمل الحالية.</div>
+          <div className="account-meta">
+            لا توجد نتائج ضمن مساحة العمل الحالية.
+          </div>
         ) : null}
       </section>
 

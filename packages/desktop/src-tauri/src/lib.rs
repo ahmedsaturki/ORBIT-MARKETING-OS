@@ -6981,7 +6981,6 @@ fn outcome_analytics(app: tauri::AppHandle) -> Result<OutcomeAnalyticsView, Stri
     })
 }
 
-
 #[tauri::command]
 fn global_search(
     app: tauri::AppHandle,
@@ -13985,7 +13984,6 @@ mod interrupted_restore_recovery_tests {
         assert!(columns.contains(&"payload_json".to_string()));
     }
 
-
     #[test]
     fn global_search_is_workspace_scoped_and_bounded() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
@@ -13994,7 +13992,7 @@ mod interrupted_restore_recovery_tests {
             .expect("fresh schema should be creatable");
         connection
             .execute_batch(
-                "INSERT INTO workspaces(id, name, created_at)
+                r#"INSERT INTO workspaces(id, name, created_at)
                  VALUES ('workspace-1', 'One', '1'), ('workspace-2', 'Two', '1');
                  INSERT INTO campaigns(id, workspace_id, name, status, created_at)
                  VALUES ('campaign-1', 'workspace-1', 'Alpha Campaign', 'draft', '1'),
@@ -14004,22 +14002,34 @@ mod interrupted_restore_recovery_tests {
                  INSERT INTO research_findings(id, workspace_id, brief_id, title, statement, source_ids_json, confidence, observed_at, expires_at, tags_json, created_at, updated_at)
                  VALUES ('finding-1', 'workspace-1', 'brief-1', 'Alpha Finding', 'Alpha evidence', '["source-1"]', 0.8, '2026-09-26T00:00:00Z', NULL, '["alpha"]', '1', '1');
                  INSERT INTO knowledge_sources(id, workspace_id, kind, label, locator, created_at)
-                 VALUES ('source-1', 'workspace-1', 'url', 'Source', 'https://example.com', '1');",
+                 VALUES ('source-1', 'workspace-1', 'url', 'Source', 'https://example.com', '1');"#,
             )
             .expect("search fixture should be created");
-        let escaped = "Alpha".replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
+        let escaped = "Alpha"
+            .replace('\\', "\\\\")
+            .replace('%', "\\%")
+            .replace('_', "\\_");
         let sql = "SELECT kind, id FROM campaigns WHERE workspace_id=?1 AND lower(name) LIKE '%' || lower(?2) || '%' ESCAPE '\\'";
         let rows: Vec<(String, String)> = connection
             .prepare(sql)
             .expect("search query should prepare")
-            .query_map(params!["workspace-1", escaped], |row| Ok((row.get(0)?, row.get(1)?)))
+            .query_map(params!["workspace-1", escaped], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })
             .expect("search query should run")
             .collect::<Result<Vec<_>, _>>()
             .expect("search rows should collect");
-        assert_eq!(rows, vec![("campaign".to_string(), "campaign-1".to_string())]);
+        assert_eq!(
+            rows,
+            vec![("campaign".to_string(), "campaign-1".to_string())]
+        );
 
         let count: i64 = connection
-            .query_row("SELECT COUNT(*) FROM research_findings WHERE workspace_id='workspace-1'", [], |row| row.get(0))
+            .query_row(
+                "SELECT COUNT(*) FROM research_findings WHERE workspace_id='workspace-1'",
+                [],
+                |row| row.get(0),
+            )
             .expect("finding should be queryable");
         assert_eq!(count, 1);
     }

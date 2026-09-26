@@ -97,10 +97,11 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 - Real-platform tests must be controlled and must not be used to claim immunity from platform enforcement.
 
 ### Research Intelligence
+
 | RESEARCH-01 | Research briefs are workspace-scoped and lifecycle-validated | core validation tests + native persistence test |
 | RESEARCH-02 | Research findings require workspace-local evidence and bounded confidence/freshness | native integrity E2E + core validation tests |
 | RESEARCH-03 | Explicit finding promotion creates workspace-scoped Knowledge with auditable provenance | native publish integration test + audit verification |
 
 ### Universal Search
-| SEARCH-01 | Universal Search is bounded, deterministic, workspace-scoped, read-only, and excludes secret/session records | core contract tests + native Tauri E2E |
 
+| SEARCH-01 | Universal Search is bounded, deterministic, workspace-scoped, read-only, and excludes secret/session records | core contract tests + native Tauri E2E |

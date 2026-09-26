@@ -506,12 +506,12 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
     expect(sameWorkspace.length).toBeLessThanOrEqual(50);
     expect(sameWorkspace.some((item) => item.kind === "campaign")).toBe(true);
-    expect(
-      sameWorkspace.some((item) => item.kind === "research_brief"),
-    ).toBe(true);
-    expect(
-      sameWorkspace.some((item) => item.kind === "research_finding"),
-    ).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "research_brief")).toBe(
+      true,
+    );
+    expect(sameWorkspace.some((item) => item.kind === "research_finding")).toBe(
+      true,
+    );
 
     const workspaceB = (await page!.evaluate(
       async (id) =>

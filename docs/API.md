@@ -205,7 +205,6 @@ When an IPC command changes, update the desktop client, this API contract, and i
 - `research_publish_to_knowledge` explicitly promotes a finding into ORBIT Knowledge after source/workspace validation. This action is user-triggered and produces an auditable write.
 - Research operations do not execute external connectors and do not read vault/session secrets.
 
-
 ### Universal Search
 
 - `global_search` — read-only, active-workspace-scoped discovery across campaign, content, contact, conversation, opportunity, work, strategy, knowledge, agent, policy, experiment, research brief, and research finding records.
