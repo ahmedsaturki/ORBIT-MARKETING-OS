@@ -34,6 +34,21 @@ describe("experimentation", () => {
     ).toContain("allocation_must_equal_100");
   });
 
+  it("rejects malformed and inverted time windows", () => {
+    const malformed = validateExperiment({
+      ...experiment,
+      startsAt: "not-a-date",
+    });
+    expect(malformed.errors).toContain("invalid_start_time");
+
+    const inverted = validateExperiment({
+      ...experiment,
+      startsAt: "2026-09-27T00:00:00Z",
+      endsAt: "2026-09-26T00:00:00Z",
+    });
+    expect(inverted.errors).toContain("start_after_end");
+  });
+
   it("assigns the same subject deterministically", () => {
     const first = assignExperimentVariant(experiment, "subject-42");
     const second = assignExperimentVariant(experiment, "subject-42");
