@@ -59,10 +59,7 @@ export function evaluateContentReuse(
   if (!Number.isFinite(policy.cooldownHours) || policy.cooldownHours < 0) {
     throw new Error("cooldownHours must be a finite non-negative number");
   }
-  if (
-    !Number.isInteger(policy.maxReuseCount) ||
-    policy.maxReuseCount < 1
-  ) {
+  if (!Number.isInteger(policy.maxReuseCount) || policy.maxReuseCount < 1) {
     throw new Error("maxReuseCount must be a positive integer");
   }
   if (!Number.isFinite(policy.maxAgeDays) || policy.maxAgeDays < 1) {
@@ -100,8 +97,7 @@ export function evaluateContentReuse(
 
   const published = relevantHistory.sort(
     (a, b) =>
-      new Date(b.publishedAt).getTime() -
-      new Date(a.publishedAt).getTime(),
+      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
   );
 
   if (published.length >= policy.maxReuseCount) {

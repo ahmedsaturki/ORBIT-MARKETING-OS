@@ -21,12 +21,7 @@ const policy = {
 describe("content reuse policy", () => {
   it("allows approved fresh content with no conflicting history", () => {
     expect(
-      evaluateContentReuse(
-        base,
-        [],
-        policy,
-        new Date("2026-09-26T00:00:00Z"),
-      ),
+      evaluateContentReuse(base, [], policy, new Date("2026-09-26T00:00:00Z")),
     ).toEqual({
       allowed: true,
       reasons: ["approved"],
@@ -134,12 +129,7 @@ describe("content reuse policy", () => {
 
   it("rejects invalid current and history dates", () => {
     expect(() =>
-      evaluateContentReuse(
-        base,
-        [],
-        policy,
-        new Date("not-a-date"),
-      ),
+      evaluateContentReuse(base, [], policy, new Date("not-a-date")),
     ).toThrow("now must be a valid date");
 
     expect(() =>
