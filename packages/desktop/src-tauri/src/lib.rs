@@ -9309,7 +9309,7 @@ fn experiment_upsert(
     }
     write_audit_for_workspace(&connection, &workspace_id, "experiment", "upsert", "success", "user", Some(&id))
         .map_err(|error| error.to_string())?;
-    let actor_id = local_user_id(&connection).map_err(|error| error.to_string())?;
+    let actor_id = "desktop-user".to_string();
     let mut connection = connection;
     append_experiment_operational_event(
         &mut connection,
