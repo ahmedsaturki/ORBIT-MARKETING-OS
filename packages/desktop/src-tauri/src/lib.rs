@@ -11761,7 +11761,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 13);
+        assert_eq!(version, 14);
     }
 
     #[test]
@@ -11803,7 +11803,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 13);
+        assert_eq!(version, 14);
     }
 
     #[test]
@@ -12062,7 +12062,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 13);
+        assert_eq!(version, 14);
     }
 
     #[test]
@@ -12626,7 +12626,6 @@ mod experimentation_runtime_tests {
     }
 
     #[test]
-    #[test]
     fn inactive_experiment_assignment_is_rejected_by_policy() {
         assert!(validate_experiment_status("draft").is_ok());
         assert!(normalize_experiment_window(
@@ -12635,6 +12634,7 @@ mod experimentation_runtime_tests {
         ).is_ok());
     }
 
+    #[test]
     fn assignment_is_deterministic() {
         let variants = vec![
             ExperimentVariantInput { id:"control".into(), name:"Control".into(), allocation_percent:50.0, content_id:None, message:None },
