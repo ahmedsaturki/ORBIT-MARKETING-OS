@@ -8,6 +8,8 @@ describe("CommandRegistry", () => {
     expect(ids).toContain("campaign.plan");
     expect(ids).toContain("workflow.simulate");
     expect(ids).toContain("execution.replay");
+    expect(ids).toContain("experiment.define");
+    expect(ids).toContain("experiment.summarize");
   });
 
   it("rejects externally visible mutable commands without approval", () => {

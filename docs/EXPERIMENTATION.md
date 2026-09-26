@@ -51,21 +51,26 @@ This is intentional: a raw rate comparison is not presented as a statistically s
 
 ## Product boundary
 
-Current implementation:
+Current implemented layers:
 
 - pure @orbit/core domain primitives;
-- deterministic assignment;
-- workspace-scoped aggregation;
-- unit tests.
+- deterministic, workspace-bound assignment;
+- strict variant/time-window validation;
+- workspace-scoped observation aggregation;
+- regression tests for unknown variants and unexposed value;
+- native SQLite persistence through schema v14;
+- native deterministic assignment and summary commands;
+- workspace integrity triggers;
+- audit and operational-event integration;
+- governed Command Registry entries;
+- desktop Experiment Studio control surface.
 
-Next governed layers should add, using the same contracts:
+Remaining product layers:
 
-- persistent native experiment/observation records;
-- command/event-spine integration;
-- desktop Experiment Studio;
-- controlled campaign/content bindings;
-- experiment-aware analytics;
-- explicit inference methodology when evidence supports it;
-- learning records connected to the existing insight/strategy loop.
+- automatic observations from real connector outcomes;
+- campaign/content binding that compiles experiments into governed work;
+- experiment-aware analytics and insight/strategy write-back;
+- an explicit statistical inference methodology with documented assumptions;
+- CLI/MCP/agent exposure through the same command boundary.
 
 No external action should become possible merely by enabling experimentation.

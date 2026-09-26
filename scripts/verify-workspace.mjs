@@ -339,14 +339,14 @@ if (
 if (!rust.includes("CREATE TABLE IF NOT EXISTS media_assets")) {
   throw new Error("Media metadata persistence table is missing");
 }
-if (!rust.includes("const SCHEMA_VERSION: i64 = 13;")) {
-  throw new Error("Native schema version must be 13");
+if (!rust.includes("const SCHEMA_VERSION: i64 = 14;")) {
+  throw new Error("Native schema version must be 14");
 }
 if (!rust.includes("UNIQUE(workspace_id, idempotency_key)")) {
   throw new Error("Task idempotency must be workspace-scoped");
 }
-if (!rust.includes("PRAGMA user_version = 13;")) {
-  throw new Error("Schema migration must finalize at v13");
+if (!rust.includes("PRAGMA user_version = 14;")) {
+  throw new Error("Schema migration must finalize at v14");
 }
 const setupIndex = rust.indexOf(".setup(|app|");
 const startupRecoveryIndex = rust.indexOf(

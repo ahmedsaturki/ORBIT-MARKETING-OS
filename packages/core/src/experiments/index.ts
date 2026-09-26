@@ -73,6 +73,14 @@ export function validateExperiment(
   if (!experiment.workspaceId.trim()) errors.push("workspace_required");
   if (!experiment.name.trim()) errors.push("name_required");
   if (!experiment.hypothesis.trim()) errors.push("hypothesis_required");
+  if (
+    !["draft", "running", "paused", "completed", "archived"].includes(
+      experiment.status,
+    )
+  ) {
+    errors.push("invalid_status");
+  }
+
   if (!experiment.objectiveMetric.trim()) {
     errors.push("objective_metric_required");
   }
@@ -149,6 +157,33 @@ function stableBucket(input: string): number {
   return (hash >>> 0) % 10000;
 }
 
+export function isExperimentActiveAt(
+  experiment: ExperimentDefinition,
+  now: string,
+): boolean {
+  if (experiment.status !== "running") return false;
+  const nowTime = Date.parse(now);
+  if (Number.isNaN(nowTime)) {
+    throw new Error("invalid_now");
+  }
+
+  const startTime = experiment.startsAt
+    ? Date.parse(experiment.startsAt)
+    : undefined;
+  const endTime = experiment.endsAt ? Date.parse(experiment.endsAt) : undefined;
+
+  if (startTime !== undefined && Number.isNaN(startTime)) {
+    throw new Error("invalid_start_time");
+  }
+  if (endTime !== undefined && Number.isNaN(endTime)) {
+    throw new Error("invalid_end_time");
+  }
+
+  if (startTime !== undefined && nowTime < startTime) return false;
+  if (endTime !== undefined && nowTime > endTime) return false;
+  return true;
+}
+
 export function assignExperimentVariant(
   experiment: ExperimentDefinition,
   subjectId: string,
@@ -156,6 +191,10 @@ export function assignExperimentVariant(
   const validation = validateExperiment(experiment);
   if (!validation.valid) {
     throw new Error(`invalid_experiment:${validation.errors.join(",")}`);
+  }
+
+  if (!isExperimentActiveAt(experiment, new Date().toISOString())) {
+    throw new Error("experiment_not_active");
   }
 
   if (!subjectId.trim()) {

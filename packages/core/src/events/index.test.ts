@@ -59,6 +59,21 @@ describe("OperationalEventLog", () => {
     ).toThrow("operational_event_parent_missing");
   });
 
+  it("accepts experimentation event kinds", () => {
+    const log = new OperationalEventLog("ws-1");
+    const event = log.append({
+      workspaceId: "ws-1",
+      timestamp: "2026-09-26T00:00:00Z",
+      kind: "experiment.observation_recorded",
+      outcome: "succeeded",
+      actor: "user",
+      actorId: "user-1",
+      entityType: "experiment",
+      entityId: "exp-1",
+    });
+    expect(event.kind).toBe("experiment.observation_recorded");
+  });
+
   it("redacts sensitive payload keys before trace storage", () => {
     const event = createOperationalEvent({
       workspaceId: "ws-1",
