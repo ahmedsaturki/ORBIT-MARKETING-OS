@@ -21,6 +21,7 @@ import { ExperimentStudioPanel } from "./components/ExperimentStudioPanel";
 import { ResearchStudioPanel } from "./components/ResearchStudioPanel";
 import { ContentCalendarPanel } from "./components/ContentCalendarPanel";
 import { BulkPlannerPanel } from "./components/BulkPlannerPanel";
+import { LinkIntelligencePanel } from "./components/LinkIntelligencePanel";
 import {
   analyzeLocalImage,
   DEFAULT_RUNTIME_URL,
@@ -1527,6 +1528,14 @@ export function App(): ReactElement {
         contentItems={contentItems}
         onTasksChanged={loadTasks}
       />
+
+      {activeWorkspace ? (
+        <LinkIntelligencePanel
+          workspaceId={activeWorkspace.id}
+          campaigns={campaigns}
+          contentItems={contentItems}
+        />
+      ) : null}
 
       <header className="hero">
         <div>
