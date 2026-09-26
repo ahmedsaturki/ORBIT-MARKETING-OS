@@ -6433,7 +6433,10 @@ fn global_search(
     )
     .map_err(|error| error.to_string())?;
 
-    let escaped = query.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
+    let escaped = query
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_");
     let sql = r#"
       SELECT kind, id, title, subtitle, score
       FROM (
@@ -6554,22 +6557,24 @@ fn global_search(
     "#;
 
     let mut statement = connection.prepare(sql).map_err(|error| error.to_string())?;
-    let rows = statement.query_map(
-        named_params! {
-            ":q": escaped,
-            ":workspace": workspace_id,
-            ":limit": limit,
-        },
-        |row| {
-            Ok(GlobalSearchResultView {
-                kind: row.get(0)?,
-                id: row.get(1)?,
-                title: row.get(2)?,
-                subtitle: row.get(3)?,
-                score: row.get(4)?,
-            })
-        },
-    ).map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(
+            named_params! {
+                ":q": escaped,
+                ":workspace": workspace_id,
+                ":limit": limit,
+            },
+            |row| {
+                Ok(GlobalSearchResultView {
+                    kind: row.get(0)?,
+                    id: row.get(1)?,
+                    title: row.get(2)?,
+                    subtitle: row.get(3)?,
+                    score: row.get(4)?,
+                })
+            },
+        )
+        .map_err(|error| error.to_string())?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())
