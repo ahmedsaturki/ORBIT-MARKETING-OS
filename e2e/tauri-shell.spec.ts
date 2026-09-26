@@ -355,7 +355,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     )) as { id: string; name: string };
     expect(restored.id).toBe(before.id);
     expect(restored.name).toBe(before.name);
-    await expect(page).toHaveTitle(/ORBIT Marketing OS/);
+    await expect(page).toHaveTitle("ORBIT Marketing OS");
   });
 
   test("native queue recovery returns interrupted sync work to pending", async () => {
