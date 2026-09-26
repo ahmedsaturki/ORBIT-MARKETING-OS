@@ -4,7 +4,7 @@
 
 GitHub currently resolves the repository default branch `main` to:
 
-`377e86d79c3c9718ca8ee4d9ce5161a5751f77a3`
+`08e0f61e881dc94901cfb280948a29f73508fd65`
 
 This signed merge commit contains the verified Release Truth / Universal Search hardening from PR #71 and the verified Publishing Workbench / Competitive Watch tranche from PR #72.
 
@@ -54,11 +54,11 @@ Connected Vercel project: `orbit-marketing-os`.
 
 The public surface currently responds successfully for the home, pricing and privacy routes, returns 404 for an unknown route, uses Arabic RTL markup, and the selected seven-day runtime-error aggregation is clean.
 
-The current READY production deployment predates `main=377e86d` and does not expose the merged release SHA in its deployment metadata. Therefore live availability is verified, but current-main production provenance is not.
+The current READY production deployment predates `main=08e0f61` and does not expose the merged release SHA in its deployment metadata. Therefore live availability is verified, but current-main production provenance is not.
 
 ## Current release gate correction
 
-PR #76 changes the Vercel workflow from soft-disable to fail-closed when `VERCEL_TOKEN`, `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` is absent. This prevents a false green from being interpreted as a real deployment.
+PR #76 changed the Vercel workflow from soft-disable to fail-closed when `VERCEL_TOKEN`, `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` is absent. This prevents a false green from being interpreted as a real deployment.
 
 ## Remaining evidence
 
