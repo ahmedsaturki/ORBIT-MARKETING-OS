@@ -97,9 +97,7 @@ describe("experiment inference", () => {
       conversion!.rateDifference,
     );
     expect(conversion?.method).toBe("newcombe_wilson_difference");
-    expect(conversion?.interpretation).toBe(
-      "descriptive_uncertainty_interval",
-    );
+    expect(conversion?.interpretation).toBe("descriptive_uncertainty_interval");
   });
 
   it("rejects summary identity mismatch", () => {
@@ -116,10 +114,10 @@ describe("experiment inference", () => {
       ],
     };
     expect(() =>
-      inferExperiment(
-        experiment,
-        { ...summary(), workspaceId: "other-workspace" },
-      ),
+      inferExperiment(experiment, {
+        ...summary(),
+        workspaceId: "other-workspace",
+      }),
     ).toThrow("experiment_inference_identity_mismatch");
   });
 
@@ -160,16 +158,13 @@ describe("experiment inference", () => {
         { id: "benefit", name: "Benefit", allocationPercent: 50 },
       ],
     };
-    const inferred = inferExperiment(
-      experiment,
-      {
-        ...summary(),
-        variants: [
-          { ...summary().variants[0]!, exposureCount: 70 },
-          { ...summary().variants[1]!, exposureCount: 30 },
-        ],
-      },
-    );
+    const inferred = inferExperiment(experiment, {
+      ...summary(),
+      variants: [
+        { ...summary().variants[0]!, exposureCount: 70 },
+        { ...summary().variants[1]!, exposureCount: 30 },
+      ],
+    });
     expect(inferred.variants[0]?.allocationDrift).toBeCloseTo(0.2, 10);
     expect(inferred.maxAbsoluteAllocationDrift).toBeCloseTo(0.2, 10);
   });

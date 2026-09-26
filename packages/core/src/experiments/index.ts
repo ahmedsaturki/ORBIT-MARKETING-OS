@@ -12,11 +12,7 @@ import type { MarketingInsight } from "../outcomes/index.js";
 import type { Campaign } from "../types/index.js";
 
 export type ExperimentStatus =
-  | "draft"
-  | "running"
-  | "paused"
-  | "completed"
-  | "archived";
+  "draft" | "running" | "paused" | "completed" | "archived";
 
 export interface ExperimentVariant {
   readonly id: string;

@@ -118,12 +118,11 @@ export function proportionInterval(
   const denominator = 1 + z2 / cleanTrials;
   const center = (estimate + z2 / (2 * cleanTrials)) / denominator;
   const margin =
-    (z /
-      denominator *
+    (z / denominator) *
       Math.sqrt(
         (estimate * (1 - estimate)) / cleanTrials +
           z2 / (4 * cleanTrials * cleanTrials),
-      )) || 0;
+      ) || 0;
 
   return {
     successes: cleanSuccesses,
@@ -149,15 +148,13 @@ function differenceInterval(
       left.estimate -
       right.estimate -
       Math.sqrt(
-        (left.estimate - left.lower) ** 2 +
-          (right.upper - right.estimate) ** 2,
+        (left.estimate - left.lower) ** 2 + (right.upper - right.estimate) ** 2,
       ),
     upper:
       left.estimate -
       right.estimate +
       Math.sqrt(
-        (left.upper - left.estimate) ** 2 +
-          (right.estimate - right.lower) ** 2,
+        (left.upper - left.estimate) ** 2 + (right.estimate - right.lower) ** 2,
       ),
   };
 }
