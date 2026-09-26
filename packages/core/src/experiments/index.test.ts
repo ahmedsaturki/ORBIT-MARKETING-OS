@@ -3,6 +3,7 @@ import {
   assignExperimentVariant,
   buildExperimentLearningWriteback,
   compileExperimentCampaignWorkPlan,
+  buildExperimentObservationFromExecution,
   isExperimentActiveAt,
   observationsToLearningSignals,
   summarizeExperiment,
@@ -258,6 +259,127 @@ describe("experimentation", () => {
     expect(observationsToLearningSignals(summary)).toContain(
       "statistical_significance_not_claimed",
     );
+  });
+});
+
+describe("experiment execution evidence bridge", () => {
+  const runningExperiment: ExperimentDefinition = {
+    id: "exp-1",
+    workspaceId: "ws-1",
+    name: "Launch test",
+    hypothesis: "Benefit improves conversion",
+    objectiveMetric: "conversion_rate",
+    status: "running",
+    variants: [
+      { id: "control", name: "Control", allocationPercent: 50 },
+      { id: "benefit", name: "Benefit", allocationPercent: 50 },
+    ],
+  };
+
+  it("turns a successful delivery into exposure without fabricating engagement", () => {
+    const observation = buildExperimentObservationFromExecution(
+      runningExperiment,
+      {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "benefit",
+        subjectId: "lead-42",
+        observedAt: "2026-09-26T12:00:00Z",
+        outcome: {
+          status: "succeeded",
+          externalId: "post-1",
+          message: "delivered",
+        },
+      },
+    );
+    expect(observation).toMatchObject({
+      exposed: true,
+      engaged: false,
+      converted: false,
+    });
+  });
+
+  it("preserves explicitly observed downstream evidence", () => {
+    const observation = buildExperimentObservationFromExecution(
+      runningExperiment,
+      {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "benefit",
+        subjectId: "lead-42",
+        observedAt: "2026-09-26T12:01:00Z",
+        outcome: { status: "succeeded", message: "delivered" },
+        engagementObserved: true,
+        conversionObserved: true,
+        value: 125,
+      },
+    );
+    expect(observation).toMatchObject({
+      exposed: true,
+      engaged: true,
+      converted: true,
+      value: 125,
+    });
+  });
+
+  it("does not treat blocked or failed delivery as exposure", () => {
+    for (const status of ["blocked", "failed"] as const) {
+      expect(
+        buildExperimentObservationFromExecution(runningExperiment, {
+          experimentId: "exp-1",
+          workspaceId: "ws-1",
+          variantId: "benefit",
+          subjectId: "lead-42",
+          observedAt: "2026-09-26T12:02:00Z",
+          outcome:
+            status === "blocked"
+              ? { status, reason: "platform_challenge", message: "blocked" }
+              : { status, message: "failed" },
+        }).exposed,
+      ).toBe(false);
+    }
+  });
+
+  it("rejects downstream evidence without a successful exposure", () => {
+    expect(() =>
+      buildExperimentObservationFromExecution(runningExperiment, {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "benefit",
+        subjectId: "lead-42",
+        observedAt: "2026-09-26T12:03:00Z",
+        outcome: {
+          status: "blocked",
+          reason: "platform_challenge",
+          message: "challenge",
+        },
+        conversionObserved: true,
+      }),
+    ).toThrow("experiment_execution_outcome_without_exposure");
+  });
+
+  it("rejects cross-workspace and unknown-variant evidence", () => {
+    expect(() =>
+      buildExperimentObservationFromExecution(runningExperiment, {
+        experimentId: "exp-1",
+        workspaceId: "ws-2",
+        variantId: "benefit",
+        subjectId: "lead-42",
+        observedAt: "2026-09-26T12:04:00Z",
+        outcome: { status: "succeeded", message: "delivered" },
+      }),
+    ).toThrow("experiment_execution_workspace_mismatch");
+
+    expect(() =>
+      buildExperimentObservationFromExecution(runningExperiment, {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "unknown",
+        subjectId: "lead-42",
+        observedAt: "2026-09-26T12:04:00Z",
+        outcome: { status: "succeeded", message: "delivered" },
+      }),
+    ).toThrow("experiment_execution_unknown_variant");
   });
 });
 
