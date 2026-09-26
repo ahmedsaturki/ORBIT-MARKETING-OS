@@ -24,9 +24,27 @@ describe("global search contract", () => {
 
   it("produces deterministic ranking independent of input order", () => {
     const results: GlobalSearchResult[] = [
-      { kind: "contact", id: "b", title: "Beta", subtitle: "contact", score: 70 },
-      { kind: "campaign", id: "a", title: "Alpha", subtitle: "campaign", score: 100 },
-      { kind: "content", id: "a", title: "Alpha", subtitle: "content", score: 100 },
+      {
+        kind: "contact",
+        id: "b",
+        title: "Beta",
+        subtitle: "contact",
+        score: 70,
+      },
+      {
+        kind: "campaign",
+        id: "a",
+        title: "Alpha",
+        subtitle: "campaign",
+        score: 100,
+      },
+      {
+        kind: "content",
+        id: "a",
+        title: "Alpha",
+        subtitle: "content",
+        score: 100,
+      },
     ];
 
     expect(rankGlobalSearchResults(results).map((item) => item.kind)).toEqual([
