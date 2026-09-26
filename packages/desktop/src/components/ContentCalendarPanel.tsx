@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { ReactElement } from "react";
 import { CalendarDays } from "lucide-react";
 
 export interface PublishingCalendarTask {
@@ -54,7 +55,7 @@ function statusLabel(status: string): string {
 
 export function ContentCalendarPanel({
   tasks,
-}: ContentCalendarPanelProps): React.ReactElement {
+}: ContentCalendarPanelProps): ReactElement {
   const days = useMemo<readonly CalendarDay[]>(() => {
     const now = new Date();
     const today = startOfDay(now);
