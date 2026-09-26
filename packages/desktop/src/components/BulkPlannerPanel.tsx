@@ -33,14 +33,20 @@ interface PlannedTask {
   readonly idempotencyKey: string;
 }
 
-function parsePositiveInteger(value: string, fallback: number, max: number): number {
+function parsePositiveInteger(
+  value: string,
+  fallback: number,
+  max: number,
+): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1) return fallback;
   return Math.min(parsed, max);
 }
 
 function toLocalInputValue(date: Date): string {
-  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  const adjusted = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60000,
+  );
   return adjusted.toISOString().slice(0, 16);
 }
 
@@ -78,10 +84,13 @@ export function BulkPlannerPanel({
       setError("وقت البداية غير صالح.");
       return null;
     }
+
     const base = `bulk-${Date.now()}`;
     return Array.from({ length: quantity }, (_, index) => ({
       index: index + 1,
-      availableAt: new Date(start.getTime() + index * interval * 60_000).toISOString(),
+      availableAt: new Date(
+        start.getTime() + index * interval * 60_000,
+      ).toISOString(),
       idempotencyKey: `${base}-${String(index + 1).padStart(2, "0")}`,
     }));
   };
@@ -89,14 +98,19 @@ export function BulkPlannerPanel({
   const previewPlan = (): void => {
     setError("");
     setMessage("");
+
     if (!campaignId || !accountId || !contentId || !destinationId.trim()) {
       setError("اختر الحملة والحساب والمحتوى وأدخل الوجهة قبل المعاينة.");
       return;
     }
+
     if (selectedContent?.approval_status !== "approved") {
-      setError("Bulk Planner يسمح فقط بالمحتوى المعتمد؛ مرّر المحتوى عبر Approval أولاً.");
+      setError(
+        "Bulk Planner يسمح فقط بالمحتوى المعتمد؛ مرّر المحتوى عبر Approval أولاً.",
+      );
       return;
     }
+
     const plan = buildPlan();
     if (plan) setPreview(plan);
   };
@@ -104,25 +118,30 @@ export function BulkPlannerPanel({
   const enqueuePlan = async (): Promise<void> => {
     setError("");
     setMessage("");
+
     if (!campaignId || !accountId || !contentId || !destinationId.trim()) {
       setError("أكمل الحملة والحساب والمحتوى والوجهة أولاً.");
       return;
     }
+
     const account = accounts.find((item) => item.id === accountId);
     if (!account) {
       setError("الحساب المحدد غير موجود.");
       return;
     }
+
     if (selectedContent?.approval_status !== "approved") {
       setError("لا يمكن إنشاء خطة نشر جماعي لمحتوى غير معتمد.");
       return;
     }
+
     const plan = preview.length > 0 ? preview : buildPlan();
     if (!plan) return;
 
     try {
       setBusy(true);
       const results: string[] = [];
+
       for (const item of plan) {
         await invoke("task_enqueue", {
           id: item.idempotencyKey,
@@ -139,12 +158,17 @@ export function BulkPlannerPanel({
         });
         results.push(item.idempotencyKey);
       }
-      setMessage(`تمت إضافة ${results.length} مهمة للنظام. التنفيذ نفسه يظل خاضعًا للـqueue والسياسات والموافقة.`);
+
+      setMessage(
+        `تمت إضافة ${results.length} مهمة للنظام. التنفيذ نفسه يظل خاضعًا للـqueue والسياسات والموافقة.`,
+      );
       setPreview([]);
       await onTasksChanged();
     } catch (caught: unknown) {
       setError(
-        caught instanceof Error ? caught.message : "فشل إنشاء خطة النشر الجماعي",
+        caught instanceof Error
+          ? caught.message
+          : "فشل إنشاء خطة النشر الجماعي",
       );
       await onTasksChanged();
     } finally {
@@ -170,22 +194,39 @@ export function BulkPlannerPanel({
         <ShieldCheck size={22} />
       </div>
 
-      {error ? <div className="notice error" role="alert">{error}</div> : null}
-      {message ? <div className="notice success" role="status">{message}</div> : null}
+      {error ? (
+        <div className="notice error" role="alert">
+          {error}
+        </div>
+      ) : null}
+      {message ? (
+        <div className="notice success" role="status">
+          {message}
+        </div>
+      ) : null}
 
       <div className="vault-form">
         <label>
           الحملة
-          <select value={campaignId} onChange={(event) => setCampaignId(event.target.value)}>
+          <select
+            value={campaignId}
+            onChange={(event) => setCampaignId(event.target.value)}
+          >
             <option value="">اختر حملة</option>
             {campaigns.map((campaign) => (
-              <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+              <option key={campaign.id} value={campaign.id}>
+                {campaign.name}
+              </option>
             ))}
           </select>
         </label>
+
         <label>
           الحساب
-          <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+          <select
+            value={accountId}
+            onChange={(event) => setAccountId(event.target.value)}
+          >
             <option value="">اختر حساباً</option>
             {accounts.map((account) => (
               <option key={account.id} value={account.id}>
@@ -194,9 +235,13 @@ export function BulkPlannerPanel({
             ))}
           </select>
         </label>
+
         <label>
           المحتوى المعتمد
-          <select value={contentId} onChange={(event) => setContentId(event.target.value)}>
+          <select
+            value={contentId}
+            onChange={(event) => setContentId(event.target.value)}
+          >
             <option value="">اختر محتوى</option>
             {contentItems.map((content) => (
               <option key={content.id} value={content.id}>
@@ -205,31 +250,70 @@ export function BulkPlannerPanel({
             ))}
           </select>
         </label>
+
         <label>
           الوجهة
-          <input value={destinationId} onChange={(event) => setDestinationId(event.target.value)} placeholder="page-or-channel-001" />
+          <input
+            value={destinationId}
+            onChange={(event) => setDestinationId(event.target.value)}
+            placeholder="page-or-channel-001"
+          />
         </label>
+
         <label>
           أول نشر
-          <input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} />
+          <input
+            type="datetime-local"
+            value={startAt}
+            onChange={(event) => setStartAt(event.target.value)}
+          />
         </label>
+
         <label>
           الفاصل بالدقائق
-          <input inputMode="numeric" value={intervalMinutes} onChange={(event) => setIntervalMinutes(event.target.value)} />
+          <input
+            inputMode="numeric"
+            value={intervalMinutes}
+            onChange={(event) => setIntervalMinutes(event.target.value)}
+          />
         </label>
+
         <label>
           عدد المنشورات
-          <input inputMode="numeric" max={50} value={count} onChange={(event) => setCount(event.target.value)} />
+          <input
+            inputMode="numeric"
+            max={50}
+            value={count}
+            onChange={(event) => setCount(event.target.value)}
+          />
         </label>
+
         <label>
           الأولوية
-          <input inputMode="numeric" max={100} value={priority} onChange={(event) => setPriority(event.target.value)} />
+          <input
+            inputMode="numeric"
+            max={100}
+            value={priority}
+            onChange={(event) => setPriority(event.target.value)}
+          />
         </label>
       </div>
 
       <div className="actions">
-        <button className="button secondary" type="button" onClick={previewPlan} disabled={busy}>معاينة الخطة</button>
-        <button className="button primary" type="button" onClick={() => void enqueuePlan()} disabled={busy || !selectedAccount}>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={previewPlan}
+          disabled={busy}
+        >
+          معاينة الخطة
+        </button>
+        <button
+          className="button primary"
+          type="button"
+          onClick={() => void enqueuePlan()}
+          disabled={busy || !selectedAccount}
+        >
           {busy ? "جاري إنشاء المهام..." : "إضافة كل المهام للطابور"}
         </button>
       </div>
@@ -239,7 +323,10 @@ export function BulkPlannerPanel({
           {preview.map((item) => (
             <div className="result" key={item.idempotencyKey}>
               <strong>#{item.index}</strong>
-              <div className="account-meta">{new Date(item.availableAt).toLocaleString("ar-EG")} • {selectedAccount?.platform}</div>
+              <div className="account-meta">
+                {new Date(item.availableAt).toLocaleString("ar-EG")} •{" "}
+                {selectedAccount?.platform}
+              </div>
               <div className="account-meta">{item.idempotencyKey}</div>
             </div>
           ))}
