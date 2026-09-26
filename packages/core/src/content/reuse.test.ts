@@ -93,6 +93,7 @@ describe("content reuse policy", () => {
       base,
       [
         {
+          workspaceId: "workspace-001",
           contentId: "content-999",
           platform: "linkedin",
           publishedAt: "2026-09-01T00:00:00Z",
@@ -137,6 +138,7 @@ describe("content reuse policy", () => {
         base,
         [
           {
+            workspaceId: base.workspaceId,
             contentId: base.contentId,
             platform: base.platform,
             publishedAt: "invalid",
@@ -146,6 +148,24 @@ describe("content reuse policy", () => {
         new Date("2026-09-26T00:00:00Z"),
       ),
     ).toThrow("history.publishedAt must be a valid date");
+  });
+
+  it("rejects cross-workspace reuse history", () => {
+    expect(() =>
+      evaluateContentReuse(
+        base,
+        [
+          {
+            workspaceId: "workspace-002",
+            contentId: base.contentId,
+            platform: base.platform,
+            publishedAt: "2026-09-01T00:00:00Z",
+          },
+        ],
+        policy,
+        new Date("2026-09-26T00:00:00Z"),
+      ),
+    ).toThrow("history workspace does not match candidate workspace");
   });
 
   it("keeps approval requirement deterministic", () => {
