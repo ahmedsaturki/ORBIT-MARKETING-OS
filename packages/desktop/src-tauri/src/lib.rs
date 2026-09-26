@@ -3521,8 +3521,6 @@ fn content_upsert(
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
 
-    ensure_experiment_variants_immutable(&connection, &id, &workspace_id, &variants_json)?;
-
     let timestamp = chrono_like_timestamp();
     let changed = connection
         .execute(
@@ -9351,6 +9349,7 @@ fn experiment_upsert(
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
+    ensure_experiment_variants_immutable(&connection, &id, &workspace_id, &variants_json)?;
     let timestamp = chrono_like_timestamp();
     let changed = connection
         .execute(
