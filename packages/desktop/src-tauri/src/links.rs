@@ -3,8 +3,8 @@ use serde::Serialize;
 use tauri::AppHandle;
 
 use crate::{
-    active_workspace_id_for_module, append_audit_event_for_module,
-    chrono_like_timestamp, open_db_for_module, require_workspace_role_for_module, uuid_like,
+    active_workspace_id_for_module, append_audit_event_for_module, chrono_like_timestamp,
+    open_db_for_module, require_workspace_role_for_module, uuid_like,
 };
 
 #[derive(Debug, Serialize)]
@@ -61,8 +61,7 @@ fn validate_link_key(value: &str) -> Result<String, String> {
 
 fn validate_http_url(value: &str, name: &str) -> Result<String, String> {
     let raw = validate_text(value, name, 4096)?;
-    let parsed = reqwest::Url::parse(&raw)
-        .map_err(|_| format!("{name} is not a valid URL"))?;
+    let parsed = reqwest::Url::parse(&raw).map_err(|_| format!("{name} is not a valid URL"))?;
     if parsed.scheme() != "http" && parsed.scheme() != "https" {
         return Err(format!("{name} must use http or https"));
     }
@@ -114,9 +113,7 @@ fn validate_provenance(value: &str) -> Result<String, String> {
 fn validate_observed_source(value: &str) -> Result<String, String> {
     let source = validate_text(value, "source_type", 64)?;
     match source.as_str() {
-        "platform_api" | "platform_export" | "manual" | "web_observation" | "import" => {
-            Ok(source)
-        }
+        "platform_api" | "platform_export" | "manual" | "web_observation" | "import" => Ok(source),
         _ => Err("unsupported evidence source type".to_string()),
     }
 }
@@ -190,11 +187,7 @@ pub(crate) fn marketing_link_upsert(
         .transpose()?;
 
     let connection = open_db_for_module(&app)?;
-    require_workspace_role_for_module(
-        &connection,
-        &workspace_id,
-        &["owner", "admin", "editor"],
-    )?;
+    require_workspace_role_for_module(&connection, &workspace_id, &["owner", "admin", "editor"])?;
     ensure_link_references_same_workspace(
         &connection,
         &workspace_id,
@@ -508,7 +501,6 @@ pub(crate) fn marketing_link_evidence_list(
         .map_err(|error| error.to_string())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -529,23 +521,17 @@ mod tests {
         assert!(validate_http_url("data:text/plain,hello", "url").is_err());
         assert!(validate_http_url("ftp://example.com", "url").is_err());
         assert!(validate_http_url("https://example.com/path", "url").is_ok());
-        assert!(
-            validate_http_url("https://user:pass@example.com/path", "url").is_err()
-        );
-        assert!(
-            validate_tracked_url(
-                "https://example.com/path",
-                "https://example.com/path?utm_source=orbit",
-            )
-            .is_ok()
-        );
-        assert!(
-            validate_tracked_url(
-                "https://example.com/path",
-                "https://evil.example/path?utm_source=orbit",
-            )
-            .is_err()
-        );
+        assert!(validate_http_url("https://user:pass@example.com/path", "url").is_err());
+        assert!(validate_tracked_url(
+            "https://example.com/path",
+            "https://example.com/path?utm_source=orbit",
+        )
+        .is_ok());
+        assert!(validate_tracked_url(
+            "https://example.com/path",
+            "https://evil.example/path?utm_source=orbit",
+        )
+        .is_err());
     }
 
     #[test]
