@@ -9281,6 +9281,7 @@ fn append_experiment_operational_event(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 fn experiment_upsert(
     app: tauri::AppHandle,
     id: String,
@@ -9495,6 +9496,7 @@ fn experiment_assign_variant(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 fn experiment_record_observation(
     app: tauri::AppHandle,
     id: String,
