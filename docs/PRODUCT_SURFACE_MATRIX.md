@@ -25,7 +25,7 @@ Updated: 2026-09-26
 | Local Ollama runtime              | yes                | Runtime smoke passed against bounded local AI contract                                              | VERIFIED        |
 | Offline licensing                 | yes                | Main tests cover token/constraints; native distribution verification remains                        | PARTIAL         |
 | Distribution/signing              | pipeline defined   | Validation artifacts are available; signing remains external                                        | PARTIAL         |
-| Accessibility/RTL baseline        | yes                | Automated structural checks exist; dedicated audit remains                                          | PENDING         |
+| Accessibility/RTL baseline        | yes                | Automated structural Accessibility/RTL audit passed in post-merge CI #1772; full manual/WCAG audit not claimed | VERIFIED        |
 | 24-hour stability soak            | yes                | Workflow/harness exists; no completed 24h evidence yet                                              | UNVERIFIED      |
 
 ## Interpretation
