@@ -1,6 +1,9 @@
 name: ORBIT Release Evidence Bundle
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       ref:
@@ -25,13 +28,13 @@ concurrency:
 
 jobs:
   evidence:
-    if: github.actor == 'ahmedsaturki'
+    if: github.event_name == 'push' || github.actor == 'ahmedsaturki'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.ref_name }}
           fetch-depth: 0
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
         with:
@@ -55,7 +58,7 @@ jobs:
       - name: Performance smoke
         run: pnpm test:performance
       - name: Readiness policy
-        run: pnpm verify:readiness -- --mode "${{ inputs.mode }}"
+        run: pnpm verify:readiness -- --mode "${{ inputs.mode || 'verification' }}"
       - name: Evidence bundle
         run: >-
           node scripts/collect-release-evidence.mjs --mode "${{ inputs.mode }}"
