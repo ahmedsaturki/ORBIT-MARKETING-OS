@@ -96,7 +96,7 @@ Knowledge fabric, research, local AI routing, agents, learning loop, anomaly det
 
 ### Operational control extensions
 
-The target control plane also includes Mission Control, simulation/dry-run, execution replay, policy packs, vertical operating packs, and a governed CLI/MCP/SDK boundary. These are platform extensions over the same local runtime and operating graph, not separate product silos.
+The target control plane also includes Mission Control, simulation/dry-run, execution replay, policy packs, vertical operating packs, and a governed CLI/MCP/SDK boundary. The CLI and MCP surfaces now expose read-only registry/authorization previews; executable remote actions remain bound to the canonical dispatcher. These are platform extensions over the same local runtime and operating graph, not separate product silos.
 
 ### Platform
 
