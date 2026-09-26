@@ -313,9 +313,28 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       workspaceA.id,
     );
 
-    await page!.evaluate((name) =>
-      window.__TAURI_INTERNALS__.invoke("campaign_create", { name, accountIds: [] }),
-      "E2E Search Campaign " + suffix,
+    const account = (await page!.evaluate(async (id) =>
+      window.__TAURI_INTERNALS__.invoke("account_upsert", {
+        id,
+        platform: "telegram",
+        displayName: "E2E Search Account",
+        username: null,
+        session: null,
+        password: null,
+      }),
+      "e2e-search-account-" + suffix,
+    )) as { id: string };
+
+    await page!.evaluate(
+      ({ name, accountId }) =>
+        window.__TAURI_INTERNALS__.invoke("campaign_create", {
+          name,
+          accountIds: [accountId],
+        }),
+      {
+        name: "E2E Search Campaign " + suffix,
+        accountId: account.id,
+      },
     );
 
     const sameWorkspace = (await page!.evaluate((query) =>
