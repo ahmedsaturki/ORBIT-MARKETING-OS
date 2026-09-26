@@ -5,7 +5,7 @@ Updated: 2026-09-26
 ## Canonical repository state
 
 - Current `main`: `1cb104647bc69cff114f430cab1ff9dc184ed864`
-- PR #71 latest release-truth head: `a095ecff50eaa8079d463e596cb32be7e4c2f3cf` before the current provenance hardening cycle; current branch continues from that lineage.
+- PR #71 latest release-truth head: `a3a4b823147df96dd8091a8413b18494a8e2e9f0`
 - PR #72 latest Publishing Workbench / Competitive Watch lineage is tracked separately.
 
 ## Product baseline
@@ -30,6 +30,7 @@ Commercial production readiness requires L3 evidence for all release-critical ca
 ## Verified / strongly evidenced
 
 - Core TypeScript/Rust architecture and local SQLite runtime.
+- React/ReactDOM are pinned at 19.2.8 across the release workspaces; mobile transitive advisories for `uuid` and `decode-uri-component` are mitigated in the lockfile via scoped pnpm overrides.
 - Workspace isolation and role-gated sensitive commands.
 - Queue/policy execution, retry, replay, simulation, audit, research intelligence, search, campaigns, CRM, content, media, agents, analytics and sync domains.
 - Web package is Next.js 16.3.6 static export.
