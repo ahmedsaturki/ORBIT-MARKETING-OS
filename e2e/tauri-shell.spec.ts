@@ -198,51 +198,82 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
   });
 
   test("capability files are deny-by-default and least-privilege (capability review)", () => {
-  const capability = JSON.parse(
-    readFileSync(
-      join(root, "packages/desktop/src-tauri/capabilities/default.json"),
-      "utf8",
-    ),
-  );
-  expect(capability.permissions).toEqual(["core:default"]);
-  expect(capability.windows).toEqual(["main"]);
-  for (const perm of capability.permissions) {
-    expect(perm).not.toMatch(/\*/);
-    expect(perm).not.toMatch(
-      /^(fs|shell|http|clipboard|dialog|updater|process|path:allow-write)/,
+    const capability = JSON.parse(
+      readFileSync(
+        join(root, "packages/desktop/src-tauri/capabilities/default.json"),
+        "utf8",
+      ),
     );
-  }
+    // Exactly one grant: core:default — no fs/shell/http/clipboard/dialog/updater.
+    expect(capability.permissions).toEqual(["core:default"]);
+    expect(capability.windows).toEqual(["main"]);
+    for (const perm of capability.permissions) {
+      expect(perm).not.toMatch(/\*/);
+      expect(perm).not.toMatch(
+        /^(fs|shell|http|clipboard|dialog|updater|process|path:allow-write)/,
+      );
+    }
 
-  const conf = JSON.parse(
-    readFileSync(
-      join(root, "packages/desktop/src-tauri/tauri.conf.json"),
-      "utf8",
-    ),
-  );
-  const security = conf.app.security;
-  expect(security.csp).toMatch(/default-src 'self'/);
-  expect(security.csp).toMatch(/script-src 'self'/);
-  expect(security.csp).not.toMatch(/script-src[^;]*unsafe-eval/);
-  expect(security.csp).not.toMatch(/script-src[^;]*https?:/);
-  expect(security.csp).toMatch(/object-src 'none'/);
-  expect(security.csp).toMatch(/frame-ancestors 'none'/);
-  expect(security.freezePrototype).toBe(true);
-  expect(security.dangerousDisableAssetCspModification).toBe(false);
-});
+    // The build must have resolved that capability to itself — nothing broader.
+    const resolved = JSON.parse(
+      readFileSync(
+        join(root, "packages/desktop/src-tauri/gen/schemas/capabilities.json"),
+        "utf8",
+      ),
+    );
+    expect(resolved.default.windows).toEqual(["main"]);
+    expect(resolved.default.permissions).toEqual(["core:default"]);
 
-test("native capability schema resolves to least privilege", () => {
-  test.skip(!exe, "native executable is required for generated capability verification");
-  const resolvedPath = join(
-    root,
-    "packages/desktop/src-tauri/gen/schemas/capabilities.json",
-  );
-  if (!existsSync(resolvedPath)) {
-    throw new Error("native capability schema is missing after native build");
-  }
-  const resolved = JSON.parse(readFileSync(resolvedPath, "utf8"));
-  expect(resolved.default.windows).toEqual(["main"]);
-  expect(resolved.default.permissions).toEqual(["core:default"]);
-});
+    const conf = JSON.parse(
+      readFileSync(
+        join(root, "packages/desktop/src-tauri/tauri.conf.json"),
+        "utf8",
+      ),
+    );
+    const security = conf.app.security;
+    // Strict CSP: no unsafe-eval, no remote script origins, framed embedding off.
+    expect(security.csp).toMatch(/default-src 'self'/);
+    expect(security.csp).toMatch(/script-src 'self'/);
+    expect(security.csp).not.toMatch(/script-src[^;]*unsafe-eval/);
+    expect(security.csp).not.toMatch(/script-src[^;]*https?:/);
+    expect(security.csp).toMatch(/object-src 'none'/);
+    expect(security.csp).toMatch(/frame-ancestors 'none'/);
+    expect(security.freezePrototype).toBe(true);
+    expect(security.dangerousDisableAssetCspModification).toBe(false);
+  });
+
+  test("renderer boots in the isolated shell and IPC positive control works", async () => {
+    try {
+      execSync("taskkill /im orbit-marketing-os.exe /F", { stdio: "ignore" });
+    } catch {
+      /* no leftover instance */
+    }
+    await launchAndConnectTauri();
+    const ctx = browser.contexts()[0];
+    page = ctx.pages()[0] ?? (await ctx.waitForEvent("page"));
+    await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
+
+    await expect(page).toHaveTitle(/ORBIT Marketing OS/);
+    await expect(
+      page.getByRole("heading", { name: "تقويم التشغيل والنشر" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "قائمة مراقبة المنافسين" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "مخطط النشر الجماعي" }),
+    ).toBeVisible();
+    expect(await page.evaluate(() => typeof window.__TAURI_INTERNALS__)).toBe(
+      "object",
+    );
+
+    // Positive control: scale_factor is inside core:default — proves IPC works.
+    const granted = await page.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("plugin:window|scale_factor", {}),
+    );
+    expect(typeof granted).toBe("number");
+    expect(granted as number).toBeGreaterThan(0);
+  });
 
   test("denied capabilities reject at the ACL and the window survives", async () => {
     expect(page, "boot test must run first").not.toBeNull();
@@ -263,23 +294,6 @@ test("native capability schema resolves to least privilege", () => {
       return out;
     });
 
-
-test("native capability schema resolves to least privilege", () => {
-  test.skip(
-    !exe,
-    "native executable is required for generated capability verification",
-  );
-  const resolvedPath = join(
-    root,
-    "packages/desktop/src-tauri/gen/schemas/capabilities.json",
-  );
-  if (!existsSync(resolvedPath)) {
-    throw new Error("native capability schema is missing after native build");
-  }
-  const resolved = JSON.parse(readFileSync(resolvedPath, "utf8"));
-  expect(resolved.default.windows).toEqual(["main"]);
-  expect(resolved.default.permissions).toEqual(["core:default"]);
-});
     for (const cmd of ["plugin:window|destroy", "plugin:fs|read_text_file"]) {
       expect(denied[cmd].ok, `${cmd} must be denied by the ACL`).toBe(false);
       expect(denied[cmd].error).toContain("not allowed by ACL");
@@ -391,7 +405,7 @@ test("native capability schema resolves to least privilege", () => {
           confidence: 0.8,
           observedAt: "2026-09-26T09:00:00Z",
           expiresAt: null,
-          tagsJson: JSON.stringify(["e2e"]),
+          tagsJson: JSON.stringify([]),
         },
       );
     } catch (caught: unknown) {
@@ -1006,40 +1020,3 @@ test("native capability schema resolves to least privilege", () => {
     expect(violations.join(",")).toContain("https://example.com/probe.js");
   });
 });
-
-test("capability files are deny-by-default and least-privilege (capability review)", () => {
-    const capability = JSON.parse(
-      readFileSync(
-        join(root, "packages/desktop/src-tauri/capabilities/default.json"),
-        "utf8",
-      ),
-    );
-    // Exactly one grant: core:default — no fs/shell/http/clipboard/dialog/updater.
-    expect(capability.permissions).toEqual(["core:default"]);
-    expect(capability.windows).toEqual(["main"]);
-    for (const perm of capability.permissions) {
-      expect(perm).not.toMatch(/\*/);
-      expect(perm).not.toMatch(
-        /^(fs|shell|http|clipboard|dialog|updater|process|path:allow-write)/,
-      );
-    }
-
-    // Source-only CI does not generate native capability schema files.
-    const conf = JSON.parse(
-      readFileSync(
-        join(root, "packages/desktop/src-tauri/tauri.conf.json"),
-        "utf8",
-      ),
-    );
-    const security = conf.app.security;
-    // Strict CSP: no unsafe-eval, no remote script origins, framed embedding off.
-    expect(security.csp).toMatch(/default-src 'self'/);
-    expect(security.csp).toMatch(/script-src 'self'/);
-    expect(security.csp).not.toMatch(/script-src[^;]*unsafe-eval/);
-    expect(security.csp).not.toMatch(/script-src[^;]*https?:/);
-    expect(security.csp).toMatch(/object-src 'none'/);
-    expect(security.csp).toMatch(/frame-ancestors 'none'/);
-    expect(security.freezePrototype).toBe(true);
-    expect(security.dangerousDisableAssetCspModification).toBe(false);
-  });
-
