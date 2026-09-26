@@ -23,7 +23,7 @@ Status meanings:
 | Gate                             | Current status           | Evidence                                                                       |
 | -------------------------------- | ------------------------ | ------------------------------------------------------------------------------ |
 | DATA-01 Local SQLite             | VERIFIED                 | Native implementation and current Rust/native quality gates passed             |
-| DATA-02 Migration safety         | VERIFIED                 | Versioned migration chain through v13 plus transactional migration tests       |
+| DATA-02 Migration safety         | VERIFIED                 | Versioned migration chain through v14 plus transactional migration tests       |
 | QUE-01 Persistent queue recovery | IMPLEMENTED / UNVERIFIED | Native queue/recovery logic exists; dedicated forced-termination drill remains |
 | QUE-02 Bounded retries           | VERIFIED                 | Core/native retry validation passed                                            |
 | QUE-03 Circuit breaker           | VERIFIED                 | Policy/runtime controls covered by current tests                               |

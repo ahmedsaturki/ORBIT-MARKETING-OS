@@ -1,4 +1,4 @@
-export const DATABASE_SCHEMA_VERSION = 13;
+export const DATABASE_SCHEMA_VERSION = 14;
 
 export const DATABASE_SCHEMA_SQL = `
 PRAGMA foreign_keys = ON;
@@ -547,6 +547,43 @@ CREATE INDEX IF NOT EXISTS idx_operational_events_entity
 CREATE INDEX IF NOT EXISTS idx_operational_events_trace
   ON operational_events(workspace_id, trace_id, sequence);
 
-PRAGMA user_version = 13;
+CREATE TABLE IF NOT EXISTS experiments (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  hypothesis TEXT NOT NULL,
+  objective_metric TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('draft', 'running', 'paused', 'completed', 'archived')),
+  variants_json TEXT NOT NULL,
+  starts_at TEXT,
+  ends_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_experiments_workspace_status
+  ON experiments(workspace_id, status, updated_at);
+
+CREATE TABLE IF NOT EXISTS experiment_observations (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  experiment_id TEXT NOT NULL REFERENCES experiments(id) ON DELETE CASCADE,
+  variant_id TEXT NOT NULL,
+  subject_id TEXT NOT NULL,
+  observed_at TEXT NOT NULL,
+  exposed INTEGER NOT NULL DEFAULT 1 CHECK(exposed IN (0, 1)),
+  engaged INTEGER NOT NULL DEFAULT 0 CHECK(engaged IN (0, 1)),
+  converted INTEGER NOT NULL DEFAULT 0 CHECK(converted IN (0, 1)),
+  value REAL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_experiment_observations_workspace_experiment
+  ON experiment_observations(workspace_id, experiment_id, observed_at);
+
+CREATE INDEX IF NOT EXISTS idx_experiment_observations_variant
+  ON experiment_observations(workspace_id, experiment_id, variant_id, observed_at);
+
+PRAGMA user_version = 14;
 
 `;
