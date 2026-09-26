@@ -48,6 +48,28 @@ function validatePoint(point: MetricPoint): void {
   }
 }
 
+function classifyAnomaly(
+  value: number,
+  baselineMedian: number,
+  baselineMad: number,
+  threshold: number,
+): { isAnomaly: boolean; modifiedZScore: number | null } {
+  if (baselineMad === 0) {
+    return {
+      isAnomaly: value !== baselineMedian,
+      modifiedZScore: null,
+    };
+  }
+
+  const modifiedZScore =
+    (0.67448975 * (value - baselineMedian)) / baselineMad;
+
+  return {
+    isAnomaly: Math.abs(modifiedZScore) >= threshold,
+    modifiedZScore,
+  };
+}
+
 function normalizedOptions(
   options: AnomalyDetectionOptions,
 ): Required<AnomalyDetectionOptions> {
@@ -122,16 +144,14 @@ export function detectMetricAnomalies(
       continue;
     }
 
-    const modifiedZScore =
-      baselineMad === 0
-        ? null
-        : (0.67448975 * (current.value - baselineMedian)) / baselineMad;
-    const isAnomaly =
-      baselineMad === 0
-        ? current.value !== baselineMedian
-        : Math.abs(modifiedZScore!) >= config.threshold;
+    const classification = classifyAnomaly(
+      current.value,
+      baselineMedian,
+      baselineMad,
+      config.threshold,
+    );
 
-    if (!isAnomaly) {
+    if (!classification.isAnomaly) {
       continue;
     }
 
@@ -143,7 +163,7 @@ export function detectMetricAnomalies(
       baselineMad,
       absoluteDelta,
       direction: current.value >= baselineMedian ? "spike" : "drop",
-      modifiedZScore,
+      modifiedZScore: classification.modifiedZScore,
       method: "rolling_median_mad",
       interpretation: "descriptive_anomaly_signal",
     });
