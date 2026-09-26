@@ -27,7 +27,6 @@ Link Intelligence does not read the secret vault, does not execute connectors, a
 
 This layer is designed to support future reporting, attribution, and content learning while preserving ORBIT's local ownership and governed execution model.
 
-
 ## Native IPC contract
 
 `marketing_link_evidence_add` receives its evidence payload under the command's `input` property. Native E2E coverage verifies persistence, deduplication, and workspace isolation against this contract.
