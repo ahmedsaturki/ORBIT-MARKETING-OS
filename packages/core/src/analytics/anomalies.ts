@@ -57,6 +57,35 @@ function assertOption(condition: boolean, errorCode: string): void {
   if (!condition) throw new Error(errorCode);
 }
 
+function normalizedOptions(
+  options: AnomalyDetectionOptions,
+): Required<AnomalyDetectionOptions> {
+  const windowSize = options.windowSize ?? 7;
+  const threshold = options.threshold ?? 3.5;
+  const minAbsoluteDelta = options.minAbsoluteDelta ?? 0;
+  const maxResults = options.maxResults ?? 50;
+
+  assertOption(
+    Number.isInteger(windowSize) && windowSize >= 3 && windowSize <= 365,
+    "anomaly_window_invalid",
+  );
+  assertOption(
+    Number.isFinite(threshold) && threshold > 0 && threshold <= 100,
+    "anomaly_threshold_invalid",
+  );
+  assertOption(
+    Number.isFinite(minAbsoluteDelta) && minAbsoluteDelta >= 0,
+    "anomaly_min_absolute_delta_invalid",
+  );
+  assertOption(
+    Number.isInteger(maxResults) && maxResults >= 1 && maxResults <= 1000,
+    "anomaly_max_results_invalid",
+  );
+
+  return { windowSize, threshold, minAbsoluteDelta, maxResults };
+}
+
+
 /**
  * Detects point anomalies against a preceding rolling baseline.
  *
