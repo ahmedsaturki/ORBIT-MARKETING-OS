@@ -22,7 +22,7 @@ PR #48 added the governed Command Dispatcher. Its exact head passed CI, Desktop 
 - marketing operating graph, outcomes and insights;
 - Mission Control, Strategy Studio, Simulation, Replay and Policy Packs;
 - Operational Event Spine and Command Registry;
-- Command Dispatcher validation layer on the current release branch;
+- Governed Command Dispatcher in the shared control spine;
 - Telegram native API path;
 - LinkedIn text publishing connector;
 - local Ollama runtime;
