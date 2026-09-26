@@ -53,4 +53,83 @@ if (
   throw new Error("orbit_preview_governance_smoke_failed");
 }
 
-console.log("orbit_surface_smoke=PASS");
+const mcp = spawnSync(
+  command,
+  ["exec", "tsx", "scripts/orbit-mcp.ts"],
+  {
+    encoding: "utf8",
+    env,
+    input:
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {},
+      }) +
+      "\n" +
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/list",
+        params: {},
+      }) +
+      "\n" +
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 3,
+        method: "tools/call",
+        params: {
+          name: "orbit.command.preview",
+          arguments: {
+            commandId: "task.execute",
+            workspaceId: "smoke",
+            actorId: "smoke-agent",
+            grantedScopes: ["task:execute"],
+            approvalGranted: false,
+          },
+        },
+      }) +
+      "\n",
+  },
+);
+if (mcp.status !== 0) {
+  process.stderr.write(mcp.stderr || mcp.stdout);
+  process.exit(mcp.status ?? 1);
+}
+
+const mcpLines = mcp.stdout
+  .trim()
+  .split(/\r?\n/)
+  .filter(Boolean)
+  .map((line) => JSON.parse(line));
+
+const initialize = mcpLines.find((entry) => entry.id === 1);
+const tools = mcpLines.find((entry) => entry.id === 2);
+const call = mcpLines.find((entry) => entry.id === 3);
+
+if (
+  initialize?.result?.serverInfo?.name !== "orbit-governed-surface" ||
+  initialize?.result?.capabilities?.tools === undefined
+) {
+  throw new Error("orbit_mcp_initialize_smoke_failed");
+}
+
+if (
+  !Array.isArray(tools?.result?.tools) ||
+  tools.result.tools.length < 2 ||
+  !tools.result.tools.some((tool) => tool.name === "orbit.command.preview")
+) {
+  throw new Error("orbit_mcp_tools_list_smoke_failed");
+}
+
+const callText = call?.result?.content?.[0]?.text;
+const callPayload = typeof callText === "string" ? JSON.parse(callText) : null;
+if (
+  callPayload?.decision?.allowed !== false ||
+  callPayload?.decision?.reason !== "approval_required" ||
+  call?.result?.isError !== true
+) {
+  throw new Error("orbit_mcp_governance_smoke_failed");
+}
+
+console.log("orbit_cli_mcp_surface_smoke=PASS");
