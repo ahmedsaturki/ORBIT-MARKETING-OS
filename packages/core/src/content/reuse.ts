@@ -10,6 +10,7 @@ export interface ContentReuseCandidate {
 }
 
 export interface ContentReuseHistory {
+  readonly workspaceId: string;
   readonly contentId: string;
   readonly platform: Platform;
   readonly publishedAt: string;
@@ -84,6 +85,12 @@ export function evaluateContentReuse(
 
   if (policy.excludedPlatforms.includes(candidate.platform)) {
     reasons.push("platform_excluded");
+  }
+
+  for (const item of history) {
+    if (item.workspaceId !== candidate.workspaceId) {
+      throw new Error("history workspace does not match candidate workspace");
+    }
   }
 
   const relevantHistory = history.filter(
