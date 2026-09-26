@@ -49,7 +49,13 @@ jobs:
         run: pnpm --dir packages/mobile exec expo prebuild --platform android --no-install
       - name: Build debug APK
         working-directory: packages/mobile/android
-        run: ./gradlew assembleDebug
+        shell: bash
+        env:
+          CI: "1"
+        run: |
+          set -euo pipefail
+          timeout 30m ./gradlew --no-daemon --console=plain --stacktrace --max-workers=2 assembleDebug
+
       - name: Upload Android debug APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
