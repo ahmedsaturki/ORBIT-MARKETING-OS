@@ -58,8 +58,8 @@ if (cargoVersion !== expectedVersion) {
 }
 
 const vercel = await json("vercel.json");
-if (vercel.framework !== null)
-  throw new Error("Vercel framework must be null/Other for the static export");
+if (!["nextjs", null].includes(vercel.framework))
+  throw new Error("Vercel framework must be Next.js/null for the static export");
 if (vercel.outputDirectory !== "packages/web/out")
   throw new Error("Vercel outputDirectory drift detected");
 if (vercel.buildCommand !== "pnpm --dir packages/web build")
