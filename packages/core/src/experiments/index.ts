@@ -7,6 +7,9 @@
  * observed outcomes for the learning loop.
  */
 
+import type { MarketingInsight } from "../outcomes/index.js";
+import type { Campaign } from "../types/index.js";
+
 export type ExperimentStatus =
   "draft" | "running" | "paused" | "completed" | "archived";
 
@@ -310,4 +313,330 @@ export function observationsToLearningSignals(
   // Deliberately factual: this is a learning signal, not a statistical-significance claim.
   signals.push("statistical_significance_not_claimed");
   return signals;
+}
+
+
+export interface ExperimentCampaignBinding {
+  readonly experimentId: string;
+  readonly workspaceId: string;
+  readonly campaignId: string;
+  readonly variants: readonly {
+    readonly variantId: string;
+    readonly allocationPercent: number;
+    readonly contentId?: string;
+    readonly message?: string;
+  }[];
+}
+
+export interface ExperimentWorkStep {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly campaignId: string;
+  readonly experimentId: string;
+  readonly variantId?: string;
+  readonly kind: "assignment" | "execution" | "observation" | "learning";
+  readonly title: string;
+  readonly dependsOn: readonly string[];
+  readonly externallyVisible: boolean;
+  readonly requiresApproval: boolean;
+}
+
+export interface ExperimentCampaignWorkPlan {
+  readonly binding: ExperimentCampaignBinding;
+  readonly steps: readonly ExperimentWorkStep[];
+}
+
+function variantSourceKey(variant: ExperimentVariant): string {
+  if (variant.contentId?.trim()) return "content:" + variant.contentId.trim();
+  if (variant.message?.trim()) return "message:" + variant.message.trim();
+  return "";
+}
+
+export function compileExperimentCampaignWorkPlan(input: {
+  readonly experiment: ExperimentDefinition;
+  readonly campaign: Campaign;
+}): ExperimentCampaignWorkPlan {
+  const { experiment, campaign } = input;
+
+  if (experiment.workspaceId !== campaign.workspaceId) {
+    throw new Error("experiment_campaign_workspace_mismatch");
+  }
+  if (!campaign.id.trim() || !experiment.id.trim()) {
+    throw new Error("experiment_campaign_identity_required");
+  }
+
+  const experimentValidation = validateExperiment(experiment);
+  if (!experimentValidation.valid) {
+    throw new Error("experiment_campaign_invalid_experiment");
+  }
+
+  if (campaign.contentIds.some((contentId) => !contentId.trim())) {
+    throw new Error("experiment_campaign_invalid_campaign_content");
+  }
+
+  const sourceKeys = new Set<string>();
+  const variants = experiment.variants.map((variant) => {
+    const sourceKey = variantSourceKey(variant);
+    if (!sourceKey) {
+      throw new Error("experiment_variant_source_required");
+    }
+    if (sourceKeys.has(sourceKey)) {
+      throw new Error("experiment_variant_sources_must_be_unique");
+    }
+    sourceKeys.add(sourceKey);
+
+    if (variant.contentId?.trim()) {
+      if (!campaign.contentIds.includes(variant.contentId.trim())) {
+        throw new Error("experiment_variant_content_not_attached_to_campaign");
+      }
+    }
+
+    return {
+      variantId: variant.id,
+      allocationPercent: variant.allocationPercent,
+      ...(variant.contentId?.trim()
+        ? { contentId: variant.contentId.trim() }
+        : {}),
+      ...(variant.message?.trim() ? { message: variant.message.trim() } : {}),
+    };
+  });
+
+  const prefix = campaign.id + ":experiment:" + experiment.id;
+  const assignmentId = prefix + ":assignment";
+  const executionSteps: ExperimentWorkStep[] = variants.map((variant) => ({
+    id: prefix + ":execute:" + variant.variantId,
+    workspaceId: campaign.workspaceId,
+    campaignId: campaign.id,
+    experimentId: experiment.id,
+    variantId: variant.variantId,
+    kind: "execution",
+    title: "Execute experiment variant " + variant.variantId,
+    dependsOn: [assignmentId],
+    externallyVisible: true,
+    requiresApproval: true,
+  }));
+  const observationId = prefix + ":observation";
+  const learningId = prefix + ":learning";
+
+  return {
+    binding: {
+      experimentId: experiment.id,
+      workspaceId: campaign.workspaceId,
+      campaignId: campaign.id,
+      variants,
+    },
+    steps: [
+      {
+        id: assignmentId,
+        workspaceId: campaign.workspaceId,
+        campaignId: campaign.id,
+        experimentId: experiment.id,
+        kind: "assignment",
+        title: "Assign deterministic experiment variants",
+        dependsOn: [campaign.id + ":approval"],
+        externallyVisible: false,
+        requiresApproval: false,
+      },
+      ...executionSteps,
+      {
+        id: observationId,
+        workspaceId: campaign.workspaceId,
+        campaignId: campaign.id,
+        experimentId: experiment.id,
+        kind: "observation",
+        title: "Collect experiment observations",
+        dependsOn: executionSteps.map((step) => step.id),
+        externallyVisible: false,
+        requiresApproval: false,
+      },
+      {
+        id: learningId,
+        workspaceId: campaign.workspaceId,
+        campaignId: campaign.id,
+        experimentId: experiment.id,
+        kind: "learning",
+        title: "Write back evidence-backed experiment learning",
+        dependsOn: [observationId],
+        externallyVisible: false,
+        requiresApproval: false,
+      },
+    ],
+  };
+}
+
+export interface ExperimentStrategyLearningSignal {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly experimentId: string;
+  readonly kind: "conversion_observation" | "value_observation" | "insufficient_evidence";
+  readonly variantId?: string;
+  readonly metric?: string;
+  readonly observedValue?: number;
+  readonly message: string;
+}
+
+export interface ExperimentLearningWriteback {
+  readonly workspaceId: string;
+  readonly experimentId: string;
+  readonly observedAt: string;
+  readonly signals: readonly ExperimentStrategyLearningSignal[];
+  readonly insights: readonly MarketingInsight[];
+}
+
+function assertLearningTimestamp(now: string): void {
+  if (!now.trim() || Number.isNaN(Date.parse(now))) {
+    throw new Error("invalid_learning_timestamp");
+  }
+}
+
+function stableVariantLeader(
+  variants: readonly ExperimentVariantSummary[],
+  selector: (variant: ExperimentVariantSummary) => number,
+): ExperimentVariantSummary | undefined {
+  return [...variants]
+    .filter((variant) => variant.exposureCount > 0)
+    .sort(
+      (left, right) =>
+        selector(right) - selector(left) ||
+        right.exposureCount - left.exposureCount ||
+        left.variantId.localeCompare(right.variantId),
+    )[0];
+}
+
+export function buildExperimentLearningWriteback(
+  experiment: ExperimentDefinition,
+  summary: ExperimentSummary,
+  now: string,
+): ExperimentLearningWriteback {
+  if (experiment.workspaceId !== summary.workspaceId) {
+    throw new Error("experiment_learning_workspace_mismatch");
+  }
+  if (experiment.id !== summary.experimentId) {
+    throw new Error("experiment_learning_experiment_mismatch");
+  }
+  assertLearningTimestamp(now);
+
+  const observedVariants = summary.variants.filter(
+    (variant) => variant.exposureCount > 0,
+  );
+  const signals: ExperimentStrategyLearningSignal[] = [];
+  const insights: MarketingInsight[] = [];
+
+  if (observedVariants.length === 0) {
+    signals.push({
+      id: "experiment:" + experiment.id + ":insufficient-evidence",
+      workspaceId: experiment.workspaceId,
+      experimentId: experiment.id,
+      kind: "insufficient_evidence",
+      message: "No exposed observations are available; no learning is written back.",
+    });
+    return {
+      workspaceId: experiment.workspaceId,
+      experimentId: experiment.id,
+      observedAt: now,
+      signals,
+      insights,
+    };
+  }
+
+  const conversionLeader = stableVariantLeader(
+    observedVariants,
+    (variant) => variant.conversionRate,
+  );
+  if (conversionLeader) {
+    signals.push({
+      id: "experiment:" + experiment.id + ":conversion:" + conversionLeader.variantId,
+      workspaceId: experiment.workspaceId,
+      experimentId: experiment.id,
+      kind: "conversion_observation",
+      variantId: conversionLeader.variantId,
+      metric: "conversion_rate",
+      observedValue: conversionLeader.conversionRate,
+      message:
+        "Observed conversion rate for " +
+        conversionLeader.variantId +
+        " is " +
+        conversionLeader.conversionRate.toFixed(6) +
+        "; statistical significance is not claimed.",
+    });
+    insights.push({
+      id:
+        "experiment-learning:" +
+        experiment.id +
+        ":conversion:" +
+        conversionLeader.variantId,
+      workspaceId: experiment.workspaceId,
+      kind: "learning",
+      title:
+        "Observed experiment conversion signal: " + conversionLeader.variantId,
+      summary:
+        "Variant " +
+        conversionLeader.variantId +
+        " recorded an observed conversion rate of " +
+        (conversionLeader.conversionRate * 100).toFixed(2) +
+        "% across " +
+        conversionLeader.exposureCount +
+        " exposed observations. This is an observed signal only; statistical significance is not claimed.",
+      metric: "conversion_rate",
+      value: conversionLeader.conversionRate,
+      confidence: 0,
+      sourceIds: ["experiment:" + experiment.id],
+      observedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  const valueLeader = stableVariantLeader(
+    observedVariants,
+    (variant) => variant.totalValue,
+  );
+  if (valueLeader && valueLeader.totalValue !== 0) {
+    signals.push({
+      id: "experiment:" + experiment.id + ":value:" + valueLeader.variantId,
+      workspaceId: experiment.workspaceId,
+      experimentId: experiment.id,
+      kind: "value_observation",
+      variantId: valueLeader.variantId,
+      metric: "observed_value",
+      observedValue: valueLeader.totalValue,
+      message:
+        "Observed total value for " +
+        valueLeader.variantId +
+        " is " +
+        valueLeader.totalValue.toFixed(2) +
+        "; this is descriptive evidence, not a causal or significance claim.",
+    });
+    insights.push({
+      id:
+        "experiment-learning:" +
+        experiment.id +
+        ":value:" +
+        valueLeader.variantId,
+      workspaceId: experiment.workspaceId,
+      kind: "learning",
+      title: "Observed experiment value signal: " + valueLeader.variantId,
+      summary:
+        "Variant " +
+        valueLeader.variantId +
+        " accumulated observed exposed value of " +
+        valueLeader.totalValue.toFixed(2) +
+        ". This is descriptive evidence only; causal attribution and statistical significance are not claimed.",
+      metric: "observed_value",
+      value: valueLeader.totalValue,
+      confidence: 0,
+      sourceIds: ["experiment:" + experiment.id],
+      observedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  return {
+    workspaceId: experiment.workspaceId,
+    experimentId: experiment.id,
+    observedAt: now,
+    signals,
+    insights,
+  };
 }
