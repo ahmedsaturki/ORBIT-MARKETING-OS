@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { Layers3, ShieldCheck } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { buildBulkPlan } from "@orbit/core";
 
 interface AccountOption {
   readonly id: string;
@@ -25,27 +26,6 @@ interface BulkPlannerProps {
   readonly campaigns: readonly CampaignOption[];
   readonly contentItems: readonly ContentOption[];
   readonly onTasksChanged: () => Promise<void>;
-}
-
-interface PlannedTask {
-  readonly index: number;
-  readonly availableAt: string;
-  readonly idempotencyKey: string;
-}
-
-function parsePositiveInteger(
-  value: string,
-  fallback: number,
-  max: number,
-): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) return fallback;
-  return Math.min(parsed, max);
-}
-
-function toLocalInputValue(date: Date): string {
-  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return adjusted.toISOString().slice(0, 16);
 }
 
 export function BulkPlannerPanel({
@@ -74,23 +54,19 @@ export function BulkPlannerPanel({
     [contentId, contentItems],
   );
 
-  const buildPlan = (): readonly PlannedTask[] | null => {
-    const quantity = parsePositiveInteger(count, 5, 50);
-    const interval = parsePositiveInteger(intervalMinutes, 60, 7 * 24 * 60);
-    const start = new Date(startAt);
-    if (Number.isNaN(start.getTime())) {
-      setError("وقت البداية غير صالح.");
+  const buildPlan = () => {
+    try {
+      return buildBulkPlan({
+        startAt,
+        intervalMinutes: Number(intervalMinutes),
+        count: Number(count),
+      });
+    } catch (caught: unknown) {
+      setError(
+        caught instanceof Error ? caught.message : "تعذر بناء خطة النشر",
+      );
       return null;
     }
-
-    const base = `bulk-${Date.now()}`;
-    return Array.from({ length: quantity }, (_, index) => ({
-      index: index + 1,
-      availableAt: new Date(
-        start.getTime() + index * interval * 60_000,
-      ).toISOString(),
-      idempotencyKey: `${base}-${String(index + 1).padStart(2, "0")}`,
-    }));
   };
 
   const previewPlan = (): void => {
