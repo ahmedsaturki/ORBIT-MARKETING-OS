@@ -24,7 +24,7 @@ const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
 const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
 const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
-const SCHEMA_VERSION: i64 = 14;
+const SCHEMA_VERSION: i64 = 15;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 static TELEGRAM_EXECUTION_IDS: OnceLock<Mutex<std::collections::HashSet<String>>> = OnceLock::new();
@@ -1393,6 +1393,39 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
               PRIMARY KEY(item_id, source_id, excerpt_hash)
             );
 
+            CREATE TABLE IF NOT EXISTS research_briefs (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              kind TEXT NOT NULL,
+              question TEXT NOT NULL,
+              objectives_json TEXT NOT NULL DEFAULT '[]',
+              status TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_research_briefs_workspace_status
+              ON research_briefs(workspace_id, status, updated_at);
+
+            CREATE TABLE IF NOT EXISTS research_findings (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              brief_id TEXT NOT NULL REFERENCES research_briefs(id) ON DELETE CASCADE,
+              title TEXT NOT NULL,
+              statement TEXT NOT NULL,
+              source_ids_json TEXT NOT NULL DEFAULT '[]',
+              confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+              observed_at TEXT NOT NULL,
+              expires_at TEXT,
+              tags_json TEXT NOT NULL DEFAULT '[]',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_research_findings_workspace_brief
+              ON research_findings(workspace_id, brief_id, observed_at, updated_at);
+
             CREATE TABLE IF NOT EXISTS agent_definitions (
               id TEXT PRIMARY KEY,
               workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
@@ -1625,6 +1658,46 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
         )?;
     }
 
+    if version < 15 {
+        connection.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS research_briefs (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              kind TEXT NOT NULL,
+              question TEXT NOT NULL,
+              objectives_json TEXT NOT NULL DEFAULT '[]',
+              status TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_research_briefs_workspace_status
+              ON research_briefs(workspace_id, status, updated_at);
+
+            CREATE TABLE IF NOT EXISTS research_findings (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              brief_id TEXT NOT NULL REFERENCES research_briefs(id) ON DELETE CASCADE,
+              title TEXT NOT NULL,
+              statement TEXT NOT NULL,
+              source_ids_json TEXT NOT NULL DEFAULT '[]',
+              confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+              observed_at TEXT NOT NULL,
+              expires_at TEXT,
+              tags_json TEXT NOT NULL DEFAULT '[]',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_research_findings_workspace_brief
+              ON research_findings(workspace_id, brief_id, observed_at, updated_at);
+
+            PRAGMA user_version = 15;
+            ",
+        )?;
+    }
     Ok(())
 }
 
