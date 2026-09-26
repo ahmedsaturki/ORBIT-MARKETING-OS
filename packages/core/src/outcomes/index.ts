@@ -1,8 +1,18 @@
 export type OpportunityStage =
-  "new" | "qualified" | "proposal" | "negotiation" | "won" | "lost" | "nurture";
+  | "new"
+  | "qualified"
+  | "proposal"
+  | "negotiation"
+  | "won"
+  | "lost"
+  | "nurture";
 
 export type InsightKind =
-  "performance" | "anomaly" | "learning" | "trend" | "recommendation";
+  | "performance"
+  | "anomaly"
+  | "learning"
+  | "trend"
+  | "recommendation";
 
 export interface MarketingOpportunity {
   readonly id: string;
@@ -75,11 +85,16 @@ export function validateOpportunity(
   if (!opportunity.workspaceId.trim()) errors.push("workspace_required");
   if (!opportunity.contactId.trim()) errors.push("contact_required");
   if (!opportunity.name.trim()) errors.push("name_required");
-  if (!OPPORTUNITY_STAGES.includes(opportunity.stage))
+  if (OPPORTUNITY_STAGES.includes(opportunity.stage)) {
+  } else {
     errors.push("invalid_stage");
-  if (!Number.isFinite(opportunity.value) || opportunity.value < 0)
+  }
+  if (!Number.isFinite(opportunity.value) || opportunity.value < 0) {
     errors.push("invalid_value");
-  if (!/^[A-Z]{3}$/.test(opportunity.currency)) errors.push("invalid_currency");
+  }
+  if (!/^[A-Z]{3}$/.test(opportunity.currency)) {
+    errors.push("invalid_currency");
+  }
   if (
     !Number.isFinite(opportunity.probability) ||
     opportunity.probability < 0 ||
