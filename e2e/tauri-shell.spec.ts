@@ -567,18 +567,20 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
     let crossWorkspaceError = "";
     try {
-      await page!.evaluate((linkId) =>
-        window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
-          linkId,
-          sourceType: "manual",
-          metricName: "clicks",
-          metricValue: 1,
-          observedAt: "2026-09-26T18:00:00Z",
-          sourceLocator: null,
-          provenance: "manual_observation",
-          metadataJson: JSON.stringify({ test: true }),
-        }),
-      link.id);
+      await page!.evaluate(
+        (linkId) =>
+          window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
+            linkId,
+            sourceType: "manual",
+            metricName: "clicks",
+            metricValue: 1,
+            observedAt: "2026-09-26T18:00:00Z",
+            sourceLocator: null,
+            provenance: "manual_observation",
+            metadataJson: JSON.stringify({ test: true }),
+          }),
+        link.id,
+      );
     } catch (caught: unknown) {
       crossWorkspaceError =
         caught instanceof Error ? caught.message : String(caught);

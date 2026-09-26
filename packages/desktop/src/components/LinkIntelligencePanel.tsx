@@ -50,9 +50,7 @@ interface LinkIntelligencePanelProps {
 
 function nowInputValue(): string {
   const now = new Date();
-  const adjusted = new Date(
-    now.getTime() - now.getTimezoneOffset() * 60_000,
-  );
+  const adjusted = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
   return adjusted.toISOString().slice(0, 16);
 }
 
@@ -94,7 +92,7 @@ export function LinkIntelligencePanel({
       setSelectedLinkId((current) =>
         current && nextLinks.some((link) => link.id === current)
           ? current
-          : nextLinks[0]?.id ?? "",
+          : (nextLinks[0]?.id ?? ""),
       );
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "فشل تحميل الروابط");
@@ -110,9 +108,7 @@ export function LinkIntelligencePanel({
       );
     } catch (caught: unknown) {
       setError(
-        caught instanceof Error
-          ? caught.message
-          : "فشل تحميل أدلة الروابط",
+        caught instanceof Error ? caught.message : "فشل تحميل أدلة الروابط",
       );
     }
   };
@@ -198,9 +194,7 @@ export function LinkIntelligencePanel({
       );
     } catch (caught: unknown) {
       setError(
-        caught instanceof Error
-          ? caught.message
-          : "فشل تسجيل evidence للرابط",
+        caught instanceof Error ? caught.message : "فشل تسجيل evidence للرابط",
       );
     } finally {
       setBusy(false);
@@ -216,8 +210,8 @@ export function LinkIntelligencePanel({
             <Link2 size={20} /> ذكاء الروابط والتتبع
           </h2>
           <p>
-            روابط deterministic محلية مرتبطة بالحملات والمحتوى، مع evidence
-            صريح بدل الادعاء بوجود metrics غير مثبتة.
+            روابط deterministic محلية مرتبطة بالحملات والمحتوى، مع evidence صريح
+            بدل الادعاء بوجود metrics غير مثبتة.
           </p>
         </div>
         <ShieldCheck size={22} />
@@ -325,9 +319,7 @@ export function LinkIntelligencePanel({
                 <div>
                   <div className="eyebrow">{link.provenance}</div>
                   <strong>{link.link_key}</strong>
-                  <p style={{ overflowWrap: "anywhere" }}>
-                    {link.tracked_url}
-                  </p>
+                  <p style={{ overflowWrap: "anywhere" }}>{link.tracked_url}</p>
                 </div>
                 <button
                   className="button secondary"
@@ -341,7 +333,9 @@ export function LinkIntelligencePanel({
           ))}
         </div>
       ) : (
-        <div className="account-meta">لا توجد روابط محفوظة في workspace الحالية.</div>
+        <div className="account-meta">
+          لا توجد روابط محفوظة في workspace الحالية.
+        </div>
       )}
 
       <div className="card">
