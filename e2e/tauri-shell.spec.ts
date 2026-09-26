@@ -499,13 +499,13 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     const firstEvidence = (await page!.evaluate(
       (linkId) =>
         window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
-            linkId,
-            sourceType: "manual",
-            metricName: "clicks",
-            metricValue: 12,
-            observedAt: "2026-09-26T18:00:00Z",
-            sourceLocator: null,
-            provenance: "manual_observation",
+          linkId,
+          sourceType: "manual",
+          metricName: "clicks",
+          metricValue: 12,
+          observedAt: "2026-09-26T18:00:00Z",
+          sourceLocator: null,
+          provenance: "manual_observation",
           metadataJson: JSON.stringify({ test: true }),
         }),
       link.id,
@@ -514,13 +514,13 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     const secondEvidence = (await page!.evaluate(
       (linkId) =>
         window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
-            linkId,
-            sourceType: "manual",
-            metricName: "clicks",
-            metricValue: 14,
-            observedAt: "2026-09-26T18:00:00Z",
-            sourceLocator: null,
-            provenance: "manual_observation",
+          linkId,
+          sourceType: "manual",
+          metricName: "clicks",
+          metricValue: 14,
+          observedAt: "2026-09-26T18:00:00Z",
+          sourceLocator: null,
+          provenance: "manual_observation",
           metadataJson: JSON.stringify({ test: true }),
         }),
       link.id,
