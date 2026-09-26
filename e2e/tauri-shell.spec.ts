@@ -244,54 +244,6 @@ test("native capability schema resolves to least privilege", () => {
   expect(resolved.default.permissions).toEqual(["core:default"]);
 });
 
-test("native capability schema resolves to least privilege", () => {
-  test.skip(!exe, "native executable is required for generated capability verification");
-  const resolved = JSON.parse(
-    readFileSync(
-      join(root, "packages/desktop/src-tauri/gen/schemas/capabilities.json"),
-      "utf8",
-    ),
-  );
-  expect(resolved.default.windows).toEqual(["main"]);
-  expect(resolved.default.permissions).toEqual(["core:default"]);
-});;
-
-  test("renderer boots in the isolated shell and IPC positive control works", async () => {
-    try {
-      execSync("taskkill /im orbit-marketing-os.exe /F", { stdio: "ignore" });
-    } catch {
-      /* no leftover instance */
-    }
-    await launchAndConnectTauri();
-    const ctx = browser.contexts()[0];
-    page = ctx.pages()[0] ?? (await ctx.waitForEvent("page"));
-    await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
-
-    await expect(page).toHaveTitle(/ORBIT Marketing OS/);
-    await expect(
-      page.getByRole("heading", { name: "تقويم التشغيل والنشر" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "قائمة مراقبة المنافسين" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "مخطط النشر الجماعي" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "ذكاء الروابط والتتبع" }),
-    ).toBeVisible();
-    expect(await page.evaluate(() => typeof window.__TAURI_INTERNALS__)).toBe(
-      "object",
-    );
-
-    // Positive control: scale_factor is inside core:default — proves IPC works.
-    const granted = await page.evaluate(() =>
-      window.__TAURI_INTERNALS__.invoke("plugin:window|scale_factor", {}),
-    );
-    expect(typeof granted).toBe("number");
-    expect(granted as number).toBeGreaterThan(0);
-  });
-
   test("denied capabilities reject at the ACL and the window survives", async () => {
     expect(page, "boot test must run first").not.toBeNull();
 
