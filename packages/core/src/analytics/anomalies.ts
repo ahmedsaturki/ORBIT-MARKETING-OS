@@ -1,5 +1,5 @@
 import type { MarketingInsight } from "../outcomes/index.js";
-import type { MetricPoint } from "./metrics.js";
+import { buildMetricSeries, type MetricPoint } from "./metrics.js";
 
 export type AnomalyDirection = "spike" | "drop";
 
@@ -119,13 +119,8 @@ export function detectMetricAnomalies(
   }
 
   const config = normalizedOptions(options);
-  const ordered = points
-    .map((point) => ({ ...point }))
-    .sort(
-      (left, right) =>
-        Date.parse(left.timestamp) - Date.parse(right.timestamp),
-    );
-  ordered.forEach(validatePoint);
+  points.forEach(validatePoint);
+  const ordered = buildMetricSeries(points);
 
   const anomalies: MetricAnomaly[] = [];
 
