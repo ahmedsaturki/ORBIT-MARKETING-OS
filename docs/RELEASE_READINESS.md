@@ -8,6 +8,13 @@ Updated: 2026-09-26.
 - PR #71: merged — release truth / Universal Search hardening.
 - PR #72: merged — Publishing Workbench / Competitive Watch.
 - PR #76: merged — fail-closed Vercel production credential gate.
+- PR #77: merged — executable production readiness gate.
+- PR #78: merged — deterministic local link intelligence core.
+- PR #80: merged — governed platform foundation.
+- PR #83: merged — governed content reuse policy.
+- PR #84: merged — SHA-independent release documentation.
+- PR #85: merged — web release health/provenance checks.
+- PR #86: merged — evidence-backed reporting packs.
 
 ## Readiness rule
 
@@ -34,7 +41,7 @@ For the commercial lane, run:
 
 ## Current state
 
-The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, workspace isolation, native desktop/mobile validation, and web quality.
+The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, deterministic link intelligence core, platform foundation, content reuse policy, evidence-backed reporting packs, workspace isolation, native desktop/mobile validation, and web quality.
 
 A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed and the corrected feature head subsequently passed CI, desktop native, mobile, and Windows Native E2E.
 
@@ -42,12 +49,14 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 - real Telegram authorization and controlled delivery;
 - real LinkedIn authorization and controlled publishing;
+- real LinkedIn authorization and controlled publishing;
 - live multi-device CRDT verification;
 - dedicated restart/migration/crash recovery evidence consolidation;
 - manual WCAG/RTL audit;
 - 24-hour stability soak;
 - Vercel project settings reconciliation;
 - credential-backed Vercel prebuilt deployment with embedded Git SHA verification;
+- Release Evidence Bundle artifact generated from the exact verified ref;
 - production rollback drill;
 - desktop signing/notarization;
 - Android/iOS production signing and store distribution;
@@ -57,7 +66,7 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 ## Web production evidence
 
-The connected Vercel project is live and the public surface currently returns healthy responses for the home, pricing, and privacy paths, with a 404 for an unknown route and no grouped runtime errors in the selected seven-day query.
+The connected Vercel project is live and the current seven-day grouped runtime-error query is clean. Guarded deployments now fail closed if release credentials are missing and, when credentials exist, verify the embedded release SHA through /api/health and /api/release.
 
 The current production deployment, however, predates the current `main` release state and does not expose the merged release SHA. It is therefore healthy live infrastructure, not yet canonical release provenance.
 
