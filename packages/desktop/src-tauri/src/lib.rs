@@ -7009,104 +7009,104 @@ fn global_search(
     .map_err(|error| error.to_string())?;
 
     let escaped = query
-        .replace('\\', "\\\\")
-        .replace('%', "\\%")
-        .replace('_', "\\_");
+        .replace('!', "!!")
+        .replace('%', "!%")
+        .replace('_', "!_");
     let sql = r#"
       SELECT kind, id, title, subtitle, score
       FROM (
         SELECT 'campaign' AS kind, id, name AS title, status AS subtitle,
           CASE WHEN lower(name) = lower(:q) THEN 100
-               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
                ELSE 70 END AS score
         FROM campaigns
         WHERE workspace_id = :workspace
-          AND lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+          AND lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '!'
 
         UNION ALL
         SELECT 'account', id, display_name,
           platform || ' • ' || status,
           CASE WHEN lower(display_name) = lower(:q) THEN 100
-               WHEN lower(display_name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(display_name) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
                ELSE 70 END
         FROM accounts
         WHERE workspace_id = :workspace
-          AND (lower(display_name) LIKE '%' || lower(:q) || '%' ESCAPE '\
-            OR lower(COALESCE(username, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(display_name) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(COALESCE(username, '')) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'content', id, title,
           CASE WHEN length(body) > 180 THEN substr(body, 1, 180) || '…' ELSE body END,
           CASE WHEN lower(title) = lower(:q) THEN 100
-               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
-               WHEN lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\' THEN 70
+               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
+               WHEN lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '!' THEN 70
                ELSE 25 END
         FROM content_items
         WHERE workspace_id = :workspace
-          AND (lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(body) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(body) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'contact', id, display_name,
           COALESCE(email, COALESCE(phone, status)),
           CASE WHEN lower(display_name) = lower(:q) THEN 100
-               WHEN lower(display_name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(display_name) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
                ELSE 70 END
         FROM contacts
         WHERE workspace_id = :workspace
-          AND (lower(display_name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(COALESCE(email, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(COALESCE(phone, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(display_name) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(COALESCE(email, '')) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(COALESCE(phone, '')) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'conversation', id, platform || ' conversation',
           COALESCE(external_thread_id, status),
           CASE WHEN lower(COALESCE(external_thread_id, '')) = lower(:q) THEN 100
-               WHEN lower(COALESCE(external_thread_id, '')) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(COALESCE(external_thread_id, '')) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
                ELSE 60 END
         FROM conversations
         WHERE workspace_id = :workspace
-          AND (lower(COALESCE(external_thread_id, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(platform) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(status) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(COALESCE(external_thread_id, '')) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(platform) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(status) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'message', m.id, c.platform || ' message',
           CASE WHEN length(m.body) > 180 THEN substr(m.body, 1, 180) || '…' ELSE m.body END,
           CASE WHEN lower(m.body) = lower(:q) THEN 100
-               WHEN lower(m.body) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(m.body) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
                ELSE 70 END
         FROM messages AS m
         INNER JOIN conversations AS c ON c.id = m.conversation_id
         WHERE c.workspace_id = :workspace
-          AND lower(m.body) LIKE '%' || lower(:q) || '%' ESCAPE '\
+          AND lower(m.body) LIKE '%' || lower(:q) || '%' ESCAPE '!'
 
         UNION ALL
         SELECT 'opportunity', id, name, stage || ' • ' || currency,
           CASE WHEN lower(name) = lower(:q) THEN 100
-               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
                ELSE 70 END
         FROM opportunities
         WHERE workspace_id = :workspace
-          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(stage) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(stage) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'work', id, title, status,
           CASE WHEN lower(title) = lower(:q) THEN 100
-               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
                ELSE 70 END
         FROM work_items
         WHERE workspace_id = :workspace
-          AND lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+          AND lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '!'
 
         UNION ALL
         SELECT 'strategy', id, 'Strategy v' || version,
           CASE WHEN length(positioning) > 180 THEN substr(positioning, 1, 180) || '…' ELSE positioning END,
-          CASE WHEN lower(positioning) LIKE lower(:q) || '%' ESCAPE '\' THEN 80 ELSE 60 END
+          CASE WHEN lower(positioning) LIKE lower(:q) || '%' ESCAPE '!' THEN 80 ELSE 60 END
         FROM strategy_documents
         WHERE workspace_id = :workspace
-          AND lower(positioning) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+          AND lower(positioning) LIKE '%' || lower(:q) || '%' ESCAPE '!'
 
         UNION ALL
         SELECT 'knowledge', id,
@@ -7115,90 +7115,90 @@ fn global_search(
           CASE trust WHEN 'verified' THEN 80 WHEN 'approved' THEN 70 WHEN 'observed' THEN 60 ELSE 20 END
         FROM knowledge_items
         WHERE workspace_id = :workspace
-          AND lower(statement) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+          AND lower(statement) LIKE '%' || lower(:q) || '%' ESCAPE '!'
 
         UNION ALL
         SELECT 'knowledge_source', id, title,
           type || CASE WHEN locator IS NOT NULL THEN ' • ' || locator ELSE '' END,
           CASE WHEN lower(title) = lower(:q) THEN 90
-               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\' THEN 80
-               WHEN lower(COALESCE(locator, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\' THEN 70
+               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '!' THEN 80
+               WHEN lower(COALESCE(locator, '')) LIKE '%' || lower(:q) || '%' ESCAPE '!' THEN 70
                ELSE 60 END
         FROM knowledge_sources
         WHERE workspace_id = :workspace
-          AND (lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\
-            OR lower(COALESCE(locator, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(COALESCE(locator, '')) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'agent', id, name,
           role || ' • ' || CASE WHEN enabled = 1 THEN 'enabled' ELSE 'disabled' END,
           CASE WHEN lower(name) = lower(:q) THEN 100
-               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
                ELSE 70 END
         FROM agent_definitions
         WHERE workspace_id = :workspace
-          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(goal) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(goal) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'policy', id, name, mode,
           CASE WHEN lower(name) = lower(:q) THEN 100
-               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
                ELSE 70 END
         FROM marketing_policies
         WHERE workspace_id = :workspace
-          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(mode) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(mode) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'experiment', id, name, status || ' • ' || objective_metric,
           CASE WHEN lower(name) = lower(:q) THEN 100
-               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
                ELSE 70 END
         FROM experiments
         WHERE workspace_id = :workspace
-          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(hypothesis) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(objective_metric) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(hypothesis) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(objective_metric) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'media_asset', id, filename,
           kind || ' • ' || mime_type,
           CASE WHEN lower(filename) = lower(:q) THEN 90
-               WHEN lower(filename) LIKE lower(:q) || '%' ESCAPE '\' THEN 80
-               WHEN lower(filename) LIKE '%' || lower(:q) || '%' ESCAPE '\' THEN 70
+               WHEN lower(filename) LIKE lower(:q) || '%' ESCAPE '!' THEN 80
+               WHEN lower(filename) LIKE '%' || lower(:q) || '%' ESCAPE '!' THEN 70
                ELSE 60 END
         FROM media_assets
         WHERE workspace_id = :workspace
-          AND (lower(filename) LIKE '%' || lower(:q) || '%' ESCAPE '\
-            OR lower(COALESCE(tags_json, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(filename) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(COALESCE(tags_json, '')) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'research_brief', id, name,
           kind || ' • ' || status || ' • ' ||
             CASE WHEN length(question) > 160 THEN substr(question, 1, 160) || '…' ELSE question END,
           CASE WHEN lower(name) = lower(:q) THEN 100
-               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
-               WHEN lower(question) LIKE '%' || lower(:q) || '%' ESCAPE '\' THEN 75
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
+               WHEN lower(question) LIKE '%' || lower(:q) || '%' ESCAPE '!' THEN 75
                ELSE 60 END
         FROM research_briefs
         WHERE workspace_id = :workspace
-          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(question) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(kind) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(question) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(kind) LIKE '%' || lower(:q) || '%' ESCAPE '!')
 
         UNION ALL
         SELECT 'research_finding', id, title,
           CASE WHEN length(statement) > 180 THEN substr(statement, 1, 180) || '…' ELSE statement END,
           CASE WHEN lower(title) = lower(:q) THEN 100
-               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
-               WHEN lower(statement) LIKE '%' || lower(:q) || '%' ESCAPE '\' THEN 75
+               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '!' THEN 90
+               WHEN lower(statement) LIKE '%' || lower(:q) || '%' ESCAPE '!' THEN 75
                ELSE 60 END
         FROM research_findings
         WHERE workspace_id = :workspace
-          AND (lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(statement) LIKE '%' || lower(:q) || '%' ESCAPE '\'
-            OR lower(tags_json) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+          AND (lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(statement) LIKE '%' || lower(:q) || '%' ESCAPE '!'
+            OR lower(tags_json) LIKE '%' || lower(:q) || '%' ESCAPE '!')
       )
       ORDER BY score DESC, lower(title) ASC, kind ASC, id ASC
       LIMIT :limit
