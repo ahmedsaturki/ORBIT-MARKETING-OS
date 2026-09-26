@@ -6150,7 +6150,15 @@ fn research_publish_to_knowledge(
              FROM research_findings
              WHERE id=?1 AND workspace_id=?2",
             params![&finding_id, &workspace_id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                ))
+            },
         )
         .optional()
         .map_err(|error| error.to_string())?;
