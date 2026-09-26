@@ -9277,6 +9277,7 @@ fn append_experiment_operational_event(
         Some(&payload),
     )
     .map_err(|error| error.to_string())
+    .map(|_| ())
 }
 
 #[tauri::command]
