@@ -9369,7 +9369,35 @@ fn experiment_assign_variant(
     let variants: Vec<ExperimentVariantInput> = serde_json::from_str(&variants_json)
         .map_err(|_| "stored experiment variants are invalid".to_string())?;
     let variant_id = experiment_variant_for_subject(&workspace_id, &experiment_id, &subject_id, &variants)?;
-    Ok(ExperimentAssignmentView { experiment_id, workspace_id, subject_id, variant_id })
+    let assignment = ExperimentAssignmentView {
+        experiment_id,
+        workspace_id: workspace_id.clone(),
+        subject_id,
+        variant_id: variant_id.clone(),
+    };
+    let mut connection = connection;
+    let payload = serde_json::json!({
+        "source": "experiment_studio",
+        "variant_id": variant_id,
+    })
+    .to_string();
+    append_operational_event(
+        &mut connection,
+        &workspace_id,
+        None,
+        &chrono_like_timestamp(),
+        "experiment.assignment",
+        "succeeded",
+        "user",
+        "desktop-user",
+        Some("experiment"),
+        Some(&assignment.experiment_id),
+        None,
+        None,
+        Some(&payload),
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(assignment)
 }
 
 #[tauri::command]
