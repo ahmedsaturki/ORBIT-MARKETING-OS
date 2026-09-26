@@ -7,7 +7,7 @@
  * observed outcomes for the learning loop.
  */
 
-import type { MarketingOpportunity, MarketingInsight } from "../outcomes/index.js";
+import type { MarketingInsight } from "../outcomes/index.js";
 import type { Campaign } from "../types/index.js";
 
 export type ExperimentStatus =
