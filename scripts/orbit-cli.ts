@@ -18,7 +18,12 @@ function flag(args: string[], name: string): string | undefined {
 }
 
 function csv(value: string | undefined): string[] {
-  return value ? value.split(",").map((entry) => entry.trim()).filter(Boolean) : [];
+  return value
+    ? value
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    : [];
 }
 
 function output(value: unknown): void {
@@ -82,5 +87,6 @@ output({
     "pnpm orbit commands get <commandId>",
     "pnpm orbit command preview <commandId> --workspace <id> --actor <id> --scopes <scope1,scope2> [--approved true]",
   ],
-  note: "Preview is read-only. Execution remains inside the canonical governed runtime.",
+  note:
+    "Preview is read-only. Execution remains inside the canonical governed runtime.",
 });
