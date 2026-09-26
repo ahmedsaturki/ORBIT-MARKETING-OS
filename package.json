@@ -31,7 +31,8 @@
     "mobile:typecheck": "pnpm --dir packages/mobile typecheck",
     "mobile:build": "pnpm --dir packages/mobile build",
     "tauri:build": "pnpm --dir packages/desktop tauri build",
-    "verify:readiness": "node scripts/verify-release-readiness.mjs"
+    "verify:readiness": "node scripts/verify-release-readiness.mjs",
+    "release:evidence": "node scripts/collect-release-evidence.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
