@@ -10255,7 +10255,10 @@ mod tests {
             states,
             vec![
                 ("pending-task".to_string(), "pending".to_string()),
-                ("publish-task".to_string(), "awaiting_user_action".to_string()),
+                (
+                    "publish-task".to_string(),
+                    "awaiting_user_action".to_string(),
+                ),
                 ("sync-task".to_string(), "pending".to_string()),
             ]
         );
@@ -10288,8 +10291,7 @@ mod tests {
         fs::write(&backup_source, "stale-backup-source")
             .expect("stale backup source should be written");
 
-        recover_database_before_open(&root, &db_path)
-            .expect("database recovery should succeed");
+        recover_database_before_open(&root, &db_path).expect("database recovery should succeed");
 
         assert_eq!(
             fs::read_to_string(&db_path).expect("restored database should be readable"),
