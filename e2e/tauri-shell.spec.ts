@@ -297,6 +297,54 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(proc!.killed).toBe(false);
   });
 
+  test("global search is workspace-scoped and bounded", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+
+    const suffix = Date.now();
+    const workspaceA = (await page!.evaluate(async (id) =>
+      window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Search Workspace A",
+      }), "e2e-search-a-" + suffix
+    )) as { id: string; name: string };
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", { id: workspaceId }),
+      workspaceA.id,
+    );
+
+    await page!.evaluate((name) =>
+      window.__TAURI_INTERNALS__.invoke("campaign_create", { name, accountIds: [] }),
+      "E2E Search Campaign " + suffix,
+    );
+
+    const sameWorkspace = (await page!.evaluate((query) =>
+      window.__TAURI_INTERNALS__.invoke("global_search", { query, limit: 500 }),
+      "E2E Search Campaign " + suffix,
+    )) as Array<{ kind: string; id: string; title: string }>;
+
+    expect(sameWorkspace.length).toBeLessThanOrEqual(50);
+    expect(sameWorkspace.some((item) => item.kind === "campaign")).toBe(true);
+
+    const workspaceB = (await page!.evaluate(async (id) =>
+      window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Search Workspace B",
+      }), "e2e-search-b-" + suffix
+    )) as { id: string; name: string };
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", { id: workspaceId }),
+      workspaceB.id,
+    );
+
+    const isolated = (await page!.evaluate((query) =>
+      window.__TAURI_INTERNALS__.invoke("global_search", { query, limit: 50 }),
+      "E2E Search Campaign " + suffix,
+    )) as Array<{ kind: string; id: string; title: string }>;
+
+    expect(isolated).toEqual([]);
+  });
   test("native runtime restart preserves selected workspace state", async () => {
     expect(page, "boot test must run first").not.toBeNull();
 

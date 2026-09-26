@@ -6,7 +6,7 @@ use aes_gcm::{
 };
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{named_params, params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -721,6 +721,14 @@ struct AccountView {
     has_encrypted_session: bool,
 }
 
+#[derive(Debug, Serialize)]
+struct GlobalSearchResultView {
+    kind: String,
+    id: String,
+    title: String,
+    subtitle: String,
+    score: i64,
+}
 fn validate_telegram_token(token: &str) -> Result<String, AppError> {
     let value = token.trim();
     let Some((bot_id, secret)) = value.split_once(':') else {
@@ -6396,6 +6404,175 @@ fn outcome_analytics(app: tauri::AppHandle) -> Result<OutcomeAnalyticsView, Stri
         insight_count: totals.4,
         by_currency,
     })
+}
+
+#[tauri::command]
+fn global_search(
+    app: tauri::AppHandle,
+    query: String,
+    limit: Option<i64>,
+) -> Result<Vec<GlobalSearchResultView>, String> {
+    let workspace_id = active_workspace_id();
+    let query = query.trim().to_string();
+    if query.is_empty() {
+        return Err("global search query is required".to_string());
+    }
+    if query.chars().count() > 200 {
+        return Err("global search query is too long".to_string());
+    }
+    if query.chars().any(|character| character.is_control()) {
+        return Err("global search query contains invalid control characters".to_string());
+    }
+    let limit = limit.unwrap_or(25).clamp(1, 50);
+
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let escaped = query.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
+    let sql = r#"
+      SELECT kind, id, title, subtitle, score
+      FROM (
+        SELECT 'campaign' AS kind, id, name AS title, status AS subtitle,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               ELSE 70 END AS score
+        FROM campaigns
+        WHERE workspace_id = :workspace
+          AND lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+
+        UNION ALL
+        SELECT 'content', id, title,
+          CASE WHEN length(body) > 180 THEN substr(body, 1, 180) || '…' ELSE body END,
+          CASE WHEN lower(title) = lower(:q) THEN 100
+               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               WHEN lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\' THEN 70
+               ELSE 25 END
+        FROM content_items
+        WHERE workspace_id = :workspace
+          AND (lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+            OR lower(body) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+
+        UNION ALL
+        SELECT 'contact', id, display_name,
+          COALESCE(email, COALESCE(phone, status)),
+          CASE WHEN lower(display_name) = lower(:q) THEN 100
+               WHEN lower(display_name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               ELSE 70 END
+        FROM contacts
+        WHERE workspace_id = :workspace
+          AND (lower(display_name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+            OR lower(COALESCE(email, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+            OR lower(COALESCE(phone, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+
+        UNION ALL
+        SELECT 'conversation', id, platform || ' conversation',
+          COALESCE(external_thread_id, status),
+          CASE WHEN lower(COALESCE(external_thread_id, '')) = lower(:q) THEN 100
+               WHEN lower(COALESCE(external_thread_id, '')) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               ELSE 60 END
+        FROM conversations
+        WHERE workspace_id = :workspace
+          AND (lower(COALESCE(external_thread_id, '')) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+            OR lower(platform) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+            OR lower(status) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+
+        UNION ALL
+        SELECT 'opportunity', id, name, stage || ' • ' || currency,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               ELSE 70 END
+        FROM opportunities
+        WHERE workspace_id = :workspace
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+            OR lower(stage) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+
+        UNION ALL
+        SELECT 'work', id, title, status,
+          CASE WHEN lower(title) = lower(:q) THEN 100
+               WHEN lower(title) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               ELSE 70 END
+        FROM work_items
+        WHERE workspace_id = :workspace
+          AND lower(title) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+
+        UNION ALL
+        SELECT 'strategy', id, 'Strategy v' || version,
+          CASE WHEN length(positioning) > 180 THEN substr(positioning, 1, 180) || '…' ELSE positioning END,
+          60
+        FROM strategy_documents
+        WHERE workspace_id = :workspace
+          AND lower(positioning) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+
+        UNION ALL
+        SELECT 'knowledge', id,
+          CASE WHEN length(statement) > 120 THEN substr(statement, 1, 120) || '…' ELSE statement END,
+          trust,
+          CASE trust WHEN 'verified' THEN 80 WHEN 'approved' THEN 70 WHEN 'observed' THEN 60 ELSE 20 END
+        FROM knowledge_items
+        WHERE workspace_id = :workspace
+          AND lower(statement) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+
+        UNION ALL
+        SELECT 'agent', id, name,
+          role || ' • ' || CASE WHEN enabled = 1 THEN 'enabled' ELSE 'disabled' END,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               ELSE 70 END
+        FROM agent_definitions
+        WHERE workspace_id = :workspace
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+            OR lower(goal) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+
+        UNION ALL
+        SELECT 'policy', id, name, mode,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               ELSE 70 END
+        FROM marketing_policies
+        WHERE workspace_id = :workspace
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+            OR lower(mode) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+
+        UNION ALL
+        SELECT 'experiment', id, name, status || ' • ' || objective_metric,
+          CASE WHEN lower(name) = lower(:q) THEN 100
+               WHEN lower(name) LIKE lower(:q) || '%' ESCAPE '\' THEN 90
+               ELSE 70 END
+        FROM experiments
+        WHERE workspace_id = :workspace
+          AND (lower(name) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+            OR lower(hypothesis) LIKE '%' || lower(:q) || '%' ESCAPE '\'
+            OR lower(objective_metric) LIKE '%' || lower(:q) || '%' ESCAPE '\')
+      )
+      ORDER BY score DESC, lower(title) ASC, kind ASC, id ASC
+      LIMIT :limit
+    "#;
+
+    let mut statement = connection.prepare(sql).map_err(|error| error.to_string())?;
+    let rows = statement.query_map(
+        named_params! {
+            ":q": escaped,
+            ":workspace": workspace_id,
+            ":limit": limit,
+        },
+        |row| {
+            Ok(GlobalSearchResultView {
+                kind: row.get(0)?,
+                id: row.get(1)?,
+                title: row.get(2)?,
+                subtitle: row.get(3)?,
+                score: row.get(4)?,
+            })
+        },
+    ).map_err(|error| error.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -12747,6 +12924,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_health,
+            global_search,
             workspace_list,
             workspace_current,
             workspace_create,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { Platform } from "@orbit/core";
+import type { GlobalSearchResult, Platform } from "@orbit/core";
 import {
   Bot,
   CheckCircle2,
@@ -10,6 +10,7 @@ import {
   LockKeyhole,
   ShieldCheck,
   Sparkles,
+  Search,
 } from "lucide-react";
 import { OutcomesPanel } from "./components/OutcomesPanel";
 import { MissionControlPanel } from "./components/MissionControlPanel";
@@ -246,6 +247,9 @@ export function App(): ReactElement {
   const [selectedBackup, setSelectedBackup] = useState("");
   const [backupStatus, setBackupStatus] = useState("");
   const [campaigns, setCampaigns] = useState<readonly CampaignView[]>([]);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
+  const [globalSearchResults, setGlobalSearchResults] = useState<readonly GlobalSearchResult[]>([]);
+  const [globalSearchBusy, setGlobalSearchBusy] = useState(false);
   const [campaignName, setCampaignName] = useState("");
   const [campaignAccountId, setCampaignAccountId] = useState("");
   const [contentItems, setContentItems] = useState<readonly ContentView[]>([]);
@@ -402,6 +406,29 @@ export function App(): ReactElement {
     }
   };
 
+  const runGlobalSearch = async (): Promise<void> => {
+    const query = globalSearchQuery.trim();
+    if (!query) {
+      setGlobalSearchResults([]);
+      return;
+    }
+    try {
+      setGlobalSearchBusy(true);
+      setError("");
+      const results = await callNative<GlobalSearchResult[]>("global_search", {
+        query,
+        limit: 25,
+      });
+      setGlobalSearchResults(results);
+    } catch (caught: unknown) {
+      setGlobalSearchResults([]);
+      setError(
+        caught instanceof Error ? caught.message : "فشل البحث الموحد",
+      );
+    } finally {
+      setGlobalSearchBusy(false);
+    }
+  };
   const loadCampaigns = async (): Promise<void> => {
     try {
       setCampaigns(await callNative<CampaignView[]>("campaign_list"));
@@ -1402,6 +1429,18 @@ export function App(): ReactElement {
   };
 
   useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent): void => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        document
+          .querySelector<HTMLInputElement>("[data-orbit-global-search]")
+          ?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
+  useEffect(() => {
     let cancelled = false;
 
     const initialize = async (): Promise<void> => {
@@ -1461,6 +1500,62 @@ export function App(): ReactElement {
         </button>
       </header>
 
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">GLOBAL SEARCH • LOCAL • READ-ONLY</div>
+            <h2>
+              <Search size={20} /> البحث الموحد في ORBIT
+            </h2>
+            <p>
+              ابحث مرة واحدة داخل الحملات والمحتوى والعملاء والمحادثات والفرص
+              والمهام والاستراتيجية والمعرفة والوكلاء والسياسات والتجارب.
+            </p>
+          </div>
+          <div className="account-meta">Ctrl+K / Cmd+K</div>
+        </div>
+        <div className="actions">
+          <label style={{ flex: 1 }}>
+            البحث
+            <input
+              data-orbit-global-search
+              value={globalSearchQuery}
+              onChange={(event) => setGlobalSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void runGlobalSearch();
+                if (event.key === "Escape") {
+                  setGlobalSearchQuery("");
+                  setGlobalSearchResults([]);
+                }
+              }}
+              placeholder="ابحث عن حملة، عميل، محتوى، فرصة، مهمة، استراتيجية..."
+              maxLength={200}
+              autoComplete="off"
+            />
+          </label>
+          <button
+            className="button primary"
+            type="button"
+            onClick={() => void runGlobalSearch()}
+            disabled={globalSearchBusy || !globalSearchQuery.trim()}
+          >
+            {globalSearchBusy ? "جاري البحث..." : "بحث"}
+          </button>
+        </div>
+        {globalSearchResults.length > 0 ? (
+          <div className="result-list">
+            {globalSearchResults.map((result) => (
+              <article className="card" key={result.kind + ":" + result.id}>
+                <div className="eyebrow">{result.kind}</div>
+                <strong>{result.title}</strong>
+                <p>{result.subtitle}</p>
+              </article>
+            ))}
+          </div>
+        ) : globalSearchQuery.trim() && !globalSearchBusy ? (
+          <div className="account-meta">لا توجد نتائج ضمن مساحة العمل الحالية.</div>
+        ) : null}
+      </section>
       {error ? <div className="notice error">{error}</div> : null}
       {health ? (
         <div className="notice success">

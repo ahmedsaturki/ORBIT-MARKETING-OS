@@ -86,6 +86,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 | QA-01    | Unit coverage threshold                                                                                                                   | coverage report                                                |
 | QA-02    | Critical E2E paths                                                                                                                        | Playwright report                                              |
 | DOC-01   | User guide matches product                                                                                                                | documentation review                                           |
+| SEARCH-01 | Universal workspace-scoped search | native search integration test + deterministic ordering test |
 | DOC-02   | Security model documented                                                                                                                 | security review                                                |
 
 ## Gate rules

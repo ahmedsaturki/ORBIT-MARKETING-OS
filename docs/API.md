@@ -197,3 +197,9 @@ Backups are encrypted locally and restore performs SQLite integrity validation b
 ## Compatibility rule
 
 When an IPC command changes, update the desktop client, this API contract, and its integration tests together. Source inspection alone is not release evidence.
+
+### Universal Search
+
+- global_search — read-only, active-workspace-scoped discovery across campaign, content, contact, conversation, opportunity, work, strategy, knowledge, agent, policy, and experiment records.
+- The native command accepts a query up to 200 characters and a result limit capped at 50.
+- It never reads or returns vault records, session payloads, passwords, tokens, or API keys.
