@@ -24,7 +24,7 @@ const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
 const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
 const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
-const SCHEMA_VERSION: i64 = 15;
+const SCHEMA_VERSION: i64 = 16;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 static TELEGRAM_EXECUTION_IDS: OnceLock<Mutex<std::collections::HashSet<String>>> = OnceLock::new();
@@ -378,6 +378,48 @@ CREATE INDEX IF NOT EXISTS idx_operational_events_entity
 
 CREATE INDEX IF NOT EXISTS idx_operational_events_trace
   ON operational_events(workspace_id, trace_id, sequence);
+
+CREATE TABLE IF NOT EXISTS marketing_links (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  link_key TEXT NOT NULL,
+  destination_url TEXT NOT NULL,
+  tracked_url TEXT NOT NULL,
+  tracking_json TEXT NOT NULL DEFAULT '{}',
+  campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
+  content_id TEXT REFERENCES content_items(id) ON DELETE SET NULL,
+  provenance TEXT NOT NULL CHECK(provenance = 'local'),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(workspace_id, link_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketing_links_workspace_updated
+  ON marketing_links(workspace_id, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_marketing_links_workspace_campaign
+  ON marketing_links(workspace_id, campaign_id, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_marketing_links_workspace_content
+  ON marketing_links(workspace_id, content_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS marketing_link_evidence (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  link_id TEXT NOT NULL REFERENCES marketing_links(id) ON DELETE CASCADE,
+  source_type TEXT NOT NULL,
+  metric_name TEXT NOT NULL,
+  metric_value REAL NOT NULL CHECK(metric_value >= 0),
+  observed_at TEXT NOT NULL,
+  source_locator TEXT,
+  provenance TEXT NOT NULL,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  UNIQUE(workspace_id, link_id, source_type, metric_name, observed_at, source_locator)
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketing_link_evidence_workspace_link
+  ON marketing_link_evidence(workspace_id, link_id, observed_at);
 "#;
 
 #[derive(Debug, Error)]
@@ -1707,6 +1749,56 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
             ",
         )?;
     }
+    if version < 16 {
+        connection.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS marketing_links (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              link_key TEXT NOT NULL,
+              destination_url TEXT NOT NULL,
+              tracked_url TEXT NOT NULL,
+              tracking_json TEXT NOT NULL DEFAULT '{}',
+              campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
+              content_id TEXT REFERENCES content_items(id) ON DELETE SET NULL,
+              provenance TEXT NOT NULL CHECK(provenance = 'local'),
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              UNIQUE(workspace_id, link_key)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_marketing_links_workspace_updated
+              ON marketing_links(workspace_id, updated_at);
+
+            CREATE INDEX IF NOT EXISTS idx_marketing_links_workspace_campaign
+              ON marketing_links(workspace_id, campaign_id, updated_at);
+
+            CREATE INDEX IF NOT EXISTS idx_marketing_links_workspace_content
+              ON marketing_links(workspace_id, content_id, updated_at);
+
+            CREATE TABLE IF NOT EXISTS marketing_link_evidence (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              link_id TEXT NOT NULL REFERENCES marketing_links(id) ON DELETE CASCADE,
+              source_type TEXT NOT NULL,
+              metric_name TEXT NOT NULL,
+              metric_value REAL NOT NULL CHECK(metric_value >= 0),
+              observed_at TEXT NOT NULL,
+              source_locator TEXT,
+              provenance TEXT NOT NULL,
+              metadata_json TEXT NOT NULL DEFAULT '{}',
+              created_at TEXT NOT NULL,
+              UNIQUE(workspace_id, link_id, source_type, metric_name, observed_at, source_locator)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_marketing_link_evidence_workspace_link
+              ON marketing_link_evidence(workspace_id, link_id, observed_at);
+
+            PRAGMA user_version = 16;
+            ",
+        )?;
+    }
+
     Ok(())
 }
 
@@ -1956,6 +2048,72 @@ OR EXISTS (
 )
 BEGIN
   SELECT RAISE(ABORT, 'research finding workspace/reference mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_marketing_links_insert_workspace
+BEFORE INSERT ON marketing_links
+WHEN (
+  NEW.campaign_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM campaigns c
+    WHERE c.id = NEW.campaign_id
+      AND c.workspace_id = NEW.workspace_id
+  )
+)
+OR (
+  NEW.content_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM content_items i
+    WHERE i.id = NEW.content_id
+      AND i.workspace_id = NEW.workspace_id
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'marketing link workspace/reference mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_marketing_links_update_workspace
+BEFORE UPDATE OF workspace_id, campaign_id, content_id ON marketing_links
+WHEN (
+  NEW.campaign_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM campaigns c
+    WHERE c.id = NEW.campaign_id
+      AND c.workspace_id = NEW.workspace_id
+  )
+)
+OR (
+  NEW.content_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM content_items i
+    WHERE i.id = NEW.content_id
+      AND i.workspace_id = NEW.workspace_id
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'marketing link workspace/reference mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_marketing_link_evidence_insert_workspace
+BEFORE INSERT ON marketing_link_evidence
+WHEN NOT EXISTS (
+  SELECT 1 FROM marketing_links l
+  WHERE l.id = NEW.link_id
+    AND l.workspace_id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'marketing link evidence workspace mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS orbit_marketing_link_evidence_update_workspace
+BEFORE UPDATE OF workspace_id, link_id ON marketing_link_evidence
+WHEN NOT EXISTS (
+  SELECT 1 FROM marketing_links l
+  WHERE l.id = NEW.link_id
+    AND l.workspace_id = NEW.workspace_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'marketing link evidence workspace mismatch');
 END;
 
 CREATE TRIGGER IF NOT EXISTS orbit_opportunities_insert_workspace
