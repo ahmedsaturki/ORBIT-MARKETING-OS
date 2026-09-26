@@ -115,3 +115,5 @@ export function authorizeAgentAction(
     reason: approved ? "approved" : "bounded_autonomy",
   };
 }
+
+export * from "./registry.js";

@@ -140,6 +140,18 @@ const BUILTIN_COMMANDS: readonly CommandDefinition[] = [
     requiresApproval: false,
   },
   {
+    id: "agent.list",
+    title: "List governed agents",
+    description:
+      "List workspace-scoped agent definitions without executing agent work.",
+    risk: "low",
+    scopes: ["agent:read"],
+    surfaces: ["desktop", "web", "mobile", "cli", "mcp"],
+    mutatesState: false,
+    externallyVisible: false,
+    requiresApproval: false,
+  },
+  {
     id: "analytics.explain",
     title: "Explain analytics",
     description: "Summarize workspace-scoped performance evidence.",
