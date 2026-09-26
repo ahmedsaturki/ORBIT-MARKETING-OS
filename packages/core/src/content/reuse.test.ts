@@ -111,6 +111,27 @@ describe("content reuse policy", () => {
     expect(result.reasons).toContain("duplicate_variant");
   });
 
+  it("rejects invalid policy values", () => {
+    expect(() =>
+      evaluateContentReuse(base, [], { ...policy, maxReuseCount: 0 }),
+    ).toThrow("maxReuseCount must be a positive integer");
+
+    expect(() =>
+      evaluateContentReuse(base, [], { ...policy, cooldownHours: -1 }),
+    ).toThrow("cooldownHours must be a finite non-negative number");
+  });
+
+  it("rejects invalid candidate dates", () => {
+    expect(() =>
+      evaluateContentReuse(
+        { ...base, createdAt: "not-a-date" },
+        [],
+        policy,
+        new Date("2026-09-26T00:00:00Z"),
+      ),
+    ).toThrow("candidate.createdAt must be a valid date");
+  });
+
   it("keeps approval requirement deterministic", () => {
     const result = evaluateContentReuse(
       { ...base, approvalStatus: "draft" },
