@@ -20,6 +20,12 @@ describe("link intelligence registry", () => {
     );
   });
 
+  it("rejects destination URLs with embedded credentials", () => {
+    expect(() =>
+      normalizeDestinationUrl("https://user:password@example.com/offer"),
+    ).toThrow("must not contain credentials");
+  });
+
   it("adds only explicit UTM values and preserves existing query parameters", () => {
     const tracked = buildTrackedUrl({
       destinationUrl: "https://example.com/landing?ref=orbit",
