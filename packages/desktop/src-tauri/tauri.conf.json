@@ -5,7 +5,7 @@
   "identifier": "com.orbitmarketing.os",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "pnpm --filter @orbit/core build && pnpm build",
     "devUrl": "http://127.0.0.1:1420",
     "frontendDist": "../dist"
   },
