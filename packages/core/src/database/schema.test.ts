@@ -3,7 +3,7 @@ import { DATABASE_SCHEMA_SQL, DATABASE_SCHEMA_VERSION } from "./schema.js";
 
 describe("canonical database schema contract", () => {
   it("tracks the current desktop schema version", () => {
-    expect(DATABASE_SCHEMA_VERSION).toBe(14);
+    expect(DATABASE_SCHEMA_VERSION).toBe(15);
   });
 
   it("includes the canonical operating-model and experimentation tables", () => {
@@ -28,12 +28,12 @@ describe("canonical database schema contract", () => {
       "experiment_observations",
     ]) {
       expect(DATABASE_SCHEMA_SQL).toContain(
-        `CREATE TABLE IF NOT EXISTS ${table}`,
+              `CREATE TABLE IF NOT EXISTS ${table}`,
       );
     }
   });
 
   it("sets SQLite user_version to the canonical version", () => {
-    expect(DATABASE_SCHEMA_SQL).toContain("PRAGMA user_version = 14;");
+    expect(DATABASE_SCHEMA_SQL).toContain("PRAGMA user_version = 15;");
   });
 });
