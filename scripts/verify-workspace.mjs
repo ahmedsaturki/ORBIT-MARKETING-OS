@@ -35,6 +35,9 @@ const requiredFiles = [
   "scripts/verify-live-web.mjs",
   "scripts/self-hosted-preflight.sh",
   "scripts/security-scan.mjs",
+  "scripts/orbit-cli.ts",
+  "scripts/orbit-mcp.ts",
+  "scripts/orbit-surface-smoke.mjs",
   "packages/core/test/linkedin.test.ts",
   "packages/core/test/executor.test.ts",
   "e2e/web-smoke.spec.ts",
@@ -154,6 +157,9 @@ const requiredRootScripts = {
   "test:e2e": "playwright test",
   "preflight:runner": "bash scripts/self-hosted-preflight.sh",
   "security:scan": "node scripts/security-scan.mjs",
+  "orbit": "tsx scripts/orbit-cli.ts",
+  "orbit:mcp": "tsx scripts/orbit-mcp.ts",
+  "test:surface": "node scripts/orbit-surface-smoke.mjs",
 };
 for (const [name, expected] of Object.entries(requiredRootScripts)) {
   if (rootPackage.scripts?.[name] !== expected) {
