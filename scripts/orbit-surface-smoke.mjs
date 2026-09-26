@@ -5,7 +5,15 @@ const env = { ...process.env, CI: "1" };
 
 const list = spawnSync(
   command,
-  ["exec", "tsx", "scripts/orbit-cli.ts", "commands", "list", "--surface", "mcp"],
+  [
+    "exec",
+    "tsx",
+    "scripts/orbit-cli.ts",
+    "commands",
+    "list",
+    "--surface",
+    "mcp",
+  ],
   { encoding: "utf8", env },
 );
 if (list.status !== 0) {
