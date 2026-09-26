@@ -6,7 +6,7 @@ import {
 
 describe("database schema contract", () => {
   it("uses the current schema version", () => {
-    expect(DATABASE_SCHEMA_VERSION).toBe(15);
+    expect(DATABASE_SCHEMA_VERSION).toBe(16);
   });
 
   it("enforces tenant ownership on core records", () => {
