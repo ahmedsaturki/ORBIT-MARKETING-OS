@@ -8,9 +8,14 @@ Updated: 2026-09-26.
 | Marketing Brain / Strategy         | yes                | Workspace-local persistence and governed strategy commands                                            | PARTIAL         |
 | Research Intelligence              | yes                | Native schema v15, commands, evidence rules and Research Studio                                       | PARTIAL         |
 | Universal Search + Mission Control | yes                | Workspace-scoped native E2E and bounded deterministic contract                                        | VERIFIED*       |
+| Publishing Calendar / Workbench     | yes                | Queue-backed calendar over canonical tasks; native/E2E surface assertions                            | PARTIAL         |
+| Bulk Planner                         | yes                | Approval-gated queue task generation; unit/native surface coverage                                  | PARTIAL         |
+| Competitive Watch / Research Sources| yes                | Workspace-scoped public-source seeding; no external execution                                       | PARTIAL         |
 | Operating graph + governed work    | yes                | Core graph/decision/native persistence plus command/event control                                     | PARTIAL         |
 | Opportunities + insights           | yes                | Native persistence and workspace validation                                                           | PARTIAL         |
 | Experimentation + Learning         | yes                | Deterministic engine, native persistence, Experiment Studio and governed evidence bridge              | PARTIAL         |
+| Content Reuse Policy                | yes                | Deterministic approval/cooldown/reuse-limit/platform/freshness/duplicate policy core                 | PARTIAL         |
+| Evidence Reporting Packs            | yes                | Deterministic evidence-linked report contract; no external runtime dependency                        | PARTIAL         |
 | Operational Event Spine            | yes                | Exact-head tests/native validation passed on merged control-spine line                                | VERIFIED        |
 | Command Registry                   | yes                | Exact-head tests/native validation passed on merged control-spine line                                | VERIFIED        |
 | Command Dispatcher                 | yes                | Exact-head CI/native/mobile validation passed before merge                                            | VERIFIED        |
@@ -19,6 +24,7 @@ Updated: 2026-09-26.
 | Desktop SQLite/vault/backup        | yes                | Rust/native quality gates passed; dedicated real-instance recovery evidence remains consolidated gate | PARTIAL         |
 | Desktop campaigns/tasks/CRM/inbox  | yes                | Unit/integration coverage; full real-instance scenario remains                                        | PARTIAL         |
 | Web public/PWA                     | yes                | Main CI + live production checks passed                                                               | VERIFIED        |
+| Web release health/provenance       | yes                | Static-export endpoints and E2E/live verifier contract                                                | PARTIAL         |
 | Mobile Expo control surface        | yes                | Mobile validation passed on validated release line                                                    | VERIFIED        |
 | Telegram connector                 | yes                | Controlled live authorization/delivery evidence remains                                               | UNVERIFIED      |
 | LinkedIn connector                 | yes                | Controlled live authorization/publish evidence remains                                                | UNVERIFIED      |
