@@ -35,7 +35,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evide
 | Performance smoke                            | VERIFIED   | Queue throughput smoke passed                                                                                        |
 | Browser E2E                                  | VERIFIED   | Playwright/browser gates passed                                                                                      |
 | Production web availability                  | VERIFIED   | READY production deployment and live route/header/runtime checks                                                     |
-| Production web provenance                    | UNVERIFIED | Current READY deployment predates main=377e86d and current project metadata/provenance still requires reconciliation |
+| Production web provenance                    | UNVERIFIED | Current READY deployment predates the current `main` release state and current project metadata/provenance still requires reconciliation |
 | Native desktop packaging                     | VERIFIED   | All four desktop packaging targets passed on PR #72 exact head                                                       |
 | Android debug validation                     | VERIFIED   | Mobile validation produced validated debug artifact                                                                  |
 | Native recovery                              | PARTIAL    | Restart/queue recovery E2E exists; consolidated production evidence remains open                                     |
