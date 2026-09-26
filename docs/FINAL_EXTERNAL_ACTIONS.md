@@ -1,57 +1,49 @@
 # ORBIT — Final External Actions
 
-Updated: 2026-09-25
+Updated: 2026-09-26
 
-The core implementation and main CI baseline are verified, and a READY Vercel production deployment exists. The remaining actions below require credentials, a real platform account, a native/physical environment, or a human-controlled release decision.
+The merged core is now strongly verified at L2 across the main product domains. The remaining actions below require provider credentials, real platform accounts, signing identities, physical/store infrastructure, or a human-controlled commercial decision.
 
-## A. Enable zero-cost technical verification
+## A. Vercel
 
-1. A committed `pnpm-lock.yaml` and desktop `Cargo.lock` are already present on `main` and frozen install has passed in hosted CI.
-2. A self-hosted runner is only needed for the remaining native/manual gates. When used, register an owned Linux/WSL runner with the labels required by the current workflow.
-3. Run **Self-Hosted Verification** against the current target branch only when native/runtime acceptance requires it.
-4. Preserve the resulting artifacts/logs with exact commit identity; do not convert source presence into verification claims.
+1. Confirm the connected Vercel Project Settings match the repository contract: repository root, Next.js, Node 22.x, build `pnpm --dir packages/web build`, output `packages/web/out`.
+2. Provide the Vercel deployment credentials to the guarded GitHub release environment.
+3. Produce a current-main prebuilt production deployment with `NEXT_PUBLIC_ORBIT_RELEASE_SHA=08e0f61...` and retain the live verification output.
+4. Exercise rollback to the previous verified production deployment and retain evidence.
 
-## B. Web deployment
+PR #76 now makes missing credentials a hard gate instead of a soft-disable.
 
-The repository now uses a reproducible web deployment contract:
+## B. Real connector verification
 
-- Next.js static export.
-- Frozen pnpm install.
-- `packages/web/out` output.
-- Missing lockfile fails closed.
+Perform controlled user-authorized tests for:
 
-Before declaring Vercel provenance fully reconciled, verify the Vercel project settings manually:
-
-- Root Directory: repository root (the single deployment source is the root `vercel.json`).
-- Framework: Next.js.
-- Production build must use the committed lockfile.
-- Output directory: `packages/web/out`.
-- Build command: `pnpm --dir packages/web build`.
-
-Do not treat an older Vercel ERROR caused by dependency metadata fetching as proof that the current source build fails.
-
-## C. Desktop/mobile distribution
-
-Desktop release remains gated on:
-
-- clean quality verification;
-- Tauri bundle build;
-- platform-specific artifact generation;
-- signing/notarization when credentials become available.
-
-Mobile release remains a validation artifact until Android/iOS signing and store distribution are independently configured.
-
-## D. Commercial release
-
-Before selling the product as a production release, collect current evidence for:
-
-- security audit;
-- backup/restore drill;
-- connector authorization tests;
+- Telegram authorization + one controlled delivery;
+- LinkedIn authorization + one controlled publish;
 - challenge/manual-intervention behavior;
-- performance measurements;
-- browser E2E;
-- crash/restart recovery;
-- signed artifacts and checksums;
-- terms/privacy/refund pages;
-- actual payment/checkout configuration.
+- failure/retry/recovery;
+- audit record verification.
+
+No bypass, stealth, anti-ban or unauthorized bulk automation is part of the acceptance criteria.
+
+## C. Native / sync / accessibility
+
+- Run the full restart/migration/crash-recovery acceptance and consolidate evidence.
+- Run live multi-device CRDT convergence using real authorized devices/network.
+- Complete manual WCAG/RTL audit in addition to automated checks.
+- Complete 24-hour stability soak on the approved main ref.
+
+## D. Distribution
+
+- Produce signed/notarized desktop installers when signing identities are available.
+- Produce production-signed Android/iOS packages and complete store submission/distribution.
+- Perform the final release-tag checksum/provenance drill.
+
+## E. Governance / commercial
+
+- Enable and verify GitHub main branch protection/rulesets with required CI/native checks.
+- Configure actual payment/billing and verify checkout/refund behavior.
+- Perform final legal/commercial publication review.
+
+## Release rule
+
+Commercial Production Proven means every release-critical item has L3 evidence. Do not infer L3 from source presence, a live old deployment, or a green CI run alone.

@@ -1,6 +1,16 @@
 import { readFile } from "node:fs/promises";
 
 const manifestPath = process.argv[2] ?? "vercel-dry-run.json";
+const vercelConfig = JSON.parse(await readFile("vercel.json", "utf8"));
+if (
+  vercelConfig.framework !== "nextjs" ||
+  vercelConfig.buildCommand !== "pnpm --dir packages/web build" ||
+  vercelConfig.outputDirectory !== "packages/web/out"
+) {
+  throw new Error(
+    "vercel.json does not match the canonical Next.js static-export deployment contract",
+  );
+}
 const raw = await readFile(manifestPath, "utf8");
 
 let data;
@@ -32,11 +42,7 @@ if (frameworkCandidates.some((value) => value.includes("vite"))) {
 
 if (
   !frameworkCandidates.some(
-    (value) =>
-      value.includes("nextjs") ||
-      value.includes("next.js") ||
-      value === "other" ||
-      value === "null",
+    (value) => value.includes("nextjs") || value.includes("next.js"),
   )
 ) {
   throw new Error(
