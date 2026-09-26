@@ -261,6 +261,116 @@ describe("experimentation", () => {
   });
 });
 
+describe("experiment execution evidence bridge", () => {
+  const runningExperiment: ExperimentDefinition = {
+    id: "exp-1",
+    workspaceId: "ws-1",
+    name: "Launch test",
+    hypothesis: "Benefit improves conversion",
+    objectiveMetric: "conversion_rate",
+    status: "running",
+    variants: [
+      { id: "control", name: "Control", allocationPercent: 50 },
+      { id: "benefit", name: "Benefit", allocationPercent: 50 },
+    ],
+  };
+
+  it("turns a successful delivery into exposure without fabricating engagement", () => {
+    const observation = buildExperimentObservationFromExecution(
+      runningExperiment,
+      {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "benefit",
+        subjectId: "lead-42",
+        observedAt: "2026-09-26T12:00:00Z",
+        outcome: { status: "succeeded", externalId: "post-1" },
+      },
+    );
+    expect(observation).toMatchObject({
+      exposed: true,
+      engaged: false,
+      converted: false,
+    });
+  });
+
+  it("preserves explicitly observed downstream evidence", () => {
+    const observation = buildExperimentObservationFromExecution(
+      runningExperiment,
+      {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "benefit",
+        subjectId: "lead-42",
+        observedAt: "2026-09-26T12:01:00Z",
+        outcome: { status: "succeeded" },
+        engagementObserved: true,
+        conversionObserved: true,
+        value: 125,
+      },
+    );
+    expect(observation).toMatchObject({
+      exposed: true,
+      engaged: true,
+      converted: true,
+      value: 125,
+    });
+  });
+
+  it("does not treat blocked or failed delivery as exposure", () => {
+    for (const status of ["blocked", "failed"] as const) {
+      expect(
+        buildExperimentObservationFromExecution(runningExperiment, {
+          experimentId: "exp-1",
+          workspaceId: "ws-1",
+          variantId: "benefit",
+          subjectId: "lead-42",
+          observedAt: "2026-09-26T12:02:00Z",
+          outcome: { status },
+        }).exposed,
+      ).toBe(false);
+    }
+  });
+
+  it("rejects downstream evidence without a successful exposure", () => {
+    expect(() =>
+      buildExperimentObservationFromExecution(runningExperiment, {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "benefit",
+        subjectId: "lead-42",
+        observedAt: "2026-09-26T12:03:00Z",
+        outcome: { status: "blocked" },
+        conversionObserved: true,
+      }),
+    ).toThrow("experiment_execution_outcome_without_exposure");
+  });
+
+  it("rejects cross-workspace and unknown-variant evidence", () => {
+    expect(() =>
+      buildExperimentObservationFromExecution(runningExperiment, {
+        experimentId: "exp-1",
+        workspaceId: "ws-2",
+        variantId: "benefit",
+        subjectId: "lead-42",
+        observedAt: "2026-09-26T12:04:00Z",
+        outcome: { status: "succeeded" },
+      }),
+    ).toThrow("experiment_execution_workspace_mismatch");
+
+    expect(() =>
+      buildExperimentObservationFromExecution(runningExperiment, {
+        experimentId: "exp-1",
+        workspaceId: "ws-1",
+        variantId: "unknown",
+        subjectId: "lead-42",
+        observedAt: "2026-09-26T12:04:00Z",
+        outcome: { status: "succeeded" },
+      }),
+    ).toThrow("experiment_execution_unknown_variant");
+  });
+});
+
 describe("experiment operating bindings and learning write-back", () => {
   const campaign = {
     id: "campaign-1",
