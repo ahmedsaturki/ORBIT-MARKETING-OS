@@ -64,7 +64,7 @@
         "live 200/404/header/RTL checks",
         "runtime error aggregation clean"
       ],
-      "notes": "Current live deployment predates main=377e86; canonical Vercel SHA provenance is not yet proven."
+      "notes": "Current live deployment predates main=08e0f61; canonical Vercel SHA provenance is not yet proven."
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",
