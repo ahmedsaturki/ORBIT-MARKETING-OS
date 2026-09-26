@@ -51,6 +51,32 @@ export interface PlatformValidationResult {
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 const EXTENSION_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{1,63}$/;
 
+const EXTENSION_KINDS = new Set<PlatformExtensionKind>([
+  "connector",
+  "agent",
+  "workflow",
+  "vertical_pack",
+]);
+const CAPABILITY_RISKS = new Set<PlatformCapabilityRisk>([
+  "low",
+  "medium",
+  "high",
+  "critical",
+]);
+const CONNECTOR_AUTH_MODES = new Set<ConnectorAuthMode>([
+  "official_oauth",
+  "official_token",
+  "user_authorized_browser",
+  "manual",
+]);
+const VERTICAL_POLICY_PACKS = new Set<VerticalPackManifest["defaultPolicyPack"]>([
+  "conservative",
+  "balanced",
+  "agency",
+  "enterprise",
+  "regulated",
+]);
+
 function requiredText(value: string, error: string, errors: string[]): void {
   if (!value.trim()) errors.push(error);
 }
@@ -69,6 +95,12 @@ function validateCapabilities(
       errors,
     );
     if (!seen.add(capability.id)) errors.push("duplicate_capability");
+    if (!CAPABILITY_RISKS.has(capability.risk)) {
+      errors.push("capability_risk_invalid");
+    }
+    if (typeof capability.externallyVisible !== "boolean") {
+      errors.push("externally_visible_invalid");
+    }
     if (capability.requiredScopes.some((scope) => !scope.trim())) {
       errors.push("empty_capability_scope");
     }
@@ -102,6 +134,12 @@ export function validatePlatformExtensionManifest(
   if (manifest.capabilities.length === 0) {
     errors.push("extension_capability_required");
   }
+  if (!EXTENSION_KINDS.has(manifest.kind)) {
+    errors.push("extension_kind_invalid");
+  }
+  if (typeof manifest.enabledByDefault !== "boolean") {
+    errors.push("enabled_by_default_invalid");
+  }
   if (manifest.requiredPermissions.some((permission) => !permission.trim())) {
     errors.push("empty_required_permission");
   }
@@ -117,6 +155,9 @@ export function validateConnectorManifest(
   if (manifest.authModes.length === 0) {
     errors.push("connector_auth_mode_required");
   }
+  if (manifest.authModes.some((mode) => !CONNECTOR_AUTH_MODES.has(mode))) {
+    errors.push("connector_auth_mode_invalid");
+  }
   if (
     manifest.authModes.includes("user_authorized_browser") &&
     !manifest.requiredPermissions.includes("browser:authorized-session")
@@ -131,6 +172,9 @@ export function validateVerticalPackManifest(
 ): PlatformValidationResult {
   const errors = [...validatePlatformExtensionManifest(manifest).errors];
   requiredText(manifest.vertical, "vertical_required", errors);
+  if (!VERTICAL_POLICY_PACKS.has(manifest.defaultPolicyPack)) {
+    errors.push("vertical_policy_pack_invalid");
+  }
   if (manifest.lifecycleStages.length < 2) {
     errors.push("lifecycle_stage_required");
   }
