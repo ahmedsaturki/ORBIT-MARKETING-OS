@@ -77,7 +77,7 @@ export function BulkPlannerPanel({
         startAt: new Date(startAt).toISOString(),
         intervalMinutes: Number(intervalMinutes),
         count: Number(count),
-        seed: `bulk-${campaignId}-${accountId}-${contentId}`,
+        seed: planSeed,
       });
       return plan;
     } catch (caught: unknown) {
@@ -156,6 +156,7 @@ export function BulkPlannerPanel({
         `تمت إضافة ${results.length} مهمة للنظام. التنفيذ نفسه يظل خاضعًا للـqueue والسياسات والموافقة.`,
       );
       setPreview([]);
+      setPlanSeed(`bulk-${Date.now()}`);
       await onTasksChanged();
     } catch (caught: unknown) {
       setError(
