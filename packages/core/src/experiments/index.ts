@@ -107,10 +107,20 @@ export function validateExperiment(
     errors.push("allocation_must_equal_100");
   }
 
+  const startTime = experiment.startsAt ? Date.parse(experiment.startsAt) : undefined;
+  const endTime = experiment.endsAt ? Date.parse(experiment.endsAt) : undefined;
+  if (experiment.startsAt && startTime !== undefined && Number.isNaN(startTime)) {
+    errors.push("invalid_start_time");
+  }
+  if (experiment.endsAt && endTime !== undefined && Number.isNaN(endTime)) {
+    errors.push("invalid_end_time");
+  }
   if (
-    experiment.startsAt &&
-    experiment.endsAt &&
-    new Date(experiment.startsAt).getTime() > new Date(experiment.endsAt).getTime()
+    startTime !== undefined &&
+    endTime !== undefined &&
+    !Number.isNaN(startTime) &&
+    !Number.isNaN(endTime) &&
+    startTime > endTime
   ) {
     errors.push("start_after_end");
   }
@@ -119,11 +129,13 @@ export function validateExperiment(
 }
 
 function stableBucket(input: string): number {
-  // FNV-1a 32-bit. Deterministic across platforms/runtimes and dependency-free.
+  // FNV-1a 32-bit over UTF-8 bytes. This keeps assignment portable across JS/Rust
+  // implementations as long as they hash the same UTF-8 input string.
   let hash = 0x811c9dc5;
+  const bytes = new TextEncoder().encode(input);
 
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
+  for (const byte of bytes) {
+    hash ^= byte;
     hash = Math.imul(hash, 0x01000193);
   }
 
