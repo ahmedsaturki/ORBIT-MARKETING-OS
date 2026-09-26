@@ -3704,8 +3704,8 @@ fn validate_experiment_status(status: &str) -> Result<String, String> {
 }
 
 fn normalize_experiment_variants_json(value: &str) -> Result<String, String> {
-    let mut variants: Vec<ExperimentVariantInput> =
-        serde_json::from_str(value).map_err(|_| "variants_json must be valid JSON".to_string())?;
+    let mut variants: Vec<ExperimentVariantInput> = serde_json::from_str(value)
+        .map_err(|_| "variants_json must be valid JSON".to_string())?;
     if variants.len() < 2 || variants.len() > 50 {
         return Err("experiment requires between 2 and 50 variants".to_string());
     }
@@ -3724,13 +3724,22 @@ fn normalize_experiment_variants_json(value: &str) -> Result<String, String> {
             return Err("experiment variant allocation must be between 0 and 100".to_string());
         }
         allocation += variant.allocation_percent;
-        variant.content_id = variant.content_id.take().map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
-        variant.message = variant.message.take().map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
+        variant.content_id = variant
+            .content_id
+            .take()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+        variant.message = variant
+            .message
+            .take()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
     }
     if (allocation - 100.0).abs() > 0.000001 {
         return Err("experiment variant allocation must equal 100".to_string());
     }
-    serde_json::to_string(&variants).map_err(|_| "failed to normalize variants_json".to_string())
+    serde_json::to_string(&variants)
+        .map_err(|_| "failed to normalize variants_json".to_string())
 }
 
 fn normalize_experiment_window(
@@ -3780,7 +3789,9 @@ fn experiment_variant_for_subject(
     subject_id: &str,
     variants: &[ExperimentVariantInput],
 ) -> Result<String, String> {
-    let bucket = f64::from(fnv1a_bucket(&format!("{}:{}:{}", workspace_id, experiment_id, subject_id))) / 100.0;
+    let bucket =
+        f64::from(fnv1a_bucket(&format!("{}:{}:{}", workspace_id, experiment_id, subject_id)))
+            / 100.0;
     let mut cumulative = 0.0;
     for variant in variants {
         cumulative += variant.allocation_percent;
@@ -3788,7 +3799,10 @@ fn experiment_variant_for_subject(
             return Ok(variant.id.clone());
         }
     }
-    variants.last().map(|variant| variant.id.clone()).ok_or_else(|| "experiment has no variants".to_string())
+    variants
+        .last()
+        .map(|variant| variant.id.clone())
+        .ok_or_else(|| "experiment has no variants".to_string())
 }
 
 fn validate_rule_pack_json(platform: &str, rules_json: &str) -> Result<serde_json::Value, String> {
@@ -9245,7 +9259,8 @@ fn append_experiment_operational_event(
     let payload = serde_json::json!({
         "source": "experiment_studio",
         "domain": "experimentation",
-    }).to_string();
+    })
+    .to_string();
     append_operational_event(
         connection,
         workspace_id,
@@ -9260,7 +9275,8 @@ fn append_experiment_operational_event(
         None,
         None,
         Some(&payload),
-    ).map_err(|error| error.to_string())
+    )
+    .map_err(|error| error.to_string())
 }
 
 fn experiment_upsert(
@@ -9278,7 +9294,8 @@ fn experiment_upsert(
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let name = validate_label(&name).map_err(|error| error.to_string())?;
     let hypothesis = hypothesis.trim().to_string();
-    let objective_metric = validate_label(&objective_metric).map_err(|error| error.to_string())?;
+    let objective_metric =
+        validate_label(&objective_metric).map_err(|error| error.to_string())?;
     if hypothesis.is_empty() || hypothesis.len() > 10_000 {
         return Err("invalid experiment hypothesis".to_string());
     }
@@ -9300,13 +9317,33 @@ fn experiment_upsert(
            variants_json=excluded.variants_json, starts_at=excluded.starts_at,
            ends_at=excluded.ends_at, updated_at=excluded.updated_at
          WHERE experiments.workspace_id=excluded.workspace_id",
-        params![&id, &workspace_id, &name, &hypothesis, &objective_metric, &status, &variants_json, &starts_at, &ends_at, &timestamp],
-    ).map_err(|error| error.to_string())?;
+        params![
+            &id,
+            &workspace_id,
+            &name,
+            &hypothesis,
+            &objective_metric,
+            &status,
+            &variants_json,
+            &starts_at,
+            &ends_at,
+            &timestamp
+        ],
+    )
+    .map_err(|error| error.to_string())?;
     if changed != 1 {
         return Err("experiment id already belongs to another workspace".to_string());
     }
-    write_audit_for_workspace(&connection, &workspace_id, "experiment", "upsert", "success", "user", Some(&id))
-        .map_err(|error| error.to_string())?;
+    write_audit_for_workspace(
+        &connection,
+        &workspace_id,
+        "experiment",
+        "upsert",
+        "success",
+        "user",
+        Some(&id),
+    )
+    .map_err(|error| error.to_string())?;
     let actor_id = "desktop-user".to_string();
     let mut connection = connection;
     append_experiment_operational_event(
@@ -9317,8 +9354,16 @@ fn experiment_upsert(
         &id,
     )?;
     Ok(ExperimentView {
-        id, name, hypothesis, objective_metric, status, variants_json, starts_at, ends_at,
-        created_at: timestamp.clone(), updated_at: timestamp,
+        id,
+        name,
+        hypothesis,
+        objective_metric,
+        status,
+        variants_json,
+        starts_at,
+        ends_at,
+        created_at: timestamp.clone(),
+        updated_at: timestamp,
     })
 }
 
@@ -9326,21 +9371,44 @@ fn experiment_upsert(
 fn experiment_list(app: tauri::AppHandle) -> Result<Vec<ExperimentView>, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"])
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &[
+            "owner",
+            "admin",
+            "editor",
+            "operator",
+            "reviewer",
+            "viewer",
+        ],
+    )
+    .map_err(|error| error.to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, hypothesis, objective_metric, status, variants_json,
+                    starts_at, ends_at, created_at, updated_at
+             FROM experiments WHERE workspace_id=?1 ORDER BY updated_at DESC",
+        )
         .map_err(|error| error.to_string())?;
-    let mut statement = connection.prepare(
-        "SELECT id, name, hypothesis, objective_metric, status, variants_json,
-                starts_at, ends_at, created_at, updated_at
-         FROM experiments WHERE workspace_id=?1 ORDER BY updated_at DESC",
-    ).map_err(|error| error.to_string())?;
-    let rows = statement.query_map(params![workspace_id], |row| {
-        Ok(ExperimentView {
-            id: row.get(0)?, name: row.get(1)?, hypothesis: row.get(2)?, objective_metric: row.get(3)?,
-            status: row.get(4)?, variants_json: row.get(5)?, starts_at: row.get(6)?, ends_at: row.get(7)?,
-            created_at: row.get(8)?, updated_at: row.get(9)?,
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok(ExperimentView {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                hypothesis: row.get(2)?,
+                objective_metric: row.get(3)?,
+                status: row.get(4)?,
+                variants_json: row.get(5)?,
+                starts_at: row.get(6)?,
+                ends_at: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
+            })
         })
-    }).map_err(|error| error.to_string())?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -9353,20 +9421,34 @@ fn experiment_assign_variant(
     let experiment_id = validate_label(&experiment_id).map_err(|error| error.to_string())?;
     let subject_id = validate_label(&subject_id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"])
-        .map_err(|error| error.to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &[
+            "owner",
+            "admin",
+            "editor",
+            "operator",
+            "reviewer",
+            "viewer",
+        ],
+    )
+    .map_err(|error| error.to_string())?;
     let (stored_workspace, status, starts_at, ends_at, variants_json): (
         String,
         String,
         Option<String>,
         Option<String>,
         String,
-    ) = connection.query_row(
-        "SELECT workspace_id, status, starts_at, ends_at, variants_json FROM experiments WHERE id=?1",
-        params![&experiment_id],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
-    ).optional().map_err(|error| error.to_string())?
-    .ok_or_else(|| "experiment not found".to_string())?;
+    ) = connection
+        .query_row(
+            "SELECT workspace_id, status, starts_at, ends_at, variants_json FROM experiments WHERE id=?1",
+            params![&experiment_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "experiment not found".to_string())?;
     if stored_workspace != workspace_id {
         return Err("experiment belongs to another workspace".to_string());
     }
@@ -9390,7 +9472,8 @@ fn experiment_assign_variant(
     }
     let variants: Vec<ExperimentVariantInput> = serde_json::from_str(&variants_json)
         .map_err(|_| "stored experiment variants are invalid".to_string())?;
-    let variant_id = experiment_variant_for_subject(&workspace_id, &experiment_id, &subject_id, &variants)?;
+    let variant_id =
+        experiment_variant_for_subject(&workspace_id, &experiment_id, &subject_id, &variants)?;
     let assignment = ExperimentAssignmentView {
         experiment_id,
         workspace_id: workspace_id.clone(),
@@ -9443,16 +9526,26 @@ fn experiment_record_observation(
     if value.is_some_and(|number| !number.is_finite()) {
         return Err("observation value must be finite".to_string());
     }
-    let observed_at = normalize_experiment_window(observed_at, None)?.0.unwrap_or_else(chrono_like_timestamp);
+    let observed_at =
+        normalize_experiment_window(observed_at, None)?
+            .0
+            .unwrap_or_else(chrono_like_timestamp);
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator"])
-        .map_err(|error| error.to_string())?;
-    let variants_json: String = connection.query_row(
-        "SELECT variants_json FROM experiments WHERE id=?1 AND workspace_id=?2",
-        params![&experiment_id, &workspace_id],
-        |row| row.get(0),
-    ).optional().map_err(|error| error.to_string())?
-    .ok_or_else(|| "experiment not found in active workspace".to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+    let variants_json: String = connection
+        .query_row(
+            "SELECT variants_json FROM experiments WHERE id=?1 AND workspace_id=?2",
+            params![&experiment_id, &workspace_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "experiment not found in active workspace".to_string())?;
     let variants: Vec<ExperimentVariantInput> = serde_json::from_str(&variants_json)
         .map_err(|_| "stored experiment variants are invalid".to_string())?;
     if !variants.iter().any(|variant| variant.id == variant_id) {
@@ -9465,14 +9558,25 @@ fn experiment_record_observation(
          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
          ON CONFLICT(id) DO NOTHING",
         params![
-            &id, &workspace_id, &experiment_id, &variant_id, &subject_id, &observed_at,
-            if exposed {1} else {0}, if engaged {1} else {0}, if converted {1} else {0},
-            &value, &observed_at
+            &id,
+            &workspace_id,
+            &experiment_id,
+            &variant_id,
+            &subject_id,
+            &observed_at,
+            if exposed { 1 } else { 0 },
+            if engaged { 1 } else { 0 },
+            if converted { 1 } else { 0 },
+            &value,
+            &observed_at,
         ],
-    ).map_err(|error| error.to_string())?;
-    if changed == 0 { return Ok(false); }
+    )
+    .map_err(|error| error.to_string())?;
+    if changed == 0 {
+        return Ok(false);
+    }
     let actor_id = local_user_id(&connection).map_err(|error| error.to_string())?;
-    let audit_result = write_audit_for_workspace(
+    write_audit_for_workspace(
         &connection,
         &workspace_id,
         "experiment",
@@ -9490,7 +9594,6 @@ fn experiment_record_observation(
         "experiment.observation_recorded",
         &id,
     )?;
-    let _ = audit_result;
     Ok(true)
 }
 
@@ -9502,21 +9605,42 @@ fn experiment_summary(
     let workspace_id = active_workspace_id();
     let experiment_id = validate_label(&experiment_id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor", "operator", "reviewer", "viewer"])
-        .map_err(|error| error.to_string())?;
-    let variants_json: String = connection.query_row(
-        "SELECT variants_json FROM experiments WHERE id=?1 AND workspace_id=?2",
-        params![&experiment_id, &workspace_id],
-        |row| row.get(0),
-    ).optional().map_err(|error| error.to_string())?
-    .ok_or_else(|| "experiment not found in active workspace".to_string())?;
+    require_workspace_role_for(
+        &connection,
+        &workspace_id,
+        &[
+            "owner",
+            "admin",
+            "editor",
+            "operator",
+            "reviewer",
+            "viewer",
+        ],
+    )
+    .map_err(|error| error.to_string())?;
+    let variants_json: String = connection
+        .query_row(
+            "SELECT variants_json FROM experiments WHERE id=?1 AND workspace_id=?2",
+            params![&experiment_id, &workspace_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "experiment not found in active workspace".to_string())?;
     let variants: Vec<ExperimentVariantInput> = serde_json::from_str(&variants_json)
         .map_err(|_| "stored experiment variants are invalid".to_string())?;
     let mut summaries = Vec::with_capacity(variants.len());
     let mut observation_count = 0_i64;
     for variant in variants {
-        let (observation_count_for_variant, exposure_count, engagement_count, conversion_count, total_value): (i64, i64, i64, i64, f64) = connection.query_row(
-            "SELECT
+        let (
+            observation_count_for_variant,
+            exposure_count,
+            engagement_count,
+            conversion_count,
+            total_value,
+        ): (i64, i64, i64, i64, f64) = connection
+            .query_row(
+                "SELECT
                COUNT(*),
                COALESCE(SUM(CASE WHEN exposed=1 THEN 1 ELSE 0 END),0),
                COALESCE(SUM(CASE WHEN exposed=1 AND engaged=1 THEN 1 ELSE 0 END),0),
@@ -9524,15 +9648,18 @@ fn experiment_summary(
                COALESCE(SUM(CASE WHEN exposed=1 THEN COALESCE(value,0) ELSE 0 END),0)
              FROM experiment_observations
              WHERE workspace_id=?1 AND experiment_id=?2 AND variant_id=?3",
-            params![&workspace_id, &experiment_id, &variant.id],
-            |row| Ok((
-                row.get(0)?,
-                row.get(1)?,
-                row.get(2)?,
-                row.get(3)?,
-                row.get(4)?,
-            )),
-        ).map_err(|error| error.to_string())?;
+                params![&workspace_id, &experiment_id, &variant.id],
+                |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                    ))
+                },
+            )
+            .map_err(|error| error.to_string())?;
         observation_count += observation_count_for_variant;
         summaries.push(ExperimentVariantSummaryView {
             variant_id: variant.id,
@@ -9540,12 +9667,23 @@ fn experiment_summary(
             engagement_count,
             conversion_count,
             total_value,
-            engagement_rate: if exposure_count == 0 {0.0} else {engagement_count as f64/exposure_count as f64},
-            conversion_rate: if exposure_count == 0 {0.0} else {conversion_count as f64/exposure_count as f64},
+            engagement_rate: if exposure_count == 0 {
+                0.0
+            } else {
+                engagement_count as f64 / exposure_count as f64
+            },
+            conversion_rate: if exposure_count == 0 {
+                0.0
+            } else {
+                conversion_count as f64 / exposure_count as f64
+            },
         });
     }
     Ok(ExperimentSummaryView {
-        experiment_id, workspace_id, observation_count, variants: summaries,
+        experiment_id,
+        workspace_id,
+        observation_count,
+        variants: summaries,
         statistical_significance_claimed: false,
     })
 }
@@ -12587,7 +12725,7 @@ mod experimentation_runtime_tests {
             r#"[{"id":"control","name":"Control","allocationPercent":50},{"id":"test","name":"Test","allocationPercent":50}]"#,
         ).expect("valid variants");
         assert!(variants.contains("allocationPercent"));
-        assert!(normalize_experiment_status("running").is_ok());
+        assert!(validate_experiment_status("running").is_ok());
         assert!(normalize_experiment_status("unknown").is_err());
         assert!(normalize_experiment_window(
             Some("2026-09-26T03:00:00+03:00".to_string()),
@@ -12806,7 +12944,6 @@ mod interrupted_restore_recovery_tests {
         assert!(columns.contains(&"sequence".to_string()));
         assert!(columns.contains(&"actor_id".to_string()));
         assert!(columns.contains(&"payload_json".to_string()));
-        assert!(columns.contains(&"sequence".to_string()));
     }
 
     #[test]
