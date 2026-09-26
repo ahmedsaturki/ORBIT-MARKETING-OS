@@ -472,7 +472,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
           id,
           conversationId,
           direction: "inbound",
-          body: "E2E Search Message",
+          body: "E2E Search Message 100%_!",
         }),
       {
         id: "e2e-search-message-" + suffix,
@@ -576,6 +576,16 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       "E2E Search Secret",
     )) as Array<{ kind: string; id: string; title: string }>;
     expect(secretSearch).toEqual([]);
+
+    const wildcardSearch = (await page!.evaluate(
+      (query) =>
+        window.__TAURI_INTERNALS__.invoke("global_search", {
+          query,
+          limit: 50,
+        }),
+      "100%_!",
+    )) as Array<{ kind: string; id: string; title: string }>;
+    expect(wildcardSearch.some((item) => item.kind === "message")).toBe(true);
 
     await page!.evaluate(() =>
       window.__TAURI_INTERNALS__.invoke("vault_delete", {
