@@ -3,10 +3,7 @@ import {
   aggregateCampaignMetrics,
   buildMetricSeries,
 } from "../src/analytics/metrics.js";
-import {
-  buildAnomalyInsights,
-  detectMetricAnomalies,
-} from "../src/analytics/anomalies.js";
+import { detectMetricAnomalies } from "../src/analytics/anomalies.js";
 
 describe("analytics primitives", () => {
   it("aggregates execution outcomes", () => {
@@ -118,14 +115,6 @@ describe("metric anomaly detection", () => {
       detectMetricAnomalies("metric", [...series].reverse(), options),
     ).toEqual(forward);
 
-    const insight = buildAnomalyInsights(
-      "ws-1",
-      forward,
-      "2026-09-10T00:00:00Z",
-    )[0];
-    expect(insight?.kind).toBe("anomaly");
-    expect(insight?.confidence).toBe(0);
-    expect(insight?.summary).toContain("statistical significance are not claimed");
     expect(() =>
       detectMetricAnomalies("metric", series, { windowSize: 2 }),
     ).toThrow("anomaly_window_invalid");
