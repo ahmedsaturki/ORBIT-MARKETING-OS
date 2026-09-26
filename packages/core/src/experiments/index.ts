@@ -7,6 +7,7 @@
  * observed outcomes for the learning loop.
  */
 
+import type { ConnectorOutcome } from "../connectors/contracts.js";
 import type { MarketingInsight } from "../outcomes/index.js";
 import type { Campaign } from "../types/index.js";
 
@@ -489,10 +490,7 @@ export interface ExperimentExecutionEvidence {
   readonly variantId: string;
   readonly subjectId: string;
   readonly observedAt: string;
-  readonly outcome: {
-    readonly status: "succeeded" | "blocked" | "failed";
-    readonly externalId?: string;
-  };
+  readonly outcome: ConnectorOutcome;
   readonly engagementObserved?: boolean;
   readonly conversionObserved?: boolean;
   readonly value?: number;
