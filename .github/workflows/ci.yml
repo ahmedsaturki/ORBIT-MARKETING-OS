@@ -70,6 +70,9 @@ jobs:
       - name: Core coverage
         run: pnpm --filter @orbit/core test:coverage
 
+      - name: Governed CLI/MCP surface smoke
+        run: pnpm test:surface
+
       - name: Runtime smoke
         timeout-minutes: 3
         run: pnpm test:runtime
