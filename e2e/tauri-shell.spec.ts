@@ -254,6 +254,15 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     await page.waitForURL(/tauri\.localhost/, { timeout: 10_000 });
 
     await expect(page).toHaveTitle(/ORBIT Marketing OS/);
+    await expect(
+      page.getByRole("heading", { name: "تقويم التشغيل والنشر" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "قائمة مراقبة المنافسين" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "مخطط النشر الجماعي" }),
+    ).toBeVisible();
     expect(await page.evaluate(() => typeof window.__TAURI_INTERNALS__)).toBe(
       "object",
     );

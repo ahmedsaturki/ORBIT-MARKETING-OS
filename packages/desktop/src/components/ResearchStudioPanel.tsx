@@ -63,6 +63,75 @@ const kindOptions = [
   ["general", "General"],
 ] as const;
 
+const COMPETITOR_WATCHLIST = [
+  {
+    id: "competitor-rbm-cloud",
+    name: "RBM Cloud",
+    locator: "https://rbmcloud.com/",
+    focus:
+      "جدولة ونشر متعدد القنوات، تقويم، فرق، تحليلات، مكتبة وسائط، watermark وروابط.",
+  },
+  {
+    id: "competitor-rbm-tools",
+    name: "RBM Tools",
+    locator: "https://rbm.tools/",
+    focus: "سطح دخول عام؛ لا نفترض قدرات غير ظاهرة بدون دليل عام.",
+  },
+  {
+    id: "competitor-rbm-whatsapp-cloud",
+    name: "RBM WhatsApp Cloud",
+    locator: "https://rbmwhats.tools/",
+    focus:
+      "جدولة، bulk posts، تقويم، مكتبة وسائط، watermark، analytics وauto reposting.",
+  },
+  {
+    id: "competitor-buffer",
+    name: "Buffer",
+    locator: "https://buffer.com/",
+    focus: "نشر/جدولة، تقويم، تعاون، تحليلات، Inbox ومساعدة AI.",
+  },
+  {
+    id: "competitor-metricool",
+    name: "Metricool",
+    locator: "https://metricool.com/social-media-management/",
+    focus: "Planner، bulk scheduling، analytics، inbox، SmartLinks وتقارير.",
+  },
+  {
+    id: "competitor-publer",
+    name: "Publer",
+    locator: "https://publer.com/help/en/article/15kxhoi/",
+    focus: "Bulk scheduling، إعادة استخدام، AutoSchedule وMedia Library.",
+  },
+  {
+    id: "competitor-postiz",
+    name: "Postiz",
+    locator: "https://postiz.com/",
+    focus:
+      "Agentic social scheduling، 30+ platforms، MCP، calendar، analytics، media وAI.",
+  },
+  {
+    id: "competitor-highlevel",
+    name: "HighLevel",
+    locator: "https://help.gohighlevel.com/",
+    focus:
+      "Social Planner، bulk CSV/XLSX، recurring/evergreen/RSS workflows، approvals وCRM.",
+  },
+  {
+    id: "competitor-respond-io",
+    name: "respond.io",
+    locator: "https://respond.io/omnichannel-ai-crm-conversation-platform",
+    focus:
+      "Omnichannel inbox، AI Agents، CRM context، routing وconversation-to-revenue workflows.",
+  },
+  {
+    id: "competitor-mixpost",
+    name: "Mixpost",
+    locator: "https://docs.mixpost.app/",
+    focus:
+      "Self-hosted social media management، scheduling، privacy وAPI/extensibility.",
+  },
+] as const;
+
 function splitComma(value: string): string[] {
   return value
     .split(",")
@@ -135,6 +204,40 @@ export function ResearchStudioPanel({ workspaceId }: ResearchStudioProps) {
   useEffect(() => {
     if (workspaceId) void load();
   }, [load, workspaceId]);
+
+  const addCompetitorSource = async (
+    competitor: (typeof COMPETITOR_WATCHLIST)[number],
+  ): Promise<void> => {
+    const existing = sources.some(
+      (source) => source.locator === competitor.locator,
+    );
+    if (existing) {
+      setMessage(`المصدر موجود بالفعل: ${competitor.name}`);
+      return;
+    }
+
+    try {
+      setBusy(true);
+      setError("");
+      setMessage("");
+      await native("knowledge_source_upsert", {
+        id: `${workspaceId}:${competitor.id}`,
+        sourceType: "research",
+        title: `Competitor: ${competitor.name}`,
+        locator: competitor.locator,
+      });
+      await load();
+      setMessage(`تمت إضافة ${competitor.name} إلى مصادر البحث المحلية.`);
+    } catch (caught: unknown) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : `فشل إضافة مصدر المنافس: ${competitor.name}`,
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const saveSource = async (): Promise<void> => {
     const id = sourceId.trim() || "research-source-" + Date.now();
@@ -300,6 +403,41 @@ export function ResearchStudioPanel({ workspaceId }: ResearchStudioProps) {
           <CheckCircle2 size={16} /> {message}
         </div>
       ) : null}
+
+      <section className="card" aria-labelledby="competitor-watchlist-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">COMPETITIVE WATCH</div>
+            <h3 id="competitor-watchlist-title">قائمة مراقبة المنافسين</h3>
+            <p>
+              مصادر عامة جاهزة للإضافة إلى ORBIT Research. الإضافة تحفظ المصدر
+              والرابط محليًا ولا تنفذ أي اتصال خارجي أو نسخ من المنتج المنافس.
+            </p>
+          </div>
+        </div>
+        <div className="grid">
+          {COMPETITOR_WATCHLIST.map((competitor) => (
+            <article className="card" key={competitor.id}>
+              <strong>{competitor.name}</strong>
+              <p>{competitor.focus}</p>
+              <div
+                className="account-meta"
+                style={{ overflowWrap: "anywhere" }}
+              >
+                {competitor.locator}
+              </div>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() => void addCompetitorSource(competitor)}
+                disabled={busy}
+              >
+                إضافة كمصدر بحث
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <div className="grid">
         <div className="card">
