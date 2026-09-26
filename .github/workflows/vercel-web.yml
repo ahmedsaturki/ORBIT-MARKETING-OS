@@ -42,44 +42,42 @@ jobs:
       - name: Web E2E
         run: pnpm test:e2e
 
-  deploy:
+  vercel_credentials:
+    name: Vercel credential gate
     needs: quality
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 5
     steps:
-      - name: Check Vercel credentials
-        id: gate
+      - name: Require Vercel release credentials
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "Vercel deployment is disabled until VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID are configured."
-          fi
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
 
+  deploy:
+    needs: [quality, vercel_credentials]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        if: steps.gate.outputs.enabled == 'true'
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
-        if: steps.gate.outputs.enabled == 'true'
         with:
           version: 10.17.1
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        if: steps.gate.outputs.enabled == 'true'
         with:
           node-version: 22
 
       - name: Install
-        if: steps.gate.outputs.enabled == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Pull Vercel project settings
-        if: steps.gate.outputs.enabled == 'true'
         run: pnpm dlx vercel@59.23.1 pull --yes --environment=production --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -87,7 +85,6 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Verify Vercel dry-run framework
-        if: steps.gate.outputs.enabled == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
@@ -95,7 +92,6 @@ jobs:
           node scripts/verify-vercel-dry-run.mjs
 
       - name: Build Vercel output
-        if: steps.gate.outputs.enabled == 'true'
         run: pnpm dlx vercel@59.23.1 build --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -105,7 +101,6 @@ jobs:
 
       - name: Deploy prebuilt output
         id: deploy
-        if: steps.gate.outputs.enabled == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -120,7 +115,6 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Verify live rebuild surface
-        if: steps.gate.outputs.enabled == 'true'
         env:
           ORBIT_LIVE_URL: ${{ steps.deploy.outputs.url }}
           ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
