@@ -27,7 +27,6 @@ Current runtime error aggregation for the selected 7-day period reports no runti
 
 ## Remaining release gates
 
-- current Command Dispatcher exact-head verification;
 - dedicated native runtime restart/migration/crash-recovery acceptance;
 - controlled real Telegram authorization/delivery evidence;
 - controlled real LinkedIn authorization/delivery evidence;
