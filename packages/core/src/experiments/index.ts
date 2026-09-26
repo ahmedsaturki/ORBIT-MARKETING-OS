@@ -193,34 +193,38 @@ export function summarizeExperiment(
 
   const variants = experiment.variants.map<ExperimentVariantSummary>(
     (variant) => {
-    const rows = scoped.filter(
-      (observation) => observation.variantId === variant.id,
-    );
-    const exposureCount = rows.filter((observation) => observation.exposed).length;
-    const engagementCount = rows.filter(
-      (observation) => observation.exposed && observation.engaged,
-    ).length;
-    const conversionCount = rows.filter(
-      (observation) => observation.exposed && observation.converted,
-    ).length;
-    const totalValue = rows.reduce(
-      (sum, observation) =>
-        sum + (Number.isFinite(observation.value) ? observation.value ?? 0 : 0),
-      0,
-    );
+      const rows = scoped.filter(
+        (observation) => observation.variantId === variant.id,
+      );
+      const exposureCount = rows.filter(
+        (observation) => observation.exposed,
+      ).length;
+      const engagementCount = rows.filter(
+        (observation) => observation.exposed && observation.engaged,
+      ).length;
+      const conversionCount = rows.filter(
+        (observation) => observation.exposed && observation.converted,
+      ).length;
+      const totalValue = rows.reduce(
+        (sum, observation) =>
+          sum +
+          (Number.isFinite(observation.value) ? (observation.value ?? 0) : 0),
+        0,
+      );
 
-    return {
-      variantId: variant.id,
-      exposureCount,
-      engagementCount,
-      conversionCount,
-      totalValue,
-      engagementRate:
-        exposureCount === 0 ? 0 : engagementCount / exposureCount,
-      conversionRate:
-        exposureCount === 0 ? 0 : conversionCount / exposureCount,
-    };
-  });
+      return {
+        variantId: variant.id,
+        exposureCount,
+        engagementCount,
+        conversionCount,
+        totalValue,
+        engagementRate:
+          exposureCount === 0 ? 0 : engagementCount / exposureCount,
+        conversionRate:
+          exposureCount === 0 ? 0 : conversionCount / exposureCount,
+      };
+    },
+  );
 
   return {
     experimentId: experiment.id,
