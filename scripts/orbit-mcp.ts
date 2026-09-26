@@ -213,9 +213,9 @@ async function handle(request: RpcRequest): Promise<void> {
       const modernError = assertModernRequest(params);
       if (modernError) {
         write(request.id, undefined, {
-        code: -32602,
-        message: modernError,
-      });
+          code: -32602,
+          message: modernError,
+        });
         return;
       }
     } else if (!legacyInitialized) {
