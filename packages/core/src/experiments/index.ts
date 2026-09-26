@@ -73,7 +73,11 @@ export function validateExperiment(
   if (!experiment.workspaceId.trim()) errors.push("workspace_required");
   if (!experiment.name.trim()) errors.push("name_required");
   if (!experiment.hypothesis.trim()) errors.push("hypothesis_required");
-  if (!["draft", "running", "paused", "completed", "archived"].includes(experiment.status)) {
+  if (
+    !["draft", "running", "paused", "completed", "archived"].includes(
+      experiment.status,
+    )
+  ) {
     errors.push("invalid_status");
   }
 
