@@ -39,7 +39,15 @@ export function normalizeGlobalSearchQuery(input: GlobalSearchQuery): {
   const query = input.query.trim();
   if (!query) throw new Error("global_search_query_required");
   if ([...query].length > 200) throw new Error("global_search_query_too_long");
-  if ([...query].some((character) => /\\p{Cc}/u.test(character))) {
+  if (
+    [...query].some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return (
+        (codePoint >= 0x00 && codePoint <= 0x1f) ||
+        (codePoint >= 0x7f && codePoint <= 0x9f)
+      );
+    })
+  ) {
     throw new Error("global_search_query_invalid_control_character");
   }
 
