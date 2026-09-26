@@ -1,9 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 const manifestPath = process.argv[2] ?? "vercel-dry-run.json";
-const vercelConfig = JSON.parse(
-  await readFile("vercel.json", "utf8"),
-);
+const vercelConfig = JSON.parse(await readFile("vercel.json", "utf8"));
 if (
   vercelConfig.framework !== "nextjs" ||
   vercelConfig.buildCommand !== "pnpm --dir packages/web build" ||
@@ -44,9 +42,7 @@ if (frameworkCandidates.some((value) => value.includes("vite"))) {
 
 if (
   !frameworkCandidates.some(
-    (value) =>
-      value.includes("nextjs") ||
-      value.includes("next.js"),
+    (value) => value.includes("nextjs") || value.includes("next.js"),
   )
 ) {
   throw new Error(
