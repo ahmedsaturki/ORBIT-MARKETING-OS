@@ -21,7 +21,7 @@ function runVerifier(mode) {
       stderr: error?.stderr ?? "",
     };
   }
-}
+});
 
 describe("release readiness verifier", () => {
   it("fails closed for the commercial lane while any critical gate is below L3", () => {
