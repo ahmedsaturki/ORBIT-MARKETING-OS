@@ -83,6 +83,25 @@ describe("platform foundation", () => {
     );
   });
 
+  it("rejects malformed runtime manifest enum values", () => {
+    const invalid = {
+      ...connector(),
+      kind: "not-a-kind",
+      capabilities: [{ ...capability(), risk: "unknown" }],
+      authModes: ["not-a-mode"],
+    } as unknown as ConnectorExtensionManifest;
+
+    const result = validateConnectorManifest(invalid);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        "extension_kind_invalid",
+        "capability_risk_invalid",
+        "connector_auth_mode_invalid",
+      ]),
+    );
+  });
+
   it("requires explicit browser-session permission for browser connectors", () => {
     const invalid = {
       ...connector(),
