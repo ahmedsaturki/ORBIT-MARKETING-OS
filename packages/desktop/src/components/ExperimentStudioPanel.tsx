@@ -35,7 +35,29 @@ export function ExperimentStudioPanel({ workspaceId }: { workspaceId: string }):
   const select = async (experiment: ExperimentView): Promise<void> => { setSelectedId(experiment.id); setName(experiment.name); setHypothesis(experiment.hypothesis); setObjectiveMetric(experiment.objective_metric); setStatus(experiment.status); setVariants(parseVariants(experiment.variants_json)); setStartsAt(experiment.starts_at ?? ""); setEndsAt(experiment.ends_at ?? ""); setAssignment(null); await refreshSummary(experiment.id); };
   const assign = async (): Promise<void> => { if (!selectedId || !subjectId.trim()) { setMessage("اختر تجربة وأدخل Subject ID."); return; } try { setBusy(true); const result = await native<{ variant_id: string }>("experiment_assign_variant", { experimentId: selectedId, subjectId: subjectId.trim() }); setAssignment(result.variant_id); setObservationVariantId(result.variant_id); setMessage("تم التوزيع deterministic داخل الـworkspace الحالية."); } catch (error) { setMessage(error instanceof Error ? error.message : "فشل تحديد الـvariant"); } finally { setBusy(false); } };
   const record = async (): Promise<void> => { if (!selectedId || !observationId.trim() || !subjectId.trim()) { setMessage("أدخل Experiment وObservation ID وSubject ID."); return; } try { setBusy(true); const value = observationValue.trim() ? Number(observationValue) : null; if (value !== null && !Number.isFinite(value)) throw new Error("قيمة observation غير صالحة."); await native<boolean>("experiment_record_observation", { id: observationId.trim(), experimentId: selectedId, variantId: observationVariantId, subjectId: subjectId.trim(), observedAt: new Date().toISOString(), exposed: observationExposed, engaged: observationEngaged, converted: observationConverted, value }); await refreshSummary(selectedId); setMessage("تم تسجيل observation محليًا، بدون تنفيذ خارجي."); } catch (error) { setMessage(error instanceof Error ? error.message : "فشل تسجيل observation"); } finally { setBusy(false); } };
-  const updateVariant = (index: number, patch: Partial<ExperimentVariant>): void => { setVariants((current) => current.map((variant, i) => (i === index ? { ...variant, ...patch } : variant))); };
+  const updateVariant = (index: number, patch: Partial<ExperimentVariant>): void => {
+    setVariants((current) =>
+      current.map((variant, i) =>
+        i === index ? { ...variant, ...patch } : variant,
+      ),
+    );
+  };
+
+  const updateOptionalVariantField = (
+    index: number,
+    field: "contentId" | "message",
+    value: string,
+  ): void => {
+    setVariants((current) =>
+      current.map((variant, i) => {
+        if (i !== index) return variant;
+        const next = { ...variant };
+        if (value) next[field] = value;
+        else delete next[field];
+        return next;
+      }),
+    );
+  };
 
   return (
     <section className="card" aria-labelledby="experiment-studio-title">
@@ -48,7 +70,7 @@ export function ExperimentStudioPanel({ workspaceId }: { workspaceId: string }):
         <div className="result">توزيع المتغيرات: <strong>{totalAllocation.toFixed(2)}%</strong></div>
         {variants.map((variant, index) => <div className="card" key={variant.id || index}><div className="actions">
           <label>ID<input value={variant.id} onChange={(event) => updateVariant(index, { id: event.target.value })} /></label><label>الاسم<input value={variant.name} onChange={(event) => updateVariant(index, { name: event.target.value })} /></label><label>Allocation %<input value={String(variant.allocationPercent)} inputMode="decimal" onChange={(event) => updateVariant(index, { allocationPercent: Number(event.target.value) })} /></label>
-        </div><label>Content ID<input value={variant.contentId ?? ""} onChange={(event) => updateVariant(index, { contentId: event.target.value || undefined })} /></label><label>Message<textarea value={variant.message ?? ""} onChange={(event) => updateVariant(index, { message: event.target.value || undefined })} rows={2} /></label>{variants.length > 2 ? <button className="button secondary" type="button" onClick={() => setVariants((current) => current.filter((_, i) => i !== index))}>حذف المتغير</button> : null}</div>)}
+        </div><label>Content ID<input value={variant.contentId ?? ""} onChange={(event) => updateOptionalVariantField(index, "contentId", event.target.value)} /></label><label>Message<textarea value={variant.message ?? ""} onChange={(event) => updateOptionalVariantField(index, "message", event.target.value)} rows={2} /></label>{variants.length > 2 ? <button className="button secondary" type="button" onClick={() => setVariants((current) => current.filter((_, i) => i !== index))}>حذف المتغير</button> : null}</div>)}
         <button className="button secondary" type="button" onClick={() => setVariants((current) => [...current, { id: "variant-" + (current.length + 1), name: "Variant " + (current.length + 1), allocationPercent: 0 }])}>إضافة Variant</button><button className="button primary" type="button" onClick={() => void save()} disabled={busy}>حفظ التجربة</button><button className="button secondary" type="button" onClick={reset} disabled={busy}>تجربة جديدة</button>
       </div>
       <div className="card"><h3>التجارب الحالية</h3>{experiments.length === 0 ? <div className="account-meta"><CircleHelp size={16} /> لا توجد تجارب محفوظة في الـworkspace الحالية.</div> : <div className="result-list">{experiments.map((experiment) => <article className="card" key={experiment.id}><strong>{experiment.name}</strong><div className="account-meta">{experiment.status} • {experiment.objective_metric} • {experiment.id}</div><div className="actions"><button className="button secondary" type="button" onClick={() => void select(experiment)}>فتح</button><button className="button secondary" type="button" onClick={() => void refreshSummary(experiment.id)}>الملخص</button></div></article>)}</div>}</div></div>
