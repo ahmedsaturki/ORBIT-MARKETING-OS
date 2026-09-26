@@ -3,6 +3,7 @@ import {
   aggregateCampaignMetrics,
   buildMetricSeries,
 } from "../src/analytics/metrics.js";
+import { detectMetricAnomalies } from "../src/analytics/anomalies.js";
 
 describe("analytics primitives", () => {
   it("aggregates execution outcomes", () => {
@@ -76,5 +77,46 @@ describe("analytics primitives", () => {
       { timestamp: "2026-09-24T02:00:00.000Z", value: 2 },
       { timestamp: "2026-09-24T03:00:00.000Z", value: 3 },
     ]);
+  });
+});
+
+describe("metric anomaly detection", () => {
+  const series = Array.from({ length: 9 }, (_, index) => ({
+    timestamp: `2026-09-${String(index + 1).padStart(2, "0")}T00:00:00Z`,
+    value: index === 8 ? 30 : 10,
+  }));
+
+  it("detects spikes and drops using only the preceding window", () => {
+    const spike = detectMetricAnomalies("engagement_rate", series, {
+      windowSize: 5,
+    });
+    expect(spike[0]).toMatchObject({
+      value: 30,
+      baselineMedian: 10,
+      direction: "spike",
+    });
+
+    const drop = detectMetricAnomalies(
+      "conversion_rate",
+      [
+        ...series.slice(0, 8),
+        { timestamp: "2026-09-09T00:00:00Z", value: 0 },
+        { timestamp: "2026-09-10T00:00:00Z", value: 10 },
+      ],
+      { windowSize: 5 },
+    );
+    expect(drop[0]?.direction).toBe("drop");
+  });
+
+  it("is deterministic and produces descriptive insights", () => {
+    const options = { windowSize: 5, maxResults: 1 };
+    const forward = detectMetricAnomalies("metric", series, options);
+    expect(
+      detectMetricAnomalies("metric", [...series].reverse(), options),
+    ).toEqual(forward);
+
+    expect(() =>
+      detectMetricAnomalies("metric", series, { windowSize: 2 }),
+    ).toThrow("anomaly_window_invalid");
   });
 });
