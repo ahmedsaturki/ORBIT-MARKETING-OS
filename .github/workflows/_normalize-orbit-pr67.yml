@@ -36,31 +36,25 @@ jobs:
           path = Path("packages/desktop/src-tauri/src/lib.rs")
           text = path.read_text(encoding="utf-8")
 
-          start = '            .execute_batch(\n                "INSERT INTO workspaces(id, name, created_at)'
-          marker = '            )\n            .expect("search fixture should be created");'
-          start_i = text.find(start)
-          if start_i == -1:
-              raise SystemExit("search fixture start not found")
-
-          end_i = text.find(marker, start_i)
-          if end_i == -1:
-              raise SystemExit("search fixture end not found")
-
-          block = text[start_i:end_i]
-          if 'r#"INSERT INTO workspaces' in block:
+          opening = '                "INSERT INTO workspaces(id, name, created_at)'
+          closing = "'https://example.com', '1');","
+          start = text.find(opening)
+          if start == -1:
+              raise SystemExit("search fixture opening not found")
+          end = text.find(closing, start)
+          if end == -1:
+              raise SystemExit("search fixture closing not found")
+          if text[start:start + 3] == 'r#"':
               raise SystemExit(0)
 
-          quote_start = block.find('"INSERT INTO workspaces')
-          quote_end = block.rfind('",')
-          if quote_start == -1 or quote_end == -1 or quote_end <= quote_start:
-              raise SystemExit("search fixture string boundaries not found")
-
-          replacement = 'r#' + block[quote_start:quote_end] + '#'
-          block = block[:quote_start] + replacement + block[quote_end:]
-          text = text[:start_i] + block + text[end_i:]
+          text = text[:start] + '                r#"INSERT INTO workspaces(id, name, created_at)' + text[start + len(opening):]
+          end = text.find(closing, start)
+          if end == -1:
+              raise SystemExit("search fixture closing moved unexpectedly")
+          replacement = "'https://example.com', '1');"#,"
+          text = text[:end] + replacement + text[end + len(closing):]
           path.write_text(text, encoding="utf-8")
           PY
-
       - name: Rust format
         working-directory: packages/desktop/src-tauri
         run: cargo fmt --all
