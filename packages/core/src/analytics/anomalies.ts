@@ -38,16 +38,6 @@ function median(values: readonly number[]): number {
   return sorted[middle]!;
 }
 
-function validatePoint(point: MetricPoint): void {
-  if (!Number.isFinite(point.value)) {
-    throw new Error("metric_value_must_be_finite");
-  }
-
-  if (!point.timestamp.trim() || Number.isNaN(Date.parse(point.timestamp))) {
-    throw new Error("metric_timestamp_invalid");
-  }
-}
-
 function classifyAnomaly(
   value: number,
   baselineMedian: number,
@@ -119,7 +109,6 @@ export function detectMetricAnomalies(
   }
 
   const config = normalizedOptions(options);
-  points.forEach(validatePoint);
   const ordered = buildMetricSeries(points);
 
   const anomalies: MetricAnomaly[] = [];
