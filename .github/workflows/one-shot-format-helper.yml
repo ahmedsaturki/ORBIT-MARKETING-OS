@@ -22,7 +22,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prettier --write packages/core/src/analytics/anomalies.ts packages/core/src/analytics/anomalies.test.ts
+      - run: pnpm exec prettier --write packages/core/src/analytics/anomalies.ts packages/core/src/analytics/anomalies.test.ts docs/ACCEPTANCE_MATRIX_V2.md
       - name: Commit canonical formatting
         run: |
           if git diff --quiet; then
