@@ -13769,3 +13769,90 @@ mod interrupted_restore_recovery_tests {
         fs::remove_dir_all(&root).expect("recovery fixture directory should be removed");
     }
 }
+
+
+#[cfg(test)]
+mod research_runtime_tests {
+    use super::*;
+
+    #[test]
+    fn schema_migrates_to_v15_and_creates_research_tables() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection.execute_batch(SCHEMA).expect("schema");
+        migrate_schema(&connection).expect("migrations");
+
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("version");
+        assert_eq!(version, 15);
+
+        for table in ["research_briefs", "research_findings"] {
+            let exists: i64 = connection
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+                    params![table],
+                    |row| row.get(0),
+                )
+                .expect("table lookup");
+            assert_eq!(exists, 1, "{table} missing");
+        }
+    }
+
+    #[test]
+    fn research_references_cannot_cross_workspace() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection.execute_batch(SCHEMA).expect("schema");
+        migrate_schema(&connection).expect("migrations");
+        create_integrity_triggers(&connection).expect("triggers");
+
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id,name,created_at)
+                 VALUES ('ws-a','A','1'),('ws-b','B','1');
+                 INSERT INTO knowledge_sources(id,workspace_id,type,title,collected_at)
+                 VALUES ('source-a','ws-a','research','A source','1');
+                 INSERT INTO research_briefs(
+                   id,workspace_id,name,kind,question,objectives_json,status,created_at,updated_at
+                 ) VALUES (
+                   'brief-a','ws-a','A brief','competitor','Question','[]','active','1','1'
+                 );",
+            )
+            .expect("fixtures");
+
+        let cross_brief = connection.execute(
+            "INSERT INTO research_findings(
+               id,workspace_id,brief_id,title,statement,source_ids_json,confidence,observed_at,
+               expires_at,tags_json,created_at,updated_at
+             ) VALUES (
+               'finding-cross','ws-b','brief-a','Cross','Statement','[\"source-a\"]',0.8,
+               '2026-09-26T09:00:00Z',NULL,'[]','1','1'
+             )",
+            [],
+        );
+        assert!(cross_brief.is_err());
+
+        let own = connection.execute(
+            "INSERT INTO research_findings(
+               id,workspace_id,brief_id,title,statement,source_ids_json,confidence,observed_at,
+               expires_at,tags_json,created_at,updated_at
+             ) VALUES (
+               'finding-a','ws-a','brief-a','Own','Statement','[\"source-a\"]',0.8,
+               '2026-09-26T09:00:00Z',NULL,'[]','1','1'
+             )",
+            [],
+        );
+        assert!(own.is_ok());
+
+        let cross_source = connection.execute(
+            "INSERT INTO research_findings(
+               id,workspace_id,brief_id,title,statement,source_ids_json,confidence,observed_at,
+               expires_at,tags_json,created_at,updated_at
+             ) VALUES (
+               'finding-cross-source','ws-a','brief-a','Cross source','Statement','[\"source-b\"]',0.8,
+               '2026-09-26T09:00:00Z',NULL,'[]','1','1'
+             )",
+            [],
+        );
+        assert!(cross_source.is_err());
+    }
+}
