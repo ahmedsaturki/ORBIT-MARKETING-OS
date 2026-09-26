@@ -69,13 +69,9 @@ const CONNECTOR_AUTH_MODES = new Set<ConnectorAuthMode>([
   "user_authorized_browser",
   "manual",
 ]);
-const VERTICAL_POLICY_PACKS = new Set<VerticalPackManifest["defaultPolicyPack"]>([
-  "conservative",
-  "balanced",
-  "agency",
-  "enterprise",
-  "regulated",
-]);
+const VERTICAL_POLICY_PACKS = new Set<
+  VerticalPackManifest["defaultPolicyPack"]
+>(["conservative", "balanced", "agency", "enterprise", "regulated"]);
 
 function requiredText(value: string, error: string, errors: string[]): void {
   if (!value.trim()) errors.push(error);
