@@ -124,6 +124,27 @@ const COMPETITOR_WATCHLIST = [
       "Omnichannel inbox، AI Agents، CRM context، routing وconversation-to-revenue workflows.",
   },
   {
+    id: "competitor-ft-controls",
+    name: "FT Controls",
+    locator: "https://ftcontrols.com/",
+    focus:
+      "تسويق متعدد المنصات، جمع/استهداف بيانات العملاء، AI، أدوات اجتماعية وبريد/SMS حسب السطح العام.",
+  },
+  {
+    id: "competitor-sender-pro",
+    name: "Sender Pro",
+    locator: "https://senderprov.com/en",
+    focus:
+      "تسويق متعدد المنصات، أدوات Facebook والمراسلة والاستهداف، B2B data، سطح Desktop وAndroid.",
+  },
+  {
+    id: "competitor-kingmaster",
+    name: "Kingmaster",
+    locator: "https://kingmaster.info/landing.php",
+    focus:
+      "إدارة متعددة الحسابات، رسائل مجمعة، تقارير حملات وأدوات تسويق رقمية.",
+  },
+  {
     id: "competitor-mixpost",
     name: "Mixpost",
     locator: "https://docs.mixpost.app/",
