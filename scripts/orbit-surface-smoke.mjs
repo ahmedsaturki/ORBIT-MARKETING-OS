@@ -62,11 +62,11 @@ if (
 }
 
 function runMcp(input) {
-  const result = spawnSync(
-    command,
-    ["exec", "tsx", "scripts/orbit-mcp.ts"],
-    { encoding: "utf8", env, input: input.trim() + "\n" },
-  );
+  const result = spawnSync(command, ["exec", "tsx", "scripts/orbit-mcp.ts"], {
+    encoding: "utf8",
+    env,
+    input: input.trim() + "\n",
+  });
   if (result.status !== 0) {
     process.stderr.write(result.stderr || result.stdout);
     process.exit(result.status ?? 1);
@@ -185,9 +185,8 @@ const call = modernLines.find((entry) => entry.id === 5);
 
 if (
   discovery?.result?.supportedVersions?.includes("2026-07-28") !== true ||
-  discovery?.result?._meta?.[
-    "io.modelcontextprotocol/serverInfo"
-  ]?.name !== "orbit-governed-surface"
+  discovery?.result?._meta?.["io.modelcontextprotocol/serverInfo"]?.name !==
+    "orbit-governed-surface"
 ) {
   throw new Error("orbit_mcp_discovery_smoke_failed");
 }
