@@ -8,10 +8,17 @@ const argv = process.argv.slice(2);
 const args = new Set(argv);
 const confirmed = args.has("--confirm-live");
 const outputIndex = argv.indexOf("--output");
-const output =
-  outputIndex >= 0
-    ? (argv[outputIndex + 1] ?? ".artifacts/commercial-connector-proof.json")
-    : ".artifacts/commercial-connector-proof.json";
+let output = ".artifacts/commercial-connector-proof.json";
+
+if (outputIndex >= 0) {
+  const candidate = argv[outputIndex + 1];
+  if (!candidate || candidate.startsWith("--")) {
+    console.error("commercial-connector-proof=BLOCKED");
+    console.error("--output requires a non-flag filename.");
+    process.exit(2);
+  }
+  output = candidate;
+}
 
 if (!confirmed) {
   console.error("commercial-connector-proof=BLOCKED");
@@ -187,7 +194,11 @@ try {
           idempotencyKey: "commercial-proof-linkedin",
           createdAt: new Date().toISOString(),
         },
-        { accountId: "commercial-proof-linkedin", userConfirmed: true },
+        {
+          accountId: "commercial-proof-linkedin",
+          userConfirmed: true,
+          signal: AbortSignal.timeout(30_000),
+        },
       );
 
       linkedin.status =
