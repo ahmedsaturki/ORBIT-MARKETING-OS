@@ -77,12 +77,15 @@ Optional session material is encrypted locally before persistence.
 - `approval_decide`
 - `approval_list`
 - `task_enqueue`
+- `task_enqueue_bulk`
 - `task_claim_next`
 - `task_fail`
 - `task_set_status`
 - `task_list`
 
 `task_enqueue` accepts an optional `idempotency_key`; task persistence is workspace-scoped. Non-sync external tasks require `content_id` and `destination_id`. Approval changes are workspace-scoped and must remain bound to the referenced content.
+
+`task_enqueue_bulk` accepts up to 50 camelCase task inputs and commits the whole batch in one SQLite transaction. If validation, workspace/reference checks, idempotency, insertion, or audit append fails for any item, the complete batch is rolled back. Each successful item is audited as part of the same transaction.
 
 ### Content variants and analytics
 

@@ -5094,6 +5094,22 @@ fn approval_list(app: tauri::AppHandle) -> Result<Vec<ApprovalView>, String> {
         .map_err(|error| error.to_string())
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BulkTaskInput {
+    id: String,
+    campaign_id: String,
+    account_id: String,
+    platform: String,
+    kind: String,
+    priority: i64,
+    available_at: String,
+    max_attempts: i64,
+    idempotency_key: Option<String>,
+    content_id: Option<String>,
+    destination_id: Option<String>,
+}
+
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn task_enqueue(
@@ -5237,6 +5253,173 @@ fn task_enqueue(
         available_at,
         created_at,
     })
+}
+
+#[tauri::command]
+fn task_enqueue_bulk(
+    app: tauri::AppHandle,
+    inputs: Vec<BulkTaskInput>,
+) -> Result<Vec<TaskView>, String> {
+    let workspace_id = active_workspace_id();
+    if inputs.is_empty() {
+        return Err("bulk enqueue requires at least one task".to_string());
+    }
+    if inputs.len() > 50 {
+        return Err("bulk enqueue supports at most 50 tasks".to_string());
+    }
+
+    let mut connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    let transaction = connection
+        .transaction()
+        .map_err(|error| error.to_string())?;
+
+    let mut results = Vec::with_capacity(inputs.len());
+
+    for input in inputs {
+        let id = validate_label(&input.id).map_err(|error| error.to_string())?;
+        let campaign_id = validate_label(&input.campaign_id).map_err(|error| error.to_string())?;
+        let account_id = validate_label(&input.account_id).map_err(|error| error.to_string())?;
+        let platform = validate_platform(&input.platform).map_err(|error| error.to_string())?;
+        let kind = validate_task_kind(&input.kind).map_err(|error| error.to_string())?;
+
+        let destination_id = input
+            .destination_id
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+            .transpose()?;
+
+        let content_id = input
+            .content_id
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .map(|value| validate_label(&value).map_err(|error| error.to_string()))
+            .transpose()?;
+
+        let idempotency_key = input
+            .idempotency_key
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| id.clone());
+        let idempotency_key =
+            validate_label(&idempotency_key).map_err(|error| error.to_string())?;
+
+        if kind != "sync" && content_id.is_none() {
+            return Err("content_id is required for external tasks".to_string());
+        }
+        if kind != "sync" && destination_id.is_none() {
+            return Err("destination_id is required for external tasks".to_string());
+        }
+        if input.priority < 0 || !(1..=10).contains(&input.max_attempts) {
+            return Err("task max_attempts must be between 1 and 10".to_string());
+        }
+
+        let available_at = normalize_rfc3339_utc(&input.available_at)?;
+
+        let associated: bool = transaction
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1
+                   FROM campaign_accounts ca
+                   JOIN campaigns c ON c.id=ca.campaign_id
+                   JOIN accounts a ON a.id=ca.account_id
+                   WHERE ca.campaign_id=?1
+                     AND ca.account_id=?2
+                     AND ca.workspace_id=?3
+                     AND c.workspace_id=?3
+                     AND a.workspace_id=?3
+                     AND a.platform=?4
+                 )",
+                params![campaign_id, account_id, workspace_id, platform],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if !associated {
+            return Err("account is not part of campaign".to_string());
+        }
+
+        if let Some(ref content_id) = content_id {
+            let content_attached: bool = transaction
+                .query_row(
+                    "SELECT EXISTS(
+                       SELECT 1
+                       FROM campaign_content cc
+                       JOIN content_items ci ON ci.id=cc.content_id
+                       WHERE cc.workspace_id=?3
+                         AND cc.campaign_id=?1
+                         AND cc.content_id=?2
+                         AND ci.workspace_id=?3
+                     )",
+                    params![campaign_id, content_id, workspace_id],
+                    |row| row.get(0),
+                )
+                .map_err(|error| error.to_string())?;
+            if !content_attached {
+                return Err("content is not part of campaign".to_string());
+            }
+        }
+
+        let created_at = chrono_like_timestamp();
+        transaction
+            .execute(
+                "INSERT INTO tasks(
+                   id, workspace_id, campaign_id, content_id, destination_id, account_id, platform, kind,
+                   priority, status, attempts, max_attempts, available_at,
+                   idempotency_key, created_at
+                 )
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'pending', 0, ?10, ?11, ?12, ?13)",
+                params![
+                    id,
+                    workspace_id,
+                    campaign_id,
+                    content_id,
+                    destination_id,
+                    account_id,
+                    platform,
+                    kind,
+                    input.priority,
+                    input.max_attempts,
+                    available_at,
+                    idempotency_key,
+                    created_at
+                ],
+            )
+            .map_err(|error| error.to_string())?;
+
+        append_audit_event(
+            &transaction,
+            &workspace_id,
+            "task",
+            "enqueue_bulk",
+            "success",
+            "user",
+            Some(&id),
+        )
+        .map_err(|error| error.to_string())?;
+
+        results.push(TaskView {
+            id,
+            campaign_id,
+            content_id,
+            destination_id,
+            account_id,
+            platform,
+            kind,
+            priority: input.priority,
+            status: "pending".to_string(),
+            attempts: 0,
+            max_attempts: input.max_attempts,
+            idempotency_key,
+            available_at,
+            created_at,
+        });
+    }
+
+    transaction.commit().map_err(|error| error.to_string())?;
+    Ok(results)
 }
 
 #[tauri::command]
@@ -13807,6 +13990,7 @@ pub fn run() {
             approval_decide,
             approval_list,
             task_enqueue,
+            task_enqueue_bulk,
             task_claim_next,
             task_fail,
             task_set_status,
