@@ -76,6 +76,10 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 - Universal Search previously failed Windows Native E2E because of a real SQLite LIKE escaping defect; the defect has been fixed and literal `%`, `_`, and `!` regression coverage added.
 - Link Intelligence previously failed Windows Native E2E because the test payload shape did not match the native IPC contract; the test has been corrected and a fresh exact-head validation cycle is running.
 
+## Current hardening note
+
+The release-proof lane is fail-closed: readiness cannot declare L3 without auditable evidence references and verification time, connector proof requires durable per-platform delivery evidence with external IDs, and the Vercel lane requires exact release-SHA verification before promotion.
+
 ## Gates that cannot be fabricated
 
 Some L3 gates require owner-controlled external evidence and therefore cannot be satisfied by source changes alone:
