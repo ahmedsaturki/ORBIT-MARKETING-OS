@@ -12,6 +12,7 @@ const output =
   outputIndex >= 0
     ? (argv[outputIndex + 1] ?? ".artifacts/commercial-connector-proof.json")
     : ".artifacts/commercial-connector-proof.json";
+
 if (!confirmed) {
   console.error("commercial-connector-proof=BLOCKED");
   console.error("Live connector proof requires --confirm-live.");
@@ -28,117 +29,180 @@ if (!telegramToken) missing.push("ORBIT_TELEGRAM_TEST_TOKEN");
 if (!telegramChatId) missing.push("ORBIT_TELEGRAM_TEST_CHAT_ID");
 if (!linkedinToken) missing.push("ORBIT_LINKEDIN_TEST_TOKEN");
 if (!linkedinAuthor) missing.push("ORBIT_LINKEDIN_TEST_AUTHOR_URN");
+
 if (missing.length > 0) {
   console.error("commercial-connector-proof=BLOCKED");
   console.error("Missing local test inputs: " + missing.join(", "));
   process.exit(2);
 }
 
-const testContent = async () => ({
+const testContent = {
   telegram:
     "ORBIT connector proof test — do not treat as customer-facing content.",
   linkedin:
     "ORBIT connector proof test — do not treat as customer-facing content.",
-});
+} as const;
 
-let telegramDelivered = false;
-let linkedinDelivered = false;
-
-const telegram = new TelegramConnector({
-  tokenResolver: async () => telegramToken,
-  contentResolver: async () => (await testContent()).telegram,
-});
-
-const telegramConnection = await telegram.connect({
-  accountId: "commercial-proof-telegram",
-  userConfirmed: true,
-});
-if (telegramConnection.status !== "succeeded") {
-  throw new Error(
-    "Telegram authorization proof failed: " +
-      (telegramConnection.message ?? telegramConnection.reason ?? "unknown"),
-  );
-}
-
-const telegramOutcome = await telegram.execute(
-  {
-    id: "commercial-proof-telegram-task",
-    workspaceId: "commercial-proof",
-    campaignId: "commercial-proof",
-    accountId: "commercial-proof-telegram",
-    platform: "telegram",
-    kind: "publish",
-    contentId: "commercial-proof-telegram-content",
-    destinationId: telegramChatId,
-    priority: 1,
-    status: "pending",
-    attempts: 0,
-    maxAttempts: 1,
-    availableAt: new Date().toISOString(),
-    idempotencyKey: "commercial-proof-telegram",
-    createdAt: new Date().toISOString(),
-  },
-  { accountId: "commercial-proof-telegram", userConfirmed: true },
-);
-if (telegramOutcome.status !== "succeeded") {
-  throw new Error(
-    "Telegram delivery proof failed: " +
-      (telegramOutcome.message ?? telegramOutcome.reason ?? "unknown"),
-  );
-}
-telegramDelivered = Boolean(telegramOutcome.externalId);
-
-const linkedin = new LinkedInConnector({
-  apiVersion: process.env.ORBIT_LINKEDIN_API_VERSION ?? "202609",
-  tokenResolver: async () => linkedinToken,
-  authorResolver: async () => linkedinAuthor,
-  contentResolver: async () => (await testContent()).linkedin,
-});
-
-const linkedinOutcome = await linkedin.execute(
-  {
-    id: "commercial-proof-linkedin-task",
-    workspaceId: "commercial-proof",
-    campaignId: "commercial-proof",
-    accountId: "commercial-proof-linkedin",
-    platform: "linkedin",
-    kind: "publish",
-    contentId: "commercial-proof-linkedin-content",
-    destinationId: "member",
-    priority: 1,
-    status: "pending",
-    attempts: 0,
-    maxAttempts: 1,
-    availableAt: new Date().toISOString(),
-    idempotencyKey: "commercial-proof-linkedin",
-    createdAt: new Date().toISOString(),
-  },
-  { accountId: "commercial-proof-linkedin", userConfirmed: true },
-);
-if (linkedinOutcome.status !== "succeeded") {
-  throw new Error(
-    "LinkedIn delivery proof failed: " +
-      (linkedinOutcome.message ?? linkedinOutcome.reason ?? "unknown"),
-  );
-}
-linkedinDelivered = Boolean(linkedinOutcome.externalId);
-
-const report = {
-  schemaVersion: 1,
-  generatedAt: new Date().toISOString(),
-  commercialConnectorProof: "PASS",
-  telegram: {
-    authorized: telegramConnection.status === "succeeded",
-    delivered: telegramDelivered,
-    externalId: telegramOutcome.externalId ?? null,
-  },
-  linkedin: {
-    authorized: true,
-    delivered: linkedinDelivered,
-    externalId: linkedinOutcome.externalId ?? null,
-  },
-  note: "No tokens, message bodies, or credential material are persisted or printed.",
+type PlatformProof = {
+  authorized: boolean;
+  delivered: boolean;
+  externalId: string | number | null;
+  status: "succeeded" | "failed";
+  message?: string;
 };
-await mkdir(dirname(output), { recursive: true });
-await writeFile(output, JSON.stringify(report, null, 2) + "\n", "utf8");
-console.log(JSON.stringify({ ...report, output }));
+
+async function writeReport(
+  telegram: PlatformProof,
+  linkedin: PlatformProof,
+  reportStatus: "PASS" | "FAIL",
+): Promise<void> {
+  const report = {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    commercialConnectorProof: reportStatus,
+    telegram,
+    linkedin,
+    note: "No tokens, message bodies, or credential material are persisted or printed.",
+  };
+  await mkdir(dirname(output), { recursive: true });
+  await writeFile(output, JSON.stringify(report, null, 2) + "\n", "utf8");
+  console.log(
+    JSON.stringify({
+      output,
+      commercialConnectorProof: reportStatus,
+      telegram: {
+        authorized: telegram.authorized,
+        delivered: telegram.delivered,
+        externalId: telegram.externalId,
+        status: telegram.status,
+      },
+      linkedin: {
+        authorized: linkedin.authorized,
+        delivered: linkedin.delivered,
+        externalId: linkedin.externalId,
+        status: linkedin.status,
+      },
+    }),
+  );
+}
+
+let telegram: PlatformProof = {
+  authorized: false,
+  delivered: false,
+  externalId: null,
+  status: "failed",
+};
+let linkedin: PlatformProof = {
+  authorized: false,
+  delivered: false,
+  externalId: null,
+  status: "failed",
+};
+
+try {
+  const telegramConnector = new TelegramConnector({
+    tokenResolver: async () => telegramToken,
+    contentResolver: async () => testContent.telegram,
+  });
+
+  try {
+    const connection = await telegramConnector.connect({
+      accountId: "commercial-proof-telegram",
+      userConfirmed: true,
+    });
+    telegram.authorized = connection.status === "succeeded";
+
+    if (telegram.authorized) {
+      const outcome = await telegramConnector.execute(
+        {
+          id: "commercial-proof-telegram-task",
+          workspaceId: "commercial-proof",
+          campaignId: "commercial-proof",
+          accountId: "commercial-proof-telegram",
+          platform: "telegram",
+          kind: "publish",
+          contentId: "commercial-proof-telegram-content",
+          destinationId: telegramChatId!,
+          priority: 1,
+          status: "pending",
+          attempts: 0,
+          maxAttempts: 1,
+          availableAt: new Date().toISOString(),
+          idempotencyKey: "commercial-proof-telegram",
+          createdAt: new Date().toISOString(),
+        },
+        { accountId: "commercial-proof-telegram", userConfirmed: true },
+      );
+      telegram.status =
+        outcome.status === "succeeded" && Boolean(outcome.externalId)
+          ? "succeeded"
+          : "failed";
+      telegram.delivered = telegram.status === "succeeded";
+      telegram.externalId = outcome.externalId ?? null;
+      telegram.message = outcome.message ?? outcome.reason;
+    } else {
+      telegram.message =
+        connection.message ?? connection.reason ?? "authorization failed";
+    }
+  } catch (error) {
+    telegram.message =
+      error instanceof Error ? error.message : String(error);
+  }
+
+  try {
+    const linkedinConnector = new LinkedInConnector({
+      apiVersion: process.env.ORBIT_LINKEDIN_API_VERSION ?? "202609",
+      tokenResolver: async () => linkedinToken,
+      authorResolver: async () => linkedinAuthor,
+      contentResolver: async () => testContent.linkedin,
+    });
+
+    const outcome = await linkedinConnector.execute(
+      {
+        id: "commercial-proof-linkedin-task",
+        workspaceId: "commercial-proof",
+        campaignId: "commercial-proof",
+        accountId: "commercial-proof-linkedin",
+        platform: "linkedin",
+        kind: "publish",
+        contentId: "commercial-proof-linkedin-content",
+        destinationId: "member",
+        priority: 1,
+        status: "pending",
+        attempts: 0,
+        maxAttempts: 1,
+        availableAt: new Date().toISOString(),
+        idempotencyKey: "commercial-proof-linkedin",
+        createdAt: new Date().toISOString(),
+      },
+      { accountId: "commercial-proof-linkedin", userConfirmed: true },
+    );
+
+    linkedin.authorized = outcome.status === "succeeded" || Boolean(outcome.externalId);
+    linkedin.status =
+      outcome.status === "succeeded" && Boolean(outcome.externalId)
+        ? "succeeded"
+        : "failed";
+    linkedin.delivered = linkedin.status === "succeeded";
+    linkedin.externalId = outcome.externalId ?? null;
+    linkedin.message = outcome.message ?? outcome.reason;
+  } catch (error) {
+    linkedin.message =
+      error instanceof Error ? error.message : String(error);
+  }
+} finally {
+  const passed =
+    telegram.authorized &&
+    telegram.delivered &&
+    telegram.externalId !== null &&
+    linkedin.authorized &&
+    linkedin.delivered &&
+    linkedin.externalId !== null;
+
+  await writeReport(telegram, linkedin, passed ? "PASS" : "FAIL");
+
+  if (!passed) {
+    console.error("commercial-connector-proof=FAIL");
+    process.exitCode = 1;
+  }
+}
