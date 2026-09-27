@@ -43,11 +43,12 @@ test("vercel ignore script declares the release-truth deployment contract", asyn
   assert.match(script, /docs\/VERIFICATION_BLOCKERS\.md/);
   assert.match(script, /scripts\/vercel-ignore\.sh/);
   assert.match(script, /scripts\/vercel-install\.sh/);
+  assert.match(script, /git rev-parse --show-toplevel/);
   assert.match(script, /exit 0/);
   assert.match(script, /exit 1/);
 });
 
-test("main branch skips unrelated documentation but builds for release-truth changes", async () => {
+test("main branch skips unrelated documentation but builds for release-truth changes from a nested root directory", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "orbit-vercel-ignore-"));
 
   try {
@@ -76,14 +77,15 @@ test("main branch skips unrelated documentation but builds for release-truth cha
       await execFileAsync("git", ["rev-parse", "HEAD"], { cwd })
     ).stdout.trim();
 
+    const webRoot = join(cwd, "packages", "web");
     assert.equal(
-      await runIgnore(cwd, {
+      await runIgnore(webRoot, {
         VERCEL_GIT_COMMIT_REF: "main",
         VERCEL_GIT_PREVIOUS_SHA: previous,
         VERCEL_GIT_COMMIT_SHA: docsCommit,
       }),
       0,
-      "unrelated documentation should remain skippable",
+      "unrelated documentation should remain skippable from a nested root",
     );
 
     await writeFile(
@@ -97,17 +99,17 @@ test("main branch skips unrelated documentation but builds for release-truth cha
     ).stdout.trim();
 
     assert.equal(
-      await runIgnore(cwd, {
+      await runIgnore(webRoot, {
         VERCEL_GIT_COMMIT_REF: "main",
         VERCEL_GIT_PREVIOUS_SHA: docsCommit,
         VERCEL_GIT_COMMIT_SHA: releaseCommit,
       }),
       1,
-      "release-truth changes must force a Vercel deployment",
+      "release-truth changes must force a Vercel deployment from a nested root",
     );
 
     assert.equal(
-      await runIgnore(cwd, {
+      await runIgnore(webRoot, {
         VERCEL_GIT_COMMIT_REF: "feature/example",
         VERCEL_GIT_PREVIOUS_SHA: docsCommit,
         VERCEL_GIT_COMMIT_SHA: releaseCommit,

@@ -14,6 +14,12 @@ if [[ -z "${VERCEL_GIT_PREVIOUS_SHA:-}" || -z "${VERCEL_GIT_COMMIT_SHA:-}" ]]; t
   exit 1
 fi
 
+# Vercel can execute the ignore command from a configured Root Directory
+# (for example packages/web). Normalize to the repository root before using
+# repository-level pathspecs so release-truth changes are never hidden by cwd.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 1
+cd "$REPO_ROOT" || exit 1
+
 if ! git rev-parse --verify "${VERCEL_GIT_PREVIOUS_SHA}^{commit}" >/dev/null 2>&1; then
   exit 1
 fi
