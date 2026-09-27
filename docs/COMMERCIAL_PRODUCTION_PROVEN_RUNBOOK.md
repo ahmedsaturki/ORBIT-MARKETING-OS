@@ -1,6 +1,6 @@
 # ORBIT Commercial Production Proven — Release Runbook
 
-Updated: 2026-09-27.
+Updated: 2026-09-28.
 
 ## Release rule
 
@@ -67,14 +67,16 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 - Billing/payment activation, if monetization is enabled.
 - Final terms/privacy/refund/EULA publication review.
 
-## Current verified state — 2026-09-27
+## Current verified state — 2026-09-28
 
-- Historical exact-main Release Evidence Bundle evidence exists, but the latest merged main SHA must have a fresh evidence bundle before commercial promotion.
-- Historical artifact IDs/digests remain retained as dated evidence and are not treated as current-main proof.
-- The Vercel deployment lane is credential-gated and fail-closed; current-main production provenance is still unverified.
-- Current Vercel production deployment is READY but has empty Git provenance metadata.
+- Current main release SHA is `bbde7c5300bc05f8c46f5d0ae539abc9abb2ef36`.
+- Release Evidence Bundle run `36350429896` passed for that exact SHA; artifact `10941992454` is retained with digest `2a8334c296980ab15b30f30eef7ae19f3aa694f935855e2dbcc8c14b9f5ce135`.
+- Vercel Production Provenance run `36350429904` passed. Production deployment `dpl_BfRxpFLLhzBDyKdwy74wB7bX7aUK` is READY, source=`git`, framework=`nextjs`, and includes the canonical `orbit-marketing-os.vercel.app` alias with the same Git SHA.
+- Web Deploy run `36350429899` passed Web quality and full live provenance/surface verification.
+- GitHub `main` is protected with required `ci` and `security:scan` checks.
 - Universal Search previously failed Windows Native E2E because of a real SQLite LIKE escaping defect; the defect has been fixed and literal `%`, `_`, and `!` regression coverage added.
-- Recent exact-head native validation also covered the corrected publishing/search test contracts; no current-main commercial proof is implied until release evidence is refreshed.
+- PR #124 consolidated bounded Windows Native E2E staging, LinkedIn ambiguous-delivery fail-closed semantics, and governed Vercel Git provenance. Its exact-head Windows Native E2E and four desktop packaging targets passed before merge.
+- Commercial production is still not proven: the 24-hour soak, rollback drill, real Telegram/LinkedIn evidence, multi-device CRDT network proof, manual accessibility audit, signing/store distribution, final L3 governance evidence, billing activation, legal/commercial review, and current-main Sonar A requirement remain open.
 
 ## Current hardening note
 
@@ -91,8 +93,8 @@ Some L3 gates require owner-controlled external evidence and therefore cannot be
 - 24-hour elapsed soak evidence;
 - desktop signing/notarization certificates or equivalent release credentials;
 - production mobile signing/store distribution credentials;
-- Vercel release credentials for the guarded prebuilt deployment;
-- GitHub administrator action for branch protection/rulesets;
+- A Vercel credential-backed prebuilt deployment is optional while the governed main-only Git provenance path remains healthy;
+- Final L3 governance evidence for protected-main policy;
 - payment/billing provider activation;
 - final legal/commercial approval.
 
