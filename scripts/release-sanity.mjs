@@ -78,7 +78,9 @@ const governedMainGitDeployment =
   deploymentEnabled["*"] === false &&
   deploymentEnabled.main === true;
 if (deploymentEnabled !== false && !governedMainGitDeployment)
-  throw new Error("Vercel Git deployments must be disabled except for governed main");
+  throw new Error(
+    "Vercel Git deployments must be disabled except for governed main",
+  );
 
 const requiredFiles = [
   "pnpm-lock.yaml",
