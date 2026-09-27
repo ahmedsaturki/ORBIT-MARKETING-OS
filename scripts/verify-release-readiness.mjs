@@ -45,9 +45,10 @@ const entries = Object.entries(document.releaseCritical);
 function isValidVerifiedAt(value) {
   if (typeof value !== "string") return false;
   const timestamp = value.trim();
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.exec(
-    timestamp,
-  );
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.exec(
+      timestamp,
+    );
   if (!match) return false;
 
   const year = Number(match[1]);
@@ -57,7 +58,14 @@ function isValidVerifiedAt(value) {
   const minutes = Number(match[5]);
   const seconds = Number(match[6]);
 
-  if (month < 1 || month > 12 || day < 1 || hours > 23 || minutes > 59 || seconds > 59) {
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    hours > 23 ||
+    minutes > 59 ||
+    seconds > 59
+  ) {
     return false;
   }
 
