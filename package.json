@@ -33,7 +33,8 @@
     "tauri:build": "pnpm --dir packages/desktop tauri build",
     "verify:readiness": "node scripts/verify-release-readiness.mjs",
     "release:evidence": "node scripts/collect-release-evidence.mjs",
-    "test:commercial-proof": "node scripts/commercial-connector-proof.safe.test.mjs"
+    "test:commercial-proof": "node scripts/commercial-connector-proof.safe.test.mjs",
+    "test:soak:evidence": "node scripts/soak-failure-evidence.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
