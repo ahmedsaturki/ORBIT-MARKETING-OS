@@ -1,6 +1,6 @@
 # ORBIT Marketing OS — Release Readiness
 
-Updated: 2026-09-27.
+Updated: 2026-09-28.
 
 ## Canonical state
 
@@ -27,6 +27,7 @@ Updated: 2026-09-27.
 - PR #101: merged — static-export web provenance endpoints and exact-SHA verification.
 - PR #102: merged — release-evidence/readiness reconciliation.
 - PR #103: merged — exact-SHA stability soak evidence hardening.
+- PR #124: merged — consolidated Windows Native E2E, LinkedIn ambiguous-delivery, and governed Vercel provenance hardening.
 
 ## Readiness rule
 
@@ -55,7 +56,7 @@ For the commercial lane, run:
 
 ## Current state
 
-The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, deterministic link intelligence core, platform foundation, content reuse policy, evidence-backed reporting packs, workspace isolation, native desktop/mobile validation, web quality, release-readiness validation, and exact-SHA soak/provenance hardening.
+The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, deterministic link intelligence core, platform foundation, content reuse policy, evidence-backed reporting packs, workspace isolation, native desktop/mobile validation, web quality, release-readiness validation, and exact-SHA soak/provenance hardening. The latest merged release-control change is `bbde7c5300bc05f8c46f5d0ae539abc9abb2ef36`; its release-evidence bundle passed, its canonical Vercel Production deployment is READY with the same Git SHA, and full Web Deploy provenance/live-surface verification passed.
 
 A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed and the corrected feature head subsequently passed CI, desktop native, mobile, and Windows Native E2E.
 
@@ -67,21 +68,20 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 - dedicated restart/migration/crash recovery evidence consolidation;
 - manual WCAG/RTL audit;
 - 24-hour stability soak;
-- Vercel project settings reconciliation;
-- credential-backed Vercel prebuilt deployment with embedded Git SHA verification;
-- Controlled real connector evidence captured with the owner-authorized proof harness;
+- controlled real connector evidence captured with the owner-authorized proof harness;
 - production rollback drill;
 - desktop signing/notarization;
 - Android/iOS production signing and store distribution;
-- GitHub main branch protection/rulesets;
+- final L3 governance evidence for protected-main policy;
 - commercial payment/billing activation;
-- final legal/commercial publication review.
+- final legal/commercial publication review;
+- current successful latest-main SonarCloud analysis meeting the required A Security Rating on New Code.
 
 ## Web production evidence
 
-The connected Vercel project is live and the current seven-day grouped runtime-error query is clean. The repository deployment contract is a Next.js static export under packages/web/out. Guarded deployments now fail closed if release credentials are missing and, when credentials exist, verify the embedded release SHA through /api/health.json and /api/release.json.
+The canonical Vercel project is live on the governed Git deployment path. Production deployment `dpl_BfRxpFLLhzBDyKdwy74wB7bX7aUK` is READY, sourced from Git `main`, uses the `nextjs` framework, and exposes the canonical `orbit-marketing-os.vercel.app` alias with Git SHA `bbde7c5300bc05f8c46f5d0ae539abc9abb2ef36`. Vercel Production Provenance run `36350429904` passed, and Web Deploy run `36350429899` passed Web quality, exact-SHA provenance, full live web-surface checks, security headers, routes, manifest/service worker, and 404 behavior. The seven-day Vercel runtime-error aggregation is clean.
 
-The current production deployment is healthy live infrastructure, but canonical release provenance is still open until a credential-backed deployment from the verified release path embeds and reports the exact release SHA.
+Current web provenance is therefore verified for the deployed SHA. The production rollback drill remains a separate open release gate.
 
 ## Distribution posture
 
