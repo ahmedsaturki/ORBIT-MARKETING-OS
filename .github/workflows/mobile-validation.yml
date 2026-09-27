@@ -50,6 +50,7 @@ jobs:
       - name: Generate Android native project
         run: pnpm --dir packages/mobile exec expo prebuild --platform android --no-install
       - name: Build debug APK
+        timeout-minutes: 35
         working-directory: packages/mobile/android
         shell: bash
         env:
