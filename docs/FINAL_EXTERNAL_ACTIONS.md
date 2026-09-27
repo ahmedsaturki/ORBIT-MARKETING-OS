@@ -1,17 +1,25 @@
 # ORBIT — Final External Actions
 
-Updated: 2026-09-27
+Updated: 2026-09-28.
 
-The merged core is now strongly verified at L2 across the main product domains. The remaining actions below require provider credentials, real platform accounts, signing identities, physical/store infrastructure, or a human-controlled commercial decision.
+The merged core is strongly verified at L2 across the main product domains. Current-main web production provenance is also verified through the governed Git/Vercel path. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
 
 ## A. Vercel
 
-1. Confirm the connected Vercel Project Settings match the repository contract: repository root, Next.js, Node 22.x, build `pnpm --dir packages/web build`, output `packages/web/out`.
-2. Provide the Vercel deployment credentials to the guarded GitHub release environment.
-3. Produce a current-main prebuilt production deployment with `NEXT_PUBLIC_ORBIT_RELEASE_SHA=${GITHUB_SHA}` (the exact GitHub Actions commit SHA) and retain the live verification output.
-4. Exercise rollback to the previous verified production deployment and retain evidence.
+Current-main production deployment and provenance are verified:
 
-The current Vercel deployment workflow now fails closed when credentials are missing, uses the triggering Git SHA, builds prebuilt output, and verifies live release provenance.
+- repository/main: exact current SHA is embedded and verified;
+- project: `orbit-marketing-os`;
+- framework: Next.js;
+- source: Git;
+- target: production;
+- canonical alias: `orbit-marketing-os.vercel.app`;
+- public health/release provenance checks, security headers, route behavior, manifest/service worker, and 404 checks pass.
+
+The remaining Vercel action is only:
+
+1. Exercise rollback from the current verified production deployment to the previous verified candidate and back.
+2. Preserve exact rollback evidence tied to deployment IDs and release SHA.
 
 ## B. Real connector verification
 
@@ -23,14 +31,14 @@ Perform controlled user-authorized tests for:
 - failure/retry/recovery;
 - audit record verification.
 
-No bypass, stealth, anti-ban or unauthorized bulk automation is part of the acceptance criteria.
+No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acceptance criteria.
 
-## C. Native / sync / accessibility
+## C. Native / sync / accessibility / stability
 
 - Run the full restart/migration/crash-recovery acceptance and consolidate evidence.
 - Run live multi-device CRDT convergence using real authorized devices/network.
 - Complete manual WCAG/RTL audit in addition to automated checks.
-- Complete 24-hour stability soak on the approved main ref.
+- Complete a 24-hour stability soak on the approved exact main ref.
 
 ## D. Distribution
 
@@ -40,10 +48,11 @@ No bypass, stealth, anti-ban or unauthorized bulk automation is part of the acce
 
 ## E. Governance / commercial
 
-- Enable and verify GitHub main branch protection/rulesets with required CI/native checks.
+- Preserve final L3 governance evidence for the protected-main policy and exact verification timestamps/evidence references.
 - Configure actual payment/billing and verify checkout/refund behavior.
 - Perform final legal/commercial publication review.
+- Resolve the current-main SonarCloud requirement: Security Rating on New Code must reach A.
 
 ## Release rule
 
-Commercial Production Proven means every release-critical item has L3 evidence. Do not infer L3 from source presence, a live old deployment, or a green CI run alone.
+Commercial Production Proven means every release-critical item has L3 evidence. Do not infer L3 from source presence, a live deployment, a green CI run, or a prior release artifact alone.

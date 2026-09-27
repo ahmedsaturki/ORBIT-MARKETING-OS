@@ -1,10 +1,10 @@
 # Implementation Status
 
-Updated: 2026-09-27.
+Updated: 2026-09-28.
 
 ## Current state
 
-The production implementation is consolidated on the current main lineage. Recent work has expanded the system from its original social-operations foundation into Research Intelligence, deterministic experimentation and learning, anomaly detection, governed agent operations, Universal Search, and the first Platform SDK and vertical-pack foundation.
+The production implementation is consolidated on the current main lineage. The current release train has strong L2 evidence across the core architecture, execution controls, research intelligence, experimentation/learning, anomaly detection, governed agent operations, Universal Search, publishing, platform foundation, native desktop/mobile validation, web production, and release-readiness controls.
 
 ## Product surface
 
@@ -32,32 +32,34 @@ The production implementation is consolidated on the current main lineage. Recen
 - Next.js static Web/PWA surface;
 - Expo mobile monitoring/control surface;
 - governed CLI and MCP read-only operator previews;
-- Platform SDK foundation with connector manifests and reusable vertical packs;
+- Platform SDK foundation with connector manifests and reusable vertical packs.
 
 ## Evidence model
 
 Implementation is intentionally separated from runtime proof:
 
-`IMPLEMENTED` → source capability exists.
-`VERIFIED` → fresh tests/runtime evidence exists.
-`PRODUCTION PROVEN` → release artifact, real-world operation and operational evidence have been demonstrated.
+`IMPLEMENTED` → source capability exists.  
+`VERIFIED` → fresh tests/runtime evidence exists.  
+`PRODUCTION PROVEN` → release artifact, real-world operation, and operational evidence have been demonstrated.
 
 No unsupported external connector capability is implied by contracts or fixtures.
 
 ## Evidence still required
 
-- exact-head validation is established on the merged release train; future release changes must repeat the same native evidence before promotion;
 - controlled real Telegram authorization/delivery;
 - controlled real LinkedIn authorization/publish;
 - live multi-device CRDT network verification;
 - dedicated manual accessibility/RTL conformance audit;
 - completed 24-hour stability soak;
 - release-tag checksum/provenance verification;
-- desktop signing/notarization;
+- production desktop signing/notarization;
 - production mobile signing/store distribution;
-- Vercel project-setting reconciliation and rollback drill;
-- main branch-protection/ruleset verification;
+- production rollback drill;
+- final L3 governance evidence with auditable evidence references and verification timestamps;
 - commercial billing/payment;
 - final legal/commercial publication review;
+- current-main SonarCloud Security Rating on New Code = A.
+
+Current-main Vercel project settings/provenance and protected-main CI/security governance are already recorded as verified by the release controls; they should be revalidated on each subsequent release change, but are not repeated here as open blockers.
 
 Implementation and green CI are substantial evidence, but they do not by themselves establish commercial release readiness.
