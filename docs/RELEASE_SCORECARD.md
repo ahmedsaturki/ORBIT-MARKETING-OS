@@ -1,6 +1,6 @@
 # ORBIT Release Scorecard
 
-Updated: 2026-09-26.
+Updated: 2026-09-27.
 
 ## Status meanings
 
@@ -100,7 +100,7 @@ Updated: 2026-09-26.
 ## External / commercial prerequisites
 
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
-- Current-main Vercel provenance/settings still require credential-backed verification.
+- Current-main Vercel provenance/settings still require credential-backed verification; the repo-side deployment workflow is now tied to the triggering SHA and uses `/api/health.json` + `/api/release.json`.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.
