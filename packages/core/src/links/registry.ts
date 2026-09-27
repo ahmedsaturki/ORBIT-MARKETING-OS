@@ -41,6 +41,9 @@ export function normalizeDestinationUrl(input: string): string {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("destinationUrl must use http or https");
   }
+  if (url.username || url.password) {
+    throw new Error("destinationUrl must not contain credentials");
+  }
 
   url.hostname = url.hostname.toLowerCase();
   if (

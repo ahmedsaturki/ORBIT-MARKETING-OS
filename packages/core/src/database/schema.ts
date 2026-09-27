@@ -1,4 +1,4 @@
-export const DATABASE_SCHEMA_VERSION = 15;
+export const DATABASE_SCHEMA_VERSION = 16;
 
 export const DATABASE_SCHEMA_SQL = `
 PRAGMA foreign_keys = ON;
@@ -617,6 +617,55 @@ CREATE INDEX IF NOT EXISTS idx_experiment_observations_workspace_experiment
 CREATE INDEX IF NOT EXISTS idx_experiment_observations_variant
   ON experiment_observations(workspace_id, experiment_id, variant_id, observed_at);
 
-PRAGMA user_version = 15;
+CREATE TABLE IF NOT EXISTS marketing_links (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  link_key TEXT NOT NULL,
+  destination_url TEXT NOT NULL,
+  tracked_url TEXT NOT NULL,
+  tracking_json TEXT NOT NULL DEFAULT '{}',
+  campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
+  content_id TEXT REFERENCES content_items(id) ON DELETE SET NULL,
+  provenance TEXT NOT NULL CHECK(provenance = 'local'),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(workspace_id, link_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketing_links_workspace_updated
+  ON marketing_links(workspace_id, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_marketing_links_workspace_campaign
+  ON marketing_links(workspace_id, campaign_id, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_marketing_links_workspace_content
+  ON marketing_links(workspace_id, content_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS marketing_link_evidence (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+  link_id TEXT NOT NULL REFERENCES marketing_links(id) ON DELETE CASCADE,
+  source_type TEXT NOT NULL,
+  metric_name TEXT NOT NULL,
+  metric_value REAL NOT NULL CHECK(metric_value >= 0),
+  observed_at TEXT NOT NULL,
+  source_locator TEXT NOT NULL DEFAULT '',
+  provenance TEXT NOT NULL,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  UNIQUE(
+    workspace_id,
+    link_id,
+    source_type,
+    metric_name,
+    observed_at,
+    source_locator
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketing_link_evidence_workspace_link
+  ON marketing_link_evidence(workspace_id, link_id, observed_at);
+
+PRAGMA user_version = 16;
 
 `;
