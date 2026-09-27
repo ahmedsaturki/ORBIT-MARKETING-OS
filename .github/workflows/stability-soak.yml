@@ -55,6 +55,9 @@ jobs:
       - name: Build web/runtime
         run: pnpm build
 
+      - name: Verify failure evidence path
+        run: pnpm test:soak:evidence
+
       - name: Require exact commercial soak duration
         run: |
           set -euo pipefail
