@@ -27,7 +27,9 @@ if (
   resolved?.default?.windows?.length !== 1 ||
   resolved.default.windows[0] !== "main"
 ) {
-  throw new Error("Resolved default capability must target only the main window");
+  throw new Error(
+    "Resolved default capability must target only the main window",
+  );
 }
 if (
   !Array.isArray(resolved?.default?.permissions) ||
