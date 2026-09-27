@@ -71,8 +71,14 @@ if (vercel.installCommand !== "bash scripts/vercel-install.sh")
   throw new Error("Vercel installCommand drift detected");
 if (vercel.ignoreCommand !== "bash scripts/vercel-ignore.sh")
   throw new Error("Vercel ignoreCommand drift detected");
-if (vercel.git?.deploymentEnabled !== false)
-  throw new Error("Automatic Git Vercel deployments must remain disabled");
+const deploymentEnabled = vercel.git?.deploymentEnabled;
+const governedMainGitDeployment =
+  typeof deploymentEnabled === "object" &&
+  deploymentEnabled !== null &&
+  deploymentEnabled["*"] === false &&
+  deploymentEnabled.main === true;
+if (deploymentEnabled !== false && !governedMainGitDeployment)
+  throw new Error("Vercel Git deployments must be disabled except for governed main");
 
 const requiredFiles = [
   "pnpm-lock.yaml",
