@@ -3,11 +3,13 @@
 This harness performs an owner-authorized live connector smoke test.
 
 It intentionally requires:
+
 - `--confirm-live`;
 - local environment variables only;
 - no secrets in command output or logs.
 
 Required local inputs:
+
 - `ORBIT_TELEGRAM_TEST_TOKEN`
 - `ORBIT_TELEGRAM_TEST_CHAT_ID`
 - `ORBIT_LINKEDIN_TEST_TOKEN`
@@ -21,6 +23,7 @@ Run:
 The Telegram test sends a clearly labeled test message to the supplied test chat. The LinkedIn test publishes the clearly labeled test post using the supplied author URN.
 
 The script exits with:
+
 - `0` only when both authorization and delivery succeed;
 - `2` when confirmation or local test inputs are missing;
 - `1` for an actual connector failure.

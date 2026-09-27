@@ -35,8 +35,10 @@ if (missing.length > 0) {
 }
 
 const testContent = async () => ({
-  telegram: "ORBIT connector proof test — do not treat as customer-facing content.",
-  linkedin: "ORBIT connector proof test — do not treat as customer-facing content.",
+  telegram:
+    "ORBIT connector proof test — do not treat as customer-facing content.",
+  linkedin:
+    "ORBIT connector proof test — do not treat as customer-facing content.",
 });
 
 let telegramDelivered = false;
