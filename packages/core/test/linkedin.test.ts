@@ -89,7 +89,6 @@ describe("LinkedInConnector", () => {
     ).rejects.toThrow("Explicit user confirmation");
   });
 
-
   it("uses a default request timeout when no signal is provided", async () => {
     let requestSignal: AbortSignal | undefined;
     const connector = new LinkedInConnector({
@@ -99,7 +98,10 @@ describe("LinkedInConnector", () => {
       contentResolver: async () => "Hello",
       fetchImpl: async (_input, init) => {
         requestSignal = init?.signal as AbortSignal | undefined;
-        return new Response("", { status: 201, headers: { "x-restli-id": "urn:li:share:457" } });
+        return new Response("", {
+          status: 201,
+          headers: { "x-restli-id": "urn:li:share:457" },
+        });
       },
     });
 
