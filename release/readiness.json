@@ -22,7 +22,7 @@
         "desktop native builds",
         "mobile validation"
       ],
-      "notes": "Current merged release-control head bbde7c5300bc05f8c46f5d0ae539abc9abb2ef36 passed main CI/security/release evidence and PR #124 native desktop/mobile validation."
+      "notes": "The current release-control line is validated by main CI/security evidence plus native desktop/mobile validation; exact SHA and artifact identifiers are retained in the generated release-evidence bundle."
     },
     "runtime": {
       "level": "L2_VERIFIED",
@@ -31,7 +31,7 @@
         "queue/recovery tests",
         "Windows native E2E"
       ],
-      "notes": "Current merged release line includes the staged/bounded Windows Native E2E hardening and verified exact-head Windows native E2E success. 24-hour soak and extended field stability are not yet proven."
+      "notes": "Native recovery and bounded Windows Native E2E are verified on the validated release line. 24-hour soak and extended field stability remain open."
     },
     "product_workflows": {
       "level": "L2_VERIFIED",
@@ -47,7 +47,7 @@
         "audit",
         "policy tests"
       ],
-      "notes": "GitHub main branch is currently protected with required ci and security:scan checks. Final L3 commercial governance still requires the machine-readable release contract to carry auditable evidence and verification time."
+      "notes": "GitHub main is protected with required ci and security:scan checks. Final L3 commercial governance still requires auditable evidence references and verification time in the machine-readable release record."
     },
     "distribution": {
       "level": "L2_VERIFIED",
@@ -61,13 +61,13 @@
     "web_production": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "Vercel Production Provenance run 36350429904",
-        "Web Deploy run 36350429899",
-        "canonical production deployment dpl_BfRxpFLLhzBDyKdwy74wB7bX7aUK",
+        "Vercel Production Provenance workflow",
+        "Web Deploy workflow",
+        "canonical production alias",
         "exact Git SHA verification",
         "live security/route/runtime checks"
       ],
-      "notes": "Production deployment is READY from Git main at bbde7c5300bc05f8c46f5d0ae539abc9abb2ef36, framework=nextjs, with the canonical alias. Rollback drill remains open."
+      "notes": "The current governed Git deployment path is verified for the latest release cycle. Production rollback evidence remains open."
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",

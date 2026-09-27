@@ -12,7 +12,7 @@ The remaining blockers are primarily production/runtime/external evidence, not m
 
 ## Vercel deployment evidence
 
-The connected `orbit-marketing-os` project is live and has a READY production deployment for the previously verified release line.
+The connected `orbit-marketing-os` project is live and has a READY governed Git production deployment for the latest verified release cycle.
 
 Current verified facts:
 
@@ -22,10 +22,10 @@ Current verified facts:
 - selected seven-day runtime-error aggregation reports no runtime errors;
 - Vercel production metadata reports `framework: nextjs` and Git source on the verified deployment;
 - the repository now has a release-aware ignored-build policy so release metadata/provenance changes cannot be silently skipped by Vercel;
-- the current `main` commit after release-documentation changes must still complete the fresh Vercel Git provenance cycle before this blocker can close;
+- the latest verified current-main release cycle completed the Vercel Git provenance cycle successfully;
 - repository `vercel.json` expects Next.js static export to `packages/web/out`.
 
-The remaining Vercel blocker is now the fresh current-main deployment/provenance verification plus rollback drill, not missing credentials.
+The remaining Vercel blocker is now the production rollback drill only; current-main deployment/provenance is verified.
 
 The GitHub Vercel deployment lane is governed, exact-SHA bound, and live-provenance checked.
 
