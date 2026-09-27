@@ -30,4 +30,4 @@ The script exits with:
 
 Never paste credentials into chat. Store them only in the local environment/vault used by the controlled test environment.
 
-The resulting stdout contains pass/fail metadata only; it does not print tokens or secret values.
+The resulting report binds the proof result to the triggering Git SHA (`GITHUB_SHA`) and contains pass/fail metadata only; it does not print tokens or secret values.
