@@ -110,6 +110,21 @@ describe("LinkedInConnector", () => {
     expect(requestSignal).toBeInstanceOf(AbortSignal);
   });
 
+  it("fails closed when LinkedIn returns 201 without a post id", async () => {
+    const connector = new LinkedInConnector({
+      apiVersion: "202609",
+      tokenResolver: async () => "token-secret",
+      authorResolver: async () => "urn:li:person:123",
+      contentResolver: async () => "Hello",
+      fetchImpl: async () => new Response("", { status: 201 }),
+    });
+
+    await expect(connector.execute(task, context)).resolves.toMatchObject({
+      status: "blocked",
+      reason: "delivery_status_unknown",
+    });
+  });
+
   it("fails closed on timeout and server responses with ambiguous delivery status", async () => {
     const make = (status: number) =>
       new LinkedInConnector({
