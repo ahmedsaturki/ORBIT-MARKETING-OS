@@ -118,6 +118,18 @@ The public landing surface describes multi-account management, bulk messaging, c
 
 Source: https://kingmaster.info/landing.php
 
+### AD Share
+
+Public product material shows WhatsApp messaging, Facebook-group publishing, data extraction, and social-marketing tooling.
+
+Source: https://iadshare.com/
+
+### Controls Tools
+
+The public site describes Facebook and WhatsApp marketing tooling, publishing/messaging tools, and a Data Control section. Private/internal implementation is not inferred.
+
+Source: https://controlstools.com/
+
 ### Publer
 
 Public documentation covers:
