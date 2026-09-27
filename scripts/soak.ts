@@ -612,7 +612,9 @@ main()
     } catch (summaryError) {
       console.error(
         "SOAK SUMMARY WRITE FAILED: " +
-          (summaryError instanceof Error ? summaryError.message : String(summaryError)),
+          (summaryError instanceof Error
+            ? summaryError.message
+            : String(summaryError)),
       );
     }
     console.error("SOAK FAILED: " + message);
@@ -623,5 +625,7 @@ main()
   });
 
 function stderrHint(child: ChildProcess | undefined): string {
-  return child?.pid ? "See captured runtime stderr for PID " + child.pid + "." : "";
+  return child?.pid
+    ? "See captured runtime stderr for PID " + child.pid + "."
+    : "";
 }
