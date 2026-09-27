@@ -6,13 +6,13 @@ Updated: 2026-09-28
 
 The current merged release lives on the repository default branch `main`; this document intentionally avoids hard-coding a moving SHA.
 
-The release train now includes commercial proof hardening, static-export web provenance endpoints, reconciled readiness evidence, exact-SHA soak binding, soak-evidence durability, current production provenance hardening, and durable release documentation.
+The release train includes commercial proof hardening, static-export web provenance endpoints, reconciled readiness evidence, exact-SHA soak binding, soak-evidence durability, current production provenance hardening, repository-root-safe Vercel ignore behavior, and durable release documentation.
 
 The remaining blockers are primarily production/runtime/external evidence, not missing core architecture.
 
 ## Vercel deployment evidence
 
-The connected `orbit-marketing-os` project is live and has a READY governed Git production deployment for the latest verified release cycle.
+The connected `orbit-marketing-os` project is live and has a READY governed Git production deployment for the current verified main release.
 
 Current verified facts:
 
@@ -20,12 +20,13 @@ Current verified facts:
 - unknown routes return 404;
 - Arabic RTL markup is present;
 - selected seven-day runtime-error aggregation reports no runtime errors;
-- Vercel production metadata reports `framework: nextjs` and Git source on the verified deployment;
+- Vercel production metadata reports `framework: nextjs` and Git source;
+- the verified production deployment exposes exact Git SHA `7fb96ad7b73af0b05eaa605cfaf7cca5368bc9e6`;
 - repository `vercel.json` expects Next.js static export to `packages/web/out`;
-- the repository ignore policy permits only `main` to deploy and explicitly includes release-truth changes;
-- PR #129 hardens the ignore command against Vercel Root Directory cwd differences.
+- the ignore policy permits only `main` to deploy and explicitly includes release-truth changes;
+- PR #129 makes the Ignore Build Step independent of Vercel Root Directory cwd.
 
-The current main docs-only revision was recognized by Vercel but stopped by the Ignore Build Step, so it is not accepted as current-main production provenance. The last verified deployment remains the canonical rollback candidate until a new current-main deployment passes the full provenance and live-surface checks.
+The current Vercel production deployment and public provenance verification passed for the exact main SHA. The remaining Vercel gate is the production rollback drill.
 
 ## Reproducible installation
 
