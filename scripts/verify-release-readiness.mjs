@@ -45,7 +45,7 @@ const entries = Object.entries(document.releaseCritical);
 function isValidVerifiedAt(value) {
   if (typeof value !== "string") return false;
   const timestamp = value.trim();
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$/.exec(
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.exec(
     timestamp,
   );
   if (!match) return false;
