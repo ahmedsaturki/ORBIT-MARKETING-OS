@@ -106,15 +106,6 @@ jobs:
 
       - name: Format check
         run: pnpm format:check
-      - name: Formatter diagnosis
-        if: failure()
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm exec prettier scripts/verify-windows-e2e-artifact.mjs > /tmp/prettier-verify-windows-e2e-artifact.mjs
-          echo '--- prettier-formatted-file-start ---'
-          cat /tmp/prettier-verify-windows-e2e-artifact.mjs
-          echo '--- prettier-formatted-file-end ---'
 
 
   rust:
