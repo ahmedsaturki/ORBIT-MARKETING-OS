@@ -39,6 +39,8 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 
 Commercial Production Proven requires every release-critical gate to reach **L3**.
 
+For a gate to carry `L3_PRODUCTION_PROVEN`, the machine-readable record must also contain non-empty `evidenceRefs` and a parseable `verifiedAt`. This prevents a plain text level change from becoming a false production claim.
+
 The machine-readable source of truth is `release/readiness.json`. Run:
 
 `pnpm verify:readiness`
