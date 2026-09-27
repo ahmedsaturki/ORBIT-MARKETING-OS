@@ -126,10 +126,7 @@ test("vercel ignore script builds when Git revision context is incomplete or una
   try {
     await git(cwd, ["init", "-q"]);
 
-    assert.equal(
-      await runIgnore(cwd, { VERCEL_GIT_COMMIT_REF: "main" }),
-      1,
-    );
+    assert.equal(await runIgnore(cwd, { VERCEL_GIT_COMMIT_REF: "main" }), 1);
 
     assert.equal(
       await runIgnore(cwd, {
