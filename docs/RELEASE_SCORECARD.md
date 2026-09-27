@@ -100,7 +100,9 @@ Updated: 2026-09-27.
 ## External / commercial prerequisites
 
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
-- Current-main Vercel provenance/settings still require credential-backed verification; the repo-side deployment workflow is now tied to the triggering SHA and uses `/api/health.json` + `/api/release.json`.
+- Current-main Vercel provenance/settings still require credential-backed verification; the repo-side deployment workflow is tied to the triggering SHA and uses `/api/health.json` + `/api/release.json`.
+- The latest current-main Vercel credential gate failed closed because all three required Vercel release credentials are absent in GitHub Actions; no secret value was exposed.
+- The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.

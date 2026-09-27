@@ -31,11 +31,12 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evide
 | Clean install                                | VERIFIED   | Frozen install with committed lockfiles                                                                                                  |
 | Typecheck/lint/tests/coverage/build          | VERIFIED   | Hosted CI gates passed on current merged feature lineage                                                                                 |
 | Rust quality                                 | VERIFIED   | Rust fmt/check/test/clippy passed on validated release line                                                                              |
-| Security/dependency audit                    | VERIFIED   | Hosted security and dependency checks passed                                                                                             |
+| Security/dependency audit                    | VERIFIED   | Secret/dependency controls and hosted audit checks passed; SonarCloud main Quality Gate remains a separate failed external analyzer gate     |
+| SonarCloud main quality gate                  | UNVERIFIED | Latest main analysis reports B Security Rating on New Code; required A; underlying issue detail is not exposed by the connected GitHub API      |
 | Performance smoke                            | VERIFIED   | Queue throughput smoke passed                                                                                                            |
 | Browser E2E                                  | VERIFIED   | Playwright/browser gates passed                                                                                                          |
 | Production web availability                  | VERIFIED   | READY production deployment and live route/header/runtime checks                                                                         |
-| Production web provenance                    | UNVERIFIED | Current READY deployment predates the current `main` release state and current project metadata/provenance still requires reconciliation |
+| Production web provenance                    | UNVERIFIED | Current READY deployment predates current `main`; Vercel credentials are absent and `/api/health.json` + `/api/release.json` still return 404 on the public alias |
 | Native desktop packaging                     | VERIFIED   | All four desktop packaging targets passed on PR #72 exact head                                                                           |
 | Android debug validation                     | VERIFIED   | Mobile validation produced validated debug artifact                                                                                      |
 | Native recovery                              | PARTIAL    | Restart/queue recovery E2E exists; consolidated production evidence remains open                                                         |
