@@ -35,7 +35,7 @@ if (expectedReleaseSha) {
   }
 }
 
-const releaseHealth = await get("/api/health", "application/json");
+const releaseHealth = await get("/api/health.json", "application/json");
 if (!releaseHealth.ok) {
   throw new Error(
     "Live ORBIT health endpoint returned HTTP " + releaseHealth.status,
@@ -54,7 +54,7 @@ if (expectedReleaseSha && healthBody?.releaseSha !== expectedReleaseSha) {
   );
 }
 
-const releaseIdentity = await get("/api/release", "application/json");
+const releaseIdentity = await get("/api/release.json", "application/json");
 if (!releaseIdentity.ok) {
   throw new Error(
     "Live ORBIT release endpoint returned HTTP " + releaseIdentity.status,

@@ -53,7 +53,7 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 ### E. Web production evidence
 
 - Canonical production deployment.
-- Git SHA embedded in /api/health and /api/release.
+- Git SHA embedded in /api/health.json and /api/release.json.
 - HTTPS/security headers.
 - 404 behavior.
 - RTL smoke.
