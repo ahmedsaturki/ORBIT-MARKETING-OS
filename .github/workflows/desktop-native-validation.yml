@@ -108,11 +108,15 @@ jobs:
       - name: Generate app icons
         run: pnpm --dir packages/desktop tauri icon src-tauri/icon-source.svg
       - name: Build desktop
+        timeout-minutes: 20
         run: pnpm --dir packages/desktop tauri build --features e2e-cdp
       - name: Build web surface for native E2E server
+        timeout-minutes: 10
         run: pnpm --dir packages/web build
 
       - name: Install Playwright Chromium
+        timeout-minutes: 10
         run: pnpm exec playwright install chromium
       - name: Run native and web E2E
+        timeout-minutes: 20
         run: pnpm test:e2e
