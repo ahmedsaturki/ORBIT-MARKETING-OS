@@ -1,7 +1,6 @@
 # ORBIT Distribution
 
 Updated: 2026-09-28.
-
 ## Desktop
 
 `release-desktop.yml` builds Windows, Linux, and macOS bundles when a `v*` tag is pushed, but first verifies that the tagged commit belongs to the `main` release lineage.
@@ -24,8 +23,4 @@ The current release cycle has passed the Vercel Production Provenance and Web De
 
 ## Release integrity
 
-Every distributed artifact must have a release tag, a checksum entry, and documented provenance. A green build job is evidence for the artifact build only; it is not evidence of code signing, store approval, commercial readiness, or platform-policy compliance.
-
-## Current distribution boundary
-
-ORBIT can be operated today as an unsigned validation/prerelease product and as a verified production Web surface. Commercial desktop/mobile distribution remains gated on signing, store, billing, legal, and the remaining runtime/external evidence.
+Every distributed artifact must have a release tag, a checksum entry, and documented provenance. A green build job is evidence for the artifact build only; it is not evidence of code signing, store approval, current-main provenance, or platform-policy compliance.
