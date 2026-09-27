@@ -49,11 +49,7 @@ for (const argv of [
     );
   }
   const invalidOutputText = `${invalidOutput.stdout}\n${invalidOutput.stderr}`;
-  if (
-    !invalidOutputText.includes(
-      "--output requires a non-flag filename.",
-    )
-  ) {
+  if (!invalidOutputText.includes("--output requires a non-flag filename.")) {
     throw new Error(
       `missing invalid-output fail-closed marker for ${argv.join(" ")}`,
     );
