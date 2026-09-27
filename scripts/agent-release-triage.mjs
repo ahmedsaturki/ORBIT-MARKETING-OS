@@ -9,14 +9,16 @@ function git(args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
 }
 
-const gates = Object.entries(readiness.releaseCritical ?? {}).map(([key, value]) => ({
-  key,
-  level: value.level,
-  notes: value.notes,
-  evidence: value.evidence ?? [],
-  evidenceRefs: value.evidenceRefs ?? [],
-  verifiedAt: value.verifiedAt ?? null,
-}));
+const gates = Object.entries(readiness.releaseCritical ?? {}).map(
+  ([key, value]) => ({
+    key,
+    level: value.level,
+    notes: value.notes,
+    evidence: value.evidence ?? [],
+    evidenceRefs: value.evidenceRefs ?? [],
+    verifiedAt: value.verifiedAt ?? null,
+  }),
+);
 
 const ownerActionKeys = new Set([
   "external_connectors",
@@ -57,7 +59,9 @@ const payload = {
   summary: {
     releaseCriticalCount: gates.length,
     productionProvenCount: gates.filter((gate) => gate.level === "L3_PRODUCTION_PROVEN").length,
-    engineeringOrVerificationCount: gates.filter((gate) => classify(gate) === "ENGINEERING_OR_VERIFICATION").length,
+    engineeringOrVerificationCount: gates.filter(
+      (gate) => classify(gate) === "ENGINEERING_OR_VERIFICATION",
+    ).length,
     ownerActionCount: gates.filter((gate) => classify(gate) === "OWNER_ACTION").length,
     blockedCount: gates.filter((gate) => gate.level !== "L3_PRODUCTION_PROVEN").length,
   },
