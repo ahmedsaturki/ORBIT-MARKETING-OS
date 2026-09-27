@@ -12,104 +12,101 @@ Updated: 2026-09-28.
 
 ## Security
 
-| Gate | Status | Evidence |
-| --- | --- | --- |
+| Gate                             | Status   | Evidence                                                 |
+| -------------------------------- | -------- | -------------------------------------------------------- |
 | SEC-01 Secrets encrypted at rest | VERIFIED | Native encryption plus hosted security/Rust gates passed |
-| SEC-02 Secret redaction | VERIFIED | Secret scan and core tests passed |
-| SEC-03 Renderer isolation | VERIFIED | Tauri capability policy and native E2E passed |
-| SEC-04 License tamper detection | VERIFIED | License tests passed |
+| SEC-02 Secret redaction          | VERIFIED | Secret scan and core tests passed                        |
+| SEC-03 Renderer isolation        | VERIFIED | Tauri capability policy and native E2E passed            |
+| SEC-04 License tamper detection  | VERIFIED | License tests passed                                     |
 
 ## Data / Queue
 
-| Gate | Status | Evidence |
-| --- | --- | --- |
-| DATA-01 Local SQLite | VERIFIED | Native implementation and validated Rust/native gates |
-| DATA-02 Migration safety | VERIFIED | Versioned migrations through v16 and migration tests |
-| DATA-03 Search scale | UNVERIFIED | Contract exists; large-contact benchmark still needs fresh measured evidence |
-| QUE-01 Persistent queue recovery | PARTIAL | Recovery implementation and E2E exist; consolidated release evidence remains |
-| QUE-02 Bounded retries | VERIFIED | Core/native retry validation passed |
-| QUE-03 Circuit breaker | VERIFIED | Policy/runtime controls covered |
-| QUE-04 Human-intervention wait | VERIFIED | Explicit wait/resume contract and tests |
+| Gate                             | Status     | Evidence                                                                     |
+| -------------------------------- | ---------- | ---------------------------------------------------------------------------- |
+| DATA-01 Local SQLite             | VERIFIED   | Native implementation and validated Rust/native gates                        |
+| DATA-02 Migration safety         | VERIFIED   | Versioned migrations through v16 and migration tests                         |
+| DATA-03 Search scale             | UNVERIFIED | Contract exists; large-contact benchmark still needs fresh measured evidence |
+| QUE-01 Persistent queue recovery | PARTIAL    | Recovery implementation and E2E exist; consolidated release evidence remains |
+| QUE-02 Bounded retries           | VERIFIED   | Core/native retry validation passed                                          |
+| QUE-03 Circuit breaker           | VERIFIED   | Policy/runtime controls covered                                              |
+| QUE-04 Human-intervention wait   | VERIFIED   | Explicit wait/resume contract and tests                                      |
 
 ## Product workflows
 
-| Gate | Status | Evidence |
-| --- | --- | --- |
-| CAMP-01 Campaign → tasks | VERIFIED | Native commands and core tests |
-| CAMP-02 Account membership | VERIFIED | Workspace checks/triggers |
-| CAMP-03 Approval gates | VERIFIED | Approval policy/persistence tests |
-| INBOX-01 Unified inbox | VERIFIED | Native inbox model/tests |
-| CRM-01 Conversation/contact linking | VERIFIED | Native relational checks |
-| SYNC-01 Offline persistence | VERIFIED | Encrypted reconnect/convergence tests |
-| SYNC-02 Convergence | PARTIAL | Automated convergence passed; live multi-device network remains |
-| CMD-01 Command dispatcher | VERIFIED | Exact-head validation passed before merge |
-| EVENT-01 Operational event spine | VERIFIED | Exact-head validation passed before merge |
-| SEARCH-01 Universal Search | VERIFIED | Exact-head Windows Native E2E passed after escaping fix |
-| PUB-01 Publishing Calendar | VERIFIED | Exact-head native validation passed |
-| PUB-02 Bulk Planner | VERIFIED | Bounded planner + approval behavior validated |
+| Gate                                | Status   | Evidence                                                        |
+| ----------------------------------- | -------- | --------------------------------------------------------------- |
+| CAMP-01 Campaign → tasks            | VERIFIED | Native commands and core tests                                  |
+| CAMP-02 Account membership          | VERIFIED | Workspace checks/triggers                                       |
+| CAMP-03 Approval gates              | VERIFIED | Approval policy/persistence tests                               |
+| INBOX-01 Unified inbox              | VERIFIED | Native inbox model/tests                                        |
+| CRM-01 Conversation/contact linking | VERIFIED | Native relational checks                                        |
+| SYNC-01 Offline persistence         | VERIFIED | Encrypted reconnect/convergence tests                           |
+| SYNC-02 Convergence                 | PARTIAL  | Automated convergence passed; live multi-device network remains |
+| CMD-01 Command dispatcher           | VERIFIED | Exact-head validation passed before merge                       |
+| EVENT-01 Operational event spine    | VERIFIED | Exact-head validation passed before merge                       |
+| SEARCH-01 Universal Search          | VERIFIED | Exact-head Windows Native E2E passed after escaping fix         |
+| PUB-01 Publishing Calendar          | VERIFIED | PR #72 exact-head native validation passed                      |
+| PUB-02 Bulk Planner                 | VERIFIED | Bounded planner + approval behavior validated                   |
 
 ## Intelligence
 
-| Gate | Status | Evidence |
-| --- | --- | --- |
-| RESEARCH-01 Research evidence model | VERIFIED | Native persistence, workspace checks and source/evidence contract |
-| EXP-01 Deterministic experimentation | VERIFIED | Deterministic assignment and aggregation tests |
-| EXP-02 Descriptive uncertainty | VERIFIED | Wilson/Newcombe-Wilson bounded interval implementation/tests |
-| AN-01 Descriptive anomaly detection | VERIFIED | Deterministic rolling median/MAD tests |
-| AGENT-01 Governed agent registry | VERIFIED | Agent authorization and workspace boundaries |
-| PLATFORM-01 Platform manifest foundation | IMPLEMENTED | Unit-tested registry foundation; deeper integration remains |
+| Gate                                     | Status      | Evidence                                                          |
+| ---------------------------------------- | ----------- | ----------------------------------------------------------------- |
+| RESEARCH-01 Research evidence model      | VERIFIED    | Native persistence, workspace checks and source/evidence contract |
+| EXP-01 Deterministic experimentation     | VERIFIED    | Deterministic assignment and aggregation tests                    |
+| EXP-02 Descriptive uncertainty           | VERIFIED    | Wilson/Newcombe-Wilson bounded interval implementation/tests      |
+| AN-01 Descriptive anomaly detection      | VERIFIED    | Deterministic rolling median/MAD tests                            |
+| AGENT-01 Governed agent registry         | VERIFIED    | Agent authorization and workspace boundaries                      |
+| PLATFORM-01 Platform manifest foundation | IMPLEMENTED | Unit-tested registry foundation; deeper integration remains       |
 
 ## Connectors
 
-| Gate | Status | Evidence |
-| --- | --- | --- |
-| CONN-01 Capability handshake | VERIFIED | Connector registry/fixture/capability tests |
-| CONN-02 Unsupported action rejection | VERIFIED | Negative connector tests |
-| CONN-03 Challenge → human intervention | VERIFIED | Challenge handling and stop paths |
-| Telegram native path | UNVERIFIED | Real-account proof pending |
-| LinkedIn | UNVERIFIED | Real-account proof pending |
-| Facebook / Instagram / WhatsApp / TikTok | NOT IMPLEMENTED | Contract/fixture surfaces only |
+| Gate                                     | Status          | Evidence                                    |
+| ---------------------------------------- | --------------- | ------------------------------------------- |
+| CONN-01 Capability handshake             | VERIFIED        | Connector registry/fixture/capability tests |
+| CONN-02 Unsupported action rejection     | VERIFIED        | Negative connector tests                    |
+| CONN-03 Challenge → human intervention   | VERIFIED        | Challenge handling and stop paths           |
+| Telegram native path                     | UNVERIFIED      | Real-account proof pending                  |
+| LinkedIn                                 | UNVERIFIED      | Real-account proof pending                  |
+| Facebook / Instagram / WhatsApp / TikTok | NOT_IMPLEMENTED | Contract/fixture surfaces only              |
 
 ## Web / Mobile
 
-| Gate | Status | Evidence |
-| --- | --- | --- |
-| WEB-01 PWA | VERIFIED | Web build/E2E and live checks |
-| MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line |
-| Native desktop packaging | VERIFIED | Windows/Linux/macOS x64/ARM validation passed |
-| Web production availability | VERIFIED | Current READY production deployment responds successfully |
-| Web production provenance | VERIFIED | Latest Vercel Production Provenance and Web Deploy verify current-main exact SHA, canonical alias, health/release endpoints, security headers, routes, manifest/service worker and 404 behavior |
+| Gate                          | Status     | Evidence                                                                                             |
+| ----------------------------- | ---------- | ---------------------------------------------------------------------------------------------------- |
+| WEB-01 PWA                    | VERIFIED   | Web build/E2E and live checks                                                                        |
+| MOB-01 Mobile control surface | VERIFIED   | Mobile validation passed on validated release line                                                   |
+| Native desktop packaging      | VERIFIED   | Windows/Linux/macOS x64/ARM validation passed                                                        |
+| Web production availability   | VERIFIED   | Current READY deployment responds successfully                                                       |
+| Web production provenance     | VERIFIED   | Latest successful Vercel Production Provenance and Web Deploy gates verify exact-main SHA provenance, canonical alias, health/release endpoints, security headers, routes, manifest/service worker and 404 behavior |
 
 ## Release / Operations
 
-| Gate | Status | Evidence |
-| --- | --- | --- |
-| REL-01 Reproducible install | VERIFIED | Committed pnpm-lock.yaml/Cargo.lock + frozen install |
-| REL-02 Signed desktop artifact | BLOCKED | Signing identities not configured |
-| REL-03 Checksum verification | PARTIAL | Validation pipeline generates and verifies checksums; final signed distribution evidence remains |
-| LIC-01 Offline license | PARTIAL | Token/constraint tests pass; production distribution proof remains |
-| OPS-01 Crash/restart recovery | PARTIAL | Native restart/queue recovery E2E exists; final consolidated evidence remains |
-| OPS-02 24h soak | UNVERIFIED | No completed 24h evidence |
-| PERF-01 Startup budget | UNVERIFIED | Fresh measured benchmark pending |
-| PERF-02 Memory budget | UNVERIFIED | Fresh measured benchmark pending |
-| QA-01 Coverage threshold | VERIFIED | Hosted coverage gate passed |
-| QA-02 Critical E2E | VERIFIED | Validated feature line passed required E2E/native gates |
-| DOC-01 Product docs | VERIFIED | Current release/readiness docs reconciled to merged main |
-| DOC-02 Security model | PARTIAL | Threat model/security gates exist; final review remains |
+| Gate                           | Status     | Evidence                                                                                       |
+| ------------------------------ | ---------- | ---------------------------------------------------------------------------------------------- |
+| REL-01 Reproducible install    | VERIFIED   | Committed pnpm-lock.yaml/Cargo.lock + frozen install                                           |
+| REL-02 Signed desktop artifact | BLOCKED    | Signing identities not configured                                                              |
+| REL-03 Checksum verification   | PARTIAL    | Validation pipeline generates and checks checksums; final distributed release evidence remains |
+| LIC-01 Offline license         | PARTIAL    | Token/constraint tests pass; production distribution proof remains                             |
+| OPS-01 Crash/restart recovery  | PARTIAL    | Native restart/queue recovery E2E exists; final consolidated evidence remains                  |
+| OPS-02 24h soak                | UNVERIFIED | No completed 24h evidence                                                                      |
+| PERF-01 Startup budget         | UNVERIFIED | Fresh measured benchmark pending                                                               |
+| PERF-02 Memory budget          | UNVERIFIED | Fresh measured benchmark pending                                                               |
+| QA-01 Coverage threshold       | VERIFIED   | Hosted coverage gate passed                                                                    |
+| QA-02 Critical E2E             | VERIFIED   | Current validated feature line passed required E2E/native gates                                |
+| DOC-01 Product docs            | VERIFIED   | Current release/readiness docs reconciled to merged main                                       |
+| DOC-02 Security model          | PARTIAL    | Threat model/security gates exist; final review remains                                        |
 
 ## External / commercial prerequisites
 
-- Current-main Vercel production provenance/settings are verified through the governed Git deployment path.
-- The verified production deployment is Git-sourced, uses the Next.js framework, targets production, exposes the canonical orbit-marketing-os.vercel.app alias, and reports the exact current main SHA.
-- Vercel runtime-error aggregation is clean for the selected seven-day window.
-- The remaining Vercel gate is a fresh rollback drill to the previous verified candidate and back.
-- The latest main SonarCloud analysis remains failed on B Security Rating on New Code (required A).
+- Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
+- Current-main Vercel production provenance/settings are verified through the governed Git deployment path; the verified production deployment is Git-sourced, uses Next.js, targets production, and exposes the exact current `main` SHA.
+- The current Vercel release cycle passed the governed Git provenance and Web Deploy checks. The remaining Vercel action is a controlled rollback drill to the previous verified candidate and back.
+- The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.
-- GitHub main is protected with required ci and security:scan; final L3 governance evidence still requires auditable evidence references and verification timestamps.
-- Final legal/commercial publication review remains open.
-- Real Telegram/LinkedIn, live multi-device CRDT, consolidated recovery, manual WCAG/RTL, and 24h soak evidence remain open.
+- GitHub `main` is protected with required `ci` and `security:scan`; final L3 governance evidence still requires auditable evidence references and verification time.
 
 ## Release rule
 
