@@ -50,6 +50,8 @@ jobs:
         run: pnpm verify:readiness -- --mode verification
       - name: Readiness verifier contract test
         run: node scripts/verify-release-readiness.test.mjs
+      - name: Vercel ignore command contract
+        run: node scripts/vercel-ignore.test.mjs
       - name: Workspace sanity
         run: pnpm verify:workspace
 
