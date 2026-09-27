@@ -125,7 +125,9 @@ jobs:
         env:
           ORBIT_LIVE_URL: ${{ steps.deploy.outputs.url }}
           ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
-        run: node scripts/verify-live-web.mjs  git_provenance:
+        run: node scripts/verify-live-web.mjs
+
+  git_provenance:
     name: Vercel Git provenance
     needs: [quality, vercel_mode]
     if: needs.vercel_mode.outputs.credentials == 'false'
