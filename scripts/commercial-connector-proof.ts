@@ -150,8 +150,7 @@ try {
         connection.message ?? connection.reason ?? "authorization failed";
     }
   } catch (error) {
-    telegram.message =
-      error instanceof Error ? error.message : String(error);
+    telegram.message = error instanceof Error ? error.message : String(error);
   }
 
   try {
@@ -203,8 +202,7 @@ try {
         connection.message ?? connection.reason ?? "authorization failed";
     }
   } catch (error) {
-    linkedin.message =
-      error instanceof Error ? error.message : String(error);
+    linkedin.message = error instanceof Error ? error.message : String(error);
   }
 } finally {
   const passed =
