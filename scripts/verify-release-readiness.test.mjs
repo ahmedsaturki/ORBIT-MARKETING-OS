@@ -1,15 +1,16 @@
+import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { describe, expect, it } from "vitest";
 
 const script = "scripts/verify-release-readiness.mjs";
 
-function runVerifier(mode) {
+function run(mode) {
   try {
-    execFileSync(process.execPath, [script, "--mode", mode], {
+    const stdout = execFileSync(process.execPath, [script, "--mode", mode], {
       cwd: process.cwd(),
       encoding: "utf8",
-      stdio: "pipe",
+      stdio: ["ignore", "pipe", "pipe"],
     });
+    return { status: 0, stdout, stderr: "" };
   } catch (error) {
     return {
       status: error?.status ?? -1,
@@ -17,22 +18,20 @@ function runVerifier(mode) {
       stderr: error?.stderr ?? "",
     };
   }
-
-  throw new Error("verifier unexpectedly passed");
 }
 
-describe("release readiness verifier", () => {
-  it("fails closed for the commercial lane while any critical gate is below L3", () => {
-    const result = runVerifier("commercial");
-    expect(result.status).toBe(2);
-    expect(result.stdout).toContain("production-proven=0");
-    expect(result.stderr).toContain("commercial-release=BLOCKED");
-  });
+const verification = run("verification");
+assert.equal(verification.status, 0);
+assert.match(verification.stdout, /release-readiness=PASS mode=verification/);
 
-  it("rejects unknown modes without printing a pass result", () => {
-    const result = runVerifier("unknown");
-    expect(result.status).toBe(1);
-    expect(result.stdout).not.toContain("release-readiness=PASS");
-    expect(result.stderr).toContain("Mode must be verification or commercial.");
-  });
-});
+const commercial = run("commercial");
+assert.equal(commercial.status, 2);
+assert.match(commercial.stdout, /production-proven=0/);
+assert.match(commercial.stderr, /commercial-release=BLOCKED/);
+
+const unknown = run("unknown");
+assert.equal(unknown.status, 1);
+assert.doesNotMatch(unknown.stdout, /release-readiness=PASS/);
+assert.match(unknown.stderr, /Mode must be verification or commercial\./);
+
+console.log("release-readiness-verifier-contract=PASS");
