@@ -14,9 +14,11 @@ The Expo project supports local development and web export. The current GitHub A
 
 ## Web
 
-The public web surface is live on the connected Vercel production project and responds correctly on the current public routes. The repository's guarded GitHub deployment workflow is intentionally credential-gated.
+The public web surface is live on the connected Vercel production project and responds correctly on the verified production routes.
 
-The current READY Vercel deployment predates the current `main` release state and does not expose current-main Git provenance. It therefore proves live infrastructure, not canonical release provenance.
+The latest verified production deployment is Git-sourced, uses the Next.js framework, targets production, and exposes current release provenance through the governed verification path. The immediately following docs-only main revision was attempted by Vercel but was stopped by the Ignore Build Step; the release-ignore hardening in this branch makes repository-root release-truth detection independent of Vercel Root Directory.
+
+The canonical `orbit-marketing-os.vercel.app` alias remains on the last verified production deployment until a subsequent current-main deployment completes successfully. This is intentional: a known-good deployment is preferable to claiming provenance for an unverified revision.
 
 ## Release integrity
 
