@@ -81,7 +81,7 @@ jobs:
       - name: Build Windows E2E desktop
         if: matrix.artifact == 'windows-x64'
         env:
-          CARGO_TARGET_DIR: packages/desktop/src-tauri/target/e2e-cdp
+          CARGO_TARGET_DIR: ${{ github.workspace }}/packages/desktop/src-tauri/target/e2e-cdp
         run: pnpm --dir packages/desktop tauri build --features e2e-cdp
       - name: Stage Windows executable for native E2E
         if: matrix.artifact == 'windows-x64'
