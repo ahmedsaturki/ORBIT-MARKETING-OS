@@ -23,6 +23,10 @@ Updated: 2026-09-27.
 - PR #95: merged — verified regional competitor-watch expansion.
 - PR #97: merged — atomic bulk task planning.
 - PR #98: merged — executable readiness verifier contract.
+- PR #100: merged — commercial production proof hardening and governed connector-proof lane.
+- PR #101: merged — static-export web provenance endpoints and exact-SHA verification.
+- PR #102: merged — release-evidence/readiness reconciliation.
+- PR #103: merged — exact-SHA stability soak evidence hardening.
 
 ## Readiness rule
 
@@ -51,7 +55,7 @@ For the commercial lane, run:
 
 ## Current state
 
-The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, deterministic link intelligence core, platform foundation, content reuse policy, evidence-backed reporting packs, workspace isolation, native desktop/mobile validation, and web quality.
+The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, deterministic link intelligence core, platform foundation, content reuse policy, evidence-backed reporting packs, workspace isolation, native desktop/mobile validation, web quality, release-readiness validation, and exact-SHA soak/provenance hardening.
 
 A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed and the corrected feature head subsequently passed CI, desktop native, mobile, and Windows Native E2E.
 
@@ -75,7 +79,7 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 ## Web production evidence
 
-The connected Vercel project is live and the current seven-day grouped runtime-error query is clean. Guarded deployments now fail closed if release credentials are missing and, when credentials exist, verify the embedded release SHA through /api/health.json and /api/release.json.
+The connected Vercel project is live and the current seven-day grouped runtime-error query is clean. The repository deployment contract is a Next.js static export under packages/web/out. Guarded deployments now fail closed if release credentials are missing and, when credentials exist, verify the embedded release SHA through /api/health.json and /api/release.json.
 
 The current production deployment is healthy live infrastructure, but canonical release provenance is still open until a credential-backed deployment from the verified release path embeds and reports the exact release SHA.
 
