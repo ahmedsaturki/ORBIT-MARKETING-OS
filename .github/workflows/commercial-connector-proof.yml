@@ -52,4 +52,6 @@ jobs:
         with:
           name: orbit-live-connector-proof-${{ github.run_id }}
           path: .artifacts/commercial-connector-proof.json
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 90
