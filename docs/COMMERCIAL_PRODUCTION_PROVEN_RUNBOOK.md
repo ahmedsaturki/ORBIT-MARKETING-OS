@@ -69,10 +69,10 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 
 ## Current verified state — 2026-09-27
 
-- Historical exact-main Release Evidence Bundle evidence exists, but the latest merged main SHA must have a fresh evidence bundle before commercial promotion.
-- Historical artifact IDs/digests remain retained as dated evidence and are not treated as current-main proof.
+- Current main is `c511d5ea88e864b53f75be43169afc580ead7ce7` and has a fresh Release Evidence Bundle: run `36337207666`, artifact `10937298611`, SHA-256 `b8487e4a34fdac104db34800557c67f4ace1d91a75c72fbadac00aa3f2f71037`.
+- The current artifact records `productionProvenCount=0` and `remainingGateCount=13`; no commercial L3 gate is promoted.
 - The Vercel deployment lane is credential-gated and fail-closed; current-main production provenance is still unverified.
-- Current Vercel production deployment is READY but has empty Git provenance metadata.
+- The public Vercel deployment is healthy but its canonical provenance endpoints `/api/health.json` and `/api/release.json` are not yet exposed on the current alias.
 - Universal Search previously failed Windows Native E2E because of a real SQLite LIKE escaping defect; the defect has been fixed and literal `%`, `_`, and `!` regression coverage added.
 - Recent exact-head native validation also covered the corrected publishing/search test contracts; no current-main commercial proof is implied until release evidence is refreshed.
 
