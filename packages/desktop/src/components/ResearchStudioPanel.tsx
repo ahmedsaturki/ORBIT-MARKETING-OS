@@ -97,6 +97,20 @@ const COMPETITOR_WATCHLIST = [
     focus: "Planner، bulk scheduling، analytics، inbox، SmartLinks وتقارير.",
   },
   {
+    id: "competitor-ad-share",
+    name: "AD Share",
+    locator: "https://iadshare.com/",
+    focus:
+      "أدوات نشر وتسويق اجتماعي ومراسلة WhatsApp، مع أدوات بيانات/استخراج ظاهرة في السطح العام.",
+  },
+  {
+    id: "competitor-controls-tools",
+    name: "Controls Tools",
+    locator: "https://controlstools.com/",
+    focus:
+      "تسويق Facebook وWhatsApp، أدوات نشر/إرسال وData Control كما يصفها الموقع العام.",
+  },
+  {
     id: "competitor-publer",
     name: "Publer",
     locator: "https://publer.com/help/en/article/15kxhoi/",
