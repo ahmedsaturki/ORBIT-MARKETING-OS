@@ -14,8 +14,8 @@ async function get(pathname) {
 let last = "";
 for (let attempt = 1; attempt <= 12; attempt += 1) {
   try {
-    const health = await get("/api/health");
-    const release = await get("/api/release");
+    const health = await get("/api/health.json");
+    const release = await get("/api/release.json");
     if (health.ok && release.ok) {
       const healthBody = await health.json();
       const releaseBody = await release.json();
@@ -37,7 +37,7 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
             status: "PASS",
             origin: base,
             expectedReleaseSha: expected,
-            verifiedPaths: ["/", "/api/health", "/api/release"],
+            verifiedPaths: ["/", "/api/health.json", "/api/release.json"],
             attempt,
           }),
         );
