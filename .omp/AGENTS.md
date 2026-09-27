@@ -19,6 +19,7 @@ Then load the ORBIT/OMP execution protocol:
 - Never expose credentials, cookies, tokens, private vault data, or signing material.
 - Never bypass CAPTCHAs, access controls, anti-abuse controls, or platform safety controls.
 - Never convert a missing external prerequisite into a simulated pass.
+
 ## Product priorities carried into agent sessions
 
 - Prefer $0 / free / local-first solutions when they are technically sound; do not add paid services just to remove an engineering inconvenience.
