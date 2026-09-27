@@ -88,7 +88,7 @@ test.describe("ORBIT public web surface", () => {
   test("release health endpoint is non-cacheable and schema-stable", async ({
     request,
   }) => {
-    const response = await request.get("/api/health");
+    const response = await request.get("/api/health.json");
     expect(response.status()).toBe(200);
     expect(response.headers()["cache-control"]).toBe("no-store");
     const body = (await response.json()) as {
@@ -108,7 +108,7 @@ test.describe("ORBIT public web surface", () => {
   test("release provenance endpoint is non-cacheable and public-safe", async ({
     request,
   }) => {
-    const response = await request.get("/api/release");
+    const response = await request.get("/api/release.json");
     expect(response.status()).toBe(200);
     expect(response.headers()["cache-control"]).toBe("no-store");
     const body = (await response.json()) as {
