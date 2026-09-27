@@ -1,6 +1,6 @@
 # ORBIT — Final External Actions
 
-Updated: 2026-09-26
+Updated: 2026-09-27
 
 The merged core is now strongly verified at L2 across the main product domains. The remaining actions below require provider credentials, real platform accounts, signing identities, physical/store infrastructure, or a human-controlled commercial decision.
 
@@ -11,7 +11,7 @@ The merged core is now strongly verified at L2 across the main product domains. 
 3. Produce a current-main prebuilt production deployment with `NEXT_PUBLIC_ORBIT_RELEASE_SHA=${GITHUB_SHA}` (the exact GitHub Actions commit SHA) and retain the live verification output.
 4. Exercise rollback to the previous verified production deployment and retain evidence.
 
-PR #76 now makes missing credentials a hard gate instead of a soft-disable.
+The current Vercel deployment workflow now fails closed when credentials are missing, uses the triggering Git SHA, builds prebuilt output, and verifies live release provenance.
 
 ## B. Real connector verification
 
