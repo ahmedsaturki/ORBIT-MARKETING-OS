@@ -1,4 +1,4 @@
-const base = (process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app").replace(/\/$/, "");
+const base = (process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app").replace(\n  /\/$/,\n  "",\n);
 const expected = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
 if (!expected) throw new Error("ORBIT_EXPECTED_RELEASE_SHA is required");
 
@@ -23,7 +23,7 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
         releaseBody?.releaseProvenance?.declaredByEnvironment === true
       ) {
         const home = await get("/");
-        if (!home.ok) throw new Error("production home HTTP " + home.status);
+        if (!home.ok) {\n          throw new Error("production home HTTP " + home.status);\n        }
         const html = await home.text();
         if (!html.includes(`data-release-sha="${expected}"`)) {
           throw new Error("production HTML release SHA mismatch");
