@@ -8,7 +8,7 @@ The repository contains `vercel.json` plus guarded GitHub Actions deployment wor
 
 The deployment path must use Vercel's CI build output flow (`vercel pull` → `vercel build` → `vercel deploy --prebuilt`). A normal Next.js build alone is not treated as Vercel Build Output evidence.
 
-The connected Vercel project exists. Automatic Git deployments are disabled repository-side; the intended release path is the guarded prebuilt flow described below. The reproducible lockfile gate is now verified on main/current hosted CI. Remaining Vercel verification is the project-setting/provenance reconciliation documented in `docs/VERIFICATION_BLOCKERS.md`.
+The connected Vercel project exists with governed Git deployment enabled for `main` and disabled for other branches. The standard release path is now the repository's governed Git deployment plus exact-SHA live verification; a credential-backed prebuilt path remains available when explicitly authorized. The reproducible lockfile gate is verified in hosted CI.
 
 ## Desktop
 
@@ -30,7 +30,7 @@ A web deployment alone does not make desktop/mobile/product release-ready. A suc
 
 ## Monorepo build filtering
 
-The root `vercel.json` contains an `ignoreCommand` that skips a Web deployment when the commit does not change `packages/web` or the workspace/deployment manifests. This prevents Core/Desktop-only commits from consuming Vercel build concurrency. Vercel project settings should use the repository root as the Root Directory, with Next.js as the framework preset, matching the canonical root `vercel.json`.
+The root `vercel.json` contains an `ignoreCommand` that skips unrelated Core/Desktop/docs-only changes while forcing a Web deployment for Web code/config, release metadata, provenance scripts, lockfiles, and the release-truth documents. This preserves build capacity without allowing release-evidence changes to leave the public deployment on an older SHA.
 
 ### Dependency resolution policy
 
@@ -46,4 +46,4 @@ For the connected Vercel project orbit-marketing-os, the intended production Web
 - Build Command: `pnpm --dir packages/web build`
 - Output Directory: `packages/web/out`.
 
-The connected project's available metadata has historically reported a Vite framework. Until the project-level Root Directory/framework configuration is confirmed as repository root with Next.js, a successful production Web deployment is not considered proven.
+The current connected production deployment metadata reports the Next.js framework and repository Git source. Production proof still requires the canonical public alias to expose the exact current `main` SHA after each release-truth change.
