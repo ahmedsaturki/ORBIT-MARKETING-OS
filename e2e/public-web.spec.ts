@@ -97,12 +97,16 @@ test.describe("ORBIT public web surface", () => {
       version: string;
       releaseSha: string;
       provenance: string;
+      provenanceSource: string;
     };
     expect(body.status).toBe("ok");
     expect(body.service).toBe("ORBIT Marketing OS Web");
     expect(body.version).toBe("0.2.0");
     expect(body.releaseSha).toMatch(/^(unreleased|[0-9a-f]{40})$/);
     expect(["unproven", "declared"]).toContain(body.provenance);
+    expect(["NEXT_PUBLIC_ORBIT_RELEASE_SHA", "VERCEL_GIT_COMMIT_SHA", "none"]).toContain(
+      body.provenanceSource,
+    );
   });
 
   test("release provenance endpoint is non-cacheable and public-safe", async ({
