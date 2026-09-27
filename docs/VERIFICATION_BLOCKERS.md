@@ -8,7 +8,7 @@ The current merged release lives on the repository default branch `main`; this d
 
 The release train now includes commercial proof hardening, static-export web provenance endpoints, reconciled readiness evidence, exact-SHA soak binding, soak-evidence durability, governed current-main Vercel Git provenance, protected-main governance, and durable release documentation.
 
-The remaining blockers are primarily production/runtime/external evidence, not missing core architecture.
+The remaining blockers are primarily production/runtime/external evidence, not missing core architecture or the verified web deployment path.
 
 ## Vercel deployment evidence
 
