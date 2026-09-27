@@ -3,12 +3,12 @@ import { readFile } from "node:fs/promises";
 const manifestPath = process.argv[2] ?? "vercel-dry-run.json";
 const vercelConfig = JSON.parse(await readFile("vercel.json", "utf8"));
 if (
-  vercelConfig.framework !== "nextjs" ||
+  ![null, "nextjs"].includes(vercelConfig.framework) ||
   vercelConfig.buildCommand !== "pnpm --dir packages/web build" ||
   vercelConfig.outputDirectory !== "packages/web/out"
 ) {
   throw new Error(
-    "vercel.json does not match the canonical Next.js static-export deployment contract",
+    "vercel.json does not match the canonical static-export deployment contract",
   );
 }
 const raw = await readFile(manifestPath, "utf8");
@@ -20,6 +20,13 @@ try {
   throw new Error("Vercel dry-run output is not valid JSON");
 }
 
+const normalizeFramework = (value) => {
+  if (value === null) return "other";
+  const normalized = String(value).trim().toLowerCase();
+  if (!normalized || normalized === "null") return "other";
+  return normalized;
+};
+
 const frameworkCandidates = [
   data.framework,
   data.detectedFramework,
@@ -28,23 +35,26 @@ const frameworkCandidates = [
   data.projectSettings?.framework,
 ]
   .filter((value) => value !== undefined)
-  .map((value) => String(value).trim().toLowerCase());
+  .map(normalizeFramework);
 
 if (frameworkCandidates.length === 0) {
-  throw new Error("Vercel dry-run did not expose a framework field");
+  if (vercelConfig.framework === null) {
+    frameworkCandidates.push("other");
+  } else {
+    throw new Error("Vercel dry-run did not expose a framework field");
+  }
 }
 
 if (frameworkCandidates.some((value) => value.includes("vite"))) {
   throw new Error(
-    "Vercel dry-run detected Vite; ORBIT requires the Next.js/Other static-export contract",
+    "Vercel dry-run detected Vite; ORBIT requires a static-export-compatible framework",
   );
 }
 
-if (
-  !frameworkCandidates.some(
-    (value) => value.includes("nextjs") || value.includes("next.js"),
-  )
-) {
+const allowedStaticFramework = frameworkCandidates.some((value) =>
+  ["nextjs", "next.js", "other", "static"].includes(value),
+);
+if (!allowedStaticFramework) {
   throw new Error(
     "Vercel dry-run framework is incompatible with the ORBIT static-export contract: " +
       frameworkCandidates.join(", "),

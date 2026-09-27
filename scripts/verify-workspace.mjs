@@ -735,9 +735,15 @@ if (rootVercel.installCommand !== "bash scripts/vercel-install.sh")
   throw new Error("Root Vercel must use the lockfile-aware install script");
 if (rootVercel.ignoreCommand !== "bash scripts/vercel-ignore.sh")
   throw new Error("Root Vercel must use the versioned ignore script");
-if (rootVercel.git?.deploymentEnabled !== false)
+const rootDeploymentEnabled = rootVercel.git?.deploymentEnabled;
+const governedMainGitDeployment =
+  typeof rootDeploymentEnabled === "object" &&
+  rootDeploymentEnabled !== null &&
+  rootDeploymentEnabled["*"] === false &&
+  rootDeploymentEnabled.main === true;
+if (rootDeploymentEnabled !== false && !governedMainGitDeployment)
   throw new Error(
-    "Vercel Git deployments must be disabled; use the guarded prebuilt release workflow",
+    "Vercel Git deployments must be disabled except for governed main",
   );
 
 const workflowFiles = [

@@ -42,25 +42,32 @@ jobs:
       - name: Web E2E
         run: pnpm test:e2e
 
-  vercel_credentials:
-    name: Vercel credential gate
+  vercel_mode:
+    name: Vercel release mode
     needs: quality
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    outputs:
+      credentials: ${{ steps.detect.outputs.credentials }}
     steps:
-      - name: Require Vercel release credentials
+      - name: Detect Vercel release credentials
+        id: detect
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
-          test -n "$VERCEL_TOKEN"
-          test -n "$VERCEL_ORG_ID"
-          test -n "$VERCEL_PROJECT_ID"
-
+          if [[ -n "$VERCEL_TOKEN" && -n "$VERCEL_ORG_ID" && -n "$VERCEL_PROJECT_ID" ]]; then
+            echo "credentials=true" >> "$GITHUB_OUTPUT"
+            echo "Using credential-backed prebuilt deployment."
+          else
+            echo "credentials=false" >> "$GITHUB_OUTPUT"
+            echo "Using governed Vercel Git production deployment."
+          fi
   deploy:
-    needs: [quality, vercel_credentials]
+    needs: [quality, vercel_mode]
+    if: needs.vercel_mode.outputs.credentials == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -117,5 +124,29 @@ jobs:
       - name: Verify live rebuild surface
         env:
           ORBIT_LIVE_URL: ${{ steps.deploy.outputs.url }}
+          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+        run: node scripts/verify-live-web.mjs
+
+  git_provenance:
+    name: Vercel Git provenance
+    needs: [quality, vercel_mode]
+    if: needs.vercel_mode.outputs.credentials == 'false'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+      - name: Verify Git deployment and live provenance
+        env:
+          ORBIT_LIVE_URL: https://orbit-marketing-os.vercel.app
+          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+        run: node scripts/verify-public-vercel-provenance.mjs
+      - name: Verify full live web surface
+        env:
+          ORBIT_LIVE_URL: https://orbit-marketing-os.vercel.app
           ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
         run: node scripts/verify-live-web.mjs
