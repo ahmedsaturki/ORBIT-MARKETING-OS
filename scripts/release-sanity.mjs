@@ -96,6 +96,7 @@ const requiredFiles = [
   "scripts/performance-smoke.mjs",
   "scripts/soak.ts",
   "scripts/verify-live-web.mjs",
+  "scripts/vercel-ignore.test.mjs",
 ];
 
 for (const relative of requiredFiles) {
@@ -140,6 +141,8 @@ if (!ci.includes("pnpm test:performance"))
   throw new Error("CI performance smoke gate missing");
 if (!ci.includes("pnpm test:e2e"))
   throw new Error("CI browser E2E gate missing");
+if (!ci.includes("node scripts/vercel-ignore.test.mjs"))
+  throw new Error("Vercel ignore-command contract test missing");
 
 const selfHostedWeb = await text(
   ".github/workflows/web-release-selfhosted.yml",
