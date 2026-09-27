@@ -5110,12 +5110,8 @@ fn task_enqueue_bulk(
     }
 
     let mut connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(
-        &connection,
-        &workspace_id,
-        &["owner", "admin", "editor"],
-    )
-    .map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
 
     let transaction = connection
         .transaction()
@@ -5125,10 +5121,8 @@ fn task_enqueue_bulk(
 
     for input in inputs {
         let id = validate_label(&input.id).map_err(|error| error.to_string())?;
-        let campaign_id =
-            validate_label(&input.campaign_id).map_err(|error| error.to_string())?;
-        let account_id =
-            validate_label(&input.account_id).map_err(|error| error.to_string())?;
+        let campaign_id = validate_label(&input.campaign_id).map_err(|error| error.to_string())?;
+        let account_id = validate_label(&input.account_id).map_err(|error| error.to_string())?;
         let platform = validate_platform(&input.platform).map_err(|error| error.to_string())?;
         let kind = validate_task_kind(&input.kind).map_err(|error| error.to_string())?;
 
