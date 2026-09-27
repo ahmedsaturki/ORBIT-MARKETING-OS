@@ -555,46 +555,65 @@ async function main(): Promise<void> {
   if (stderr.trim()) log({ serverStderr: stderr.slice(-4_000) });
 }
 
+async function writeSoakSummary(
+  ok: boolean,
+  errorMessage: string | null = null,
+): Promise<void> {
+  if (server) {
+    try {
+      await terminateProcess(server);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push("server termination error: " + message);
+    }
+  }
+
+  const summary = {
+    runId,
+    gitSha,
+    minutes,
+    cycles,
+    healthOk,
+    healthFailures,
+    consecutiveHealthFailures,
+    staticOk,
+    staticFailures,
+    consecutiveStaticFailures,
+    chatChecks,
+    chatFailures,
+    consecutiveChatFailures,
+    rssMinMb: Number.isFinite(rssMin) ? Math.round(rssMin) : null,
+    rssMaxMb: rssMax ? Math.round(rssMax) : null,
+    rssFirstMb: rssFirst ? Math.round(rssFirst) : null,
+    rssLastMb: rssLast ? Math.round(rssLast) : null,
+    rssBudgetMb: RSS_BUDGET_MB,
+    failures,
+    ok: ok && failures.length === 0,
+    errorMessage,
+    finishedAt: new Date().toISOString(),
+  };
+
+  await new Promise<void>((resolve) => jsonl.end(resolve));
+  writeFileSync(summaryPath, JSON.stringify(summary, null, 2) + "\n", "utf8");
+  console.log(JSON.stringify(summary, null, 2));
+}
+
 main()
   .then(async () => {
-    const summary = {
-      runId,
-      gitSha,
-      minutes,
-      cycles,
-      healthOk,
-      healthFailures,
-      consecutiveHealthFailures,
-      staticOk,
-      staticFailures,
-      consecutiveStaticFailures,
-      chatChecks,
-      chatFailures,
-      consecutiveChatFailures,
-      rssMinMb: Number.isFinite(rssMin) ? Math.round(rssMin) : null,
-      rssMaxMb: rssMax ? Math.round(rssMax) : null,
-      rssFirstMb: rssFirst ? Math.round(rssFirst) : null,
-      rssLastMb: rssLast ? Math.round(rssLast) : null,
-      rssBudgetMb: RSS_BUDGET_MB,
-      failures,
-      ok: failures.length === 0,
-      finishedAt: new Date().toISOString(),
-    };
-    if (server) await terminateProcess(server);
-    jsonl.end();
-    writeFileSync(summaryPath, JSON.stringify(summary, null, 2) + "\n", "utf8");
-    console.log(JSON.stringify(summary, null, 2));
-    process.exit(summary.ok ? 0 : 1);
+    await writeSoakSummary(true);
+    process.exit(failures.length === 0 ? 0 : 1);
   })
   .catch(async (error: unknown) => {
-    if (server) {
-      try {
-        await terminateProcess(server);
-      } catch {}
-    }
-    jsonl.end();
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`SOAK FAILED: ${message}`);
+    try {
+      await writeSoakSummary(false, message);
+    } catch (summaryError) {
+      console.error(
+        "SOAK SUMMARY WRITE FAILED: " +
+          (summaryError instanceof Error ? summaryError.message : String(summaryError)),
+      );
+    }
+    console.error("SOAK FAILED: " + message);
     if (stderrHint(server)) {
       console.error(stderrHint(server));
     }
@@ -602,5 +621,5 @@ main()
   });
 
 function stderrHint(child: ChildProcess | undefined): string {
-  return child?.pid ? `See captured runtime stderr for PID ${child.pid}.` : "";
+  return child?.pid ? "See captured runtime stderr for PID " + child.pid + "." : "";
 }
