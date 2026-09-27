@@ -670,6 +670,7 @@ const sensitiveDesktopCommands = {
   account_upsert: ["owner", "admin"],
   account_delete: ["owner", "admin"],
   task_enqueue: ["owner", "admin", "editor"],
+  task_enqueue_bulk: ["owner", "admin", "editor"],
   task_claim_next: ["owner", "admin", "operator"],
   task_set_status: ["owner", "admin", "operator"],
   content_upsert: ["owner", "admin", "editor"],
