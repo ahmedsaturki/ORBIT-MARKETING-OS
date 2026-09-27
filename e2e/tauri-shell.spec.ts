@@ -266,6 +266,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     await expect(page.getByText("FT Controls", { exact: true })).toBeVisible();
     await expect(page.getByText("Sender Pro", { exact: true })).toBeVisible();
     await expect(page.getByText("Kingmaster", { exact: true })).toBeVisible();
+    await expect(page.getByText("AD Share", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Controls Tools", { exact: true }),
+    ).toBeVisible();
     expect(await page.evaluate(() => typeof window.__TAURI_INTERNALS__)).toBe(
       "object",
     );
