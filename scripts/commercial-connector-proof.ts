@@ -1,9 +1,17 @@
 #!/usr/bin/env node
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { TelegramConnector } from "../packages/core/src/connectors/telegram.js";
 import { LinkedInConnector } from "../packages/core/src/connectors/linkedin.js";
 
-const args = new Set(process.argv.slice(2));
+const argv = process.argv.slice(2);
+const args = new Set(argv);
 const confirmed = args.has("--confirm-live");
+const outputIndex = argv.indexOf("--output");
+const output =
+  outputIndex >= 0
+    ? (argv[outputIndex + 1] ?? ".artifacts/commercial-connector-proof.json")
+    : ".artifacts/commercial-connector-proof.json";
 if (!confirmed) {
   console.error("commercial-connector-proof=BLOCKED");
   console.error("Live connector proof requires --confirm-live.");
@@ -113,17 +121,22 @@ if (linkedinOutcome.status !== "succeeded") {
 }
 linkedinDelivered = Boolean(linkedinOutcome.externalId);
 
-console.log(
-  JSON.stringify({
-    commercialConnectorProof: "PASS",
-    telegram: {
-      authorized: telegramConnection.status === "succeeded",
-      delivered: telegramDelivered,
-    },
-    linkedin: {
-      authorized: true,
-      delivered: linkedinDelivered,
-    },
-    note: "No tokens, message bodies, or credential material are printed.",
-  }),
-);
+const report = {
+  schemaVersion: 1,
+  generatedAt: new Date().toISOString(),
+  commercialConnectorProof: "PASS",
+  telegram: {
+    authorized: telegramConnection.status === "succeeded",
+    delivered: telegramDelivered,
+    externalId: telegramOutcome.externalId ?? null,
+  },
+  linkedin: {
+    authorized: true,
+    delivered: linkedinDelivered,
+    externalId: linkedinOutcome.externalId ?? null,
+  },
+  note: "No tokens, message bodies, or credential material are persisted or printed.",
+};
+await mkdir(dirname(output), { recursive: true });
+await writeFile(output, JSON.stringify(report, null, 2) + "\n", "utf8");
+console.log(JSON.stringify({ ...report, output }));
