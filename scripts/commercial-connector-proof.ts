@@ -162,13 +162,8 @@ try {
       userConfirmed: true,
     });
     linkedin.authorized = connection.status === "succeeded";
-    if (!linkedin.authorized) {
-      linkedin.message =
-        connection.message ?? connection.reason ?? "authorization failed";
-      return;
-    }
-
-    const outcome = await linkedinConnector.execute(
+    if (linkedin.authorized) {
+      const outcome = await linkedinConnector.execute(
       {
         id: "commercial-proof-linkedin-task",
         workspaceId: "commercial-proof",
@@ -189,8 +184,8 @@ try {
       { accountId: "commercial-proof-linkedin", userConfirmed: true },
     );
 
-    linkedin.authorized = true;
-    linkedin.status =
+      linkedin.authorized = true;
+      linkedin.status =
       outcome.status === "succeeded" && Boolean(outcome.externalId)
         ? "succeeded"
         : "failed";
