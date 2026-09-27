@@ -1,6 +1,6 @@
 # Implementation Status
 
-Updated: 2026-09-26.
+Updated: 2026-09-27.
 
 ## Current state
 
@@ -46,7 +46,7 @@ No unsupported external connector capability is implied by contracts or fixtures
 
 ## Evidence still required
 
-- final exact-head native validation for the current Universal Search release line;
+- exact-head validation is established on the merged release train; future release changes must repeat the same native evidence before promotion;
 - controlled real Telegram authorization/delivery;
 - controlled real LinkedIn authorization/publish;
 - live multi-device CRDT network verification;
