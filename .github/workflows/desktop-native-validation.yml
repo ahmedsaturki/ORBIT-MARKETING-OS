@@ -80,6 +80,7 @@ jobs:
         run: pnpm --dir packages/desktop tauri build
       - name: Build Windows E2E desktop
         if: matrix.artifact == 'windows-x64'
+        timeout-minutes: 20
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/packages/desktop/src-tauri/target/e2e-cdp
         run: pnpm --dir packages/desktop tauri build --features e2e-cdp
@@ -143,9 +144,12 @@ jobs:
         run: node scripts/verify-windows-e2e-artifact.mjs
 
       - name: Build web surface for native E2E server
+        timeout-minutes: 10
         run: pnpm --dir packages/web build
 
       - name: Install Playwright Chromium
+        timeout-minutes: 10
         run: pnpm exec playwright install chromium
       - name: Run native and web E2E
+        timeout-minutes: 20
         run: pnpm test:e2e
