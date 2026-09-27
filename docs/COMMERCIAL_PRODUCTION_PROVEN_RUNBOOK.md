@@ -7,6 +7,7 @@ Updated: 2026-09-27.
 ORBIT is commercially production-proven only when every release-critical gate is L3_PRODUCTION_PROVEN.
 
 Readiness levels:
+
 - L0_DESIGNED
 - L1_IMPLEMENTED
 - L2_VERIFIED
@@ -19,6 +20,7 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 ## Evidence classes
 
 ### A. Repository evidence
+
 - Exact Git SHA.
 - Signed release commit/tag.
 - Exact-head CI and native/mobile validation.
@@ -26,12 +28,14 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 - Security/quality/performance reports.
 
 ### B. Runtime evidence
+
 - Desktop restart/migration/crash recovery.
 - Queue recovery and replay/resume.
 - 24-hour stability soak.
 - No unexplained runtime errors during the verification window.
 
 ### C. External integration evidence
+
 - User-authorized Telegram test account.
 - User-authorized LinkedIn test account.
 - Controlled publish/readback evidence.
@@ -39,6 +43,7 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 - No bypass of platform controls.
 
 ### D. Distribution evidence
+
 - Windows/Linux/macOS artifacts.
 - SHA-256 manifest.
 - Desktop signing/notarization.
@@ -46,6 +51,7 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 - Store/package distribution evidence.
 
 ### E. Web production evidence
+
 - Canonical production deployment.
 - Git SHA embedded in /api/health and /api/release.
 - HTTPS/security headers.
@@ -54,6 +60,7 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 - Rollback to previous verified deployment.
 
 ### F. Governance and commercial evidence
+
 - GitHub main branch protection/rulesets.
 - Required status checks.
 - Secrets policy.
@@ -111,6 +118,7 @@ Do not promote an artifact to commercial release merely because build, UI, or un
 ## Evidence retention
 
 Retain:
+
 - exact SHA;
 - workflow run IDs;
 - artifact IDs/digests;
