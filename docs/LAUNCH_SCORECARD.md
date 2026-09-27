@@ -1,6 +1,6 @@
 # ORBIT Launch Scorecard
 
-Updated: 2026-09-27.
+Updated: 2026-09-28.
 
 Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evidence exists; UNVERIFIED = required runtime evidence is missing; PARTIAL = mixed evidence; BLOCKED = external prerequisite prevents completion.
 
@@ -31,12 +31,12 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evide
 | Clean install                                | VERIFIED   | Frozen install with committed lockfiles                                                                                                                           |
 | Typecheck/lint/tests/coverage/build          | VERIFIED   | Hosted CI gates passed on current merged feature lineage                                                                                                          |
 | Rust quality                                 | VERIFIED   | Rust fmt/check/test/clippy passed on validated release line                                                                                                       |
-| Security/dependency audit                    | VERIFIED   | Secret/dependency controls and hosted audit checks passed; SonarCloud main Quality Gate remains a separate failed external analyzer gate                          |
+| Security/dependency audit                    | VERIFIED   | Secret/dependency controls and hosted audit checks passed; SonarCloud main remains a separate analyzer gate requiring Security Rating A on New Code                  |
 | SonarCloud main quality gate                 | UNVERIFIED | Latest main analysis reports B Security Rating on New Code; required A; underlying issue detail is not exposed by the connected GitHub API                        |
 | Performance smoke                            | VERIFIED   | Queue throughput smoke passed                                                                                                                                     |
 | Browser E2E                                  | VERIFIED   | Playwright/browser gates passed                                                                                                                                   |
 | Production web availability                  | VERIFIED   | READY production deployment and live route/header/runtime checks                                                                                                  |
-| Production web provenance                    | UNVERIFIED | Current READY deployment predates current `main`; Vercel credentials are absent and `/api/health.json` + `/api/release.json` still return 404 on the public alias |
+| Production web provenance                    | VERIFIED   | Vercel Production Provenance run 36350429904 and Web Deploy run 36350429899 passed for main SHA `bbde7c5300bc05f8c46f5d0ae539abc9abb2ef36`; canonical alias and exact SHA provenance verified |
 | Native desktop packaging                     | VERIFIED   | All four desktop packaging targets passed on PR #72 exact head                                                                                                    |
 | Android debug validation                     | VERIFIED   | Mobile validation produced validated debug artifact                                                                                                               |
 | Native recovery                              | PARTIAL    | Restart/queue recovery E2E exists; consolidated production evidence remains open                                                                                  |
@@ -47,9 +47,9 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evide
 | 24h stability soak                           | UNVERIFIED | No completed 24-hour evidence                                                                                                                                     |
 | Desktop signing/notarization                 | BLOCKED    | Signing identities/credentials not configured                                                                                                                     |
 | Mobile production signing/store distribution | BLOCKED    | Store credentials/configuration not configured                                                                                                                    |
-| Vercel project/settings provenance           | PARTIAL    | Repository contract says Next.js/root/out; connected metadata currently reports Vite/empty provenance                                                             |
+| Vercel project/settings provenance           | VERIFIED   | Current Vercel deployment reports `framework=nextjs`, source=`git`, canonical production alias, and exact Git SHA; repository Web Deploy contract passes against the same SHA |
 | Vercel rollback drill                        | UNVERIFIED | Procedure exists; fresh drill evidence missing                                                                                                                    |
-| Governance/main branch protection            | UNVERIFIED | Live protection state cannot be verified with current GitHub integration                                                                                          |
+| Governance/main branch protection            | VERIFIED   | GitHub `main` is protected and requires `ci` plus `security:scan`; final L3 release evidence remains a separate readiness requirement |
 | Billing/payment                              | BLOCKED    | No verified commercial billing provider configured                                                                                                                |
 | Production/commercial launch                 | BLOCKED    | Multiple release-critical L3 gates remain open                                                                                                                    |
 
