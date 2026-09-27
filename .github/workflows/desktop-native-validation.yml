@@ -10,6 +10,7 @@ on:
       - "scripts/build-tauri.mjs"
       - "scripts/build-icon.mjs"
       - "e2e/tauri-shell.spec.ts"
+      - "scripts/verify-windows-e2e-artifact.mjs"
       - "pnpm-lock.yaml"
       - "package.json"
       - "pnpm-workspace.yaml"
@@ -77,6 +78,15 @@ jobs:
         run: pnpm --dir packages/desktop tauri icon src-tauri/icon-source.svg
       - name: Build desktop
         run: pnpm --dir packages/desktop tauri build
+      - name: Stage Windows executable for native E2E
+        if: matrix.artifact == 'windows-x64'
+        shell: pwsh
+        run: |
+          $exe = "packages/desktop/src-tauri/target/release/orbit-marketing-os.exe"
+          if (!(Test-Path $exe)) { throw "Windows Tauri build did not produce orbit-marketing-os.exe" }
+          $dest = "packages/desktop/src-tauri/target/release/bundle/native-e2e"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Copy-Item $exe "$dest/orbit-marketing-os.exe" -Force
       - name: Upload desktop bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
