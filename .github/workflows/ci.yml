@@ -50,6 +50,16 @@ jobs:
         run: pnpm verify:readiness -- --mode verification
       - name: Readiness verifier contract test
         run: node scripts/verify-release-readiness.test.mjs
+      - name: Agent release triage contract
+        run: |
+          node scripts/agent-release-triage.mjs > /tmp/orbit-release-triage.json
+          node --input-type=module -e "
+            import { readFileSync } from \"node:fs\";
+            const report = JSON.parse(readFileSync(\"/tmp/orbit-release-triage.json\", \"utf8\"));
+            if (report.repository !== \"ahmedsaturki/ORBIT-MARKETING-OS\") throw new Error(\"agent triage repository mismatch\");
+            if (!report.git.sha) throw new Error(\"agent triage must record exact Git SHA\");
+            if (!Array.isArray(report.nextActions)) throw new Error(\"agent triage nextActions must be an array\");
+          "
       - name: Vercel ignore command contract
         run: node scripts/vercel-ignore.test.mjs
       - name: Workspace sanity
