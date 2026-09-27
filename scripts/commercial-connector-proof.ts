@@ -30,6 +30,7 @@ const telegramToken = process.env.ORBIT_TELEGRAM_TEST_TOKEN;
 const telegramChatId = process.env.ORBIT_TELEGRAM_TEST_CHAT_ID;
 const linkedinToken = process.env.ORBIT_LINKEDIN_TEST_TOKEN;
 const linkedinAuthor = process.env.ORBIT_LINKEDIN_TEST_AUTHOR_URN;
+const releaseSha = process.env.GITHUB_SHA ?? "unknown";
 
 const missing = [];
 if (!telegramToken) missing.push("ORBIT_TELEGRAM_TEST_TOKEN");
@@ -66,6 +67,7 @@ async function writeReport(
   const report = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
+    releaseSha,
     commercialConnectorProof: reportStatus,
     telegram,
     linkedin,
@@ -78,6 +80,7 @@ async function writeReport(
   console.log(
     JSON.stringify({
       output,
+      releaseSha,
       commercialConnectorProof: reportStatus,
       telegram: {
         authorized: telegram.authorized,
