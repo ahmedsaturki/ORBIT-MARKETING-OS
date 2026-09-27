@@ -3,10 +3,15 @@ set -u
 
 # Vercel ignore command contract:
 # exit 0 = skip build; exit 1 = build.
-# A missing previous SHA is a first deployment / shallow-history case: build.
-if [[ ! -s pnpm-lock.yaml && "${VERCEL_GIT_COMMIT_REF:-}" != "main" ]]; then
-  echo "Preview deployment skipped until the reproducible lockfile gate is satisfied."
+# ORBIT only permits Vercel Git builds from the protected main branch.
+if [[ "${VERCEL_GIT_COMMIT_REF:-}" != "main" ]]; then
+  echo "Vercel Git deployment skipped: only the protected main branch may build."
   exit 0
+fi
+
+# A missing previous SHA / shallow-history case on main is a first deployment: build.
+if [[ -z "${VERCEL_GIT_PREVIOUS_SHA:-}" || -z "${VERCEL_GIT_COMMIT_SHA:-}" ]]; then
+  exit 1
 fi
 
 if [[ -z "${VERCEL_GIT_PREVIOUS_SHA:-}" || -z "${VERCEL_GIT_COMMIT_SHA:-}" ]]; then
