@@ -91,7 +91,6 @@ try {
   assert.equal(impossible.status, 1);
   assert.match(impossible.stderr, /Invalid gate levels: impossible_date/);
 
-
   const validL3 = join(tempDirectory, "valid.json");
   writeFileSync(
     validL3,
