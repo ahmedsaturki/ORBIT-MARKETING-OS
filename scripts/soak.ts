@@ -18,7 +18,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { platform } from "node:os";
 
 import { AuditIntegrityChain } from "../packages/core/src/audit/integrity.js";
@@ -52,7 +52,7 @@ const deadline = Date.now() + minutes * 60_000;
 const root = process.cwd();
 const expectedGitSha = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
 const logsDir = process.env.ORBIT_SOAK_LOG_DIR?.trim()
-  ? join(root, process.env.ORBIT_SOAK_LOG_DIR.trim())
+  ? resolve(root, process.env.ORBIT_SOAK_LOG_DIR.trim())
   : join(root, "logs");
 mkdirSync(logsDir, { recursive: true });
 const runId = new Date().toISOString().replace(/[:.]/g, "-");
