@@ -32,6 +32,7 @@ Updated: 2026-09-28.
 - PR #126: merged — exact provenance deployment hardening.
 - PR #127: merged — durable SHA-independent release truth.
 - PR #128: merged — durable external-action and implementation-status reconciliation.
+- PR #129: merged — repository-root-safe Vercel Ignore Build Step handling and nested-root regression coverage.
 
 ## Readiness rule
 
@@ -62,8 +63,6 @@ For the commercial lane, run:
 
 The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, deterministic link intelligence core, platform foundation, content reuse policy, evidence-backed reporting packs, workspace isolation, native desktop/mobile validation, web quality, release-readiness validation, and exact-SHA soak/provenance hardening. Exact release SHA, deployment, workflow-run, and artifact identifiers are deliberately recorded in per-release evidence bundles and operational issue reconciliations rather than hard-coded into this durable policy document.
 
-A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed and the corrected feature head subsequently passed CI, desktop native, mobile, and Windows Native E2E.
-
 ## Production gates still open
 
 - real Telegram authorization and controlled delivery;
@@ -83,9 +82,11 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 ## Web production evidence
 
-The canonical Vercel project is live on the governed Git deployment path. The release contract requires each current-main production deployment to be sourced from Git `main`, use the `nextjs` framework, expose the canonical `orbit-marketing-os.vercel.app` alias, and prove the exact Git SHA through `/api/health.json`, `/api/release.json`, homepage provenance, security headers, routes, manifest/service worker, and 404 checks.
+The canonical Vercel project is live on the governed Git deployment path. The latest verified production deployment is Git-sourced, targets production, uses the Next.js framework, serves `orbit-marketing-os.vercel.app`, and proves exact SHA `7fb96ad7b73af0b05eaa605cfaf7cca5368bc9e6`.
 
-The last verified production cycle passed these checks for its exact SHA. A later docs-only main revision reached Vercel but was stopped by the Ignore Build Step; the root-relative hardening under PR #129 is intended to make release-truth detection robust before the next current-main production cycle. Until that cycle passes, the previously verified production deployment remains the canonical live candidate.
+The associated verification cycle passed the Vercel Git provenance workflow, full Web Deploy workflow, and release evidence workflow. Runtime-error aggregation for the selected 24-hour window is clean.
+
+The production rollback drill remains a separate open release gate.
 
 ## Distribution posture
 
