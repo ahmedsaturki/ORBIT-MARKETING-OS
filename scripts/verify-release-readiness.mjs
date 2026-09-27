@@ -12,7 +12,10 @@ if (!["verification", "commercial"].includes(mode)) {
   process.exit(1);
 }
 
-const path = new URL("../release/readiness.json", import.meta.url);
+const readinessFile = process.env.ORBIT_READINESS_FILE?.trim();
+const path = readinessFile
+  ? new URL(readinessFile, import.meta.url)
+  : new URL("../release/readiness.json", import.meta.url);
 let document;
 
 try {
