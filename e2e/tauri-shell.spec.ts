@@ -757,6 +757,9 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     const before = (await page!.evaluate(() =>
       window.__TAURI_INTERNALS__.invoke("task_list", {}),
     )) as Array<{ id: string }>;
+    const auditBefore = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("audit_list", { limit: 200 }),
+    )) as Array<{ action: string; entityId?: string | null }>;
 
     let error = "";
     try {
@@ -805,6 +808,18 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     )) as Array<{ id: string }>;
 
     expect(after).toEqual(before);
+
+    const auditAfter = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("audit_list", { limit: 200 }),
+    )) as Array<{ action: string; entityId?: string | null }>;
+    expect(auditAfter.length).toBe(auditBefore.length);
+    expect(
+      auditAfter.some(
+        (entry) =>
+          entry.action === "enqueue_bulk" &&
+          String(entry.entityId ?? "").includes("e2e-bulk-good-" + suffix),
+      ),
+    ).toBe(false);
 
     await page!.evaluate(
       (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
