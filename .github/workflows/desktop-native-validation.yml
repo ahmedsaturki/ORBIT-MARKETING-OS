@@ -78,12 +78,17 @@ jobs:
         run: pnpm --dir packages/desktop tauri icon src-tauri/icon-source.svg
       - name: Build desktop
         run: pnpm --dir packages/desktop tauri build
+      - name: Build Windows E2E desktop
+        if: matrix.artifact == 'windows-x64'
+        env:
+          CARGO_TARGET_DIR: packages/desktop/src-tauri/target/e2e-cdp
+        run: pnpm --dir packages/desktop tauri build --features e2e-cdp
       - name: Stage Windows executable for native E2E
         if: matrix.artifact == 'windows-x64'
         shell: pwsh
         run: |
-          $exe = "packages/desktop/src-tauri/target/release/orbit-marketing-os.exe"
-          if (!(Test-Path $exe)) { throw "Windows Tauri build did not produce orbit-marketing-os.exe" }
+          $exe = "packages/desktop/src-tauri/target/e2e-cdp/release/orbit-marketing-os.exe"
+          if (!(Test-Path $exe)) { throw "Windows E2E Tauri build did not produce orbit-marketing-os.exe" }
           $dest = "packages/desktop/src-tauri/target/release/bundle/native-e2e"
           $schema = "packages/desktop/src-tauri/gen/schemas/capabilities.json"
           if (!(Test-Path $schema)) { throw "Tauri build did not produce gen/schemas/capabilities.json" }
