@@ -45,6 +45,8 @@ jobs:
 
       - name: Readiness contract
         run: pnpm verify:readiness -- --mode verification
+      - name: Readiness verifier contract test
+        run: node scripts/verify-release-readiness.test.mjs
 
       - name: Secret scan
         run: pnpm security:scan
