@@ -47,9 +47,9 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evide
 | 24h stability soak                           | UNVERIFIED | No completed 24-hour evidence                                                                                                                                     |
 | Desktop signing/notarization                 | BLOCKED    | Signing identities/credentials not configured                                                                                                                     |
 | Mobile production signing/store distribution | BLOCKED    | Store credentials/configuration not configured                                                                                                                    |
-| Vercel project/settings provenance           | PARTIAL    | Repository contract says Next.js/root/out; connected metadata currently reports Vite/empty provenance                                                             |
+| Vercel project/settings provenance           | PARTIAL    | Repository contract is Next.js/static-export; public alias is healthy, but current-main credential-backed provenance is not yet proven and public provenance endpoints are 404 |
 | Vercel rollback drill                        | UNVERIFIED | Procedure exists; fresh drill evidence missing                                                                                                                    |
-| Governance/main branch protection            | UNVERIFIED | Live protection state cannot be verified with current GitHub integration                                                                                          |
+| Governance/main branch protection            | VERIFIED   | Live `main` protection is active; required contexts `ci` and `security:scan` are enforced and #118 merged successfully under the protected-main policy                     |
 | Billing/payment                              | BLOCKED    | No verified commercial billing provider configured                                                                                                                |
 | Production/commercial launch                 | BLOCKED    | Multiple release-critical L3 gates remain open                                                                                                                    |
 
