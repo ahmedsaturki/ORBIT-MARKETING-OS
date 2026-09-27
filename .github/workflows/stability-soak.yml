@@ -56,6 +56,8 @@ jobs:
         run: pnpm build
 
       - name: Run stability soak
+        env:
+          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
         run: pnpm exec tsx scripts/soak.ts --hours "${{ github.event.inputs.hours }}"
 
       - name: Upload soak evidence
@@ -68,3 +70,4 @@ jobs:
             logs/soak-summary.json
           if-no-files-found: warn
           retention-days: 30
+          include-hidden-files: true
