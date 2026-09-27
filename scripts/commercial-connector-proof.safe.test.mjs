@@ -34,4 +34,25 @@ for (const required of [
   }
 }
 
+
+for (const argv of [
+  ["--confirm-live", "--output"],
+  ["--confirm-live", "--output", "--confirm-live"],
+]) {
+  const invalidOutput = spawnSync(
+    process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+    ["exec", "tsx", "scripts/commercial-connector-proof.ts", ...argv],
+    { env: process.env, encoding: "utf8" },
+  );
+  if (invalidOutput.status !== 2) {
+    throw new Error(
+      `expected invalid output operand to fail closed with exit 2, got ${invalidOutput.status} for ${argv.join(" ")}`,
+    );
+  }
+  const invalidOutputText = `${invalidOutput.stdout}\n${invalidOutput.stderr}`;
+  if (!invalidOutputText.includes("--output requires a non-flag filename.")) {
+    throw new Error(`missing invalid-output fail-closed marker for ${argv.join(" ")}`);
+  }
+}
+
 console.log("commercial_connector_proof_safe_test=PASS");
