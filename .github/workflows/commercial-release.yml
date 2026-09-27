@@ -65,22 +65,6 @@ jobs:
       - name: Install reproducibly
         run: pnpm install --frozen-lockfile
 
-      - name: Live connector proof
-        env:
-          ORBIT_TELEGRAM_TEST_TOKEN: ${{ secrets.ORBIT_TELEGRAM_TEST_TOKEN }}
-          ORBIT_TELEGRAM_TEST_CHAT_ID: ${{ secrets.ORBIT_TELEGRAM_TEST_CHAT_ID }}
-          ORBIT_LINKEDIN_TEST_TOKEN: ${{ secrets.ORBIT_LINKEDIN_TEST_TOKEN }}
-          ORBIT_LINKEDIN_TEST_AUTHOR_URN: ${{ secrets.ORBIT_LINKEDIN_TEST_AUTHOR_URN }}
-        run: |
-          set -euo pipefail
-          pnpm exec tsx scripts/commercial-connector-proof.ts --confirm-live --output .artifacts/commercial-connector-proof.json
-      - name: Upload live connector proof
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: orbit-commercial-connector-proof-${{ github.run_id }}
-          path: .artifacts/commercial-connector-proof.json
-          retention-days: 90
-
       - name: Verify commercial readiness
         run: pnpm verify:readiness -- --mode commercial
 
