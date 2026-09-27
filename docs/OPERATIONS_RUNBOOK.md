@@ -55,7 +55,7 @@ Ollama is optional at runtime; the application must fail into a degraded state r
 ## CI and release
 
 GitHub Actions is the clean-environment verification path.
-Current repository infrastructure issue: jobs may fail before the first workflow step is registered. This is tracked as an execution-infrastructure blocker.
+Current execution-infrastructure note: the historical pre-runner allocation failure mode is resolved, but on 2026-09-27 three Windows Native E2E validation jobs exceeded their declared 45-minute timeout while remaining in `in_progress` during the Desktop build step. Replacement executions subsequently reached terminal success; no release gate is bypassed because of the incident.
 Validation prereleases are unsigned and must not be presented as production builds.
 Production release requires current evidence for install, tests, build, Rust quality, runtime recovery, connector E2E, security, performance, signed artifacts, web deployment, mobile signing, rollback, and commercial billing configuration where applicable.
 
