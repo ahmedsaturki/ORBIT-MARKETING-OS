@@ -102,6 +102,9 @@ jobs:
         timeout-minutes: 5
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
+      - name: Print Prettier output for public web E2E
+        run: pnpm exec prettier e2e/public-web.spec.ts
+
       - name: Format check
         run: pnpm format:check
 
