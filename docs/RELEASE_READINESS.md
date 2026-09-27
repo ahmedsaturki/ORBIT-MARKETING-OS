@@ -27,6 +27,7 @@ Updated: 2026-09-27.
 - PR #101: merged — static-export web provenance endpoints and exact-SHA verification.
 - PR #102: merged — release-evidence/readiness reconciliation.
 - PR #103: merged — exact-SHA stability soak evidence hardening.
+- PR #118: merged — consolidated base64/sha2/argon2 dependency refresh.
 
 ## Readiness rule
 
@@ -73,15 +74,15 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 - production rollback drill;
 - desktop signing/notarization;
 - Android/iOS production signing and store distribution;
-- GitHub main branch protection/rulesets;
+- GitHub protected-main policy is active with required `ci` and `security:scan` contexts; the current integration cannot inspect administrative ruleset details, and final release-L3 governance evidence remains a separate gate.
 - commercial payment/billing activation;
 - final legal/commercial publication review.
 
 ## Web production evidence
 
-The connected Vercel project is live and the current seven-day grouped runtime-error query is clean. The repository deployment contract is a Next.js static export under packages/web/out. Guarded deployments now fail closed if release credentials are missing and, when credentials exist, verify the embedded release SHA through /api/health.json and /api/release.json.
+The canonical Vercel site is live and the current seven-day grouped runtime-error query is clean. Public verification confirms the current web surface is the intended Next.js/RTL/PWA surface with working pricing/legal routes, manifest, service worker, security headers and real 404 behavior. The repository deployment contract is a Next.js static export under `packages/web/out`. Guarded deployments fail closed if release credentials are missing and, when credentials exist, verify the embedded release SHA through `/api/health.json` and `/api/release.json`.
 
-The current production deployment is healthy live infrastructure, but canonical release provenance is still open until a credential-backed deployment from the verified release path embeds and reports the exact release SHA.
+The public production alias is healthy infrastructure but is not accepted as current-main provenance because the provenance JSON endpoints are not yet exposed on the canonical alias and the guarded current-main deployment lane is blocked at the missing-credentials gate.
 
 ## Distribution posture
 
