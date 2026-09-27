@@ -105,10 +105,19 @@ jobs:
           if (!(Test-Path packages/desktop/src-tauri/Cargo.lock)) { exit 1 }
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Generate app icons
-        run: pnpm --dir packages/desktop tauri icon src-tauri/icon-source.svg
-      - name: Build desktop
-        run: pnpm --dir packages/desktop tauri build --features e2e-cdp
+      - name: Download verified Windows desktop bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: orbit-desktop-windows-x64
+          path: native-desktop
+
+      - name: Locate verified desktop executable
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path native-desktop -Recurse -Filter orbit-marketing-os.exe | Select-Object -First 1
+          if ($null -eq $exe) { throw "Verified Windows desktop artifact did not contain orbit-marketing-os.exe" }
+          "TAURI_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Build web surface for native E2E server
         run: pnpm --dir packages/web build
 
