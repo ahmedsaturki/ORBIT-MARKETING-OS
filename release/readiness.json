@@ -11,8 +11,8 @@
   "releaseCritical": {
     "source_integrity": {
       "level": "L2_VERIFIED",
-      "evidence": ["CI quality", "SonarCloud", "security scan"],
-      "notes": "No current evidence supports L3 commercial use."
+      "evidence": ["CI quality", "security scan"],
+      "notes": "Historical SonarCloud evidence is preserved in dated release-evidence snapshots, but no current successful latest-main SonarCloud analysis is independently verified here. No current evidence supports L3 commercial use."
     },
     "build": {
       "level": "L2_VERIFIED",
