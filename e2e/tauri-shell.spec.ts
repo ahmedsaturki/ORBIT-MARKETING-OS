@@ -215,12 +215,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     }
 
     // The build must have resolved that capability to itself — nothing broader.
-    const resolved = JSON.parse(
-      readFileSync(
-        join(root, "packages/desktop/src-tauri/gen/schemas/capabilities.json"),
-        "utf8",
-      ),
-    );
+    const capabilitiesSchema =
+      process.env.ORBIT_CAPABILITIES_SCHEMA?.trim() ??
+      join(root, "packages/desktop/src-tauri/gen/schemas/capabilities.json");
+    const resolved = JSON.parse(readFileSync(capabilitiesSchema, "utf8"));
     expect(resolved.default.windows).toEqual(["main"]);
     expect(resolved.default.permissions).toEqual(["core:default"]);
 
