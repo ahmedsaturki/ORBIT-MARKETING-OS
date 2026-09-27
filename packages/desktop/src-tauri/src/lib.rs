@@ -14221,13 +14221,13 @@ mod interrupted_restore_recovery_tests {
             )
             .expect("search fixture should be created");
         let escaped = "Alpha"
-            .replace('\\', "\\\\")
-            .replace('%', "\\%")
-            .replace('_', "\\_");
+            .replace('!', "!!")
+            .replace('%', "!%")
+            .replace('_', "!_");
         let sql = r#"SELECT 'campaign' AS kind, id
                      FROM campaigns
                      WHERE workspace_id=?1
-                       AND lower(name) LIKE '%' || lower(?2) || '%' ESCAPE '\'"#;
+                       AND lower(name) LIKE '%' || lower(?2) || '%' ESCAPE '!'"#;
         let rows: Vec<(String, String)> = connection
             .prepare(sql)
             .expect("search query should prepare")
