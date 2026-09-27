@@ -1,6 +1,6 @@
 # ORBIT Launch Scorecard
 
-Updated: 2026-09-26.
+Updated: 2026-09-27.
 
 Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evidence exists; UNVERIFIED = required runtime evidence is missing; PARTIAL = mixed evidence; BLOCKED = external prerequisite prevents completion.
 
@@ -11,7 +11,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evide
 | Execution orchestrator                       | VERIFIED   | Policy → confirmation → connector → audit → queue controls covered by core/native validation                                             |
 | Workspace isolation                          | VERIFIED   | Persisted active workspace, membership checks and scoped sensitive data                                                                  |
 | SQLite integrity                             | VERIFIED   | FK enforcement, migrations and workspace integrity controls                                                                              |
-| Migration path                               | VERIFIED   | Versioned schema through v15 with research model                                                                                         |
+| Migration path                               | VERIFIED   | Versioned schema through v16 with research model                                                                                         |
 | Operating graph/outcomes                     | VERIFIED   | Strategy/work graph, opportunities, insights and bounded context                                                                         |
 | Mission Control/control layer                | VERIFIED   | Next actions, simulation, replay, policy packs and grounded knowledge                                                                    |
 | Research Intelligence                        | VERIFIED   | Research briefs/findings, source/evidence rules and native persistence                                                                   |
