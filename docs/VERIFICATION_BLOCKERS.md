@@ -1,12 +1,12 @@
 # Verification Blockers
 
-Updated: 2026-09-26
+Updated: 2026-09-27
 
 ## Current state
 
 The current merged release lives on the repository default branch `main`; this document intentionally avoids hard-coding a moving SHA.
 
-PR #71 and PR #72 are merged. Their final validated feature heads passed the required hosted CI/native/mobile gates; the Windows Native E2E run also passed after exposing and driving the Universal Search escaping fix.
+PRs #100–#104 are merged. The current release train includes commercial proof hardening, static-export web provenance endpoints, reconciled readiness evidence, exact-SHA soak binding, and current release documentation. PR #105 is the active soak-evidence hardening line.
 
 The remaining blockers are primarily production/runtime/external evidence, not missing core architecture.
 
@@ -25,7 +25,7 @@ Current verified facts:
 
 The remaining Vercel blocker is configuration/provenance reconciliation plus a credential-backed current-main prebuilt deployment and rollback drill.
 
-PR #76 changes the GitHub deployment workflow to fail closed when its Vercel credentials are absent, eliminating the previous false-green behavior.
+The GitHub Vercel deployment lane is credential-gated, fail-closed, exact-SHA bound, prebuilt, and live-provenance checked.
 
 ## Reproducible installation
 
