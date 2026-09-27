@@ -137,10 +137,8 @@ export function BulkPlannerPanel({
 
     try {
       setBusy(true);
-      const results: string[] = [];
-
-      for (const item of plan) {
-        await invoke("task_enqueue", {
+      const results = (await invoke("task_enqueue_bulk", {
+        inputs: plan.map((item) => ({
           id: item.idempotencyKey,
           campaignId,
           accountId,
@@ -152,12 +150,11 @@ export function BulkPlannerPanel({
           idempotencyKey: item.idempotencyKey,
           contentId,
           destinationId: destinationId.trim(),
-        });
-        results.push(item.idempotencyKey);
-      }
+        })),
+      })) as Array<{ id: string }>;
 
       setMessage(
-        `تمت إضافة ${results.length} مهمة للنظام. التنفيذ نفسه يظل خاضعًا للـqueue والسياسات والموافقة.`,
+        `تمت إضافة ${results.length} مهمة ذرية إلى النظام؛ إما تُحفظ الخطة كاملة أو تُرفض كاملة. التنفيذ نفسه يظل خاضعًا للـqueue والسياسات والموافقة.`,
       );
       setPreview([]);
       setPlanSeed(`bulk-${Date.now()}`);
