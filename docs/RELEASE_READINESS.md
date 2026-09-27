@@ -75,7 +75,7 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 ## Web production evidence
 
-The connected Vercel project is live and the current seven-day grouped runtime-error query is clean. Guarded deployments now fail closed if release credentials are missing and, when credentials exist, verify the embedded release SHA through /api/health and /api/release.
+The connected Vercel project is live and the current seven-day grouped runtime-error query is clean. Guarded deployments now fail closed if release credentials are missing and, when credentials exist, verify the embedded release SHA through /api/health.json and /api/release.json.
 
 The current production deployment is healthy live infrastructure, but canonical release provenance is still open until a credential-backed deployment from the verified release path embeds and reports the exact release SHA.
 
