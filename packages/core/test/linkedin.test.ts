@@ -89,7 +89,69 @@ describe("LinkedInConnector", () => {
     ).rejects.toThrow("Explicit user confirmation");
   });
 
-  it("maps authorization, rate-limit and server errors separately", async () => {
+  it("uses a default request timeout when no signal is provided", async () => {
+    let requestSignal: AbortSignal | undefined;
+    const connector = new LinkedInConnector({
+      apiVersion: "202609",
+      tokenResolver: async () => "token-secret",
+      authorResolver: async () => "urn:li:person:123",
+      contentResolver: async () => "Hello",
+      fetchImpl: async (_input, init) => {
+        requestSignal = init?.signal as AbortSignal | undefined;
+        return new Response("", {
+          status: 201,
+          headers: { "x-restli-id": "urn:li:share:457" },
+        });
+      },
+    });
+
+    await expect(connector.execute(task, context)).resolves.toMatchObject({
+      status: "succeeded",
+      externalId: "urn:li:share:457",
+    });
+    expect(requestSignal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("fails closed when LinkedIn returns 201 without a post id", async () => {
+    const connector = new LinkedInConnector({
+      apiVersion: "202609",
+      tokenResolver: async () => "token-secret",
+      authorResolver: async () => "urn:li:person:123",
+      contentResolver: async () => "Hello",
+      fetchImpl: async () => new Response("", { status: 201 }),
+    });
+
+    await expect(connector.execute(task, context)).resolves.toMatchObject({
+      status: "blocked",
+      reason: "delivery_status_unknown",
+    });
+  });
+
+  it("fails closed on timeout and server responses with ambiguous delivery status", async () => {
+    const make = (status: number) =>
+      new LinkedInConnector({
+        apiVersion: "202609",
+        tokenResolver: async () => "token-secret",
+        authorResolver: async () => "urn:li:person:123",
+        contentResolver: async () => "Hello",
+        fetchImpl: async () => new Response("", { status }),
+      });
+
+    await expect(make(408).execute(task, context)).resolves.toMatchObject({
+      status: "blocked",
+      reason: "delivery_status_unknown",
+    });
+    await expect(make(500).execute(task, context)).resolves.toMatchObject({
+      status: "blocked",
+      reason: "delivery_status_unknown",
+    });
+    await expect(make(503).execute(task, context)).resolves.toMatchObject({
+      status: "blocked",
+      reason: "delivery_status_unknown",
+    });
+  });
+
+  it("maps authorization, rate-limit and ambiguous server errors separately", async () => {
     const make = (status: number) =>
       new LinkedInConnector({
         apiVersion: "202609",
@@ -108,7 +170,8 @@ describe("LinkedInConnector", () => {
       reason: "platform_limit",
     });
     await expect(make(500).execute(task, context)).resolves.toMatchObject({
-      status: "failed",
+      status: "blocked",
+      reason: "delivery_status_unknown",
     });
   });
 
