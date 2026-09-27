@@ -28,6 +28,10 @@ Updated: 2026-09-28.
 - PR #102: merged — release-evidence/readiness reconciliation.
 - PR #103: merged — exact-SHA stability soak evidence hardening.
 - PR #124: merged — consolidated Windows Native E2E, LinkedIn ambiguous-delivery, and governed Vercel provenance hardening.
+- PR #125: merged — current production provenance and gate reconciliation.
+- PR #126: merged — exact provenance deployment hardening.
+- PR #127: merged — durable SHA-independent release truth.
+- PR #128: merged — durable external-action and implementation-status reconciliation.
 
 ## Readiness rule
 
@@ -79,9 +83,9 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 ## Web production evidence
 
-The canonical Vercel project is live on the governed Git deployment path. The release contract requires each current-main production deployment to be sourced from Git `main`, use the `nextjs` framework, expose the canonical `orbit-marketing-os.vercel.app` alias, and prove the exact Git SHA through `/api/health.json`, `/api/release.json`, homepage provenance, security headers, routes, manifest/service worker, and 404 checks. The latest successful release cycle has passed these checks, and the selected seven-day Vercel runtime-error aggregation is clean.
+The canonical Vercel project is live on the governed Git deployment path. The release contract requires each current-main production deployment to be sourced from Git `main`, use the `nextjs` framework, expose the canonical `orbit-marketing-os.vercel.app` alias, and prove the exact Git SHA through `/api/health.json`, `/api/release.json`, homepage provenance, security headers, routes, manifest/service worker, and 404 checks.
 
-Current web provenance is verified through the generated per-release evidence. The production rollback drill remains a separate open release gate.
+The last verified production cycle passed these checks for its exact SHA. A later docs-only main revision reached Vercel but was stopped by the Ignore Build Step; the root-relative hardening under PR #129 is intended to make release-truth detection robust before the next current-main production cycle. Until that cycle passes, the previously verified production deployment remains the canonical live candidate.
 
 ## Distribution posture
 
