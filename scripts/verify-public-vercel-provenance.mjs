@@ -19,10 +19,17 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
     if (health.ok && release.ok) {
       const healthBody = await health.json();
       const releaseBody = await release.json();
+      const allowedSources = new Set([
+        "NEXT_PUBLIC_ORBIT_RELEASE_SHA",
+        "VERCEL_GIT_COMMIT_SHA",
+      ]);
       if (
         healthBody?.releaseSha === expected &&
         releaseBody?.releaseSha === expected &&
-        releaseBody?.releaseProvenance?.declaredByEnvironment === true
+        releaseBody?.releaseProvenance?.declaredByEnvironment === true &&
+        allowedSources.has(healthBody?.provenanceSource) &&
+        allowedSources.has(releaseBody?.releaseProvenance?.source) &&
+        healthBody.provenanceSource === releaseBody.releaseProvenance.source
       ) {
         const home = await get("/");
         if (!home.ok) {
