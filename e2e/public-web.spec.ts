@@ -127,8 +127,14 @@ test.describe("ORBIT public web surface", () => {
     expect(body.application).toBe("ORBIT Marketing OS");
     expect(body.version).toBe("0.2.0");
     expect(body.releaseSha).toMatch(/^(unreleased|[0-9a-f]{40})$/);
-    expect(["NEXT_PUBLIC_ORBIT_RELEASE_SHA", "VERCEL_GIT_COMMIT_SHA"]).toContain(
-      body.releaseProvenance.source,
-    );
+    if (body.releaseSha === "unreleased") {
+      expect(body.releaseProvenance.declaredByEnvironment).toBe(false);
+      expect(body.releaseProvenance.source).toBe("none");
+    } else {
+      expect(["NEXT_PUBLIC_ORBIT_RELEASE_SHA", "VERCEL_GIT_COMMIT_SHA"]).toContain(
+        body.releaseProvenance.source,
+      );
+      expect(body.releaseProvenance.declaredByEnvironment).toBe(true);
+    }
   });
 });
