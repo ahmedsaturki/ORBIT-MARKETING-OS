@@ -135,7 +135,12 @@ export class LinkedInConnector implements PlatformConnector {
               externalId,
               message: "LinkedIn post published.",
             }
-          : { status: "succeeded", message: "LinkedIn post published." };
+          : {
+              status: "blocked",
+              reason: "delivery_status_unknown",
+              message:
+                "LinkedIn returned 201 without x-restli-id. Verify delivery before retrying to avoid duplicate posts.",
+            };
       }
 
       return mapHttpFailure(response.status);
