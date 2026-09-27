@@ -22,7 +22,7 @@ e2e-cdp = []
 
 [dependencies]
 aes-gcm = "0.10"
-argon2 = "0.5"
+argon2 = "0.6"
 base64 = "0.22"
 ed25519-dalek = "2"
 rand = "0.9"
