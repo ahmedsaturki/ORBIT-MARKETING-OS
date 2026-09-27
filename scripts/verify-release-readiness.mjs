@@ -6,6 +6,12 @@ const mode =
   modeIndex >= 0
     ? (process.argv[modeIndex + 1] ?? "verification")
     : "verification";
+if (!["verification", "commercial"].includes(mode)) {
+  console.error("release-readiness=FAIL");
+  console.error("Mode must be verification or commercial.");
+  process.exit(1);
+}
+
 const path = new URL("../release/readiness.json", import.meta.url);
 let document;
 
@@ -70,8 +76,4 @@ if (mode === "commercial" && blockers.length > 0) {
   process.exit(2);
 }
 
-if (!["verification", "commercial"].includes(mode)) {
-  console.error("release-readiness=FAIL");
-  console.error("Mode must be verification or commercial.");
-  process.exit(1);
-}
+
