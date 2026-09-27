@@ -36,7 +36,10 @@
     }
   ],
   "git": {
-    "deploymentEnabled": false
+    "deploymentEnabled": {
+      "*": false,
+      "main": true
+    }
   },
   "$schema": "https://openapi.vercel.sh/vercel.json"
 }
