@@ -100,6 +100,36 @@ Public product material covers:
 
 Source: https://metricool.com/social-media-management/
 
+### FT Controls
+
+Public product material describes multi-platform social marketing, customer-data targeting, AI support, email/SMS capabilities, and Android/iPhone availability.
+
+Source: https://ftcontrols.com/
+
+### Sender Pro
+
+Public product material describes cross-platform marketing, Facebook/group tooling, customer targeting, B2B data workflows, and desktop/Android products.
+
+Source: https://senderprov.com/en
+
+### Kingmaster
+
+The public landing surface describes multi-account management, bulk messaging, campaign reports, and digital-marketing tooling.
+
+Source: https://kingmaster.info/landing.php
+
+### AD Share
+
+Public product material shows WhatsApp messaging, Facebook-group publishing, data extraction, and social-marketing tooling.
+
+Source: https://iadshare.com/
+
+### Controls Tools
+
+The public site describes Facebook and WhatsApp marketing tooling, publishing/messaging tools, and a Data Control section. Private/internal implementation is not inferred.
+
+Source: https://controlstools.com/
+
 ### Publer
 
 Public documentation covers:

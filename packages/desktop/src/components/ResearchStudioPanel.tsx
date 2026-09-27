@@ -97,6 +97,20 @@ const COMPETITOR_WATCHLIST = [
     focus: "Planner، bulk scheduling، analytics، inbox، SmartLinks وتقارير.",
   },
   {
+    id: "competitor-ad-share",
+    name: "AD Share",
+    locator: "https://iadshare.com/",
+    focus:
+      "أدوات نشر وتسويق اجتماعي ومراسلة WhatsApp، مع أدوات بيانات/استخراج ظاهرة في السطح العام.",
+  },
+  {
+    id: "competitor-controls-tools",
+    name: "Controls Tools",
+    locator: "https://controlstools.com/",
+    focus:
+      "تسويق Facebook وWhatsApp، أدوات نشر/إرسال وData Control كما يصفها الموقع العام.",
+  },
+  {
     id: "competitor-publer",
     name: "Publer",
     locator: "https://publer.com/help/en/article/15kxhoi/",
@@ -122,6 +136,27 @@ const COMPETITOR_WATCHLIST = [
     locator: "https://respond.io/omnichannel-ai-crm-conversation-platform",
     focus:
       "Omnichannel inbox، AI Agents، CRM context، routing وconversation-to-revenue workflows.",
+  },
+  {
+    id: "competitor-ft-controls",
+    name: "FT Controls",
+    locator: "https://ftcontrols.com/",
+    focus:
+      "تسويق متعدد المنصات، جمع/استهداف بيانات العملاء، AI، أدوات اجتماعية وبريد/SMS حسب السطح العام.",
+  },
+  {
+    id: "competitor-sender-pro",
+    name: "Sender Pro",
+    locator: "https://senderprov.com/en",
+    focus:
+      "تسويق متعدد المنصات، أدوات Facebook والمراسلة والاستهداف، B2B data، سطح Desktop وAndroid.",
+  },
+  {
+    id: "competitor-kingmaster",
+    name: "Kingmaster",
+    locator: "https://kingmaster.info/landing.php",
+    focus:
+      "إدارة متعددة الحسابات، رسائل مجمعة، تقارير حملات وأدوات تسويق رقمية.",
   },
   {
     id: "competitor-mixpost",
