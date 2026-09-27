@@ -49,6 +49,8 @@ jobs:
         run: pnpm verify:readiness -- --mode verification
       - name: Readiness verifier contract test
         run: node scripts/verify-release-readiness.test.mjs
+      - name: Commercial connector proof safety
+        run: pnpm test:commercial-proof
 
       - name: Secret scan
         run: pnpm security:scan
