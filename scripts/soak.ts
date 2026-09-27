@@ -50,12 +50,14 @@ const CYCLE_MS = 2_000;
 const deadline = Date.now() + minutes * 60_000;
 
 const root = process.cwd();
+const expectedGitSha = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
 const logsDir = join(root, "logs");
 mkdirSync(logsDir, { recursive: true });
 const runId = new Date().toISOString().replace(/[:.]/g, "-");
 const logPath = join(logsDir, `soak-${runId}.jsonl`);
 const summaryPath = join(logsDir, "soak-summary.json");
 const jsonl = createWriteStream(logPath, { flags: "w" });
+const gitSha = process.env.GITHUB_SHA?.trim() || "unknown";
 
 let server: ChildProcess | undefined;
 let healthOk = 0;
@@ -381,8 +383,11 @@ async function terminateProcess(child: ChildProcess): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  if (expectedGitSha && gitSha !== expectedGitSha) {
+    fail(`soak source SHA mismatch: expected ${expectedGitSha}, got ${gitSha}`);
+  }
   console.log(
-    `soak: ${minutes} min against production runtime on :${port} (RSS budget ${RSS_BUDGET_MB} MB)`,
+    `soak: ${minutes} min against production runtime on :${port} (RSS budget ${RSS_BUDGET_MB} MB, git ${gitSha})`,
   );
   server = spawn(
     process.execPath,
@@ -554,6 +559,7 @@ main()
   .then(async () => {
     const summary = {
       runId,
+      gitSha,
       minutes,
       cycles,
       healthOk,
