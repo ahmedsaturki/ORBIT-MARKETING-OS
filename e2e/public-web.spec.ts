@@ -104,9 +104,9 @@ test.describe("ORBIT public web surface", () => {
     expect(body.version).toBe("0.2.0");
     expect(body.releaseSha).toMatch(/^(unreleased|[0-9a-f]{40})$/);
     expect(["unproven", "declared"]).toContain(body.provenance);
-    expect(["NEXT_PUBLIC_ORBIT_RELEASE_SHA", "VERCEL_GIT_COMMIT_SHA", "none"]).toContain(
-      body.provenanceSource,
-    );
+    expect(
+      ["NEXT_PUBLIC_ORBIT_RELEASE_SHA", "VERCEL_GIT_COMMIT_SHA", "none"],
+    ).toContain(body.provenanceSource);
   });
 
   test("release provenance endpoint is non-cacheable and public-safe", async ({
@@ -131,9 +131,9 @@ test.describe("ORBIT public web surface", () => {
       expect(body.releaseProvenance.declaredByEnvironment).toBe(false);
       expect(body.releaseProvenance.source).toBe("none");
     } else {
-      expect(["NEXT_PUBLIC_ORBIT_RELEASE_SHA", "VERCEL_GIT_COMMIT_SHA"]).toContain(
-        body.releaseProvenance.source,
-      );
+      expect(
+        ["NEXT_PUBLIC_ORBIT_RELEASE_SHA", "VERCEL_GIT_COMMIT_SHA"],
+      ).toContain(body.releaseProvenance.source);
       expect(body.releaseProvenance.declaredByEnvironment).toBe(true);
     }
   });
