@@ -14,10 +14,6 @@ if [[ -z "${VERCEL_GIT_PREVIOUS_SHA:-}" || -z "${VERCEL_GIT_COMMIT_SHA:-}" ]]; t
   exit 1
 fi
 
-if [[ -z "${VERCEL_GIT_PREVIOUS_SHA:-}" || -z "${VERCEL_GIT_COMMIT_SHA:-}" ]]; then
-  exit 1
-fi
-
 if ! git rev-parse --verify "${VERCEL_GIT_PREVIOUS_SHA}^{commit}" >/dev/null 2>&1; then
   exit 1
 fi
@@ -26,7 +22,24 @@ if ! git rev-parse --verify "${VERCEL_GIT_COMMIT_SHA}^{commit}" >/dev/null 2>&1;
   exit 1
 fi
 
-git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA}" "${VERCEL_GIT_COMMIT_SHA}" --   packages/web   vercel.json   package.json   pnpm-workspace.yaml   pnpm-lock.yaml
+# Release-truth changes intentionally trigger a Web deployment because the
+# deployment embeds VERCEL_GIT_COMMIT_SHA into the public provenance endpoints.
+# Unrelated docs/core/desktop changes can still be skipped to preserve build capacity.
+git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA}" "${VERCEL_GIT_COMMIT_SHA}" -- \
+  packages/web \
+  vercel.json \
+  package.json \
+  pnpm-workspace.yaml \
+  pnpm-lock.yaml \
+  scripts/vercel-ignore.sh \
+  scripts/vercel-install.sh \
+  scripts/verify-live-web.mjs \
+  scripts/verify-public-vercel-provenance.mjs \
+  release \
+  docs/RELEASE_READINESS.md \
+  docs/LAUNCH_SCORECARD.md \
+  docs/COMMERCIAL_PRODUCTION_PROVEN_RUNBOOK.md \
+  docs/VERIFICATION_BLOCKERS.md
 status=$?
 
 case "$status" in

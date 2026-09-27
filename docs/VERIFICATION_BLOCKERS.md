@@ -1,6 +1,6 @@
 # Verification Blockers
 
-Updated: 2026-09-27
+Updated: 2026-09-28
 
 ## Current state
 
@@ -12,22 +12,22 @@ The remaining blockers are primarily production/runtime/external evidence, not m
 
 ## Vercel deployment evidence
 
-The connected `orbit-marketing-os` project is live and has a READY production deployment.
+The connected `orbit-marketing-os` project is live and has a READY production deployment for the previously verified release line.
 
 Current verified facts:
 
-- public home/pricing/privacy paths respond successfully;
+- public home/pricing/privacy paths respond successfully on the last verified production deployment;
 - unknown routes return 404;
 - Arabic RTL markup is present;
 - selected seven-day runtime-error aggregation reports no runtime errors;
-- current READY deployment metadata reports `framework: vite` and empty Git metadata;
-- the current main Web release workflow passed Web typecheck, lint, build, and browser E2E, but the Vercel credential gate failed because `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` are not configured in Actions;
-- the public provenance workflow then failed closed because `/api/health.json` and `/api/release.json` on the current public production alias returned 404 instead of the expected current-main SHA;
+- Vercel production metadata reports `framework: nextjs` and Git source on the verified deployment;
+- the repository now has a release-aware ignored-build policy so release metadata/provenance changes cannot be silently skipped by Vercel;
+- the current `main` commit after release-documentation changes must still complete the fresh Vercel Git provenance cycle before this blocker can close;
 - repository `vercel.json` expects Next.js static export to `packages/web/out`.
 
-The remaining Vercel blocker is configuration/provenance reconciliation plus a credential-backed current-main prebuilt deployment and rollback drill.
+The remaining Vercel blocker is now the fresh current-main deployment/provenance verification plus rollback drill, not missing credentials.
 
-The GitHub Vercel deployment lane is credential-gated, fail-closed, exact-SHA bound, prebuilt, and live-provenance checked.
+The GitHub Vercel deployment lane is governed, exact-SHA bound, and live-provenance checked.
 
 ## Reproducible installation
 
@@ -35,7 +35,7 @@ The canonical `pnpm-lock.yaml` and desktop `Cargo.lock` are present on main and 
 
 ## Governance
 
-The GitHub branch-protection endpoint is not accessible through the current integration and returns 403. Main-branch protection/ruleset enforcement therefore remains unverified.
+The live GitHub branch metadata verifies `main` is protected with required `ci` and `security:scan` checks.
 
 ## Release consequence
 
