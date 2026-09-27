@@ -6,9 +6,9 @@ Updated: 2026-09-28
 
 The current merged release lives on the repository default branch `main`; this document intentionally avoids hard-coding a moving SHA.
 
-The release train now includes commercial proof hardening, static-export web provenance endpoints, reconciled readiness evidence, exact-SHA soak binding, soak-evidence durability, current production provenance hardening, and durable release documentation.
+The release train now includes commercial proof hardening, static-export web provenance endpoints, reconciled readiness evidence, exact-SHA soak binding, soak-evidence durability, governed current-main Vercel Git provenance, protected-main governance, and durable release documentation.
 
-The remaining blockers are primarily production/runtime/external evidence, not missing core architecture.
+The remaining blockers are primarily production/runtime/external evidence, not missing core architecture or the verified web deployment path.
 
 ## Vercel deployment evidence
 
@@ -25,7 +25,7 @@ Current verified facts:
 - the repository ignore policy permits only `main` to deploy and explicitly includes release-truth changes;
 - PR #129 hardens the ignore command against Vercel Root Directory cwd differences.
 
-The current main docs-only revision was recognized by Vercel but stopped by the Ignore Build Step, so it is not accepted as current-main production provenance. The last verified deployment remains the canonical rollback candidate until a new current-main deployment passes the full provenance and live-surface checks.
+The current-main Vercel production provenance and Web Deploy checks have passed on the verified release cycle. The remaining Vercel action is a controlled rollback drill to the previous verified candidate and back.
 
 ## Reproducible installation
 

@@ -1,6 +1,6 @@
 # ORBIT Release Scorecard
 
-Updated: 2026-09-27.
+Updated: 2026-09-28.
 
 ## Status meanings
 
@@ -72,13 +72,13 @@ Updated: 2026-09-27.
 
 ## Web / Mobile
 
-| Gate                          | Status     | Evidence                                                                                             |
-| ----------------------------- | ---------- | ---------------------------------------------------------------------------------------------------- |
-| WEB-01 PWA                    | VERIFIED   | Web build/E2E and live checks                                                                        |
-| MOB-01 Mobile control surface | VERIFIED   | Mobile validation passed on validated release line                                                   |
-| Native desktop packaging      | VERIFIED   | Windows/Linux/macOS x64/ARM validation passed                                                        |
-| Web production availability   | VERIFIED   | Current READY deployment responds successfully                                                       |
-| Web production provenance     | UNVERIFIED | Current production deployment predates the current `main` release state and has empty Git provenance |
+| Gate                          | Status   | Evidence                                                                                                                                                                                                            |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WEB-01 PWA                    | VERIFIED | Web build/E2E and live checks                                                                                                                                                                                       |
+| MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                                                                                  |
+| Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                                                                       |
+| Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                                                                      |
+| Web production provenance     | VERIFIED | Latest successful Vercel Production Provenance and Web Deploy gates verify exact-main SHA provenance, canonical alias, health/release endpoints, security headers, routes, manifest/service worker and 404 behavior |
 
 ## Release / Operations
 
@@ -100,13 +100,13 @@ Updated: 2026-09-27.
 ## External / commercial prerequisites
 
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
-- Current-main Vercel provenance/settings still require credential-backed verification; the repo-side deployment workflow is tied to the triggering SHA and uses `/api/health.json` + `/api/release.json`.
-- The latest current-main Vercel credential gate failed closed because all three required Vercel release credentials are absent in GitHub Actions; no secret value was exposed.
+- Current-main Vercel production provenance/settings are verified through the governed Git deployment path; the verified production deployment is Git-sourced, uses Next.js, targets production, and exposes the exact current `main` SHA.
+- The current Vercel release cycle passed the governed Git provenance and Web Deploy checks. The remaining Vercel action is a controlled rollback drill to the previous verified candidate and back.
 - The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.
-- GitHub main branch protection/ruleset state remains unverified.
+- GitHub `main` is protected with required `ci` and `security:scan`; final L3 governance evidence still requires auditable evidence references and verification time.
 
 ## Release rule
 
