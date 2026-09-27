@@ -72,13 +72,13 @@ Updated: 2026-09-28.
 
 ## Web / Mobile
 
-| Gate                          | Status     | Evidence                                                                                             |
-| ----------------------------- | ---------- | ---------------------------------------------------------------------------------------------------- |
-| WEB-01 PWA                    | VERIFIED   | Web build/E2E and live checks                                                                        |
-| MOB-01 Mobile control surface | VERIFIED   | Mobile validation passed on validated release line                                                   |
-| Native desktop packaging      | VERIFIED   | Windows/Linux/macOS x64/ARM validation passed                                                        |
-| Web production availability   | VERIFIED   | Current READY deployment responds successfully                                                       |
-| Web production provenance     | VERIFIED   | Latest successful Vercel Production Provenance and Web Deploy gates verify exact-main SHA provenance, canonical alias, health/release endpoints, security headers, routes, manifest/service worker and 404 behavior |
+| Gate                          | Status   | Evidence                                                                                                                                                                                                            |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WEB-01 PWA                    | VERIFIED | Web build/E2E and live checks                                                                                                                                                                                       |
+| MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                                                                                  |
+| Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                                                                       |
+| Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                                                                      |
+| Web production provenance     | VERIFIED | Latest successful Vercel Production Provenance and Web Deploy gates verify exact-main SHA provenance, canonical alias, health/release endpoints, security headers, routes, manifest/service worker and 404 behavior |
 
 ## Release / Operations
 
