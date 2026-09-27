@@ -69,11 +69,10 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 
 ## Current verified state — 2026-09-28
 
-- Current main release SHA is `bbde7c5300bc05f8c46f5d0ae539abc9abb2ef36`.
-- Release Evidence Bundle run `36350429896` passed for that exact SHA; artifact `10941992454` is retained with digest `2a8334c296980ab15b30f30eef7ae19f3aa694f935855e2dbcc8c14b9f5ce135`.
-- Vercel Production Provenance run `36350429904` passed. Production deployment `dpl_BfRxpFLLhzBDyKdwy74wB7bX7aUK` is READY, source=`git`, framework=`nextjs`, and includes the canonical `orbit-marketing-os.vercel.app` alias with the same Git SHA.
-- Web Deploy run `36350429899` passed Web quality and full live provenance/surface verification.
+- The current release cycle has a successful exact-SHA Release Evidence Bundle, Vercel Production Provenance, and Web Deploy verification recorded in GitHub Actions artifacts.
+- The canonical production deployment path is source=`git`, framework=`nextjs`, target=`production`, with the canonical `orbit-marketing-os.vercel.app` alias and public exact-SHA provenance endpoints.
 - GitHub `main` is protected with required `ci` and `security:scan` checks.
+- Exact SHA, deployment ID, workflow run IDs, and artifact digests are retained in per-release evidence and should not be hard-coded into this durable runbook.
 - Universal Search previously failed Windows Native E2E because of a real SQLite LIKE escaping defect; the defect has been fixed and literal `%`, `_`, and `!` regression coverage added.
 - PR #124 consolidated bounded Windows Native E2E staging, LinkedIn ambiguous-delivery fail-closed semantics, and governed Vercel Git provenance. Its exact-head Windows Native E2E and four desktop packaging targets passed before merge.
 - Commercial production is still not proven: the 24-hour soak, rollback drill, real Telegram/LinkedIn evidence, multi-device CRDT network proof, manual accessibility audit, signing/store distribution, final L3 governance evidence, billing activation, legal/commercial review, and current-main Sonar A requirement remain open.
