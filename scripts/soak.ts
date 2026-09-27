@@ -51,7 +51,9 @@ const deadline = Date.now() + minutes * 60_000;
 
 const root = process.cwd();
 const expectedGitSha = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
-const logsDir = join(root, "logs");
+const logsDir = process.env.ORBIT_SOAK_LOG_DIR?.trim()
+  ? join(root, process.env.ORBIT_SOAK_LOG_DIR.trim())
+  : join(root, "logs");
 mkdirSync(logsDir, { recursive: true });
 const runId = new Date().toISOString().replace(/[:.]/g, "-");
 const logPath = join(logsDir, `soak-${runId}.jsonl`);
