@@ -1,4 +1,4 @@
-const base = (process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app").replace(\n  /\/$/,\n  "",\n);
+const base = (process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app").replace(\n  /\\/$/,\n  "",\n);
 const expected = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
 if (!expected) throw new Error("ORBIT_EXPECTED_RELEASE_SHA is required");
 
