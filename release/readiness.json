@@ -47,7 +47,7 @@
         "audit",
         "policy tests"
       ],
-      "notes": "GitHub main protection/ruleset live state is not verified."
+      "notes": "Protected main is active with required ci and security:scan contexts; final commercial L3 governance evidence remains separate from the live protection configuration."
     },
     "distribution": {
       "level": "L2_VERIFIED",
