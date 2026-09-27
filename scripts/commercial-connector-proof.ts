@@ -64,8 +64,10 @@ async function writeReport(
     linkedin,
     note: "No tokens, message bodies, or credential material are persisted or printed.",
   };
+
   await mkdir(dirname(output), { recursive: true });
   await writeFile(output, JSON.stringify(report, null, 2) + "\n", "utf8");
+
   console.log(
     JSON.stringify({
       output,
@@ -86,13 +88,14 @@ async function writeReport(
   );
 }
 
-let telegram: PlatformProof = {
+const telegram: PlatformProof = {
   authorized: false,
   delivered: false,
   externalId: null,
   status: "failed",
 };
-let linkedin: PlatformProof = {
+
+const linkedin: PlatformProof = {
   authorized: false,
   delivered: false,
   externalId: null,
@@ -110,6 +113,7 @@ try {
       accountId: "commercial-proof-telegram",
       userConfirmed: true,
     });
+
     telegram.authorized = connection.status === "succeeded";
 
     if (telegram.authorized) {
@@ -133,6 +137,7 @@ try {
         },
         { accountId: "commercial-proof-telegram", userConfirmed: true },
       );
+
       telegram.status =
         outcome.status === "succeeded" && Boolean(outcome.externalId)
           ? "succeeded"
@@ -161,37 +166,42 @@ try {
       accountId: "commercial-proof-linkedin",
       userConfirmed: true,
     });
+
     linkedin.authorized = connection.status === "succeeded";
+
     if (linkedin.authorized) {
       const outcome = await linkedinConnector.execute(
-      {
-        id: "commercial-proof-linkedin-task",
-        workspaceId: "commercial-proof",
-        campaignId: "commercial-proof",
-        accountId: "commercial-proof-linkedin",
-        platform: "linkedin",
-        kind: "publish",
-        contentId: "commercial-proof-linkedin-content",
-        destinationId: "member",
-        priority: 1,
-        status: "pending",
-        attempts: 0,
-        maxAttempts: 1,
-        availableAt: new Date().toISOString(),
-        idempotencyKey: "commercial-proof-linkedin",
-        createdAt: new Date().toISOString(),
-      },
-      { accountId: "commercial-proof-linkedin", userConfirmed: true },
-    );
+        {
+          id: "commercial-proof-linkedin-task",
+          workspaceId: "commercial-proof",
+          campaignId: "commercial-proof",
+          accountId: "commercial-proof-linkedin",
+          platform: "linkedin",
+          kind: "publish",
+          contentId: "commercial-proof-linkedin-content",
+          destinationId: "member",
+          priority: 1,
+          status: "pending",
+          attempts: 0,
+          maxAttempts: 1,
+          availableAt: new Date().toISOString(),
+          idempotencyKey: "commercial-proof-linkedin",
+          createdAt: new Date().toISOString(),
+        },
+        { accountId: "commercial-proof-linkedin", userConfirmed: true },
+      );
 
-      linkedin.authorized = true;
       linkedin.status =
-      outcome.status === "succeeded" && Boolean(outcome.externalId)
-        ? "succeeded"
-        : "failed";
-    linkedin.delivered = linkedin.status === "succeeded";
-    linkedin.externalId = outcome.externalId ?? null;
-    linkedin.message = outcome.message ?? outcome.reason;
+        outcome.status === "succeeded" && Boolean(outcome.externalId)
+          ? "succeeded"
+          : "failed";
+      linkedin.delivered = linkedin.status === "succeeded";
+      linkedin.externalId = outcome.externalId ?? null;
+      linkedin.message = outcome.message ?? outcome.reason;
+    } else {
+      linkedin.message =
+        connection.message ?? connection.reason ?? "authorization failed";
+    }
   } catch (error) {
     linkedin.message =
       error instanceof Error ? error.message : String(error);
