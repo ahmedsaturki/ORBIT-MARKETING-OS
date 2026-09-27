@@ -34,7 +34,6 @@ for (const required of [
   }
 }
 
-
 for (const argv of [
   ["--confirm-live", "--output"],
   ["--confirm-live", "--output", "--confirm-live"],
@@ -50,8 +49,14 @@ for (const argv of [
     );
   }
   const invalidOutputText = `${invalidOutput.stdout}\n${invalidOutput.stderr}`;
-  if (!invalidOutputText.includes("--output requires a non-flag filename.")) {
-    throw new Error(`missing invalid-output fail-closed marker for ${argv.join(" ")}`);
+  if (
+    !invalidOutputText.includes(
+      "--output requires a non-flag filename.",
+    )
+  ) {
+    throw new Error(
+      `missing invalid-output fail-closed marker for ${argv.join(" ")}`,
+    );
   }
 }
 
