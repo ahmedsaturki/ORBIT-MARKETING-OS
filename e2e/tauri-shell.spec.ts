@@ -940,11 +940,47 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
           id,
           title: "E2E Bulk Content",
           body: "Atomic bulk task content",
-          approvalStatus: "approved",
+          approvalStatus: "draft",
           tagsJson: JSON.stringify(["bulk"]),
         }),
       "e2e-bulk-content-" + suffix,
     )) as { id: string };
+
+    const attached = await page!.evaluate(
+      async ({ campaignId, contentId }) =>
+        window.__TAURI_INTERNALS__.invoke("campaign_attach_content", {
+          campaignId,
+          contentId,
+        }),
+      { campaignId: campaign.id, contentId: content.id },
+    );
+    expect(attached).toBe(true);
+
+    const approval = (await page!.evaluate(
+      async ({ contentId, approvalId }) =>
+        window.__TAURI_INTERNALS__.invoke("approval_request", {
+          id: approvalId,
+          contentId,
+          reviewerIdsJson: JSON.stringify(["local-user"]),
+          note: "Approve content for atomic bulk enqueue E2E",
+        }),
+      {
+        contentId: content.id,
+        approvalId: "e2e-bulk-approval-" + suffix,
+      },
+    )) as { id: string; status: string };
+    expect(approval.status).toBe("pending");
+
+    const decision = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("approval_decide", {
+          id,
+          status: "approved",
+          note: "Approved by the local E2E reviewer",
+        }),
+      approval.id,
+    )) as { id: string; status: string };
+    expect(decision.status).toBe("approved");
 
     const before = (await page!.evaluate(() =>
       window.__TAURI_INTERNALS__.invoke("task_list", {}),
