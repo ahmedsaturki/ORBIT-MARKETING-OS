@@ -61,6 +61,37 @@ try {
   assert.equal(invalid.status, 1);
   assert.match(invalid.stderr, /Invalid gate levels: fake_gate/);
 
+  const impossibleDate = join(tempDirectory, "impossible-date.json");
+  writeFileSync(
+    impossibleDate,
+    JSON.stringify({
+      schemaVersion: 1,
+      readinessLevels: [
+        "L0_DESIGNED",
+        "L1_IMPLEMENTED",
+        "L2_VERIFIED",
+        "L3_PRODUCTION_PROVEN",
+      ],
+      releaseCritical: {
+        impossible_date: {
+          level: "L3_PRODUCTION_PROVEN",
+          evidence: ["workflow run 124"],
+          evidenceRefs: ["gha://runs/124"],
+          verifiedAt: "2026-02-30T00:00:00Z",
+          notes: "impossible calendar date",
+        },
+      },
+      rule: "every gate must be L3",
+    }),
+  );
+
+  const impossible = run("commercial", {
+    ORBIT_READINESS_FILE: impossibleDate,
+  });
+  assert.equal(impossible.status, 1);
+  assert.match(impossible.stderr, /Invalid gate levels: impossible_date/);
+
+
   const validL3 = join(tempDirectory, "valid.json");
   writeFileSync(
     validL3,
