@@ -124,7 +124,7 @@ export class LinkedInConnector implements PlatformConnector {
           lifecycleState: "PUBLISHED",
           isReshareDisabledByAuthor: false,
         }),
-        ...(context.signal ? { signal: context.signal } : {}),
+        signal: context.signal ?? AbortSignal.timeout(15_000),
       });
 
       if (response.status === 201) {
@@ -195,10 +195,12 @@ function mapHttpFailure(status: number): ConnectorOutcome {
     };
   }
 
-  if (status >= 500) {
+  if (status === 408 || (status >= 500 && status <= 599)) {
     return {
-      status: "failed",
-      message: "LinkedIn service returned a temporary server error.",
+      status: "blocked",
+      reason: "delivery_status_unknown",
+      message:
+        "LinkedIn delivery status is ambiguous. Verify delivery before retrying to avoid duplicate posts.",
     };
   }
 
