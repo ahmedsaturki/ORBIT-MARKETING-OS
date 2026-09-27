@@ -44,7 +44,15 @@ const invalid = entries.filter(
     !document.readinessLevels.includes(value.level) ||
     !Array.isArray(value.evidence) ||
     value.evidence.length === 0 ||
-    typeof value.notes !== "string",
+    typeof value.notes !== "string" ||
+    (value.level === "L3_PRODUCTION_PROVEN" &&
+      (!Array.isArray(value.evidenceRefs) ||
+        value.evidenceRefs.length === 0 ||
+        !value.evidenceRefs.every(
+          (ref) => typeof ref === "string" && ref.trim().length > 0,
+        ) ||
+        typeof value.verifiedAt !== "string" ||
+        Number.isNaN(Date.parse(value.verifiedAt)))),
 );
 if (invalid.length > 0) {
   console.error("release-readiness=FAIL");
