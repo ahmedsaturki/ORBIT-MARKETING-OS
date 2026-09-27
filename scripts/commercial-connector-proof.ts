@@ -157,6 +157,17 @@ try {
       contentResolver: async () => testContent.linkedin,
     });
 
+    const connection = await linkedinConnector.connect({
+      accountId: "commercial-proof-linkedin",
+      userConfirmed: true,
+    });
+    linkedin.authorized = connection.status === "succeeded";
+    if (!linkedin.authorized) {
+      linkedin.message =
+        connection.message ?? connection.reason ?? "authorization failed";
+      return;
+    }
+
     const outcome = await linkedinConnector.execute(
       {
         id: "commercial-proof-linkedin-task",
@@ -178,7 +189,7 @@ try {
       { accountId: "commercial-proof-linkedin", userConfirmed: true },
     );
 
-    linkedin.authorized = outcome.status === "succeeded" || Boolean(outcome.externalId);
+    linkedin.authorized = true;
     linkedin.status =
       outcome.status === "succeeded" && Boolean(outcome.externalId)
         ? "succeeded"
