@@ -134,7 +134,7 @@ describe("LinkedInConnector", () => {
     });
   });
 
-  it("maps authorization, rate-limit and server errors separately", async () => {
+  it("maps authorization, rate-limit and ambiguous server errors separately", async () => {
     const make = (status: number) =>
       new LinkedInConnector({
         apiVersion: "202609",
@@ -153,7 +153,8 @@ describe("LinkedInConnector", () => {
       reason: "platform_limit",
     });
     await expect(make(500).execute(task, context)).resolves.toMatchObject({
-      status: "failed",
+      status: "blocked",
+      reason: "delivery_status_unknown",
     });
   });
 
