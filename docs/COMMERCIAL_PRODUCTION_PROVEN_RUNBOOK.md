@@ -69,12 +69,12 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 
 ## Current verified state — 2026-09-27
 
-- Exact-main Release Evidence Bundle succeeded on main run `36282263357` at SHA `33e29a0f99411c7285abb5a8dbf823fcf60d0f52`.
-- The evidence artifact ID is `10918938828` and its digest is `sha256:7a80db78afa218c26df225e840bc81a27fb422b82958ed55511a27cb10d4ad55`.
-- Main Web Deploy reached the Web quality gate, but the Vercel credential gate failed closed and deployment was skipped.
+- Historical exact-main Release Evidence Bundle evidence exists, but the latest merged main SHA must have a fresh evidence bundle before commercial promotion.
+- Historical artifact IDs/digests remain retained as dated evidence and are not treated as current-main proof.
+- The Vercel deployment lane is credential-gated and fail-closed; current-main production provenance is still unverified.
 - Current Vercel production deployment is READY but has empty Git provenance metadata.
 - Universal Search previously failed Windows Native E2E because of a real SQLite LIKE escaping defect; the defect has been fixed and literal `%`, `_`, and `!` regression coverage added.
-- Link Intelligence previously failed Windows Native E2E because the test payload shape did not match the native IPC contract; the test has been corrected and a fresh exact-head validation cycle is running.
+- Recent exact-head native validation also covered the corrected publishing/search test contracts; no current-main commercial proof is implied until release evidence is refreshed.
 
 ## Current hardening note
 
