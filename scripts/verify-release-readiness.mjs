@@ -75,5 +75,3 @@ if (mode === "commercial" && blockers.length > 0) {
   console.error(document.rule);
   process.exit(2);
 }
-
-
