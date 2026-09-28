@@ -35,8 +35,14 @@ const contractFixtures = [
     forbidden: true,
   },
   { value: "current-main SHA: 1234567", forbidden: true },
-  { value: "Current verified production deployment is `dpl_example123`.", forbidden: true },
-  { value: "Current main production provenance is verified for SHA `1234567`.", forbidden: true },
+  {
+    value: "Current verified production deployment is `dpl_example123`.",
+    forbidden: true,
+  },
+  {
+    value: "Current main production provenance is verified for SHA `1234567`.",
+    forbidden: true,
+  },
   {
     value: "The last verified main SHA `1234567` is historical evidence.",
     forbidden: false,
