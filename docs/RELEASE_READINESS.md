@@ -88,9 +88,9 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 ## Web production evidence
 
-The canonical Vercel project is live on the governed Git deployment path. The release contract requires each current-main production deployment to be sourced from Git `main`, use the `nextjs` framework, expose the canonical `orbit-marketing-os.vercel.app` alias, and prove the exact Git SHA through `/api/health.json`, `/api/release.json`, homepage provenance, security headers, routes, manifest/service worker, and 404 checks.
+The canonical Vercel project is live on the governed Git deployment path. The release contract requires an explicit reviewed non-bootstrap `release/PRODUCTION_RELEASE.json` marker on `main` before a Production deployment is considered active; the deployment must be sourced from Git `main`, use the `nextjs` framework, expose the canonical alias, and prove the marker commit through `/api/health.json`, `/api/release.json`, homepage provenance, security headers, routes, manifest/service worker, and 404 checks.
 
-The latest completed production verification cycle passed the Vercel Git provenance workflow, full Web Deploy workflow, and live surface checks for main SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`. Deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is READY and exact-SHA provenance is verified. The controlled rollback drill remains open.
+The latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`. Current main carries the bootstrap production marker; Vercel Production Provenance run `36480198039` therefore performs no current-main Production verification, while Web Deploy run `36480197959` validates the web quality path. The controlled rollback drill remains open.
 
 ## Distribution posture
 
