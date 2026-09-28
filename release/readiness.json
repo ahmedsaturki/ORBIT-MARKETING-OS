@@ -11,78 +11,42 @@
   "releaseCritical": {
     "source_integrity": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "CI run 36434671261",
-        "security:scan run 36434671261",
-        "SonarCloud check-run 108970631772"
-      ],
+      "evidence": ["CI run 36434671261","security:scan run 36434671261","SonarCloud check-run 108970631772"],
       "notes": "Current exact-main CI/security evidence is verified; the current-main SonarCloud check reports Security Rating B on New Code while the required threshold is A. No bypass or exclusion is used."
     },
     "build": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "CI run 36434671261",
-        "Rust quality run 36434671261",
-        "desktop native validation on validated release line",
-        "mobile validation on validated release line"
-      ],
+      "evidence": ["CI run 36434671261","Rust quality run 36434671261","desktop native validation on validated release line","mobile validation on validated release line"],
       "notes": "The latest completed exact-main CI/Rust cycle passed. Current production web provenance is independently verified through the Vercel release cycle; desktop/mobile production signing remains open."
     },
     "runtime": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "CI run 36434671261",
-        "recovery evidence artifact 10975741308",
-        "runtime smoke",
-        "Windows native E2E"
-      ],
+      "evidence": ["CI run 36434671261","recovery evidence artifact 10975741308","runtime smoke","Windows native E2E"],
       "notes": "Current exact-main recovery artifact 10975741308 records 4/4 PASS for startup recovery, database recovery, recovery idempotency, and migration idempotency. Field recovery and 24-hour stability remain open."
     },
     "product_workflows": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "campaign/content/approval/CRM/inbox/search/publishing E2E"
-      ],
+      "evidence": ["campaign/content/approval/CRM/inbox/search/publishing E2E"],
       "notes": "Real external connector workflows remain separate gates."
     },
     "security_governance": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "RBAC",
-        "workspace isolation",
-        "vault",
-        "audit",
-        "policy tests",
-        "CI run 36434671261"
-      ],
+      "evidence": ["RBAC","workspace isolation","vault","audit","policy tests","CI run 36434671261"],
       "notes": "GitHub main is protected with required ci and security:scan checks. Final L3 commercial governance still requires auditable evidence references and verification time in the machine-readable release record."
     },
     "distribution": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "validated Windows/Linux/macOS artifacts",
-        "validated Android debug validation",
-        "current exact-main CI run 36434671261",
-        "release-evidence artifact 10975805471"
-      ],
+      "evidence": ["validated Windows/Linux/macOS artifacts","validated Android debug validation","current exact-main CI run 36434671261","release-evidence artifact 10975805471"],
       "notes": "Packaging/validation is verified on the release line; desktop signing/notarization and production mobile store signing/distribution remain open."
     },
     "web_production": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "current Vercel Production Provenance run 36434671316",
-        "current Web Deploy run 36434671320",
-        "deployment dpl_CVTi4TwkUUntjsCrNonMwVJT32qm",
-        "canonical production alias",
-        "live security/route/runtime checks"
-      ],
+      "evidence": ["current Vercel Production Provenance run 36434671316","current Web Deploy run 36434671320","deployment dpl_CVTi4TwkUUntjsCrNonMwVJT32qm","canonical production alias","live security/route/runtime checks"],
       "notes": "Current main has a READY Git-sourced production deployment and the Vercel/Web Deploy verification cycle passed against the current main commit. The deployment exposes the canonical alias and exact Git provenance. The controlled rollback drill remains open."
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",
-      "evidence": [
-        "connector contracts/fixtures/challenge handling"
-      ],
+      "evidence": ["connector contracts/fixtures/challenge handling"],
       "notes": "Real Telegram and LinkedIn authorization/delivery evidence is still required; connector contracts, negative-path handling, and challenge stop behavior are verified."
     },
     "sync_network": {
@@ -96,30 +60,22 @@
     },
     "accessibility": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "current CI automated RTL/accessibility tests"
-      ],
+      "evidence": ["current CI automated RTL/accessibility tests"],
       "notes": "Automated accessibility/RTL tests passed on current CI. Manual WCAG/RTL audit remains open."
     },
     "stability_soak": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "verified 10-minute soak harness/run"
-      ],
+      "evidence": ["verified 10-minute soak harness/run"],
       "notes": "The release line has a verified 10-minute soak harness/run. A complete 24-hour stability soak on the exact release SHA remains open."
     },
     "commercial_billing": {
       "level": "L1_IMPLEMENTED",
-      "evidence": [
-        "pricing surface and commercial contract docs"
-      ],
+      "evidence": ["pricing surface and commercial contract docs"],
       "notes": "Pricing/commercial surfaces exist, but payment/billing provider activation is not configured."
     },
     "legal_commercial": {
       "level": "L1_IMPLEMENTED",
-      "evidence": [
-        "privacy/terms/refunds/EULA surfaces"
-      ],
+      "evidence": ["privacy/terms/refunds/EULA surfaces"],
       "notes": "Privacy, terms, refund and EULA surfaces exist. Final legal/commercial publication review remains open."
     }
   },
