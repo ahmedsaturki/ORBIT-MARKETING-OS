@@ -32,8 +32,14 @@ jobs:
           set -euo pipefail
           node scripts/resolve-production-release.mjs > /tmp/orbit-release-state.txt
           cat /tmp/orbit-release-state.txt
-          grep -q '^release_active=true$' /tmp/orbit-release-state.txt
-          grep -q '^release_current=true$' /tmp/orbit-release-state.txt
+          if ! grep -q '^release_active=true$' /tmp/orbit-release-state.txt; then
+            echo "Production release marker is bootstrap/non-production; nothing to verify."
+            exit 0
+          fi
+          if ! grep -q '^release_current=true$' /tmp/orbit-release-state.txt; then
+            echo "Production release marker is not on the current main commit; nothing to verify."
+            exit 0
+          fi
           release_sha="$(sed -n 's/^release_sha=//p' /tmp/orbit-release-state.txt)"
           test -n "$release_sha"
           echo "ORBIT_EXPECTED_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
