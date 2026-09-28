@@ -6,6 +6,7 @@ description: Reconcile ORBIT release truth across readiness, scorecards, CI, run
 Treat release/readiness.json as machine-readable truth and require fresh evidence for the exact SHA.
 
 Check for:
+
 - status drift
 - unsupported L3 claims
 - stale evidence

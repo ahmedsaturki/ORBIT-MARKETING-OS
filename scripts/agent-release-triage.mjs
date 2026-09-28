@@ -58,12 +58,16 @@ const payload = {
   rule: readiness.rule,
   summary: {
     releaseCriticalCount: gates.length,
-    productionProvenCount: gates.filter((gate) => gate.level === "L3_PRODUCTION_PROVEN").length,
+    productionProvenCount: gates.filter(
+      (gate) => gate.level === "L3_PRODUCTION_PROVEN",
+    ).length,
     engineeringOrVerificationCount: gates.filter(
       (gate) => classify(gate) === "ENGINEERING_OR_VERIFICATION",
     ).length,
-    ownerActionCount: gates.filter((gate) => classify(gate) === "OWNER_ACTION").length,
-    blockedCount: gates.filter((gate) => gate.level !== "L3_PRODUCTION_PROVEN").length,
+    ownerActionCount: gates.filter((gate) => classify(gate) === "OWNER_ACTION")
+      .length,
+    blockedCount: gates.filter((gate) => gate.level !== "L3_PRODUCTION_PROVEN")
+      .length,
   },
   nextActions: gates
     .filter((gate) => gate.level !== "L3_PRODUCTION_PROVEN")

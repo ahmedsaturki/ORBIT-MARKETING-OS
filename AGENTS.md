@@ -32,6 +32,7 @@ A change is done only when:
 ## Architecture
 
 The target structure is documented in `docs/ARCHITECTURE.md`. The current repository is being migrated incrementally, so existing root-level UI code must remain functional until its replacement is verified.
+
 ## Agent execution protocol
 
 When OMP or another repository agent is used, follow docs/OMP_OPERATOR_PROTOCOL.md as the execution playbook. OMP should be treated as the execution/delegation engine; ORBIT's acceptance and release evidence rules remain authoritative.

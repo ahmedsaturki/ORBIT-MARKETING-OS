@@ -26,6 +26,7 @@ and the latest release scorecard.
 ## Hard rules
 
 Never:
+
 - claim L3 from source inspection, fixtures, or historical evidence;
 - skip security/quality gates;
 - fabricate external connector delivery;

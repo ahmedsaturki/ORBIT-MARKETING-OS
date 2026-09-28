@@ -6,6 +6,7 @@ description: Map the current ORBIT implementation, evidence, regressions, and re
 Use docs/OMP_OPERATOR_PROTOCOL.md and release/readiness.json as the contract.
 
 Return:
+
 - exact SHA/branch
 - affected files and relevant code paths
 - current evidence

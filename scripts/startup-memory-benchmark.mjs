@@ -60,7 +60,9 @@ let samples = 0;
 try {
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
-      throw new Error("runtime exited during startup with code " + child.exitCode);
+      throw new Error(
+        "runtime exited during startup with code " + child.exitCode,
+      );
     }
 
     const rss = child.pid ? rssMb(child.pid) : 0;
@@ -68,10 +70,9 @@ try {
     if (rss > 0) samples += 1;
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:" + port + "/api/health",
-        { signal: AbortSignal.timeout(1_000) },
-      );
+      const response = await fetch("http://127.0.0.1:" + port + "/api/health", {
+        signal: AbortSignal.timeout(1_000),
+      });
       if (response.ok) {
         healthy = true;
         startupMs = performance.now() - startedAt;

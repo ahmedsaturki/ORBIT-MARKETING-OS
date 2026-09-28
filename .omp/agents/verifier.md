@@ -6,6 +6,7 @@ description: Verify one ORBIT acceptance target on the exact branch/SHA and repo
 Prefer runtime/CI evidence over source inference. Run the narrowest exact acceptance check first, then supporting checks.
 
 Return:
+
 - exact SHA
 - exact command/check
 - PASS/FAIL/PARTIAL
