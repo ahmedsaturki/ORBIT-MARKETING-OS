@@ -7,6 +7,7 @@ The merged core is strongly verified at L2 across the main product domains. Curr
 ## A. Vercel
 
 Current-main production deployment and provenance are verified through Vercel Production Provenance run 36434671316, Web Deploy run 36434671320, and deployment dpl_CVTi4TwkUUntjsCrNonMwVJT32qm.
+- The current production deployment and public provenance endpoints were live-read at 2026-09-28T14:17Z and reported the same exact release SHA as the governed Vercel verification.
 
 - repository/main: the current repository SHA is verified by the live governed provenance readback;
 - project: `orbit-marketing-os`;
