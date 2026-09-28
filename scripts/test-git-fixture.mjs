@@ -5,20 +5,37 @@ import { join } from "node:path";
 
 export const execFileAsync = promisify(execFile);
 
-export async function git(cwd, args) {
+async function runGit(cwd, args) {
   await execFileAsync("git", args, { cwd });
+}
+
+export async function initGitFixture(cwd, marker) {
+  await runGit(cwd, ["init", "-q"]);
+  await runGit(cwd, [
+    "config",
+    "user.email",
+    "orbit-test@example.invalid",
+  ]);
+  await runGit(cwd, ["config", "user.name", "ORBIT Test"]);
+  await mkdir(join(cwd, "scripts"), { recursive: true });
+  await mkdir(join(cwd, "release"), { recursive: true });
+  await writeReleaseMarker(
+    cwd,
+    marker.releaseId ?? "bootstrap",
+    marker.notes ?? "",
+  );
+}
+
+export async function commit(cwd) {
+  await runGit(cwd, ["add", "."]);
+  await runGit(cwd, ["commit", "-qm", "ORBIT fixture"]);
+  return commitSha(cwd);
 }
 
 export async function commitSha(cwd) {
   return (
     await execFileAsync("git", ["rev-parse", "HEAD"], { cwd })
   ).stdout.trim();
-}
-
-export async function commit(cwd, message) {
-  await git(cwd, ["add", "."]);
-  await git(cwd, ["commit", "-qm", message]);
-  return commitSha(cwd);
 }
 
 export async function writeReleaseMarker(
@@ -36,18 +53,5 @@ export async function writeReleaseMarker(
     join(cwd, "release", "PRODUCTION_RELEASE.json"),
     JSON.stringify(marker) + "\n",
     "utf8",
-  );
-}
-
-export async function initGitFixture(cwd, marker) {
-  await git(cwd, ["init", "-q"]);
-  await git(cwd, ["config", "user.email", "orbit-test@example.invalid"]);
-  await git(cwd, ["config", "user.name", "ORBIT Test"]);
-  await mkdir(join(cwd, "scripts"), { recursive: true });
-  await mkdir(join(cwd, "release"), { recursive: true });
-  await writeReleaseMarker(
-    cwd,
-    marker.releaseId ?? "bootstrap",
-    marker.notes ?? "",
   );
 }
