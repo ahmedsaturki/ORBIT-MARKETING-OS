@@ -24,11 +24,7 @@ export async function initGitFixture(cwd, marker) {
 
 export async function commit(cwd) {
   await execFileAsync("git", ["add", "."], { cwd });
-  await execFileAsync(
-    "git",
-    ["commit", "-qm", "ORBIT fixture"],
-    { cwd },
-  );
+  await execFileAsync("git", ["commit", "-qm", "ORBIT fixture"], { cwd });
   return commitSha(cwd);
 }
 

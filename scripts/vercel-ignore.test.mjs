@@ -6,12 +6,22 @@ import {
   initGitFixture,
   writeReleaseMarker,
 } from "./test-git-fixture.mjs";
-import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  cp,
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 
-const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), "vercel-ignore.sh");
+const SCRIPT = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "vercel-ignore.sh",
+);
 
 async function runIgnore(cwd, env = { VERCEL_GIT_COMMIT_REF: "main" }) {
   try {
@@ -25,7 +35,9 @@ async function runIgnore(cwd, env = { VERCEL_GIT_COMMIT_REF: "main" }) {
   }
 }
 
-test("vercel ignore script exposes the explicit production release contract", async () => {
+test(
+  "vercel ignore script exposes the explicit production release contract",
+  async () => {
   const script = await readFile(SCRIPT, "utf8");
   assert.match(script, /VERCEL_GIT_COMMIT_REF/);
   assert.match(script, /HEAD\^ HEAD/);
@@ -33,12 +45,18 @@ test("vercel ignore script exposes the explicit production release contract", as
   assert.match(script, /releaseId/);
   assert.match(script, /bootstrap/);
   assert.match(script, /last successful deployment/);
-  assert.match(script, /VERCEL_GIT_PREVIOUS_SHA is the last successful deployment/);
+  assert.match(
+    script,
+    /VERCEL_GIT_PREVIOUS_SHA is the last successful deployment/,
+  );
   assert.match(script, /exit 0/);
   assert.match(script, /exit 1/);
-});
+  },
+);
 
-test("only the commit that changes the release marker can trigger a build", async () => {
+test(
+  "only the commit that changes the release marker can trigger a build",
+  async () => {
   const cwd = await mkdtemp(join(tmpdir(), "orbit-vercel-ignore-"));
   try {
     await initGitFixture(cwd, {
@@ -101,7 +119,15 @@ test("vercel ignore builds when the current commit has no parent", async () => {
     await execFileAsync("git", ["add", "."], { cwd });
     await execFileAsync(
       "git",
-      ["-c", "user.email=orbit-test@example.invalid", "-c", "user.name=ORBIT Test", "commit", "-qm", "root"],
+      [
+        "-c",
+        "user.email=orbit-test@example.invalid",
+        "-c",
+        "user.name=ORBIT Test",
+        "commit",
+        "-qm",
+        "root",
+      ],
       { cwd },
     );
     assert.equal(await runIgnore(cwd), 1);
