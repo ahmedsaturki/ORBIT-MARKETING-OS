@@ -100,7 +100,7 @@ Updated: 2026-09-28.
 ## External / commercial prerequisites
 
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
-- Vercel production provenance is verified for the current main SHA `62cf100c1b5c09010acfcf030890e578a25ab827` through governed Git deployment verification.
+- Vercel production provenance is verified for the exact main release SHA `62cf100c1b5c09010acfcf030890e578a25ab827` through governed Git deployment verification.
 - The current verified production deployment is `dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2` (READY, Git-sourced, production-targeted); Vercel Production Provenance run 36450595465 and Web Deploy run 36450595482 both passed. The rollback drill remains separate.
 - The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
 - Desktop signing/notarization needs external signing identities.
