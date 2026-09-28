@@ -61,7 +61,16 @@ jobs:
           node-version: 22
       - name: Resolve production release
         id: resolve
-        run: node scripts/resolve-production-release.mjs
+        run: |
+          set -euo pipefail
+          node scripts/resolve-production-release.mjs > /tmp/orbit-release-state.txt
+          release_id="$(sed -n 's/^release_id=//p' /tmp/orbit-release-state.txt)"
+          release_sha="$(sed -n 's/^release_sha=//p' /tmp/orbit-release-state.txt)"
+          release_current="$(sed -n 's/^release_current=//p' /tmp/orbit-release-state.txt)"
+          printf 'release_id=%s\n' "$release_id" >> "$GITHUB_OUTPUT"
+          printf 'release_sha=%s\n' "$release_sha" >> "$GITHUB_OUTPUT"
+          printf 'release_current=%s\n' "$release_current" >> "$GITHUB_OUTPUT"
+          grep -q '^release_current=' /tmp/orbit-release-state.txt
 
   vercel_mode:
     name: Vercel release mode
