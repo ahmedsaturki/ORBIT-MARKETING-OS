@@ -33,6 +33,8 @@ Updated: 2026-09-28.
 - PR #127: merged — durable SHA-independent release truth.
 - PR #128: merged — durable external-action and implementation-status reconciliation.
 - PR #129: merged — repository-root-safe Vercel Ignore Build Step handling and nested-root regression coverage.
+- PR #132: merged — OMP-native project context, sticky rules, watchdog/advisor roster, operator agents, release triage and evidence/performance controls.
+- PR #136: merged — exact-SHA recovery/migration evidence harness and durable recovery artifact.
 
 ## Readiness rule
 
@@ -70,7 +72,7 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 - real Telegram authorization and controlled delivery;
 - real LinkedIn authorization and controlled publishing;
 - live multi-device CRDT verification;
-- dedicated restart/migration/crash recovery evidence consolidation;
+- dedicated restart/migration/crash recovery evidence consolidation; automated 4/4 recovery/migration proof is now complete, while forced-crash/field recovery evidence remains open;
 - manual WCAG/RTL audit;
 - 24-hour stability soak;
 - controlled real connector evidence captured with the owner-authorized proof harness;

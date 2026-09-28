@@ -12,16 +12,42 @@ The test records elapsed query time and prints a machine-readable line:
 
 CI runs the benchmark with `--nocapture` so the measured result is visible in the workflow log.
 
-### Interpretation
+### Exact-main evidence — DATA-03
 
-- PASS means the 1,000-contact fixture is searchable through the tested predicate and the benchmark produced a timing measurement.
-- This benchmark does not invent a latency target. The acceptance matrix requires a performance benchmark but does not define a numeric DATA-03 latency threshold.
-- Exact-main CI run `36364156402` on `6e1c744b78402bdfb0e1a3312f90aa2e98cc9710` measured `1.316917ms`, with one matching result and workspace scoping enabled.
-- The measurement supports `VERIFIED` for DATA-03 at the automated-evidence level; it does not imply L3 production proof.
+GitHub Actions CI run `36414578451` on exact main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac` measured:
+
+- dataset: 1,000 contacts
+- query: `Benchmark Contact 0999`
+- workspace scoped: true
+- matched: 1
+- elapsed: 1.015757 ms
+
+This supports `VERIFIED` for DATA-03 at the automated-evidence level. It does not imply L3 production proof.
 
 ## PERF-01 / PERF-02
 
-Startup and memory budget compliance remains a separate reconciliation question. The exact-main CI run `36364156402` measured startup-to-health at `376.05ms` and peak RSS at `100.44MB`. The repository currently does not publish a numeric acceptance budget for PERF-01 or PERF-02, so these gates remain `PARTIAL` rather than being promoted from measurement to budget compliance.
+The benchmark harness explicitly enforces these budgets:
+
+- PERF-01 startup-to-health: <= 8,000 ms
+- PERF-02 peak RSS: <= 200 MB
+- PERF-02 heap used: <= 100 MB
+
+Exact-main CI run `36414578451` on `6e5d78db8300cdfc53440ccfe738af76d81275ac` measured:
+
+- startup-to-health: 266.68 ms
+- peak RSS: 96.79 MB
+- RSS samples: 13
+- listener: 127.0.0.1:39069
+- server announced: true
+- provider: ollama-local
+
+The companion memory workload completed its assertions for 1,000 contacts, 500 queue tasks, 500 inbox messages, 200 media assets, and 100 generated variants before the memory result was accepted. The benchmark passes the configured RSS and heap budgets in this exact run.
+
+These are fresh automated L2 evidence, not L3 production proof.
+
+## Exact-main recovery evidence
+
+The same exact-main CI run produced recovery artifact `10966503592` for SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac`, digest `sha256:e43d2aee41be0bbc562398cd384dcb15bc160e054c2548cc293850ec1f6092f2`. It records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
 
 ## Reproducibility
 
@@ -29,6 +55,8 @@ Always record the exact Git SHA, workflow run, platform/runner, Node/Rust toolch
 
 ## PERF-01 / PERF-02 measurement harness
 
-The script `scripts/startup-memory-benchmark.mjs` starts the production-shaped local runtime on loopback, waits for `/api/health`, records startup-to-health time, and samples process RSS during startup and a short settling window. It prints `STARTUP_MEMORY_BENCHMARK_JSON` for exact-run evidence.
+The script `scripts/startup-memory-benchmark.mjs` starts the production-shaped local runtime on loopback, waits for `/api/health`, records startup-to-health time, samples process RSS during startup and a short settling window, and emits `STARTUP_MEMORY_BENCHMARK_JSON`.
 
-The harness is intentionally measurement-only: it does not invent a pass/fail threshold where the release contract does not publish one. The current exact-main measurement is retained here as evidence; a future numeric target must be added to the acceptance contract before PERF-01/02 can be promoted beyond `PARTIAL` on the basis of budget compliance.
+The Rust test `contact_search_1000_scale_benchmark` provides the 1,000-contact DATA-03 measurement. The recovery harness `scripts/recovery-evidence.mjs` executes the four exact recovery/migration checks and writes the durable artifact.
+
+The harnesses are intentionally tied to exact GitHub Actions runs and do not promote any gate to L3 by themselves.

@@ -62,4 +62,6 @@ No unsupported external connector capability is implied by contracts or fixtures
 
 Current-main Vercel project settings/provenance and protected-main CI/security governance are already recorded as verified by the release controls; they should be revalidated on each subsequent release change, but are not repeated here as open blockers.
 
+Automated restart/recovery/migration evidence is now consolidated and passing on the exact main release line; dedicated forced-crash/field recovery, 24-hour soak, rollback, and the remaining external/commercial gates are still separate requirements.
+
 Implementation and green CI are substantial evidence, but they do not by themselves establish commercial release readiness.

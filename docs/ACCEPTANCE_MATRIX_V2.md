@@ -2,7 +2,7 @@
 
 Last evidence refresh: 2026-09-28
 
-Current exact-main verification reference: GitHub Actions CI run `36364156402` on `6e1c744b78402bdfb0e1a3312f90aa2e98cc9710`. DATA-03 measured `1.316917ms` for the 1,000-contact workspace-scoped search benchmark. PERF-01/02 measurement harness also executed on the same CI run; the harness records startup and RSS but the repository does not publish a numeric release budget for these two gates.
+Current exact-main verification reference: GitHub Actions CI run `36414578451` on `6e5d78db8300cdfc53440ccfe738af76d81275ac`. DATA-03 measured `1.015757ms` for the 1,000-contact workspace-scoped search benchmark. The same run produced recovery evidence artifact `10966503592` with 4/4 recovery/migration checks passing. PERF-01/02 also executed on the same exact-main run; the benchmark enforces startup ≤8,000ms, RSS ≤200MB, and heap ≤100MB.
 
 Status vocabulary: `PASS`, `FAIL`, `PARTIAL`, `UNVERIFIED`, `NOT_APPLICABLE`.
 
