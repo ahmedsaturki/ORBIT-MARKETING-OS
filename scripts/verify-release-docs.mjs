@@ -52,9 +52,33 @@ for (const fixture of contractFixtures) {
   }
 }
 
+const readiness = JSON.parse(
+  await readFile(resolve(root, "release/readiness.json"), "utf8"),
+);
+
+const launchScorecard = await readFile(
+  resolve(root, "docs/LAUNCH_SCORECARD.md"),
+  "utf8",
+);
+const webProvenanceRow = launchScorecard
+  .split(/\r?\n/)
+  .find((line) => line.startsWith("| Production web provenance"));
+const webProductionLevel = readiness.releaseCritical?.web_production?.level;
+
+if (
+  typeof webProvenanceRow === "string" &&
+  typeof webProductionLevel === "string" &&
+  webProductionLevel !== "L3_PRODUCTION_PROVEN" &&
+  /\|\s*VERIFIED\s*\|/.test(webProvenanceRow)
+) {
+  throw new Error(
+    "launch scorecard cannot mark production web provenance VERIFIED before web_production is L3",
+  );
+}
+
 const failures = [];
 
-for (const relativePath of durableReleaseFiles) {
+for (const relativePath of durableReleaseFiles {
   const content = await readFile(resolve(root, relativePath), "utf8");
   const lines = content.split(/\r?\n/);
 
