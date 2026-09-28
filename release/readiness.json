@@ -16,7 +16,7 @@
         "security:scan run 36455009654",
         "SonarCloud current-main quality gate remains open at B; required A"
       ],
-      "notes": "Exact main release SHA edc8c07f0527c7ea9b38827e293fd820b9f6cce0 passed CI and security verification. SonarCloud remains the outstanding quality prerequisite: the latest observed main analysis is B Security Rating on New Code while the required threshold is A. No bypass or exclusion has been introduced.",
+      "notes": "Latest verified main release SHA edc8c07f0527c7ea9b38827e293fd820b9f6cce0 passed CI and security verification. SonarCloud remains the outstanding quality prerequisite: the latest observed main analysis is B Security Rating on New Code while the required threshold is A. No bypass or exclusion has been introduced.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009654",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/112"
@@ -32,7 +32,7 @@
         "mobile validation on validated pre-merge tree",
         "current production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp"
       ],
-      "notes": "The exact main release SHA edc8c07f0527c7ea9b38827e293fd820b9f6cce0 passed main CI and Rust quality. Production provenance for the same release cycle is also verified at dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp; native desktop/mobile packaging evidence remains from the validated pre-merge release tree and does not by itself claim an exact merge-SHA package artifact.",
+      "notes": "The latest verified main release SHA edc8c07f0527c7ea9b38827e293fd820b9f6cce0 passed main CI and Rust quality. Production provenance for that verified release cycle is also verified at dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp; native desktop/mobile packaging evidence remains from the validated pre-merge release tree and does not by itself claim an exact merge-SHA package artifact.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009654",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009698",
@@ -107,9 +107,9 @@
         "Web Deploy run 36455009416",
         "deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp",
         "canonical production alias",
-        "exact Git SHA verification edc8c07f0527c7ea9b38827e293fd820b9f6cce0"
+        "exact Git SHA evidence for edc8c07f0527c7ea9b38827e293fd820b9f6cce0"
       ],
-      "notes": "Verified production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp is READY, Git-sourced, target=production, framework=nextjs, and reports githubCommitSha=edc8c07f0527c7ea9b38827e293fd820b9f6cce0. Vercel Production Provenance and Web Deploy both passed. Live public verification checked /, /api/health.json and /api/release.json against the exact release SHA. Rollback evidence remains open.",
+      "notes": "Latest verified production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp is READY, Git-sourced, target=production, framework=nextjs, and reports githubCommitSha=edc8c07f0527c7ea9b38827e293fd820b9f6cce0. Vercel Production Provenance and Web Deploy both passed. Live public verification checked /, /api/health.json and /api/release.json against the exact release SHA. Rollback evidence remains open.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009698",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009416",
