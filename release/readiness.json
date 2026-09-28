@@ -32,7 +32,7 @@
         "mobile validation on validated pre-merge tree",
         "current production deployment dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2"
       ],
-      "notes": "The current main SHA 62cf100c1b5c09010acfcf030890e578a25ab827 passed main CI and Rust quality. Current production provenance is also verified at dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2; native desktop/mobile packaging evidence remains from the validated pre-merge release tree and does not by itself claim an exact merge-SHA package artifact.",
+      "notes": "The exact main release SHA 62cf100c1b5c09010acfcf030890e578a25ab827 passed main CI and Rust quality. Current production provenance is also verified at dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2; native desktop/mobile packaging evidence remains from the validated pre-merge release tree and does not by itself claim an exact merge-SHA package artifact.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595461",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595465",
