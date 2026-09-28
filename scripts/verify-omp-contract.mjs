@@ -34,11 +34,7 @@ for (const [label, content, needles] of [
     nativeContext,
     ["@../AGENTS.md", "@../docs/OMP_OPERATOR_PROTOCOL.md"],
   ],
-  [
-    "sticky OMP rules",
-    stickyRules,
-    ["L3_PRODUCTION_PROVEN", "OWNER_ACTION"],
-  ],
+  ["sticky OMP rules", stickyRules, ["L3_PRODUCTION_PROVEN", "OWNER_ACTION"]],
   [
     "OMP watchdog",
     watchdog,
@@ -66,12 +62,14 @@ function parseAgentFrontmatter(content, relativePath) {
   if (!content.startsWith("---\n")) {
     throw new Error(relativePath + " must start with YAML frontmatter");
   }
+
   const end = content.indexOf("\n---", 4);
   if (end < 0) {
     throw new Error(
       relativePath + " must have a closing frontmatter delimiter",
     );
   }
+
   const block = content.slice(4, end).split(/\r?\n/);
   const name = block
     .find((line) => /^name:\s*/.test(line))
@@ -81,11 +79,13 @@ function parseAgentFrontmatter(content, relativePath) {
     .find((line) => /^description:\s*/.test(line))
     ?.replace(/^description:\s*/, "")
     .trim();
+
   if (!name || !description) {
     throw new Error(
       relativePath + " must define name and description inside frontmatter",
     );
   }
+
   return { name, description };
 }
 
@@ -96,6 +96,7 @@ const agentPaths = [
   ".omp/agents/release-auditor.md",
   ".omp/agents/reviewer.md",
 ];
+
 const names = [];
 for (const relativePath of agentPaths) {
   const content = await read(relativePath);

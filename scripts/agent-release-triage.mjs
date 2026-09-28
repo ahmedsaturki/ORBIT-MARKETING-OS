@@ -22,6 +22,7 @@ function git(args) {
   ]) {
     delete env[key];
   }
+
   return execFileSync("git", args, {
     cwd: repoRoot,
     encoding: "utf8",
@@ -81,12 +82,14 @@ const nextActions = gates
       level: gate.level,
       action: gate.notes,
     };
+
     if (gate.key === "distribution") {
       action.engineeringAction =
         "Validate package generation, checksums, and release artifacts on the exact release SHA.";
       action.ownerAction =
         "Provide desktop signing/notarization identities and production mobile store signing/distribution credentials.";
     }
+
     return action;
   });
 

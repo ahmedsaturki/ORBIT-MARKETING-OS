@@ -31,49 +31,53 @@ function rssMb(pid) {
 
 async function allocatePort() {
   const probe = createServer();
+
   await new Promise((resolve, reject) => {
     probe.once("error", reject);
     probe.listen(0, "127.0.0.1", resolve);
   });
+
   const address = probe.address();
   if (!address || typeof address === "string") {
     probe.close();
     throw new Error("could not allocate an isolated TCP port");
   }
+
   const port = address.port;
+
   await new Promise((resolve, reject) =>
     probe.close((error) => (error ? reject(error) : resolve())),
   );
+
   return port;
 }
 
 const port = await allocatePort();
 const startedAt = performance.now();
-const child = spawn(
-  process.execPath,
-  ["--import", "tsx", "server.ts"],
-  {
-    cwd: root,
-    env: {
-      ...process.env,
-      NODE_ENV: "production",
-      PORT: String(port),
-      RUNTIME_HOST: "127.0.0.1",
-      OLLAMA_BASE_URL: "http://127.0.0.1:9",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
+
+const child = spawn(process.execPath, ["--import", "tsx", "server.ts"], {
+  cwd: root,
+  env: {
+    ...process.env,
+    NODE_ENV: "production",
+    PORT: String(port),
+    RUNTIME_HOST: "127.0.0.1",
+    OLLAMA_BASE_URL: "http://127.0.0.1:9",
   },
-);
+  stdio: ["ignore", "pipe", "pipe"],
+});
 
 let stdout = "";
 let stderr = "";
 let serverAnnounced = false;
+
 child.stdout?.on("data", (chunk) => {
   stdout += String(chunk);
   if (stdout.includes("127.0.0.1:" + port)) {
     serverAnnounced = true;
   }
 });
+
 child.stderr?.on("data", (chunk) => {
   stderr += String(chunk);
 });
