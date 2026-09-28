@@ -21,8 +21,8 @@ Updated: 2026-09-28.
 
 ## Data / Queue
 
-| Gate                             | Status   | Evidence                                                                                                      |
-| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| Gate                           | Status   | Evidence                                                                                                      |
+| ------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------- |
 | DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                                                         |
 | DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                                                          |
 | DATA-03 Search scale             | VERIFIED | CI 36414578451; 1,000-contact search measured 1.015757ms                                                      |
@@ -72,12 +72,12 @@ Updated: 2026-09-28.
 
 ## Web / Mobile
 
-| Gate                          | Status   | Evidence                                                                                                                                                        |
-| ----------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| WEB-01 PWA                    | VERIFIED | Web build/E2E and live checks                                                                                                                                   |
-| MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                              |
-| Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                   |
-| Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                  |
+| Gate                          | Status   | Evidence                                                                                                                                                       |
+| ----------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WEB-01 PWA                    | VERIFIED | Web build/E2E and live checks                                                                                                                                  |
+| MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                             |
+| Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                  |
+| Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                 |
 | Web production provenance     | PARTIAL  | Last verified production SHA is `6e5d78db...`; current main `367c0de...` is not yet production-verified because no deployment for the current SHA was observed |
 
 ## Release / Operations
