@@ -68,11 +68,12 @@
     "web_production": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "previous verified Vercel Production Provenance run 36414577994",
-        "previous verified Web Deploy run 36414577962",
-        "deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa"
+        "Vercel Production Provenance run 36434671316",
+        "Web Deploy run 36434671320",
+        "deployment dpl_CVTi4TwkUUntjsCrNonMwVJT32qm",
+        "live /api/health.json and /api/release.json readback"
       ],
-      "notes": "Last verified production deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa is Git-sourced from main SHA 6e5d78db8300cdfc53440ccfe738af76d81275ac. The current main commit has not yet been production-verified; no current-SHA deployment is observed and Vercel is rate-limited."
+      "notes": "The current main production deployment is Git-sourced and READY, with the exact repository SHA verified through the governed Vercel provenance workflow and live health/release endpoints. The remaining Vercel release action is the controlled rollback drill to the previous verified candidate and back."
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",
