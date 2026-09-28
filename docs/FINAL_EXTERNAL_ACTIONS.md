@@ -35,7 +35,7 @@ No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acc
 
 ## C. Native / sync / accessibility / stability
 
-- Automated restart/recovery/migration evidence is now consolidated and passed 4/4 on exact main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac` (artifact `10966503592`).
+- Automated restart/recovery/migration evidence is consolidated and passed 4/4 on the later exact main SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa` (CI run `36425376303`; artifact `10971258468`).
 - Complete the remaining forced-crash/field recovery evidence and consolidate any real-world recovery observations.
 - Run live multi-device CRDT convergence using real authorized devices/network.
 - Complete manual WCAG/RTL audit in addition to automated checks.

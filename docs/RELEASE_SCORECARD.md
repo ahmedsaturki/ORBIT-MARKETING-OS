@@ -25,8 +25,8 @@ Updated: 2026-09-28.
 | ------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------- |
 | DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                                                         |
 | DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                                                          |
-| DATA-03 Search scale             | VERIFIED | CI 36414578451; 1,000-contact search measured 1.015757ms                                                      |
-| QUE-01 Persistent queue recovery | VERIFIED | CI 36414578451; exact-main recovery evidence artifact 10966503592 proves 4/4 recovery/idempotency checks PASS |
+| DATA-03 Search scale             | VERIFIED | CI 36425376303 on SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`; 1,000-contact search measured 1.501363ms                                                      |
+| QUE-01 Persistent queue recovery | VERIFIED | CI 36425376303 on SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`; exact-main recovery evidence artifact `10971258468` proves 4/4 recovery/idempotency checks PASS |
 | QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                                                           |
 | QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                                                               |
 | QUE-04 Human-intervention wait   | VERIFIED | Explicit wait/resume contract and tests                                                                       |
@@ -90,8 +90,8 @@ Updated: 2026-09-28.
 | LIC-01 Offline license         | PARTIAL    | Token/constraint tests pass; production distribution proof remains                             |
 | OPS-01 Crash/restart recovery  | PARTIAL    | Native restart/queue recovery E2E exists; final consolidated evidence remains                  |
 | OPS-02 24h soak                | UNVERIFIED | No completed 24-hour evidence                                                                      |
-| PERF-01 Startup budget         | VERIFIED   | CI 36414578451; startup-to-health 266.68ms; enforced budget ≤8000ms                            |
-| PERF-02 Memory budget          | VERIFIED   | CI 36414578451; peak RSS 96.79MB; enforced budgets 200MB RSS / 100MB heap                      |
+| PERF-01 Startup budget         | VERIFIED   | CI 36425376303 on SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`; startup-to-health 384.63ms; enforced budget ≤8000ms                            |
+| PERF-02 Memory budget          | VERIFIED   | CI 36425376303 on SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`; peak RSS 104.4MB; enforced budgets 200MB RSS / 100MB heap                      |
 | QA-01 Coverage threshold       | VERIFIED   | Hosted coverage gate passed                                                                    |
 | QA-02 Critical E2E             | VERIFIED   | Current validated feature line passed required E2E/native gates                                |
 | DOC-01 Product docs            | VERIFIED   | Current release/readiness docs reconciled to merged main                                       |
@@ -106,7 +106,7 @@ Updated: 2026-09-28.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.
-- Exact-main CI run `36414578451` completed successfully on `6e5d78db8300cdfc53440ccfe738af76d81275ac`; current recovery/performance measurements are preserved in the generated release-evidence and recovery artifacts.
+- Exact-main CI run `36425376303` completed successfully on `367c0de11cd7c075ff59448cb7dafdfaf98faffa`; current recovery/performance measurements are preserved in the generated release-evidence and recovery artifacts.
 - GitHub `main` is protected with required `ci` and `security:scan`; final L3 governance evidence still requires auditable evidence references and verification time.
 
 ## Release rule
