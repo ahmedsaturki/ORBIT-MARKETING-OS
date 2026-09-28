@@ -25,8 +25,8 @@ Updated: 2026-09-28.
 | -------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                                                                                                             |
 | DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                                                                                                              |
-| DATA-03 Search scale             | VERIFIED | CI 36425376303 on SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`; 1,000-contact search measured 1.501363ms                                                        |
-| QUE-01 Persistent queue recovery | VERIFIED | CI 36425376303 on SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`; exact-main recovery evidence artifact `10971258468` proves 4/4 recovery/idempotency checks PASS |
+| DATA-03 Search scale             | VERIFIED | CI 36434671261 on the current exact-main cycle; 1,000-contact search measured 1.304414ms                                                               |
+| QUE-01 Persistent queue recovery | VERIFIED | CI 36434671261; exact-main recovery evidence artifact `10975741308` proves 4/4 recovery/idempotency checks PASS                             |
 | QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                                                                                                               |
 | QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                                                                                                                   |
 | QUE-04 Human-intervention wait   | VERIFIED | Explicit wait/resume contract and tests                                                                                                                           |
@@ -78,7 +78,7 @@ Updated: 2026-09-28.
 | MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                             |
 | Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                  |
 | Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                 |
-| Web production provenance     | PARTIAL  | Last verified production SHA is `6e5d78db...`; the current `main` commit is not yet production-verified because no deployment for the current SHA was observed |
+| Web production provenance     | VERIFIED | Vercel Production Provenance run 36434671316 and Web Deploy run 36434671320 verify the current main Git deployment and live surface |
 
 ## Release / Operations
 
@@ -90,8 +90,8 @@ Updated: 2026-09-28.
 | LIC-01 Offline license         | PARTIAL    | Token/constraint tests pass; production distribution proof remains                                                          |
 | OPS-01 Crash/restart recovery  | PARTIAL    | Native restart/queue recovery E2E exists; final consolidated evidence remains                                               |
 | OPS-02 24h soak                | UNVERIFIED | No completed 24-hour evidence                                                                                               |
-| PERF-01 Startup budget         | VERIFIED   | CI 36425376303 on SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`; startup-to-health 384.63ms; enforced budget ≤8000ms       |
-| PERF-02 Memory budget          | VERIFIED   | CI 36425376303 on SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`; peak RSS 104.4MB; enforced budgets 200MB RSS / 100MB heap |
+| PERF-01 Startup budget         | VERIFIED   | CI 36434671261; startup-to-health 373.57ms; enforced budget ≤8000ms                                                        |
+| PERF-02 Memory budget          | VERIFIED   | CI 36434671261; peak RSS 96.7MB; enforced budgets 200MB RSS / 100MB heap                                             |
 | QA-01 Coverage threshold       | VERIFIED   | Hosted coverage gate passed                                                                                                 |
 | QA-02 Critical E2E             | VERIFIED   | Current validated feature line passed required E2E/native gates                                                             |
 | DOC-01 Product docs            | VERIFIED   | Current release/readiness docs reconciled to merged main                                                                    |
@@ -100,13 +100,13 @@ Updated: 2026-09-28.
 ## External / commercial prerequisites
 
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
-- Vercel production provenance is verified only for the last deployed main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac`; current main requires fresh deployment/readback before it is treated as production-current.
-- The last verified Vercel release cycle passed governed Git provenance and Web Deploy for main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac`. The current `main` commit is not yet production-verified because no deployment for that commit was observed; the rollback drill remains separate.
+- Vercel production provenance is verified for the current main release cycle by Vercel Production Provenance run 36434671316 and Web Deploy run 36434671320; the remaining Vercel action is the controlled rollback drill.
+- The current Vercel release cycle passed governed Git provenance and Web Deploy for the current main commit. The production deployment is READY and Git-sourced; the rollback drill remains separate.
 - The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.
-- Exact-main CI run `36425376303` completed successfully on `367c0de11cd7c075ff59448cb7dafdfaf98faffa`; current recovery/performance measurements are preserved in the generated release-evidence and recovery artifacts.
+- Exact-main CI run `36434671261` completed successfully; current recovery/performance measurements are preserved in the generated release-evidence and recovery artifacts.
 - GitHub `main` is protected with required `ci` and `security:scan`; final L3 governance evidence still requires auditable evidence references and verification time.
 
 ## Release rule
