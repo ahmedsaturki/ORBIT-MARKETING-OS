@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  commitSha,
+  commit,
   execFileAsync,
   git,
   initGitFixture,
+  writeReleaseMarker,
 } from "./test-git-fixture.mjs";
 import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -45,25 +46,19 @@ test("ordinary web/docs commits are skipped; only a non-bootstrap marker change 
   const cwd = await mkdtemp(join(tmpdir(), "orbit-vercel-ignore-"));
   try {
     await initGitFixture(cwd, {
-      schemaVersion: 1,
       releaseId: "bootstrap",
-      mode: "EXPLICIT_PRODUCTION_RELEASE",
       notes: "bootstrap base",
     });
     await mkdir(join(cwd, "packages", "web"), { recursive: true });
     await writeFile(join(cwd, "packages/web/index.html"), "v1\n", "utf8");
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "base"]);
-    let previous = await commitSha(cwd);
+    let previous = await commit(cwd, "base");
 
     await writeFile(
       join(cwd, "packages/web/index.html"),
       "ordinary web change\n",
       "utf8",
     );
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "ordinary web"]);
-    let current = await commitSha(cwd);
+    let current = await commit(cwd, "ordinary web");
     assert.equal(
       await runIgnore(join(cwd, "packages", "web"), {
         VERCEL_GIT_COMMIT_REF: "main",
@@ -74,19 +69,8 @@ test("ordinary web/docs commits are skipped; only a non-bootstrap marker change 
     );
 
     previous = current;
-    await writeFile(
-      join(cwd, MARKER_PATH),
-      JSON.stringify({
-        schemaVersion: 1,
-        releaseId: "bootstrap",
-        mode: "EXPLICIT_PRODUCTION_RELEASE",
-        notes: "bootstrap rewrite",
-      }) + "\n",
-      "utf8",
-    );
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "bootstrap marker rewrite"]);
-    current = await commitSha(cwd);
+    await writeReleaseMarker(cwd, "bootstrap", "bootstrap rewrite");
+    current = await commit(cwd, "bootstrap marker rewrite");
     assert.equal(
       await runIgnore(join(cwd, "packages", "web"), {
         VERCEL_GIT_COMMIT_REF: "main",
@@ -97,18 +81,8 @@ test("ordinary web/docs commits are skipped; only a non-bootstrap marker change 
     );
 
     previous = current;
-    await writeFile(
-      join(cwd, MARKER_PATH),
-      JSON.stringify({
-        schemaVersion: 1,
-        releaseId: "2026-09-28-r1",
-        mode: "EXPLICIT_PRODUCTION_RELEASE",
-      }) + "\n",
-      "utf8",
-    );
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "production release r1"]);
-    current = await commitSha(cwd);
+    await writeReleaseMarker(cwd, "2026-09-28-r1");
+    current = await commit(cwd, "production release r1");
     assert.equal(
       await runIgnore(join(cwd, "packages", "web"), {
         VERCEL_GIT_COMMIT_REF: "main",
@@ -120,9 +94,7 @@ test("ordinary web/docs commits are skipped; only a non-bootstrap marker change 
 
     previous = current;
     await writeFile(join(cwd, "README.md"), "post-release docs\n", "utf8");
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "post-release docs"]);
-    current = await commitSha(cwd);
+    current = await commit(cwd, "post-release docs");
     assert.equal(
       await runIgnore(join(cwd, "packages", "web"), {
         VERCEL_GIT_COMMIT_REF: "main",
