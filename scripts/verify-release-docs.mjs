@@ -68,20 +68,26 @@ const launchScorecard = await readFile(
 const overallLaunchRow = launchScorecard
   .split(/\r?\n/)
   .find((line) => line.startsWith("| Production/commercial launch"));
-if (
-  typeof overallLaunchRow === "string" &&
-  typeof readiness.releaseCritical === "object" &&
-  readiness.releaseCritical &&
-  !Object.values(readiness.releaseCritical).every(
+const releaseCritical = readiness.releaseCritical;
+const hasValidReleaseCritical =
+  releaseCritical &&
+  typeof releaseCritical === "object" &&
+  !Array.isArray(releaseCritical) &&
+  Object.values(releaseCritical).length > 0 &&
+  Object.values(releaseCritical).every(
     (value) =>
       value &&
       typeof value === "object" &&
       value.level === "L3_PRODUCTION_PROVEN",
-  ) &&
+  );
+
+if (
+  typeof overallLaunchRow === "string" &&
+  !hasValidReleaseCritical &&
   /\|\s*(VERIFIED|PASS)\s*\|/.test(overallLaunchRow)
 ) {
   throw new Error(
-    "launch scorecard cannot mark overall production/commercial launch VERIFIED before all release-critical gates are L3",
+    "launch scorecard cannot mark overall production/commercial launch VERIFIED before all non-empty release-critical gates are L3",
   );
 }
 
