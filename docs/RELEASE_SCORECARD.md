@@ -78,7 +78,7 @@ Updated: 2026-09-28.
 | MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                                                                                  |
 | Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                                                                       |
 | Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                                                                      |
-| Web production provenance     | VERIFIED | Latest successful Vercel Production Provenance and Web Deploy gates verify exact-main SHA provenance, canonical alias, health/release endpoints, security headers, routes, manifest/service worker and 404 behavior |
+| Web production provenance     | PARTIAL  | Previous main SHA provenance is verified; current main `242820d6...` is not yet production-verified because its deployment was not observed |
 
 ## Release / Operations
 
@@ -101,7 +101,7 @@ Updated: 2026-09-28.
 
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
 - Current-main Vercel production provenance/settings are verified through the governed Git deployment path; the verified production deployment is Git-sourced, uses Next.js, targets production, and exposes the exact current `main` SHA.
-- The current Vercel release cycle passed the governed Git provenance and Web Deploy checks on current main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac`. The remaining Vercel action is a controlled rollback drill to the previous verified candidate and back.
+- The last verified Vercel release cycle passed governed Git provenance and Web Deploy for main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac`. Current main `242820d6a5abbd998e69d5e493bd0a26d5dbe128` is not yet production-verified because no deployment for that SHA was observed; the rollback drill remains separate.
 - The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
