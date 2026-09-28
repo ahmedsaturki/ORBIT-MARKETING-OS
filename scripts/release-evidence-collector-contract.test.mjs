@@ -106,7 +106,11 @@ try {
 
   execFileSync(
     process.execPath,
-    [fileURLToPath(new URL("./collect-release-evidence.mjs", import.meta.url)), "--output", outputPath],
+    [
+      fileURLToPath(new URL("./collect-release-evidence.mjs", import.meta.url)),
+      "--output",
+      outputPath,
+    ],
     {
       cwd: hostileDir,
       encoding: "utf8",
