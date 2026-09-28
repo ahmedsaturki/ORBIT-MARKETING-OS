@@ -1,96 +1,125 @@
-import type { ReactElement } from "react";
-import Link from "next/link";
-
-const features = [
-  "امتلاك البيانات التشغيلية على جهازك",
-  "تخطيط الحملات وطوابير المهام",
-  "CRM وصندوق محادثات موحد",
-  "ذكاء اصطناعي محلي عبر Ollama",
-  "تأكيدات المستخدم وقواطع السلامة",
-  "سطح مكتبي للعمليات الحساسة",
-];
-
-const declaredReleaseSha = process.env.NEXT_PUBLIC_ORBIT_RELEASE_SHA?.trim();
-const vercelGitCommitSha = process.env.VERCEL_GIT_COMMIT_SHA?.trim();
-const releaseSha = declaredReleaseSha || vercelGitCommitSha || "unreleased";
-const releaseShaSource = declaredReleaseSha
-  ? "NEXT_PUBLIC_ORBIT_RELEASE_SHA"
-  : vercelGitCommitSha
-    ? "VERCEL_GIT_COMMIT_SHA"
-    : "none";
-const publicReleaseId =
-  releaseSha === "unreleased" ? "غير مثبت" : releaseSha.slice(0, 12);
-
-export default function HomePage(): ReactElement {
-  return (
-    <main
-      data-release="0.2.0"
-      data-release-sha={releaseSha}
-      data-release-sha-source={releaseShaSource}
-    >
-      <header className="topbar">
-        <div className="container nav">
-          <strong>ORBIT</strong>
-          <nav aria-label="التنقل الرئيسي">
-            <Link href="/pricing/">الأسعار</Link>
-            <Link href="/legal/privacy/">الخصوصية</Link>
-            <Link href="/legal/terms/">الشروط</Link>
-            <Link href="/legal/refunds/">الاسترداد</Link>
-            <Link href="/legal/eula/">EULA</Link>
-          </nav>
-        </div>
-      </header>
-
-      <section className="hero container">
-        <div className="eyebrow">LOCAL-FIRST MARKETING OPERATIONS</div>
-        <h1>مركز تشغيل تسويقك، مع ملكية بياناتك على جهازك.</h1>
-        <p>
-          ORBIT يجمع التخطيط، المحتوى، CRM، صندوق المحادثات، والمهام في مساحة
-          واحدة، مع تشغيل محلي للبيانات الحساسة ومساعد AI عبر Ollama.
-        </p>
-        <div className="actions">
-          <Link className="button primary" href="/pricing/">
-            استكشف الخطط
-          </Link>
-          <a
-            className="button secondary"
-            href="https://github.com/ahmedsaturki/ORBIT-MARKETING-OS"
-          >
-            المستودع
-          </a>
-        </div>
-      </section>
-
-      <section className="container feature-grid" aria-label="المزايا">
-        {features.map((feature) => (
-          <article key={feature} className="card">
-            <div className="check">✓</div>
-            <h2>{feature}</h2>
-          </article>
-        ))}
-      </section>
-
-      <section className="container note" aria-label="معلومات الإصدار">
-        <h2>هوية الإصدار</h2>
-        <p>
-          النسخة <strong>v0.2.0</strong> مرتبطة ببصمة البناء{" "}
-          <code>{publicReleaseId}</code> من المصدر <code>{releaseShaSource}</code>.
-          استخدم واجهتي الصحة والإصدار للتحقق من البصمة الكاملة قبل الاعتماد على
-          أي نشر.
-        </p>
-      </section>
-
-      <section className="container note">
-        <h2>السطح السحابي ليس خزنة جلسات</h2>
-        <p>
-          Web مخصص للتعريف والشراء والوصول السريع. كلمات المرور، الكوكيز،
-          وبيانات الجلسات الحساسة لا تُخزن في الموقع العام.
-        </p>
-      </section>
-
-      <footer className="container footer">
-        ORBIT Marketing OS • v0.2.0 • Local-first
-      </footer>
-    </main>
-  );
+{
+  "schemaVersion": 1,
+  "product": "ORBIT Marketing OS",
+  "updated": "2026-09-28",
+  "readinessLevels": [
+    "L0_DESIGNED",
+    "L1_IMPLEMENTED",
+    "L2_VERIFIED",
+    "L3_PRODUCTION_PROVEN"
+  ],
+  "releaseCritical": {
+    "source_integrity": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "CI run 36414578451",
+        "security:scan run 36414578451",
+        "SonarCloud check-run on exact main SHA"
+      ],
+      "notes": "The last validated exact-main release line was 6e5d78db8300cdfc53440ccfe738af76d81275ac. Current main is 242820d6a5abbd998e69d5e493bd0a26d5dbe128; its SonarCloud result is not yet independently verified as meeting the required A rating."
+    },
+    "build": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "CI run 36414578451",
+        "Rust quality run 36414578451",
+        "desktop native validation on validated release line",
+        "mobile validation on validated release line"
+      ],
+      "notes": "The last validated release line passed main CI/Rust/native/mobile evidence. Current main 242820d6a5abbd998e69d5e493bd0a26d5dbe128 is source-current, but current production verification remains subject to fresh release-cycle evidence."
+    },
+    "runtime": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "CI run 36414578451",
+        "recovery evidence artifact 10966503592",
+        "runtime smoke",
+        "Windows native E2E"
+      ],
+      "notes": "Exact-main recovery artifact 10966503592 records 4/4 PASS on 6e5d78db8300cdfc53440ccfe738af76d81275ac. Current main 242820d6a5abbd998e69d5e493bd0a26d5dbe128 still requires fresh release-cycle runtime/provenance reconciliation; field recovery and 24-hour stability remain open."
+    },
+    "product_workflows": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "campaign/content/approval/CRM/inbox/search/publishing E2E"
+      ],
+      "notes": "Real external connector workflows remain separate gates."
+    },
+    "security_governance": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "RBAC",
+        "workspace isolation",
+        "vault",
+        "audit",
+        "policy tests",
+        "CI run 36414578451"
+      ],
+      "notes": "GitHub main is protected with required ci and security:scan checks. Final L3 commercial governance still requires auditable evidence references and verification time in the machine-readable release record."
+    },
+    "distribution": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "validated Windows/Linux/macOS artifacts",
+        "validated Android debug validation",
+        "current exact-main CI run 36414578451",
+        "release-evidence artifact 10965998085"
+      ],
+      "notes": "Packaging/validation is verified on the release line; desktop signing/notarization and production mobile store signing/distribution remain open."
+    },
+    "web_production": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "previous verified Vercel Production Provenance run 36414577994",
+        "previous verified Web Deploy run 36414577962",
+        "deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa"
+      ],
+      "notes": "Last verified production deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa is Git-sourced from main SHA 6e5d78db8300cdfc53440ccfe738af76d81275ac. Current main is 242820d6a5abbd998e69d5e493bd0a26d5dbe128 and has not yet been production-verified; no current-SHA deployment is observed and Vercel is rate-limited."
+    },
+    "external_connectors": {
+      "level": "L1_IMPLEMENTED",
+      "evidence": [
+        "connector contracts/fixtures/challenge handling"
+      ],
+      "notes": "Real Telegram and LinkedIn authorization/delivery evidence is still required; connector contracts, negative-path handling, and challenge stop behavior are verified."
+    },
+    "sync_network": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "Yjs sync document layer",
+        "local encrypted sync-network convergence test",
+        "tamper-resistance test"
+      ],
+      "notes": "Local encrypted convergence and tamper-resistance are verified. Live multi-device CRDT network operation still requires real-world evidence."
+    },
+    "accessibility": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "automated RTL/accessibility tests"
+      ],
+      "notes": "Automated accessibility/RTL tests passed on current CI. Manual WCAG/RTL audit remains open."
+    },
+    "stability_soak": {
+      "level": "L2_VERIFIED",
+      "evidence": [
+        "verified 10-minute soak harness/run"
+      ],
+      "notes": "The release line has a verified 10-minute soak harness/run. A complete 24-hour stability soak on the exact release SHA remains open."
+    },
+    "commercial_billing": {
+      "level": "L1_IMPLEMENTED",
+      "evidence": [
+        "pricing surface and commercial contract docs"
+      ],
+      "notes": "Pricing/commercial surfaces exist, but payment/billing provider activation is not configured."
+    },
+    "legal_commercial": {
+      "level": "L1_IMPLEMENTED",
+      "evidence": [
+        "privacy/terms/refunds/EULA surfaces"
+      ],
+      "notes": "Privacy, terms, refund and EULA surfaces exist. Final legal/commercial publication review remains open."
+    }
+  },
+  "rule": "Commercial Production Proven requires every release-critical gate to be L3_PRODUCTION_PROVEN."
 }
