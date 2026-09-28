@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { appendFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -84,11 +83,3 @@ const lines = [
 ];
 
 for (const line of lines) console.log(line);
-
-if (process.env.GITHUB_OUTPUT) {
-  appendFileSync(
-    process.env.GITHUB_OUTPUT,
-    lines.map((line) => line + "\n").join(""),
-    "utf8",
-  );
-}
