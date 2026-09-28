@@ -36,8 +36,18 @@ const requiredGitOverrides = [
 ];
 
 const requiredRepoBinding = [
-  ["security scan", securitySource, 'const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");', "cwd: repoRoot,"],
-  ["recovery evidence", recoverySource, 'const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");', "cwd: root,"],
+  [
+    "security scan",
+    securitySource,
+    'const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");',
+    "cwd: repoRoot,",
+  ],
+  [
+    "recovery evidence",
+    recoverySource,
+    'const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");',
+    "cwd: root,",
+  ],
 ];
 
 for (const marker of requiredGitOverrides) {
@@ -54,8 +64,16 @@ for (const marker of requiredGitOverrides) {
 }
 
 for (const [label, content, rootMarker, cwdMarker] of requiredRepoBinding) {
-  assert.equal(content.includes(rootMarker), true, `${label} missing repository-root marker`);
-  assert.equal(content.includes(cwdMarker), true, `${label} missing bound Git cwd marker`);
+  assert.equal(
+    content.includes(rootMarker),
+    true,
+    `${label} missing repository-root marker`,
+  );
+  assert.equal(
+    content.includes(cwdMarker),
+    true,
+    `${label} missing bound Git cwd marker`,
+  );
 }
 
 console.log("release_evidence_collector_contract=PASS");
