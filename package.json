@@ -37,7 +37,8 @@
     "test:soak:evidence": "node scripts/soak-failure-evidence.test.mjs",
     "triage:release": "node scripts/agent-release-triage.mjs",
     "verify:omp": "node scripts/verify-omp-contract.mjs",
-    "benchmark:startup-memory": "node scripts/startup-memory-benchmark.mjs"
+    "benchmark:startup-memory": "node scripts/startup-memory-benchmark.mjs",
+    "test:recovery:evidence": "node scripts/recovery-evidence.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

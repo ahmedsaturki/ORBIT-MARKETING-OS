@@ -15,6 +15,7 @@ for (const script of [
   "test:e2e",
   "soak",
   "release:evidence",
+  "test:recovery:evidence",
 ]) {
   if (typeof rootPackage.scripts?.[script] !== "string") {
     throw new Error("Root package script is missing: " + script);
@@ -97,6 +98,7 @@ const requiredFiles = [
   "scripts/soak.ts",
   "scripts/verify-live-web.mjs",
   "scripts/vercel-ignore.test.mjs",
+  "scripts/recovery-evidence.mjs",
 ];
 
 for (const relative of requiredFiles) {
@@ -143,6 +145,18 @@ if (!ci.includes("pnpm test:e2e"))
   throw new Error("CI browser E2E gate missing");
 if (!ci.includes("node scripts/vercel-ignore.test.mjs"))
   throw new Error("Vercel ignore-command contract test missing");
+if (!ci.includes("pnpm test:recovery:evidence"))
+  throw new Error("Recovery evidence CI gate missing");
+if (!ci.includes("if: ${{ !cancelled() }}"))
+  throw new Error(
+    "Recovery evidence artifact failure upload condition missing",
+  );
+if (
+  !ci.includes(
+    "orbit-recovery-evidence-${{ github.event.pull_request.head.sha || github.sha }}",
+  )
+)
+  throw new Error("Recovery evidence artifact SHA selection missing");
 
 const selfHostedWeb = await text(
   ".github/workflows/web-release-selfhosted.yml",
