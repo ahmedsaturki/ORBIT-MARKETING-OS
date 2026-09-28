@@ -194,6 +194,9 @@ jobs:
         run: cargo test --workspace --all-targets
       - name: Search scale benchmark
         run: cargo test --manifest-path packages/desktop/src-tauri/Cargo.toml contact_search_1000_scale_benchmark -- --nocapture
+      - name: Startup and memory benchmark
+        run: pnpm benchmark:startup-memory
+
       - name: Rust clippy
         working-directory: packages/desktop/src-tauri
         env:
