@@ -140,6 +140,10 @@ jobs:
         timeout-minutes: 5
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
+      - name: Format debug — release scorecard
+        run: |
+          pnpm exec prettier docs/RELEASE_SCORECARD.md --write
+          git diff --no-ext-diff --unified=0 -- docs/RELEASE_SCORECARD.md
       - name: Format check
         run: pnpm format:check
 
