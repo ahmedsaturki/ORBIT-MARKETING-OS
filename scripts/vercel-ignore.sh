@@ -42,7 +42,7 @@ git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA}" "${VERCEL_GIT_COMMIT_SHA}" -- \
   scripts/verify-live-web.mjs \
   scripts/verify-public-vercel-provenance.mjs \
   release \
-  docs/RELEASE_*.md \
+  "docs/RELEASE_*.md" \
   docs/LAUNCH_SCORECARD.md \
   docs/PERFORMANCE_EVIDENCE.md \
   docs/COMMERCIAL_PRODUCTION_PROVEN_RUNBOOK.md \
