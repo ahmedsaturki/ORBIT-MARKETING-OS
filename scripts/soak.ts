@@ -10,6 +10,7 @@
  * endpoint behavior, queue/policy/audit invariant break, process exit, or
  * RSS budget breach.
  */
+import { createServer } from "node:net";
 import { spawn, type ChildProcess } from "node:child_process";
 import {
   createWriteStream,
@@ -44,7 +45,8 @@ function readNumericArg(flag: string): number | undefined {
 const requestedMinutes =
   readNumericArg("--minutes") ?? (readNumericArg("--hours") ?? 0) * 60;
 const minutes = requestedMinutes > 0 ? requestedMinutes : 10;
-const port = readNumericArg("--port") ?? 34790;
+const requestedPort = readNumericArg("--port");
+let port = requestedPort !== undefined && requestedPort > 0 ? requestedPort : 0;
 const RSS_BUDGET_MB = 600;
 const CYCLE_MS = 2_000;
 const deadline = Date.now() + minutes * 60_000;
@@ -62,6 +64,8 @@ const jsonl = createWriteStream(logPath, { flags: "w" });
 const gitSha = process.env.GITHUB_SHA?.trim() || "unknown";
 
 let server: ChildProcess | undefined;
+let serverExitCode: number | null = null;
+let serverSignalCode: NodeJS.Signals | null = null;
 let healthOk = 0;
 let healthFailures = 0;
 let consecutiveHealthFailures = 0;
@@ -310,11 +314,37 @@ async function runAuditInvariant(cycle: number): Promise<void> {
   if (!(await chain.verify())) fail("audit integrity invariant failed");
 }
 
+async function findFreeLoopbackPort(): Promise<number> {
+  return new Promise((resolvePort, rejectPort) => {
+    const probe = createServer();
+    probe.once("error", rejectPort);
+    probe.listen(0, "127.0.0.1", () => {
+      const address = probe.address();
+      if (!address || typeof address === "string") {
+        probe.close();
+        rejectPort(new Error("could not determine a free loopback port"));
+        return;
+      }
+      probe.close((error) => {
+        if (error) rejectPort(error);
+        else resolvePort(address.port);
+      });
+    });
+  });
+}
+
 async function waitForHealth(): Promise<void> {
   const started = Date.now();
   while (Date.now() - started < 30_000) {
-    if (server?.exitCode !== null && server?.exitCode !== undefined) {
-      fail(`server exited before health check (code ${server.exitCode})`);
+    if (
+      server?.exitCode !== null ||
+      server?.signalCode !== null ||
+      serverExitCode !== null ||
+      serverSignalCode !== null
+    ) {
+      fail(
+        `server exited before health check (code ${serverExitCode ?? server?.exitCode ?? "null"}, signal ${serverSignalCode ?? server?.signalCode ?? "null"})`,
+      );
     }
     try {
       const response = await fetch(`http://127.0.0.1:${port}/api/health`, {
@@ -330,7 +360,7 @@ async function waitForHealth(): Promise<void> {
 }
 
 async function terminateProcess(child: ChildProcess): Promise<void> {
-  if (child.exitCode !== null) return;
+  if (child.exitCode !== null || child.signalCode !== null) return;
 
   if (child.pid && platform() !== "win32") {
     try {
@@ -347,7 +377,7 @@ async function terminateProcess(child: ChildProcess): Promise<void> {
   }
 
   await new Promise<void>((resolve) => {
-    if (child.exitCode !== null) {
+    if (child.exitCode !== null || child.signalCode !== null) {
       resolve();
       return;
     }
@@ -358,7 +388,7 @@ async function terminateProcess(child: ChildProcess): Promise<void> {
     });
   });
 
-  if (child.exitCode === null) {
+  if (child.exitCode === null && child.signalCode === null) {
     if (child.pid && platform() !== "win32") {
       try {
         process.kill(-child.pid, "SIGKILL");
@@ -369,7 +399,7 @@ async function terminateProcess(child: ChildProcess): Promise<void> {
       } catch {}
     }
     await new Promise<void>((resolve) => {
-      if (child.exitCode !== null) {
+      if (child.exitCode !== null || child.signalCode !== null) {
         resolve();
         return;
       }
@@ -381,10 +411,16 @@ async function terminateProcess(child: ChildProcess): Promise<void> {
     });
   }
 
-  if (child.exitCode === null) fail("soak server process did not terminate");
+  if (child.exitCode === null && child.signalCode === null) {
+    fail("soak server process did not terminate");
+  }
 }
 
 async function main(): Promise<void> {
+  if (requestedPort === undefined || requestedPort <= 0) {
+    port = await findFreeLoopbackPort();
+  }
+
   if (expectedGitSha && gitSha !== expectedGitSha) {
     fail(`soak source SHA mismatch: expected ${expectedGitSha}, got ${gitSha}`);
   }
@@ -414,6 +450,10 @@ async function main(): Promise<void> {
   server.stderr?.on("data", (chunk) => {
     stderr += String(chunk);
   });
+  server.on("exit", (code, signal) => {
+    serverExitCode = code;
+    serverSignalCode = signal;
+  });
   server.on("error", (error) => {
     failures.push(`server spawn error: ${error.message}`);
   });
@@ -423,8 +463,16 @@ async function main(): Promise<void> {
   let lastSample = 0;
 
   while (Date.now() < deadline) {
-    if (server.exitCode !== null)
-      fail(`server exited with code ${server.exitCode}`);
+    if (
+      server.exitCode !== null ||
+      server.signalCode !== null ||
+      serverExitCode !== null ||
+      serverSignalCode !== null
+    ) {
+      fail(
+        `server exited with code ${serverExitCode ?? server.exitCode ?? "null"} signal ${serverSignalCode ?? server.signalCode ?? "null"}`,
+      );
+    }
 
     cycles += 1;
 
@@ -589,6 +637,8 @@ async function writeSoakSummary(
     rssFirstMb: rssFirst ? Math.round(rssFirst) : null,
     rssLastMb: rssLast ? Math.round(rssLast) : null,
     rssBudgetMb: RSS_BUDGET_MB,
+    serverExitCode,
+    serverSignalCode,
     failures,
     ok: ok && failures.length === 0,
     errorMessage,
