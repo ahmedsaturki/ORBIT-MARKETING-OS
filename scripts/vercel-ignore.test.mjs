@@ -6,14 +6,7 @@ import {
   initGitFixture,
   writeReleaseMarker,
 } from "./test-git-fixture.mjs";
-import {
-  cp,
-  mkdtemp,
-  mkdir,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
@@ -35,9 +28,7 @@ async function runIgnore(cwd, env = { VERCEL_GIT_COMMIT_REF: "main" }) {
   }
 }
 
-test(
-  "vercel ignore script exposes the explicit production release contract",
-  async () => {
+test("vercel ignore script exposes the explicit production release contract", async () => {
   const script = await readFile(SCRIPT, "utf8");
   assert.match(script, /VERCEL_GIT_COMMIT_REF/);
   assert.match(script, /HEAD\^ HEAD/);
@@ -51,12 +42,9 @@ test(
   );
   assert.match(script, /exit 0/);
   assert.match(script, /exit 1/);
-  },
-);
+});
 
-test(
-  "only the commit that changes the release marker can trigger a build",
-  async () => {
+test("only the commit that changes the release marker can trigger a build", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "orbit-vercel-ignore-"));
   try {
     await initGitFixture(cwd, {
