@@ -60,6 +60,9 @@ jobs:
             if (!report.git.sha) throw new Error(\"agent triage must record exact Git SHA\");
             if (!Array.isArray(report.nextActions)) throw new Error(\"agent triage nextActions must be an array\");
           "
+      - name: OMP contract
+        run: pnpm verify:omp
+
       - name: Vercel ignore command contract
         run: node scripts/vercel-ignore.test.mjs
       - name: Workspace sanity
