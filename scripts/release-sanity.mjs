@@ -32,6 +32,15 @@ const packages = await Promise.all([
 ]);
 
 const expectedVersion = rootPackage.version;
+const productionRelease = await json("release/PRODUCTION_RELEASE.json");
+if (
+  productionRelease.schemaVersion !== 1 ||
+  typeof productionRelease.releaseId !== "string" ||
+  !/^[A-Za-z0-9._-]{1,100}$/.test(productionRelease.releaseId) ||
+  productionRelease.mode !== "EXPLICIT_PRODUCTION_RELEASE"
+) {
+  throw new Error("Invalid production release marker");
+}
 if (!/^\d+\.\d+\.\d+$/.test(expectedVersion)) {
   throw new Error("Root package version must be semver: " + expectedVersion);
 }
@@ -99,6 +108,9 @@ const requiredFiles = [
   "scripts/soak.ts",
   "scripts/verify-live-web.mjs",
   "scripts/vercel-ignore.test.mjs",
+  "scripts/production-release-trigger.test.mjs",
+  "scripts/resolve-production-release.mjs",
+  "release/PRODUCTION_RELEASE.json",
   "scripts/recovery-evidence.mjs",
 ];
 
@@ -146,6 +158,8 @@ if (!ci.includes("pnpm test:e2e"))
   throw new Error("CI browser E2E gate missing");
 if (!ci.includes("node scripts/vercel-ignore.test.mjs"))
   throw new Error("Vercel ignore-command contract test missing");
+if (!ci.includes("node scripts/production-release-trigger.test.mjs"))
+  throw new Error("Production release trigger contract test missing");
 if (!ci.includes("pnpm test:recovery:evidence"))
   throw new Error("Recovery evidence CI gate missing");
 if (!ci.includes("if: ${{ !cancelled() }}"))
@@ -165,6 +179,8 @@ const selfHostedWeb = await text(
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
   "github.ref_name == 'main' && github.actor == 'ahmedsaturki'",
+  "Require explicit production release",
+  "scripts/resolve-production-release.mjs",
   "pnpm install --frozen-lockfile",
   "pnpm security:scan",
   "vercel@59.23.1 build --prod",
@@ -177,6 +193,9 @@ for (const fragment of [
 
 const vercelWorkflow = await text(".github/workflows/vercel-web.yml");
 for (const fragment of [
+  "release/PRODUCTION_RELEASE.json",
+  "scripts/resolve-production-release.mjs",
+  "needs.release_trigger.outputs.triggered",
   "vercel@59.23.1 pull --yes",
   "vercel@59.23.1 deploy --dry --format=json",
   "vercel@59.23.1 build --prod",
