@@ -116,9 +116,8 @@ const payload = {
         classify(gate),
       ),
     ).length,
-    blockedCount: gates.filter(
-      (gate) => gate.level !== "L3_PRODUCTION_PROVEN",
-    ).length,
+    blockedCount: gates.filter((gate) => gate.level !== "L3_PRODUCTION_PROVEN")
+      .length,
   },
   nextActions,
   gates,

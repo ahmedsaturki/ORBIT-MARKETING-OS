@@ -34,11 +34,7 @@ for (const [label, content, needles] of [
     nativeContext,
     ["@../AGENTS.md", "@../docs/OMP_OPERATOR_PROTOCOL.md"],
   ],
-  [
-    "sticky OMP rules",
-    stickyRules,
-    ["L3_PRODUCTION_PROVEN", "OWNER_ACTION"],
-  ],
+  ["sticky OMP rules", stickyRules, ["L3_PRODUCTION_PROVEN", "OWNER_ACTION"]],
   [
     "OMP watchdog",
     watchdog,

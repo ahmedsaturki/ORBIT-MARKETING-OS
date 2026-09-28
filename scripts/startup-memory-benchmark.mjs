@@ -49,21 +49,17 @@ async function allocatePort() {
 
 const port = await allocatePort();
 const startedAt = performance.now();
-const child = spawn(
-  process.execPath,
-  ["--import", "tsx", "server.ts"],
-  {
-    cwd: root,
-    env: {
-      ...process.env,
-      NODE_ENV: "production",
-      PORT: String(port),
-      RUNTIME_HOST: "127.0.0.1",
-      OLLAMA_BASE_URL: "http://127.0.0.1:9",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
+const child = spawn(process.execPath, ["--import", "tsx", "server.ts"], {
+  cwd: root,
+  env: {
+    ...process.env,
+    NODE_ENV: "production",
+    PORT: String(port),
+    RUNTIME_HOST: "127.0.0.1",
+    OLLAMA_BASE_URL: "http://127.0.0.1:9",
   },
-);
+  stdio: ["ignore", "pipe", "pipe"],
+});
 
 let stdout = "";
 let stderr = "";
@@ -98,10 +94,9 @@ try {
     if (rss > 0) samples += 1;
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:" + port + "/api/health",
-        { signal: AbortSignal.timeout(1_000) },
-      );
+      const response = await fetch("http://127.0.0.1:" + port + "/api/health", {
+        signal: AbortSignal.timeout(1_000),
+      });
       if (response.ok && serverAnnounced) {
         healthy = true;
         startupMs = performance.now() - startedAt;
