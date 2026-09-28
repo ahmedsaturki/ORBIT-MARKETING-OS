@@ -7,6 +7,18 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = resolve(root, "packages/desktop/src-tauri/Cargo.toml");
 const evidenceDir = resolve(root, ".artifacts");
+const gitEnv = { ...process.env };
+for (const key of [
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_COMMON_DIR",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_NAMESPACE",
+]) {
+  delete gitEnv[key];
+}
 mkdirSync(evidenceDir, { recursive: true });
 
 const checks = [
@@ -56,7 +68,7 @@ for (const check of checks) {
         stdio: ["ignore", "pipe", "pipe"],
         encoding: "utf8",
         timeout: 4 * 60 * 1000,
-        env: process.env,
+        env: gitEnv,
       },
     );
 
@@ -116,7 +128,7 @@ const payload = {
   sha: execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: root,
     encoding: "utf8",
-    env: process.env,
+    env: gitEnv,
   }).trim(),
   checks: results,
   summary: {
