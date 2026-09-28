@@ -60,19 +60,28 @@ const launchScorecard = await readFile(
   resolve(root, "docs/LAUNCH_SCORECARD.md"),
   "utf8",
 );
-const webProvenanceRow = launchScorecard
-  .split(/\r?\n/)
-  .find((line) => line.startsWith("| Production web provenance"));
-const webProductionLevel = readiness.releaseCritical?.web_production?.level;
 
+// "VERIFIED" means fresh evidence exists; it does not mean L3_PRODUCTION_PROVEN.
+// The launch scorecard is allowed to show VERIFIED for individual capabilities
+// while the overall production/commercial launch remains blocked until every
+// release-critical gate is L3. Guard the actual release claim instead.
+const overallLaunchRow = launchScorecard
+  .split(/\r?\n/)
+  .find((line) => line.startsWith("| Production/commercial launch"));
 if (
-  typeof webProvenanceRow === "string" &&
-  typeof webProductionLevel === "string" &&
-  webProductionLevel !== "L3_PRODUCTION_PROVEN" &&
-  /\|\s*VERIFIED\s*\|/.test(webProvenanceRow)
+  typeof overallLaunchRow === "string" &&
+  typeof readiness.releaseCritical === "object" &&
+  readiness.releaseCritical &&
+  !Object.values(readiness.releaseCritical).every(
+    (value) =>
+      value &&
+      typeof value === "object" &&
+      value.level === "L3_PRODUCTION_PROVEN",
+  ) &&
+  /\|\s*(VERIFIED|PASS)\s*\|/.test(overallLaunchRow)
 ) {
   throw new Error(
-    "launch scorecard cannot mark production web provenance VERIFIED before web_production is L3",
+    "launch scorecard cannot mark overall production/commercial launch VERIFIED before all release-critical gates are L3",
   );
 }
 
