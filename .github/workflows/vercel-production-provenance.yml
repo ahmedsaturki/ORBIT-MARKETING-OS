@@ -7,15 +7,14 @@ on:
       - "release/PRODUCTION_RELEASE.json"
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 concurrency:
   group: orbit-vercel-provenance
   cancel-in-progress: true
 
 jobs:
   verify:
+    permissions:
+      contents: read
     if: github.ref_name == 'main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
