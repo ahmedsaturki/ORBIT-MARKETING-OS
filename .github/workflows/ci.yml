@@ -138,6 +138,8 @@ jobs:
         timeout-minutes: 5
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
+      - name: Format diagnostic
+        run: pnpm exec prettier scripts/release-evidence-collector-contract.test.mjs
       - name: Format check
         run: pnpm format:check
 
