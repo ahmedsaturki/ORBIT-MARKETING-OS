@@ -3,8 +3,7 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches:
-      ["main", "rebuild/orbit-production-final", "fix/explicit-production-release-trigger-20260928"]
+    branches: ["main", "rebuild/orbit-production-final"]
   pull_request:
     branches: ["main"]
 
