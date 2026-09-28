@@ -10,11 +10,10 @@ import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-const scriptPath = new URL("./vercel-ignore.sh", import.meta.url);
 
 async function runIgnore(cwd, env = { VERCEL_GIT_COMMIT_REF: "main" }) {
   try {
-    await execFileAsync("bash", [scriptPath.pathname], {
+    await execFileAsync("bash", ["scripts/vercel-ignore.sh"], {
       cwd,
       env: { ...process.env, ...env },
     });
