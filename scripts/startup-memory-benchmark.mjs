@@ -1,9 +1,8 @@
-import { spawn, execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { createServer } from "node:net";
 import { readFileSync } from "node:fs";
 
 const root = process.cwd();
-const port = 34891;
-const startedAt = performance.now();
 
 function rssMb(pid) {
   if (process.platform === "linux") {
@@ -30,9 +29,29 @@ function rssMb(pid) {
   return match ? Number(match[1].replaceAll(",", "")) / 1024 : 0;
 }
 
+async function allocatePort() {
+  const probe = createServer();
+  await new Promise((resolve, reject) => {
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", resolve);
+  });
+  const address = probe.address();
+  if (!address || typeof address === "string") {
+    probe.close();
+    throw new Error("could not allocate an isolated TCP port");
+  }
+  const port = address.port;
+  await new Promise((resolve, reject) =>
+    probe.close((error) => (error ? reject(error) : resolve())),
+  );
+  return port;
+}
+
+const port = await allocatePort();
+const startedAt = performance.now();
 const child = spawn(
   process.execPath,
-  ["node_modules/tsx/dist/cli.mjs", "server.ts"],
+  ["--import", "tsx", "server.ts"],
   {
     cwd: root,
     env: {
@@ -42,11 +61,19 @@ const child = spawn(
       RUNTIME_HOST: "127.0.0.1",
       OLLAMA_BASE_URL: "http://127.0.0.1:9",
     },
-    stdio: ["ignore", "ignore", "pipe"],
+    stdio: ["ignore", "pipe", "pipe"],
   },
 );
 
+let stdout = "";
 let stderr = "";
+let serverAnnounced = false;
+child.stdout?.on("data", (chunk) => {
+  stdout += String(chunk);
+  if (stdout.includes("127.0.0.1:" + port)) {
+    serverAnnounced = true;
+  }
+});
 child.stderr?.on("data", (chunk) => {
   stderr += String(chunk);
 });
@@ -59,9 +86,10 @@ let samples = 0;
 
 try {
   while (Date.now() < deadline) {
-    if (child.exitCode !== null) {
+    if (child.exitCode !== null || child.signalCode !== null) {
       throw new Error(
-        "runtime exited during startup with code " + child.exitCode,
+        "runtime exited during startup before readiness: " +
+          (child.exitCode ?? child.signalCode),
       );
     }
 
@@ -70,10 +98,11 @@ try {
     if (rss > 0) samples += 1;
 
     try {
-      const response = await fetch("http://127.0.0.1:" + port + "/api/health", {
-        signal: AbortSignal.timeout(1_000),
-      });
-      if (response.ok) {
+      const response = await fetch(
+        "http://127.0.0.1:" + port + "/api/health",
+        { signal: AbortSignal.timeout(1_000) },
+      );
+      if (response.ok && serverAnnounced) {
         healthy = true;
         startupMs = performance.now() - startedAt;
         break;
@@ -84,7 +113,9 @@ try {
   }
 
   if (!healthy) {
-    throw new Error("runtime did not become healthy within 30 seconds");
+    throw new Error(
+      "launched runtime did not announce its listener and pass health within 30 seconds",
+    );
   }
 
   for (let index = 0; index < 10; index += 1) {
@@ -102,13 +133,14 @@ try {
     peak_rss_mb: Number(peakRssMb.toFixed(2)),
     rss_samples: samples,
     host: "127.0.0.1",
-    provider: "ollama-local",
     port,
+    server_announced: serverAnnounced,
+    provider: "ollama-local",
   };
 
   console.log("STARTUP_MEMORY_BENCHMARK_JSON " + JSON.stringify(result));
 } finally {
-  if (child.exitCode === null) {
+  if (child.exitCode === null && child.signalCode === null) {
     child.kill("SIGTERM");
     await new Promise((resolve) => {
       const timer = setTimeout(resolve, 5_000);
@@ -119,12 +151,12 @@ try {
     });
   }
 
-  if (child.exitCode === null) {
+  if (child.exitCode === null && child.signalCode === null) {
     child.kill("SIGKILL");
     await new Promise((resolve) => child.once("exit", resolve));
   }
 
-  if (stderr.trim() && child.exitCode !== 0) {
+  if (stderr.trim() && child.exitCode !== 0 && child.signalCode === null) {
     console.error(stderr.slice(-4_000));
   }
 }
