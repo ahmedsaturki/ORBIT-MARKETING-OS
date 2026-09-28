@@ -139,7 +139,10 @@ jobs:
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
       - name: Format check
-        run: pnpm format:check
+        run: |
+          pnpm prettier docs/RELEASE_SCORECARD.md > /tmp/release-scorecard.prettier.md
+          diff -u docs/RELEASE_SCORECARD.md /tmp/release-scorecard.prettier.md || true
+          pnpm format:check
 
   security_scan:
     name: security:scan
