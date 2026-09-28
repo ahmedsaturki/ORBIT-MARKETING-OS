@@ -37,7 +37,7 @@ Exact-main CI run `36455009654` on `edc8c07f0527c7ea9b38827e293fd820b9f6cce0` me
 - startup-to-health: 387.4 ms
 - peak RSS: 100.15 MB
 - RSS samples: 14
-- listener: 127.0.0.1:37387
+- listener: 127.0.0.1:38563
 - server announced: true
 - provider: ollama-local
 
@@ -57,7 +57,7 @@ The current production deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is READY, G
 
 The live verification checked `/`, `/api/health.json`, and `/api/release.json` against `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`.
 
-Deployment details: https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2
+Deployment details: https://vercel.com/jmls-projects/orbit-marketing-os/3YiUkYHNpQPRaPjTZvH5UrTztEQp
 
 ## Reproducibility
 
