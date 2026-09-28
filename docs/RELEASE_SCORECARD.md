@@ -78,7 +78,7 @@ Updated: 2026-09-28.
 | MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                             |
 | Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                  |
 | Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                 |
-| Web production provenance     | PARTIAL  | Last verified production SHA is `6e5d78db...`; current main `367c0de...` is not yet production-verified because no deployment for the current SHA was observed |
+| Web production provenance     | PARTIAL  | Last verified production SHA is `6e5d78db...`; the current `main` commit is not yet production-verified because no deployment for the current SHA was observed |
 
 ## Release / Operations
 

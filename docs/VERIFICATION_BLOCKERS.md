@@ -25,7 +25,7 @@ Current verified facts:
 - the repository ignore policy permits only `main` to deploy and explicitly includes release-truth changes;
 - PR #129 hardens the ignore command against Vercel Root Directory cwd differences.
 
-The last verified Vercel production provenance and Web Deploy cycle passed for main SHA `6e5d78db...`. Current main `367c0de...` is not production-verified because no deployment for the current SHA was observed; Vercel is currently returning the free deployment-per-day rate limit. After a successful current-SHA deployment is observed, the remaining Vercel action is the controlled rollback drill.
+The last verified Vercel production provenance and Web Deploy cycle passed for main SHA `6e5d78db...`. The current `main` commit is not production-verified because no deployment for the current commit was observed; Vercel is currently returning the free deployment-per-day rate limit. After a successful current-SHA deployment is observed, the remaining Vercel action is the controlled rollback drill.
 
 ## Reproducible installation
 
