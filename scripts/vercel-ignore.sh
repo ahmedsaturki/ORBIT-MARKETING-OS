@@ -9,40 +9,23 @@ if [[ "${VERCEL_GIT_COMMIT_REF:-}" != "main" ]]; then
   exit 0
 fi
 
-# A missing previous SHA / shallow-history case on main is fail-open to build.
-if [[ -z "${VERCEL_GIT_PREVIOUS_SHA:-}" || -z "${VERCEL_GIT_COMMIT_SHA:-}" ]]; then
-  exit 1
-fi
-
-# Vercel supplies commit SHAs. Reject every other shape before using the
-# values as Git revision arguments so the deployment hook cannot accept
-# option-like or otherwise malformed revision input.
-if [[ ! "${VERCEL_GIT_PREVIOUS_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
-  echo "Vercel Git deployment skipped: previous revision is not a full SHA."
-  exit 1
-fi
-if [[ ! "${VERCEL_GIT_COMMIT_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
-  echo "Vercel Git deployment skipped: current revision is not a full SHA."
-  exit 1
-fi
-
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 1
 cd "$REPO_ROOT" || exit 1
 
-if ! git rev-parse --verify "${VERCEL_GIT_PREVIOUS_SHA}^{commit}" >/dev/null 2>&1; then
-  exit 1
-fi
-if ! git rev-parse --verify "${VERCEL_GIT_COMMIT_SHA}^{commit}" >/dev/null 2>&1; then
+# Compare the commit being considered with its first parent. Vercel's
+# VERCEL_GIT_PREVIOUS_SHA is the last successful deployment, not necessarily
+# the previous Git commit, so using it would make an old release-marker change
+# look new again after later commits. HEAD^ keeps the decision local to this
+# exact Git commit and its parent.
+if ! git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+  echo "Vercel Git deployment cannot establish the current commit parent; building fails closed."
   exit 1
 fi
 
 MARKER="release/PRODUCTION_RELEASE.json"
 
-# The first bootstrap marker is intentionally non-production and must not
-# consume a production deployment attempt. Future non-bootstrap marker
-# changes are the sole production deployment trigger.
-if git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA}" "${VERCEL_GIT_COMMIT_SHA}" -- "$MARKER"; then
-  echo "Vercel Git deployment skipped: no explicit production release marker change."
+if git diff --quiet HEAD^ HEAD -- "$MARKER"; then
+  echo "Vercel Git deployment skipped: current commit does not change the production release marker."
   exit 0
 fi
 
