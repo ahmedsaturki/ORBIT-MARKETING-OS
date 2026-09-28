@@ -2,13 +2,13 @@
 
 Updated: 2026-09-28.
 
-The merged core is strongly verified at L2 across the main product domains. Web production provenance is verified only for the last deployed main SHA `6e5d78db...`; the current `main` commit requires a fresh production deployment/readback. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
+The merged core is strongly verified at L2 across the main product domains. Current-main web production provenance is verified through the current Vercel deployment, governed provenance workflow, and live health/release readback. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
 
 ## A. Vercel
 
-Last verified production deployment and provenance are recorded for main SHA `6e5d78db...`; the current `main` commit is awaiting a production deployment for that commit.
+Current-main production deployment and provenance are verified through Vercel Production Provenance run 36434671316, Web Deploy run 36434671320, and deployment dpl_CVTi4TwkUUntjsCrNonMwVJT32qm.
 
-- repository/main: the current repository SHA is available from Git; production verification of that SHA remains pending;
+- repository/main: the current repository SHA is verified by the live governed provenance readback;
 - project: `orbit-marketing-os`;
 - framework: Next.js;
 - source: Git;
