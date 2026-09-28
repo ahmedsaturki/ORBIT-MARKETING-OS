@@ -12,25 +12,25 @@ mkdirSync(evidenceDir, { recursive: true });
 const checks = [
   {
     id: "startup-recovery",
-    test: "startup_recovery_requeues_sync_and_halts_external_work",
+    test: "tests::startup_recovery_requeues_sync_and_halts_external_work",
     description:
       "Requeue interrupted sync work, park interrupted external work for human recovery, write recovery audit events, and verify the audit chain.",
   },
   {
     id: "database-recovery",
-    test: "database_recovery_restores_missing_primary_and_cleans_transients",
+    test: "tests::database_recovery_restores_missing_primary_and_cleans_transients",
     description:
       "Restore a missing primary SQLite database from the previous copy and remove stale restore/backup source artifacts.",
   },
   {
     id: "recovery-idempotency",
-    test: "interrupted_external_tasks_require_human_recovery_but_sync_tasks_requeue",
+    test: "tests::interrupted_external_tasks_require_human_recovery_but_sync_tasks_requeue",
     description:
       "Recover interrupted tasks once, prove a second recovery is a no-op, and preserve the sync-vs-external recovery state boundary.",
   },
   {
     id: "migration-idempotency",
-    test: "schema_migration_reaches_current_version_and_is_idempotent_afterwards",
+    test: "tests::schema_migration_reaches_current_version_and_is_idempotent_afterwards",
     description:
       "Apply the production schema migration to the current version and prove a second migration is a no-op.",
   },
