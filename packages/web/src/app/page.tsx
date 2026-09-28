@@ -18,10 +18,16 @@ const releaseShaSource = declaredReleaseSha
   : vercelGitCommitSha
     ? "VERCEL_GIT_COMMIT_SHA"
     : "none";
+const publicReleaseId =
+  releaseSha === "unreleased" ? "غير مثبت" : releaseSha.slice(0, 12);
 
 export default function HomePage(): ReactElement {
   return (
-    <main data-release="0.2.0" data-release-sha={releaseSha}>
+    <main
+      data-release="0.2.0"
+      data-release-sha={releaseSha}
+      data-release-sha-source={releaseShaSource}
+    >
       <header className="topbar">
         <div className="container nav">
           <strong>ORBIT</strong>
@@ -62,6 +68,16 @@ export default function HomePage(): ReactElement {
             <h2>{feature}</h2>
           </article>
         ))}
+      </section>
+
+      <section className="container note" aria-label="معلومات الإصدار">
+        <h2>هوية الإصدار</h2>
+        <p>
+          النسخة <strong>v0.2.0</strong> مرتبطة ببصمة البناء{" "}
+          <code>{publicReleaseId}</code> من المصدر <code>{releaseShaSource}</code>.
+          استخدم واجهتي الصحة والإصدار للتحقق من البصمة الكاملة قبل الاعتماد على
+          أي نشر.
+        </p>
       </section>
 
       <section className="container note">
