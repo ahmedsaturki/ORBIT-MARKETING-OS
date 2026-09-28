@@ -49,7 +49,7 @@ These are fresh automated L2 evidence, not L3 production proof.
 
 Current main CI run `36480198008` produced recovery artifact `10995738209`. The artifact records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
 
-Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009654#artifacts-10985138175
+Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480198008#artifacts-10995738209
 
 ## Current production provenance
 
