@@ -30,7 +30,7 @@
         "Rust quality run 36455009654",
         "desktop native validation on validated pre-merge tree",
         "mobile validation on validated pre-merge tree",
-        "current production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp"
+        "latest verified production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp"
       ],
       "notes": "The latest verified main release SHA edc8c07f0527c7ea9b38827e293fd820b9f6cce0 passed main CI and Rust quality. Production provenance for that verified release cycle is also verified at dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp; native desktop/mobile packaging evidence remains from the validated pre-merge release tree and does not by itself claim an exact merge-SHA package artifact.",
       "evidenceRefs": [
@@ -91,7 +91,7 @@
         "validated Windows/Linux/macOS artifacts",
         "validated Android debug validation",
         "current exact-main CI run 36455009654",
-        "current production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp"
+        "latest verified production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp"
       ],
       "notes": "CI and production web distribution/provenance for the exact release cycle are verified. Desktop signing/notarization and production mobile signing/store distribution remain open.",
       "evidenceRefs": [
