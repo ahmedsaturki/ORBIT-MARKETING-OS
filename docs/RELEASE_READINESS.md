@@ -65,7 +65,7 @@ For the commercial lane, run:
 
 The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, deterministic link intelligence core, platform foundation, content reuse policy, evidence-backed reporting packs, workspace isolation, native desktop/mobile validation, web quality, release-readiness validation, and exact-SHA soak/provenance hardening. Exact release SHA, deployment, workflow-run, and artifact identifiers are deliberately recorded in per-release evidence bundles and operational issue reconciliations rather than hard-coded into this durable policy document.
 
-A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed and the corrected feature head subsequently passed CI, desktop native, mobile, and Windows Native E2E. The current main CI cycle also passed the recovery/performance gates on exact SHA `09b12346f06df465bff223190547c185f4a55014`.
+A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed and the corrected feature head subsequently passed CI, desktop native, mobile, and Windows Native E2E. The current main CI cycle (run `36434671261`) also passed the recovery/performance gates; the exact release SHA is retained in the per-release evidence bundle rather than hard-coded in this durable policy document.
 
 ## Production gates still open
 
