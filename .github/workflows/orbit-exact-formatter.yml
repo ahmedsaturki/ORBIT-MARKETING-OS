@@ -26,16 +26,16 @@ jobs:
       - name: Format exact release-control files and self-delete
         run: |
           set -euo pipefail
-          pnpm exec prettier --write \\
-            scripts/release-sanity.mjs \\
-            scripts/resolve-production-release.mjs \\
-            scripts/test-git-fixture.mjs \\
+          pnpm exec prettier --write 
+            scripts/release-sanity.mjs 
+            scripts/resolve-production-release.mjs 
+            scripts/test-git-fixture.mjs 
             scripts/vercel-ignore.test.mjs
           git diff --check
-          if git diff --quiet -- \\
-            scripts/release-sanity.mjs \\
-            scripts/resolve-production-release.mjs \\
-            scripts/test-git-fixture.mjs \\
+          if git diff --quiet -- 
+            scripts/release-sanity.mjs 
+            scripts/resolve-production-release.mjs 
+            scripts/test-git-fixture.mjs 
             scripts/vercel-ignore.test.mjs; then
             echo "No formatter changes needed"
             exit 0
@@ -43,11 +43,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm .github/workflows/orbit-exact-formatter.yml
-          git add \\
-            scripts/release-sanity.mjs \\
-            scripts/resolve-production-release.mjs \\
-            scripts/test-git-fixture.mjs \\
-            scripts/vercel-ignore.test.mjs \\
+          git add 
+            scripts/release-sanity.mjs 
+            scripts/resolve-production-release.mjs 
+            scripts/test-git-fixture.mjs 
+            scripts/vercel-ignore.test.mjs 
             .github/workflows/orbit-exact-formatter.yml
           git commit -m "style(release): apply exact Prettier output [format-once]"
           git push origin HEAD:fix/explicit-production-release-trigger-20260928
