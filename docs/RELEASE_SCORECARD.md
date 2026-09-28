@@ -101,7 +101,7 @@ Updated: 2026-09-28.
 
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
 - Vercel production provenance is verified only for the last deployed main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac`; current main requires fresh deployment/readback before it is treated as production-current.
-- The last verified Vercel release cycle passed governed Git provenance and Web Deploy for main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac`. Current main `367c0de11cd7c075ff59448cb7dafdfaf98faffa` is not yet production-verified because no deployment for that SHA was observed; the rollback drill remains separate.
+- The last verified Vercel release cycle passed governed Git provenance and Web Deploy for main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac`. The current `main` commit is not yet production-verified because no deployment for that commit was observed; the rollback drill remains separate.
 - The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
