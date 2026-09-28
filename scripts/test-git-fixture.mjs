@@ -15,15 +15,39 @@ export async function commitSha(cwd) {
   ).stdout.trim();
 }
 
+export async function commit(cwd, message) {
+  await git(cwd, ["add", "."]);
+  await git(cwd, ["commit", "-qm", message]);
+  return commitSha(cwd);
+}
+
+export async function writeReleaseMarker(
+  cwd,
+  releaseId = "bootstrap",
+  notes = "",
+) {
+  const marker = {
+    schemaVersion: 1,
+    releaseId,
+    mode: "EXPLICIT_PRODUCTION_RELEASE",
+  };
+  if (notes) marker.notes = notes;
+  await writeFile(
+    join(cwd, "release", "PRODUCTION_RELEASE.json"),
+    JSON.stringify(marker) + "\n",
+    "utf8",
+  );
+}
+
 export async function initGitFixture(cwd, marker) {
   await git(cwd, ["init", "-q"]);
   await git(cwd, ["config", "user.email", "orbit-test@example.invalid"]);
   await git(cwd, ["config", "user.name", "ORBIT Test"]);
   await mkdir(join(cwd, "scripts"), { recursive: true });
   await mkdir(join(cwd, "release"), { recursive: true });
-  await writeFile(
-    join(cwd, "release", "PRODUCTION_RELEASE.json"),
-    JSON.stringify(marker) + "\n",
-    "utf8",
+  await writeReleaseMarker(
+    cwd,
+    marker.releaseId ?? "bootstrap",
+    marker.notes ?? "",
   );
 }
