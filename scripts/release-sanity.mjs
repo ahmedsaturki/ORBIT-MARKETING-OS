@@ -148,7 +148,9 @@ if (!ci.includes("node scripts/vercel-ignore.test.mjs"))
 if (!ci.includes("pnpm test:recovery:evidence"))
   throw new Error("Recovery evidence CI gate missing");
 if (!ci.includes("if: ${{ !cancelled() }}"))
-  throw new Error("Recovery evidence artifact failure upload condition missing");
+  throw new Error(
+    "Recovery evidence artifact failure upload condition missing",
+  );
 if (
   !ci.includes(
     "orbit-recovery-evidence-${{ github.event.pull_request.head.sha || github.sha }}",
