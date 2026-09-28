@@ -72,12 +72,12 @@ Updated: 2026-09-28.
 
 ## Web / Mobile
 
-| Gate                          | Status   | Evidence                                                                                                                                                                     |
-| ----------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| WEB-01 PWA                    | VERIFIED | Web build/E2E and live checks                                                                                                                                                |
-| MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                                           |
-| Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                                |
-| Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                               |
+| Gate                          | Status   | Evidence                                                                                                                                                                                        |
+| ----------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WEB-01 PWA                    | VERIFIED | Web build/E2E and live checks                                                                                                                                                                   |
+| MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                                                              |
+| Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                                                   |
+| Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                                                  |
 | Web production provenance     | PARTIAL  | Latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`; current main is controlled by bootstrap marker, so current-main production proof is not claimed |
 
 ## Release / Operations
