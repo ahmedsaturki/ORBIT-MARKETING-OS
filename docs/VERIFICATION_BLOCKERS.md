@@ -25,7 +25,7 @@ Current verified facts:
 - the repository ignore policy permits only `main` to deploy and explicitly includes release-truth changes;
 - PR #129 hardens the ignore command against Vercel Root Directory cwd differences.
 
-Current main production provenance is verified for SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`: deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is READY, Git-sourced, and production-targeted. Vercel Production Provenance run `36455009698` and Web Deploy run `36455009416` passed. The selected seven-day runtime-error aggregation is clean. The remaining Vercel action is the controlled rollback drill.
+Latest verified main production provenance was verified for SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`: deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is READY, Git-sourced, and production-targeted. Vercel Production Provenance run `36455009698` and Web Deploy run `36455009416` passed. The selected seven-day runtime-error aggregation is clean. The remaining Vercel action is the controlled rollback drill.
 
 ## Reproducible installation
 
