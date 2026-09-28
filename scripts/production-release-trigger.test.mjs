@@ -2,10 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import {
-  commitSha,
+  commit,
   execFileAsync,
-  git,
   initGitFixture,
+  writeReleaseMarker,
 } from "./test-git-fixture.mjs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,13 +33,10 @@ test("production release resolver binds the release to the marker commit", async
   const cwd = await mkdtemp(join(tmpdir(), "orbit-production-release-"));
   try {
     await initGitFixture(cwd, {
-      schemaVersion: 1,
       releaseId: "bootstrap",
-      mode: "EXPLICIT_PRODUCTION_RELEASE",
     });
     await cp(RESOLVER, join(cwd, "scripts", "resolve-production-release.mjs"));
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "bootstrap"]);
+    await commit(cwd, "bootstrap");
 
     let current = await commitSha(cwd);
     let result = await state(cwd);
