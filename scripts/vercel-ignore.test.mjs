@@ -37,8 +37,9 @@ test("vercel ignore script declares the release-truth deployment contract", asyn
   );
   assert.match(script, /packages\/web/);
   assert.match(script, /release/);
-  assert.match(script, /docs\/RELEASE_READINESS\.md/);
+  assert.match(script, /docs\/RELEASE_\*\.md/);
   assert.match(script, /docs\/LAUNCH_SCORECARD\.md/);
+  assert.match(script, /docs\/PERFORMANCE_EVIDENCE\.md/);
   assert.match(script, /docs\/COMMERCIAL_PRODUCTION_PROVEN_RUNBOOK\.md/);
   assert.match(script, /docs\/VERIFICATION_BLOCKERS\.md/);
   assert.match(script, /scripts\/vercel-ignore\.sh/);
@@ -88,24 +89,48 @@ test("main branch skips unrelated documentation but builds for release-truth cha
       "unrelated documentation should remain skippable from a nested root",
     );
 
-    await writeFile(
-      join(cwd, "release", "readiness.json"),
+    const assertBuildRequired = async (relativePath, content, label) => {
+      await writeFile(join(cwd, relativePath), content);
+      await git(cwd, ["add", "."]);
+      await git(cwd, ["commit", "-qm", label]);
+      const current = (
+        await execFileAsync("git", ["rev-parse", "HEAD"], { cwd })
+      ).stdout.trim();
+
+      assert.equal(
+        await runIgnore(webRoot, {
+          VERCEL_GIT_COMMIT_REF: "main",
+          VERCEL_GIT_PREVIOUS_SHA: previous,
+          VERCEL_GIT_COMMIT_SHA: current,
+        }),
+        1,
+        label + " changes must force a Vercel deployment from a nested root",
+      );
+    };
+
+    await assertBuildRequired(
+      "release/readiness.json",
       '{ "updated": "2026-09-28" }\n',
+      "release-truth",
     );
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "release-truth"]);
     const releaseCommit = (
       await execFileAsync("git", ["rev-parse", "HEAD"], { cwd })
     ).stdout.trim();
 
-    assert.equal(
-      await runIgnore(webRoot, {
-        VERCEL_GIT_COMMIT_REF: "main",
-        VERCEL_GIT_PREVIOUS_SHA: docsCommit,
-        VERCEL_GIT_COMMIT_SHA: releaseCommit,
-      }),
-      1,
-      "release-truth changes must force a Vercel deployment from a nested root",
+    await assertBuildRequired(
+      "docs/RELEASE_SCORECARD.md",
+      "release scorecard",
+      "release-scorecard",
+    );
+    await assertBuildRequired(
+      "docs/RELEASE_EVIDENCE_2026-09-28.md",
+      "release evidence",
+      "release-evidence",
+    );
+    await assertBuildRequired(
+      "docs/PERFORMANCE_EVIDENCE.md",
+      "performance evidence",
+      "performance-evidence",
     );
 
     assert.equal(
