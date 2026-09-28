@@ -12,6 +12,10 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 
+const RESOLVER = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "resolve-production-release.mjs",
+);
 
 async function state(cwd) {
   const { stdout } = await execFileAsync(

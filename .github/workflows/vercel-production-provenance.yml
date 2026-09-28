@@ -27,22 +27,27 @@ jobs:
         with:
           node-version: 22
       - name: Resolve production release
+        id: resolve
         run: |
           set -euo pipefail
           node scripts/resolve-production-release.mjs > /tmp/orbit-release-state.txt
           cat /tmp/orbit-release-state.txt
           if ! grep -q '^release_active=true$' /tmp/orbit-release-state.txt; then
             echo "Production release marker is bootstrap/non-production; nothing to verify."
+            echo "verify=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if ! grep -q '^release_current=true$' /tmp/orbit-release-state.txt; then
             echo "Production release marker is not on the current main commit; nothing to verify."
+            echo "verify=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           release_sha="$(sed -n 's/^release_sha=//p' /tmp/orbit-release-state.txt)"
           test -n "$release_sha"
           echo "ORBIT_EXPECTED_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
+          echo "verify=true" >> "$GITHUB_OUTPUT"
       - name: Verify public production provenance
+        if: steps.resolve.outputs.verify == 'true'
         env:
           ORBIT_LIVE_URL: https://orbit-marketing-os.vercel.app
         run: node scripts/verify-public-vercel-provenance.mjs
