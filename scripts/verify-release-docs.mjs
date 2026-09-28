@@ -23,6 +23,8 @@ const durableReleaseFiles = [
 const forbiddenCurrentMainShaPatterns = [
   /current[\s_-]+main\s*(?:is\s*)?(?:sha\s*)?[:=]?\s*[`'"]?[0-9a-f]{7,40}[`'"]?/i,
   /current[\s_-]+main\s+sha\s*[:=]\s*[`'"]?[0-9a-f]{7,40}[`'"]?/i,
+  /current(?:ly)?\s+verified\s+production\s+deployment\s+is\s+[`'"]?dpl_[A-Za-z0-9]+[`'"]?/i,
+  /current[\s_-]+main\s+production\s+provenance\s+is\s+verified\s+for\s+(?:SHA\s+)?[`'"]?[0-9a-f]{7,40}[`'"]?/i,
 ];
 
 const contractFixtures = [
@@ -33,6 +35,8 @@ const contractFixtures = [
     forbidden: true,
   },
   { value: "current-main SHA: 1234567", forbidden: true },
+  { value: "Current verified production deployment is `dpl_example123`.", forbidden: true },
+  { value: "Current main production provenance is verified for SHA `1234567`.", forbidden: true },
   {
     value: "The last verified main SHA `1234567` is historical evidence.",
     forbidden: false,
