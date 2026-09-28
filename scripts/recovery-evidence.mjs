@@ -42,14 +42,7 @@ for (const check of checks) {
   try {
     execFileSync(
       "cargo",
-      [
-        "test",
-        "--manifest-path",
-        manifest,
-        check.test,
-        "--",
-        "--nocapture",
-      ],
+      ["test", "--manifest-path", manifest, check.test, "--", "--nocapture"],
       {
         cwd: root,
         stdio: ["ignore", "pipe", "pipe"],
@@ -99,8 +92,7 @@ const payload = {
   },
   releaseTruth: {
     promotesToL3: false,
-    note:
-      "This artifact consolidates reproducible recovery/migration evidence for the exact SHA. It does not claim external production proof.",
+    note: "This artifact consolidates reproducible recovery/migration evidence for the exact SHA. It does not claim external production proof.",
   },
 };
 
