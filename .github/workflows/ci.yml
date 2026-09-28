@@ -207,6 +207,9 @@ jobs:
         timeout-minutes: 20
         working-directory: packages/desktop/src-tauri
         run: cargo test --workspace --all-targets
+      - name: Recovery evidence
+        timeout-minutes: 5
+        run: pnpm test:recovery:evidence
       - name: Search scale benchmark
         run: cargo test --manifest-path packages/desktop/src-tauri/Cargo.toml contact_search_1000_scale_benchmark -- --nocapture
       - name: Startup and memory benchmark
