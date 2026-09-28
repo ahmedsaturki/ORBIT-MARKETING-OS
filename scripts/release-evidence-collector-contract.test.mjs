@@ -77,5 +77,3 @@ for (const [label, content, rootMarker, cwdMarker] of requiredRepoBinding) {
 }
 
 console.log("release_evidence_collector_contract=PASS");
-
-
