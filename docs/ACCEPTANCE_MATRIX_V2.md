@@ -1,6 +1,8 @@
 # ORBIT Acceptance Matrix v2
 
-Last evidence refresh: 2026-09-26
+Last evidence refresh: 2026-09-28
+
+Current exact-main verification reference: GitHub Actions CI run `36364156402` on `6e1c744b78402bdfb0e1a3312f90aa2e98cc9710`. DATA-03 measured `1.316917ms` for the 1,000-contact workspace-scoped search benchmark. PERF-01/02 measurement harness also executed on the same CI run; the harness records startup and RSS but the repository does not publish a numeric release budget for these two gates.
 
 Status vocabulary: `PASS`, `FAIL`, `PARTIAL`, `UNVERIFIED`, `NOT_APPLICABLE`.
 
