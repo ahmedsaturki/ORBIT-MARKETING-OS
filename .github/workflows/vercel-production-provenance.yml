@@ -3,6 +3,8 @@ name: Vercel Production Provenance
 on:
   push:
     branches: ["main"]
+    paths:
+      - "release/PRODUCTION_RELEASE.json"
   workflow_dispatch:
 
 permissions:
@@ -14,17 +16,28 @@ concurrency:
 
 jobs:
   verify:
+    if: github.ref_name == 'main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
+      - name: Resolve production release
+        run: |
+          set -euo pipefail
+          node scripts/resolve-production-release.mjs > /tmp/orbit-release-state.txt
+          cat /tmp/orbit-release-state.txt
+          grep -q '^release_active=true$' /tmp/orbit-release-state.txt
+          grep -q '^release_current=true$' /tmp/orbit-release-state.txt
+          release_sha="$(sed -n 's/^release_sha=//p' /tmp/orbit-release-state.txt)"
+          test -n "$release_sha"
+          echo "ORBIT_EXPECTED_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
       - name: Verify public production provenance
         env:
           ORBIT_LIVE_URL: https://orbit-marketing-os.vercel.app
-          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
         run: node scripts/verify-public-vercel-provenance.mjs
