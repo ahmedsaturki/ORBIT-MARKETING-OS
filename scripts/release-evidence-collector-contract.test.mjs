@@ -7,7 +7,7 @@ const recoverySource = await readFile("scripts/recovery-evidence.mjs", "utf8");
 
 for (const marker of [
   'const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");',
-  'cwd: repoRoot,',
+  "cwd: repoRoot,",
   '"GIT_DIR",',
   '"GIT_WORK_TREE",',
   '"GIT_INDEX_FILE",',
