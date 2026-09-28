@@ -50,6 +50,34 @@ jobs:
         run: pnpm verify:readiness -- --mode verification
       - name: Readiness verifier contract test
         run: node scripts/verify-release-readiness.test.mjs
+      - name: Agent release triage contract
+        run: |
+          node scripts/agent-release-triage.mjs > /tmp/orbit-release-triage.json
+          cat > /tmp/verify-triage.mjs <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { readFileSync } from "node:fs";
+          const report = JSON.parse(
+            readFileSync("/tmp/orbit-release-triage.json", "utf8"),
+          );
+          if (report.repository !== "ahmedsaturki/ORBIT-MARKETING-OS") {
+            throw new Error("agent triage repository mismatch");
+          }
+          const expectedSha = execFileSync(
+            "git",
+            ["rev-parse", "HEAD"],
+            { encoding: "utf8" },
+          ).trim();
+          if (report.git.sha !== expectedSha) {
+            throw new Error("agent triage SHA does not match checked-out HEAD");
+          }
+          if (!Array.isArray(report.nextActions)) {
+            throw new Error("agent triage nextActions must be an array");
+          }
+          NODE
+          node /tmp/verify-triage.mjs
+      - name: OMP contract
+        run: pnpm verify:omp
+
       - name: Vercel ignore command contract
         run: node scripts/vercel-ignore.test.mjs
       - name: Workspace sanity
@@ -179,6 +207,11 @@ jobs:
         timeout-minutes: 20
         working-directory: packages/desktop/src-tauri
         run: cargo test --workspace --all-targets
+      - name: Search scale benchmark
+        run: cargo test --manifest-path packages/desktop/src-tauri/Cargo.toml contact_search_1000_scale_benchmark -- --nocapture
+      - name: Startup and memory benchmark
+        run: pnpm benchmark:startup-memory
+
       - name: Rust clippy
         working-directory: packages/desktop/src-tauri
         env:

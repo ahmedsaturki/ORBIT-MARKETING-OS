@@ -67,6 +67,8 @@ Operating control: [docs/OPERATING_CONTROL.md](docs/OPERATING_CONTROL.md) define
 
 Launch control: `docs/LAUNCH_SCORECARD.md`
 
+Agent execution control: `docs/OMP_OPERATOR_PROTOCOL.md` and `pnpm triage:release` provide the shared OMP/release-truth workflow.
+
 Executable release truth: `pnpm verify:readiness` for verification and `pnpm verify:readiness -- --mode commercial` for the fail-closed commercial gate.
 
 Canonical release evidence snapshot: `docs/RELEASE_EVIDENCE_2026-09-26.md`

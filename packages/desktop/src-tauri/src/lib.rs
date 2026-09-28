@@ -14437,6 +14437,90 @@ mod interrupted_restore_recovery_tests {
     }
 
     #[test]
+    fn contact_search_1000_scale_benchmark() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        connection
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at) VALUES (?1, ?2, ?3)",
+                params!["workspace-benchmark", "Search Benchmark", "1"],
+            )
+            .expect("benchmark workspace should be created");
+
+        {
+            let transaction = connection
+                .unchecked_transaction()
+                .expect("benchmark transaction should begin");
+            for index in 0..1_000_i64 {
+                let id = format!("contact-{index:04}");
+                let display_name = format!("Benchmark Contact {index:04}");
+                let email = format!("contact-{index:04}@example.test");
+                let phone = format!("+201000{index:06}");
+                transaction
+                    .execute(
+                        "INSERT INTO contacts(id, workspace_id, display_name, phone, email, source_platform, status, notes, created_at, updated_at)
+                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)",
+                        params![
+                            id,
+                            "workspace-benchmark",
+                            display_name,
+                            phone,
+                            email,
+                            "benchmark",
+                            "active",
+                            "",
+                            "1",
+                        ],
+                    )
+                    .expect("benchmark contact insert should succeed");
+            }
+            transaction
+                .commit()
+                .expect("benchmark transaction should commit");
+        }
+
+        let query = "Benchmark Contact 0999";
+        let escaped = query
+            .replace('!', "!!")
+            .replace('%', "!%")
+            .replace('_', "!_");
+        let started = std::time::Instant::now();
+        let mut statement = connection
+            .prepare(
+                "SELECT id FROM contacts
+                 WHERE workspace_id=?1
+                   AND (lower(display_name) LIKE '%' || lower(?2) || '%' ESCAPE '!'
+                     OR lower(COALESCE(email, '')) LIKE '%' || lower(?2) || '%' ESCAPE '!'
+                     OR lower(COALESCE(phone, '')) LIKE '%' || lower(?2) || '%' ESCAPE '!')
+                 ORDER BY updated_at DESC, id ASC
+                 LIMIT 50",
+            )
+            .expect("contact benchmark query should prepare");
+        let rows: Vec<String> = statement
+            .query_map(params!["workspace-benchmark", escaped], |row| row.get(0))
+            .expect("contact benchmark query should run")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("contact benchmark rows should collect");
+        let elapsed_ms = started.elapsed().as_secs_f64() * 1_000.0;
+
+        assert_eq!(rows, vec!["contact-0999".to_string()]);
+        println!(
+            "SEARCH_SCALE_BENCHMARK_JSON {}",
+            serde_json::json!({
+                "dataset": "1000 contacts",
+                "query": query,
+                "matched": rows.len(),
+                "elapsed_ms": elapsed_ms,
+                "limit": 50,
+                "workspace_scoped": true
+            })
+        );
+    }
+
+    #[test]
     fn preserves_previous_until_active_database_is_opened() {
         let root = std::env::temp_dir().join(format!("orbit-recovery-{}", uuid_like()));
         fs::create_dir_all(&root).expect("recovery fixture directory should be created");

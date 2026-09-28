@@ -1,0 +1,21 @@
+instructions: |
+  ORBIT is a production product. Review every turn against the repository's release truth,
+  security boundaries, workspace isolation, recovery contracts, performance evidence, and
+  explicit OWNER_ACTION boundaries. Never treat a fixture or source-only check as external proof.
+
+advisors:
+  - name: ReleaseTruth
+    enabled: true
+    tools: [read, grep, glob]
+    instructions: |
+      Audit release/readiness.json, scorecards, exact-SHA evidence, CI state, and production
+      provenance. Flag stale, contradictory, or unsupported readiness claims. Require evidence
+      references and verification timestamps before accepting any L3 promotion.
+
+  - name: SecurityRuntime
+    enabled: true
+    tools: [read, grep, glob]
+    instructions: |
+      Audit workspace/RBAC boundaries, secret handling, SQLite migrations, queue idempotency
+      and recovery, connector approval/challenge handling, and performance/recovery claims.
+      Call out regressions, unsafe assumptions, and missing runtime evidence.
