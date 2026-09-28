@@ -21,15 +21,15 @@ Updated: 2026-09-28.
 
 ## Data / Queue
 
-| Gate                             | Status     | Evidence                                                                     |
-| -------------------------------- | ---------- | ---------------------------------------------------------------------------- |
-| DATA-01 Local SQLite             | VERIFIED   | Native implementation and validated Rust/native gates                        |
-| DATA-02 Migration safety         | VERIFIED   | Versioned migrations through v16 and migration tests                         |
-| DATA-03 Search scale             | VERIFIED   | CI 36364156402; 1,000-contact search measured 1.316917ms                     |
-| QUE-01 Persistent queue recovery | PARTIAL    | Recovery implementation and E2E exist; consolidated release evidence remains |
-| QUE-02 Bounded retries           | VERIFIED   | Core/native retry validation passed                                          |
-| QUE-03 Circuit breaker           | VERIFIED   | Policy/runtime controls covered                                              |
-| QUE-04 Human-intervention wait   | VERIFIED   | Explicit wait/resume contract and tests                                      |
+| Gate                             | Status   | Evidence                                                                     |
+| -------------------------------- | -------- | ---------------------------------------------------------------------------- |
+| DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                        |
+| DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                         |
+| DATA-03 Search scale             | VERIFIED | CI 36364156402; 1,000-contact search measured 1.316917ms                     |
+| QUE-01 Persistent queue recovery | PARTIAL  | Recovery implementation and E2E exist; consolidated release evidence remains |
+| QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                          |
+| QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                              |
+| QUE-04 Human-intervention wait   | VERIFIED | Explicit wait/resume contract and tests                                      |
 
 ## Product workflows
 
