@@ -194,6 +194,15 @@ for (const fragment of [
 }
 
 const vercelWorkflow = await text(".github/workflows/vercel-web.yml");
+const productionResolver = await text(
+  "scripts/resolve-production-release.mjs",
+);
+if (productionResolver.includes("GITHUB_OUTPUT")) {
+  throw new Error(
+    "Production release resolver must not write directly to GitHub output paths",
+  );
+}
+
 for (const fragment of [
   "scripts/resolve-production-release.mjs",
   "needs.release_trigger.outputs.triggered",
