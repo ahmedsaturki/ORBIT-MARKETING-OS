@@ -3,15 +3,14 @@ name: Web Release — Self-Hosted
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 concurrency:
   group: orbit-web-release-self-hosted
   cancel-in-progress: false
 
 jobs:
   release:
+    permissions:
+      contents: read
     if: github.ref_name == 'main' && github.actor == 'ahmedsaturki'
     name: Verified web release from main
     runs-on: [self-hosted, x64, linux]
