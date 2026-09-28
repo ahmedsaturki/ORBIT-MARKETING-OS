@@ -79,6 +79,7 @@ Updated: 2026-09-28.
 | Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                   |
 | Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                  |
 | Web production provenance     | PARTIAL  | Last verified production SHA is `6e5d78db...`; current main `242820d6...` is not yet production-verified because no deployment for the current SHA was observed |
+
 ## Release / Operations
 
 | Gate                           | Status     | Evidence                                                                                       |
