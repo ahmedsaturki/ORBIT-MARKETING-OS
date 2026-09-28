@@ -108,26 +108,29 @@ test("main branch skips unrelated documentation but builds for release-truth cha
       );
     };
 
-    await assertBuildRequired(
+    const releaseCommit = await assertBuildRequired(
+      previous,
       "release/readiness.json",
       '{ "updated": "2026-09-28" }\n',
       "release-truth",
     );
-    const releaseCommit = (
-      await execFileAsync("git", ["rev-parse", "HEAD"], { cwd })
-    ).stdout.trim();
 
-    await assertBuildRequired(
+    const scorecardCommit = await assertBuildRequired(
+      releaseCommit,
       "docs/RELEASE_SCORECARD.md",
       "release scorecard",
       "release-scorecard",
     );
-    await assertBuildRequired(
+
+    const evidenceCommit = await assertBuildRequired(
+      scorecardCommit,
       "docs/RELEASE_EVIDENCE_2026-09-28.md",
       "release evidence",
       "release-evidence",
     );
-    await assertBuildRequired(
+
+    const performanceCommit = await assertBuildRequired(
+      evidenceCommit,
       "docs/PERFORMANCE_EVIDENCE.md",
       "performance evidence",
       "performance-evidence",
@@ -137,7 +140,7 @@ test("main branch skips unrelated documentation but builds for release-truth cha
       await runIgnore(webRoot, {
         VERCEL_GIT_COMMIT_REF: "feature/example",
         VERCEL_GIT_PREVIOUS_SHA: docsCommit,
-        VERCEL_GIT_COMMIT_SHA: releaseCommit,
+        VERCEL_GIT_COMMIT_SHA: performanceCommit,
       }),
       0,
       "non-main branches must never deploy",
