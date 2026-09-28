@@ -25,7 +25,7 @@ Updated: 2026-09-28.
 | -------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                                                                                         |
 | DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                                                                                          |
-| DATA-03 Search scale             | VERIFIED | CI 36455009654 on SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; 1,000-contact search measured 1.50868ms                                    |
+| DATA-03 Search scale             | VERIFIED | CI 36455009654 on SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; 1,000-contact search measured 1.50868ms                                     |
 | QUE-01 Persistent queue recovery | VERIFIED | CI 36455009654 on SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; recovery artifact `10985138175` proves 4/4 recovery/idempotency checks PASS |
 | QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                                                                                           |
 | QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                                                                                               |
@@ -90,7 +90,7 @@ Updated: 2026-09-28.
 | LIC-01 Offline license         | PARTIAL    | Token/constraint tests pass; production distribution proof remains                                                           |
 | OPS-01 Crash/restart recovery  | VERIFIED   | CI 36455009654 + recovery artifact `10985138175`; 4/4 startup/database/idempotency/migration checks PASS                     |
 | OPS-02 24h soak                | UNVERIFIED | No completed 24-hour evidence                                                                                                |
-| PERF-01 Startup budget         | VERIFIED   | CI 36455009654 on SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; startup-to-health 387.4ms; enforced budget ≤8000ms        |
+| PERF-01 Startup budget         | VERIFIED   | CI 36455009654 on SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; startup-to-health 387.4ms; enforced budget ≤8000ms         |
 | PERF-02 Memory budget          | VERIFIED   | CI 36455009654 on SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; peak RSS 100.15MB; enforced budgets 200MB RSS / 100MB heap |
 | QA-01 Coverage threshold       | VERIFIED   | Hosted coverage gate passed                                                                                                  |
 | QA-02 Critical E2E             | VERIFIED   | Current validated feature line passed required E2E/native gates                                                              |
