@@ -21,15 +21,15 @@ Updated: 2026-09-28.
 
 ## Data / Queue
 
-| Gate                             | Status   | Evidence                                                                                                                                                          |
-| -------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                                                                                                             |
-| DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                                                                                                              |
-| DATA-03 Search scale             | VERIFIED | Exact-main CI run `36434671261` on current main; 1,000-contact search measured 1.304414 ms                                                        |
+| Gate                             | Status   | Evidence                                                                                                                  |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------- |
+| DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                                                                     |
+| DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                                                                      |
+| DATA-03 Search scale             | VERIFIED | Exact-main CI run `36434671261` on current main; 1,000-contact search measured 1.304414 ms                                |
 | QUE-01 Persistent queue recovery | VERIFIED | Exact-main recovery evidence artifact `10975741308` on current main proves 4/4 recovery/idempotency/migration checks PASS |
-| QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                                                                                                               |
-| QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                                                                                                                   |
-| QUE-04 Human-intervention wait   | VERIFIED | Explicit wait/resume contract and tests                                                                                                                           |
+| QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                                                                       |
+| QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                                                                           |
+| QUE-04 Human-intervention wait   | VERIFIED | Explicit wait/resume contract and tests                                                                                   |
 
 ## Product workflows
 
@@ -72,30 +72,30 @@ Updated: 2026-09-28.
 
 ## Web / Mobile
 
-| Gate                          | Status   | Evidence                                                                                                                                                       |
-| ----------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| WEB-01 PWA                    | VERIFIED | Web build/E2E and live checks                                                                                                                                  |
-| MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                             |
-| Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                  |
-| Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                 |
+| Gate                          | Status   | Evidence                                                                                                                                                                                               |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| WEB-01 PWA                    | VERIFIED | Web build/E2E and live checks                                                                                                                                                                          |
+| MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                                                                     |
+| Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                                                          |
+| Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                                                         |
 | Web production provenance     | VERIFIED | Vercel Production Provenance run 36434671316 + Web Deploy run 36434671320; current main deployment dpl_CVTi4TwkUUntjsCrNonMwVJT32qm is READY and live health/release readback matches the deployed SHA |
 
 ## Release / Operations
 
-| Gate                           | Status     | Evidence                                                                                                                    |
-| ------------------------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------- |
-| REL-01 Reproducible install    | VERIFIED   | Committed pnpm-lock.yaml/Cargo.lock + frozen install                                                                        |
-| REL-02 Signed desktop artifact | BLOCKED    | Signing identities not configured                                                                                           |
-| REL-03 Checksum verification   | PARTIAL    | Validation pipeline generates and checks checksums; final distributed release evidence remains                              |
-| LIC-01 Offline license         | PARTIAL    | Token/constraint tests pass; production distribution proof remains                                                          |
+| Gate                           | Status     | Evidence                                                                                                                  |
+| ------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------- |
+| REL-01 Reproducible install    | VERIFIED   | Committed pnpm-lock.yaml/Cargo.lock + frozen install                                                                      |
+| REL-02 Signed desktop artifact | BLOCKED    | Signing identities not configured                                                                                         |
+| REL-03 Checksum verification   | PARTIAL    | Validation pipeline generates and checks checksums; final distributed release evidence remains                            |
+| LIC-01 Offline license         | PARTIAL    | Token/constraint tests pass; production distribution proof remains                                                        |
 | OPS-01 Crash/restart recovery  | VERIFIED   | Exact-main recovery evidence artifact `10975741308` records 4/4 PASS; forced-crash/field recovery remains a separate gate |
-| OPS-02 24h soak                | UNVERIFIED | No completed 24-hour evidence                                                                                               |
-| PERF-01 Startup budget         | VERIFIED   | Exact-main CI run `36434671261`; startup-to-health 373.57 ms; enforced budget ≤8000 ms       |
-| PERF-02 Memory budget          | VERIFIED   | Exact-main CI run `36434671261`; peak RSS 96.7 MB; enforced budgets 200 MB RSS / 100 MB heap |
-| QA-01 Coverage threshold       | VERIFIED   | Hosted coverage gate passed                                                                                                 |
-| QA-02 Critical E2E             | VERIFIED   | Current validated feature line passed required E2E/native gates                                                             |
-| DOC-01 Product docs            | VERIFIED   | Current release/readiness docs reconciled to merged main                                                                    |
-| DOC-02 Security model          | PARTIAL    | Threat model/security gates exist; final review remains                                                                     |
+| OPS-02 24h soak                | UNVERIFIED | No completed 24-hour evidence                                                                                             |
+| PERF-01 Startup budget         | VERIFIED   | Exact-main CI run `36434671261`; startup-to-health 373.57 ms; enforced budget ≤8000 ms                                    |
+| PERF-02 Memory budget          | VERIFIED   | Exact-main CI run `36434671261`; peak RSS 96.7 MB; enforced budgets 200 MB RSS / 100 MB heap                              |
+| QA-01 Coverage threshold       | VERIFIED   | Hosted coverage gate passed                                                                                               |
+| QA-02 Critical E2E             | VERIFIED   | Current validated feature line passed required E2E/native gates                                                           |
+| DOC-01 Product docs            | VERIFIED   | Current release/readiness docs reconciled to merged main                                                                  |
+| DOC-02 Security model          | PARTIAL    | Threat model/security gates exist; final review remains                                                                   |
 
 ## External / commercial prerequisites
 
