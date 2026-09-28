@@ -65,14 +65,14 @@ For the commercial lane, run:
 
 The current merged release train has strong L2 evidence across the core architecture, queue/policy execution, research intelligence, Universal Search, Publishing Workbench, Competitive Watch, deterministic link intelligence core, platform foundation, content reuse policy, evidence-backed reporting packs, workspace isolation, native desktop/mobile validation, web quality, release-readiness validation, and exact-SHA soak/provenance hardening. Exact release SHA, deployment, workflow-run, and artifact identifiers are deliberately recorded in per-release evidence bundles and operational issue reconciliations rather than hard-coded into this durable policy document.
 
-A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed and the corrected feature head subsequently passed CI, desktop native, mobile, and Windows Native E2E.
+A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in Universal Search. The defect was fixed and the corrected feature head subsequently passed CI, desktop native, mobile, and Windows Native E2E. The current main CI cycle also passed the recovery/performance gates on exact SHA `09b12346f06df465bff223190547c185f4a55014`.
 
 ## Production gates still open
 
 - real Telegram authorization and controlled delivery;
 - real LinkedIn authorization and controlled publishing;
 - live multi-device CRDT verification;
-- dedicated restart/migration/crash recovery evidence consolidation; automated 4/4 recovery/migration proof is now complete, while forced-crash/field recovery evidence remains open;
+- dedicated restart/migration/crash recovery evidence consolidation; automated exact-main 4/4 recovery/migration proof is now complete, while forced-crash/field recovery evidence remains open;
 - manual WCAG/RTL audit;
 - 24-hour stability soak;
 - controlled real connector evidence captured with the owner-authorized proof harness;
