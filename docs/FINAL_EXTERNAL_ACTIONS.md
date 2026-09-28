@@ -8,7 +8,7 @@ The merged core is strongly verified at L2 across the main product domains. Web 
 
 Last verified production deployment and provenance are recorded for main SHA `6e5d78db...`; current main `242820d6...` is awaiting a current-SHA production deployment.
 
-- repository/main: exact current SHA is embedded and verified;
+- repository/main: the current repository SHA is available from Git; production verification of that SHA remains pending;
 - project: `orbit-marketing-os`;
 - framework: Next.js;
 - source: Git;
