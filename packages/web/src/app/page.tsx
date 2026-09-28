@@ -72,8 +72,11 @@ export default function HomePage(): ReactElement {
         </p>
       </section>
 
-      <footer className="container footer">
-        ORBIT Marketing OS • v0.2.0 • Local-first
+      <footer className="container footer" aria-label="معلومات الإصدار">
+        ORBIT Marketing OS • v0.2.0 • Local-first • إصدار:{" "}
+        <code data-release-source={releaseShaSource}>
+          {releaseSha === "unreleased" ? "غير منشور" : releaseSha.slice(0, 12)}
+        </code>
       </footer>
     </main>
   );
