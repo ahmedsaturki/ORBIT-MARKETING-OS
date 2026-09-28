@@ -96,6 +96,8 @@ Never promote a gate merely because:
 - Never claim 24-hour stability from a short soak.
 - Never claim store distribution from a locally generated debug package.
 - Never expose credentials, cookies, tokens, or private vault material in logs, artifacts, issues, or chat.
+- Ordinary main commits are development/reconciliation commits, not Production releases. A reviewed non-bootstrap update to `release/PRODUCTION_RELEASE.json` on `main` is the explicit production-release marker and identifies the exact release commit.
+- Production provenance must verify that explicit marker commit; it must not assume every moving `main` SHA is live.
 
 ## 7. Efficient execution loop
 
@@ -133,8 +135,9 @@ Prefer these in order unless fresh evidence changes the ordering:
 3. strengthen failure/recovery paths;
 4. make performance evidence measurable and repeatable;
 5. make OMP/operator workflows deterministic and resumable;
-6. finish owner-controlled external gates only when the necessary credentials/devices/platform controls are actually available;
-7. never convert an external prerequisite into a fake done state.
+6. keep ordinary main commits separate from the explicit production-release marker so deployment capacity is reserved for actual releases;
+7. finish owner-controlled external gates only when the necessary credentials/devices/platform controls are actually available;
+8. never convert an external prerequisite into a fake done state.
 
 ## 10. Reference
 
