@@ -14,13 +14,13 @@ CI runs the benchmark with `--nocapture` so the measured result is visible in th
 
 ### Exact-main evidence — DATA-03
 
-GitHub Actions CI run `36425376303` on exact main SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa` measured:
+GitHub Actions CI run `36434671261` on the current exact-main cycle measured:
 
 - dataset: 1,000 contacts
 - query: `Benchmark Contact 0999`
 - workspace scoped: true
 - matched: 1
-- elapsed: 1.501363 ms
+- elapsed: 1.304414 ms
 
 This supports `VERIFIED` for DATA-03 at the automated-evidence level. It does not imply L3 production proof.
 
@@ -32,12 +32,12 @@ The benchmark harness explicitly enforces these budgets:
 - PERF-02 peak RSS: <= 200 MB
 - PERF-02 heap used: <= 100 MB
 
-Exact-main CI run `36425376303` on `367c0de11cd7c075ff59448cb7dafdfaf98faffa` measured:
+Exact-main CI run `36434671261` measured:
 
-- startup-to-health: 384.63 ms
-- peak RSS: 104.4 MB
+- startup-to-health: 373.57 ms
+- peak RSS: 96.7 MB
 - RSS samples: 14
-- listener: 127.0.0.1:34029
+- listener: 127.0.0.1:36253
 - server announced: true
 - provider: ollama-local
 
@@ -47,7 +47,7 @@ These are fresh automated L2 evidence, not L3 production proof.
 
 ## Exact-main recovery evidence
 
-The same exact-main CI run produced recovery artifact `10971258468` for SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`. It records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
+The same exact-main CI run produced recovery artifact `10975741308` for the current main commit. It records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
 
 ## Reproducibility
 
