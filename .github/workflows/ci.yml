@@ -139,7 +139,9 @@ jobs:
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
       - name: Format diagnostic
-        run: pnpm exec prettier scripts/release-evidence-collector-contract.test.mjs
+        run: |
+          pnpm exec prettier --write scripts/release-evidence-collector-contract.test.mjs
+          git diff --no-ext-diff -- scripts/release-evidence-collector-contract.test.mjs
       - name: Format check
         run: pnpm format:check
 
