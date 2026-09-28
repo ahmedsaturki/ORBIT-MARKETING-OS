@@ -2,11 +2,11 @@
 
 Updated: 2026-09-28.
 
-The merged core is strongly verified at L2 across the main product domains. Web production provenance is verified only for the last deployed main SHA `6e5d78db...`; the current `main` commit requires a fresh production deployment/readback. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
+The merged core is strongly verified at L2 across the main product domains. The current main production deployment and live Vercel/Web verification cycle are now verified. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
 
 ## A. Vercel
 
-Last verified production deployment and provenance are recorded for main SHA `6e5d78db...`; the current `main` commit is awaiting a production deployment for that commit.
+The current main production deployment is READY and Git-sourced. Vercel Production Provenance run 36434671316 and Web Deploy run 36434671320 verify the current release cycle, including the canonical alias and live surface checks.
 
 - repository/main: the current repository SHA is available from Git; production verification of that SHA remains pending;
 - project: `orbit-marketing-os`;
@@ -35,7 +35,7 @@ No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acc
 
 ## C. Native / sync / accessibility / stability
 
-- Automated restart/recovery/migration evidence is consolidated and passed 4/4 on the later exact main SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa` (CI run `36425376303`; artifact `10971258468`).
+- Automated restart/recovery/migration evidence is consolidated and passed 4/4 on the current exact-main CI cycle (run `36434671261`; artifact `10975741308`).
 - Complete the remaining forced-crash/field recovery evidence and consolidate any real-world recovery observations.
 - Run live multi-device CRDT convergence using real authorized devices/network.
 - Complete manual WCAG/RTL audit in addition to automated checks.
