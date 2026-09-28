@@ -132,6 +132,8 @@ jobs:
         timeout-minutes: 5
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
+      - name: Debug recovery formatter output
+        run: pnpm exec prettier scripts/recovery-evidence.mjs
       - name: Format check
         run: pnpm format:check
 
