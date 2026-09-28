@@ -37,7 +37,7 @@ test("vercel ignore script declares the release-truth deployment contract", asyn
   );
   assert.match(script, /packages\/web/);
   assert.match(script, /release/);
-  assert.match(script, /docs\/RELEASE_\*\.md/);
+  assert.match(script, /"docs\/RELEASE_\*\.md"/);
   assert.match(script, /docs\/LAUNCH_SCORECARD\.md/);
   assert.match(script, /docs\/PERFORMANCE_EVIDENCE\.md/);
   assert.match(script, /docs\/COMMERCIAL_PRODUCTION_PROVEN_RUNBOOK\.md/);
@@ -89,7 +89,12 @@ test("main branch skips unrelated documentation but builds for release-truth cha
       "unrelated documentation should remain skippable from a nested root",
     );
 
-    const assertBuildRequired = async (relativePath, content, label) => {
+    const assertBuildRequired = async (
+      previousSha,
+      relativePath,
+      content,
+      label,
+    ) => {
       await writeFile(join(cwd, relativePath), content);
       await git(cwd, ["add", "."]);
       await git(cwd, ["commit", "-qm", label]);
@@ -100,12 +105,13 @@ test("main branch skips unrelated documentation but builds for release-truth cha
       assert.equal(
         await runIgnore(webRoot, {
           VERCEL_GIT_COMMIT_REF: "main",
-          VERCEL_GIT_PREVIOUS_SHA: previous,
+          VERCEL_GIT_PREVIOUS_SHA: previousSha,
           VERCEL_GIT_COMMIT_SHA: current,
         }),
         1,
         label + " changes must force a Vercel deployment from a nested root",
       );
+      return current;
     };
 
     const releaseCommit = await assertBuildRequired(
