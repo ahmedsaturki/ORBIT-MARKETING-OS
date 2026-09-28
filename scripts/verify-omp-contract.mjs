@@ -5,6 +5,7 @@ const requiredFiles = [
   ".omp/AGENTS.md",
   ".omp/RULES.md",
   "WATCHDOG.md",
+  "WATCHDOG.yml",
   "docs/OMP_OPERATOR_PROTOCOL.md",
   "scripts/agent-release-triage.mjs",
   ".omp/agents/forensics.md",
@@ -25,6 +26,7 @@ const nativeContext = await read(".omp/AGENTS.md");
 const stickyRules = await read(".omp/RULES.md");
 const watchdog = await read("WATCHDOG.md");
 const protocol = await read("docs/OMP_OPERATOR_PROTOCOL.md");
+const watchdogRoster = await read("WATCHDOG.yml");
 
 for (const [label, content, needles] of [
   [
@@ -46,6 +48,11 @@ for (const [label, content, needles] of [
     "OMP protocol",
     protocol,
     ["SPEC → IMPLEMENT → TEST", "Do not simulate or fabricate these proofs."],
+  ],
+  [
+    "WATCHDOG roster",
+    watchdogRoster,
+    ["advisors:", "ReleaseTruth", "SecurityRuntime"],
   ],
 ]) {
   for (const needle of needles) {
