@@ -106,7 +106,7 @@ Updated: 2026-09-28.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.
-- Exact-main CI run `36364156402` completed successfully on `6e1c744b78402bdfb0e1a3312f90aa2e98cc9710`; current benchmark measurements are preserved in `docs/RELEASE_EVIDENCE_2026-09-28.md`.
+- Exact-main CI run `36414578451` completed successfully on `6e5d78db8300cdfc53440ccfe738af76d81275ac`; current recovery/performance measurements are preserved in the generated release-evidence and recovery artifacts.
 - GitHub `main` is protected with required `ci` and `security:scan`; final L3 governance evidence still requires auditable evidence references and verification time.
 
 ## Release rule
