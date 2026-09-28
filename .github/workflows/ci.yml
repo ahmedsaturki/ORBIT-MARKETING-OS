@@ -57,7 +57,8 @@ jobs:
             import { readFileSync } from \"node:fs\";
             const report = JSON.parse(readFileSync(\"/tmp/orbit-release-triage.json\", \"utf8\"));
             if (report.repository !== \"ahmedsaturki/ORBIT-MARKETING-OS\") throw new Error(\"agent triage repository mismatch\");
-            const expectedSha = require("node:child_process").execFileSync(
+            import { execFileSync } from "node:child_process";
+            const expectedSha = execFileSync(
               "git",
               ["rev-parse", "HEAD"],
               { encoding: "utf8" },
