@@ -33,7 +33,7 @@ test("vercel ignore script exposes the explicit production release contract", as
   assert.match(script, /releaseId/);
   assert.match(script, /bootstrap/);
   assert.match(script, /last successful deployment/);
-  assert.match(script, /not necessarily the previous Git commit/);
+  assert.match(script, /VERCEL_GIT_PREVIOUS_SHA is the last successful deployment/);
   assert.match(script, /exit 0/);
   assert.match(script, /exit 1/);
 });
