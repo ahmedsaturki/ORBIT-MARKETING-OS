@@ -32,6 +32,15 @@ const packages = await Promise.all([
 ]);
 
 const expectedVersion = rootPackage.version;
+const productionRelease = await json("release/PRODUCTION_RELEASE.json");
+if (
+  productionRelease.schemaVersion !== 1 ||
+  typeof productionRelease.releaseId !== "string" ||
+  !/^[A-Za-z0-9._-]{1,100}$/.test(productionRelease.releaseId) ||
+  productionRelease.mode !== "EXPLICIT_PRODUCTION_RELEASE"
+) {
+  throw new Error("Invalid production release marker");
+}
 if (!/^\d+\.\d+\.\d+$/.test(expectedVersion)) {
   throw new Error("Root package version must be semver: " + expectedVersion);
 }
@@ -99,6 +108,11 @@ const requiredFiles = [
   "scripts/soak.ts",
   "scripts/verify-live-web.mjs",
   "scripts/vercel-ignore.test.mjs",
+  "scripts/test-git-fixture.mjs",
+  "scripts/production-release-trigger.test.mjs",
+  "scripts/resolve-production-release.mjs",
+  "release/PRODUCTION_RELEASE.json",
+  "docs/PRODUCTION_RELEASES.md",
   "scripts/recovery-evidence.mjs",
 ];
 
@@ -146,6 +160,8 @@ if (!ci.includes("pnpm test:e2e"))
   throw new Error("CI browser E2E gate missing");
 if (!ci.includes("node scripts/vercel-ignore.test.mjs"))
   throw new Error("Vercel ignore-command contract test missing");
+if (!ci.includes("node scripts/production-release-trigger.test.mjs"))
+  throw new Error("Production release trigger contract test missing");
 if (!ci.includes("pnpm test:recovery:evidence"))
   throw new Error("Recovery evidence CI gate missing");
 if (!ci.includes("if: ${{ !cancelled() }}"))
@@ -164,7 +180,9 @@ const selfHostedWeb = await text(
 );
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
-  "github.ref_name == 'main' && github.actor == 'ahmedsaturki'",
+  "github.ref_name == 'main'",
+  "Require explicit production release",
+  "scripts/resolve-production-release.mjs",
   "pnpm install --frozen-lockfile",
   "pnpm security:scan",
   "vercel@59.23.1 build --prod",
@@ -176,7 +194,17 @@ for (const fragment of [
 }
 
 const vercelWorkflow = await text(".github/workflows/vercel-web.yml");
+const productionResolver = await text("scripts/resolve-production-release.mjs");
+if (productionResolver.includes("GITHUB_OUTPUT")) {
+  throw new Error(
+    "Production release resolver must not write directly to GitHub output paths",
+  );
+}
+
 for (const fragment of [
+  "scripts/resolve-production-release.mjs",
+  "needs.release_trigger.outputs.triggered",
+  "github.sha",
   "vercel@59.23.1 pull --yes",
   "vercel@59.23.1 deploy --dry --format=json",
   "vercel@59.23.1 build --prod",
@@ -184,6 +212,29 @@ for (const fragment of [
 ]) {
   if (!vercelWorkflow.includes(fragment))
     throw new Error("Vercel deployment gate missing: " + fragment);
+}
+
+const vercelProvenanceWorkflow = await text(
+  ".github/workflows/vercel-production-provenance.yml",
+);
+for (const [name, workflow] of [
+  ["Vercel web workflow", vercelWorkflow],
+  ["Vercel production provenance workflow", vercelProvenanceWorkflow],
+  ["Self-hosted web release workflow", selfHostedWeb],
+]) {
+  if (/\npermissions:\n  contents: read\n/.test(workflow)) {
+    throw new Error(name + " must scope permissions at job level");
+  }
+}
+
+for (const fragment of [
+  "release/PRODUCTION_RELEASE.json",
+  "scripts/resolve-production-release.mjs",
+  "release_active=true",
+  "release_current=true",
+]) {
+  if (!vercelProvenanceWorkflow.includes(fragment))
+    throw new Error("Vercel provenance gate missing: " + fragment);
 }
 
 const selfHosted = await text(".github/workflows/self-hosted-verify.yml");

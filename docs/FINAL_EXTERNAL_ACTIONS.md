@@ -2,24 +2,17 @@
 
 Updated: 2026-09-28.
 
-The merged core is strongly verified at L2 across the main product domains. Web production provenance is verified for the exact main release SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0` via deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`; Vercel Production Provenance and Web Deploy both passed. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
+The merged core is strongly verified at L2 across the main product domains. The last independently verified Vercel production deployment remains a READY Git deployment from a prior verified release SHA; the current main is not treated as production-proven until an explicit production-release marker is deployed and its public provenance passes. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
 
 ## A. Vercel
 
-Latest verified production deployment: `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`, READY, Git-sourced, target=production, exact SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`.
+Production deployment is controlled by the reviewed `release/PRODUCTION_RELEASE.json` marker.
 
-- repository/main: current SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; production verification is complete for this SHA;
-- project: `orbit-marketing-os`;
-- framework: Next.js;
-- source: Git;
-- target: production;
-- canonical alias: `orbit-marketing-os.vercel.app`;
-- public health/release provenance checks, security headers, route behavior, manifest/service worker, and 404 checks pass.
-
-The remaining Vercel action is only:
-
-1. Exercise rollback from the latest verified production deployment to the previous verified candidate and back.
-2. Preserve exact rollback evidence tied to deployment IDs and release SHA.
+- Ordinary `main` commits do not become Production deployments merely because web or release documentation changed.
+- A non-bootstrap marker update on `main` identifies the exact release commit.
+- The Vercel deployment/provenance workflow verifies the public deployment against that marker commit SHA.
+- The zero-cost self-hosted release workflow uses the same marker and refuses to deploy an arbitrary moving `main`.
+- Rollback remains a separate operation and is not claimed until both rollback and return-to-current are observed.
 
 ## B. Real connector verification
 
@@ -35,11 +28,11 @@ No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acc
 
 ## C. Native / sync / accessibility / stability
 
-- Automated restart/recovery/migration evidence is consolidated and passed 4/4 on exact main SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0` (CI run `36455009654`; artifact `10985138175`).
+- Automated restart/recovery/migration evidence is consolidated and passed on the validated release line.
 - Complete the remaining forced-crash/field recovery evidence and consolidate any real-world recovery observations.
 - Run live multi-device CRDT convergence using real authorized devices/network.
 - Complete manual WCAG/RTL audit in addition to automated checks.
-- Complete a 24-hour stability soak on the approved exact main ref.
+- Complete a 24-hour stability soak on the approved exact release ref.
 
 ## D. Distribution
 
@@ -49,7 +42,7 @@ No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acc
 
 ## E. Governance / commercial
 
-- Preserve final L3 governance evidence for the protected-main policy and exact verification timestamps/evidence references.
+- Preserve final L3 governance evidence for protected-main policy and exact verification timestamps/evidence references.
 - Configure actual payment/billing and verify checkout/refund behavior.
 - Perform final legal/commercial publication review.
 - Resolve the current-main SonarCloud requirement: Security Rating on New Code must reach A.

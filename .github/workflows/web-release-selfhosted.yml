@@ -3,16 +3,15 @@ name: Web Release — Self-Hosted
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 concurrency:
   group: orbit-web-release-self-hosted
   cancel-in-progress: false
 
 jobs:
   release:
-    if: github.ref_name == 'main' && github.actor == 'ahmedsaturki'
+    permissions:
+      contents: read
+    if: github.ref_name == 'main'
     name: Verified web release from main
     runs-on: [self-hosted, x64, linux]
     timeout-minutes: 45
@@ -20,6 +19,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
         with:
@@ -28,6 +28,17 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
+
+      - name: Require explicit production release
+        run: |
+          set -euo pipefail
+          node scripts/resolve-production-release.mjs > /tmp/orbit-release-state.txt
+          cat /tmp/orbit-release-state.txt
+          grep -q '^release_active=true$' /tmp/orbit-release-state.txt
+          grep -q '^release_current=true$' /tmp/orbit-release-state.txt
+          release_sha="$(sed -n 's/^release_sha=//p' /tmp/orbit-release-state.txt)"
+          test -n "$release_sha"
+          echo "ORBIT_EXPECTED_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
 
       - name: Require Vercel release credentials
         env:
@@ -91,7 +102,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          NEXT_PUBLIC_ORBIT_RELEASE_SHA: ${{ github.sha }}
+          NEXT_PUBLIC_ORBIT_RELEASE_SHA: ${{ env.ORBIT_EXPECTED_RELEASE_SHA }}
         run: pnpm dlx vercel@59.23.1 build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy production
@@ -111,5 +122,5 @@ jobs:
       - name: Verify live rebuild
         env:
           ORBIT_LIVE_URL: ${{ steps.deploy.outputs.url }}
-          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+          ORBIT_EXPECTED_RELEASE_SHA: ${{ env.ORBIT_EXPECTED_RELEASE_SHA }}
         run: node scripts/verify-live-web.mjs

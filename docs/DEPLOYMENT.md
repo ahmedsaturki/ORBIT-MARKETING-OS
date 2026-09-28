@@ -30,7 +30,11 @@ A web deployment alone does not make desktop/mobile/product release-ready. A suc
 
 ## Monorepo build filtering
 
-The root `vercel.json` contains an `ignoreCommand` that skips unrelated Core/Desktop/docs-only changes while forcing a Web deployment for Web code/config, release metadata, provenance scripts, lockfiles, and the release-truth documents. This preserves build capacity without allowing release-evidence changes to leave the public deployment on an older SHA.
+The root `vercel.json` uses an `ignoreCommand` as a fail-safe deployment boundary. Ordinary main commits—including documentation, release-scorecard reconciliation, Core, Desktop, or Web changes—do not become Production deployments merely because files changed.
+
+Production deployment is explicitly triggered by a reviewed non-bootstrap update to `release/PRODUCTION_RELEASE.json` on `main`. The marker commit becomes the exact release SHA used by the provenance verifier. The bootstrap marker is intentionally non-production.
+
+This separates the development/reconciliation stream from the production-release stream, preserves exact-SHA evidence, and avoids burning the Vercel deployment budget on internal release-truth commits. Main CI still exercises the full web build/E2E surface on every main push.
 
 ### Dependency resolution policy
 
@@ -46,4 +50,4 @@ For the connected Vercel project orbit-marketing-os, the intended production Web
 - Build Command: `pnpm --dir packages/web build`
 - Output Directory: `packages/web/out`.
 
-The current connected production deployment metadata reports the Next.js framework and repository Git source. Production proof still requires the canonical public alias to expose the exact current `main` SHA after each release-truth change.
+The current connected production deployment metadata reports the Next.js framework and repository Git source. Production proof is tied to the explicit production-release marker commit, not to every moving `main` SHA.

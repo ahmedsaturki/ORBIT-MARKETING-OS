@@ -1,19 +1,18 @@
 name: Web Deploy
 
-
-concurrency:
-  group: orbit-.github-workflows-vercel-web.yml-${{ github.ref }}
-  cancel-in-progress: true
 on:
   push:
     branches: ["main"]
   workflow_dispatch:
 
-permissions:
-  contents: read
+concurrency:
+  group: orbit-web-deploy-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   quality:
+    permissions:
+      contents: read
     name: Web quality gate
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -42,9 +41,43 @@ jobs:
       - name: Web E2E
         run: pnpm test:e2e
 
+  release_trigger:
+    permissions:
+      contents: read
+    name: Production release trigger
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      triggered: ${{ steps.resolve.outputs.release_current }}
+      release_sha: ${{ steps.resolve.outputs.release_sha }}
+      release_id: ${{ steps.resolve.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+      - name: Resolve production release
+        id: resolve
+        run: |
+          set -euo pipefail
+          node scripts/resolve-production-release.mjs > /tmp/orbit-release-state.txt
+          release_id="$(sed -n 's/^release_id=//p' /tmp/orbit-release-state.txt)"
+          release_sha="$(sed -n 's/^release_sha=//p' /tmp/orbit-release-state.txt)"
+          release_current="$(sed -n 's/^release_current=//p' /tmp/orbit-release-state.txt)"
+          printf 'release_id=%s\n' "$release_id" >> "$GITHUB_OUTPUT"
+          printf 'release_sha=%s\n' "$release_sha" >> "$GITHUB_OUTPUT"
+          printf 'release_current=%s\n' "$release_current" >> "$GITHUB_OUTPUT"
+          grep -q '^release_current=' /tmp/orbit-release-state.txt
+
   vercel_mode:
+    permissions:
+      contents: read
     name: Vercel release mode
-    needs: quality
+    needs: [quality, release_trigger]
+    if: needs.release_trigger.outputs.triggered == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -65,39 +98,38 @@ jobs:
             echo "credentials=false" >> "$GITHUB_OUTPUT"
             echo "Using governed Vercel Git production deployment."
           fi
+
   deploy:
-    needs: [quality, vercel_mode]
-    if: needs.vercel_mode.outputs.credentials == 'true'
+    permissions:
+      contents: read
+    needs: [quality, release_trigger, vercel_mode]
+    if: needs.release_trigger.outputs.triggered == 'true' && needs.vercel_mode.outputs.credentials == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-
+        with:
+          ref: ${{ github.sha }}
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
         with:
           version: 10.17.1
-
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
-
       - name: Install
         run: pnpm install --frozen-lockfile
-
       - name: Pull Vercel project settings
         run: pnpm dlx vercel@59.23.1 pull --yes --environment=production --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
       - name: Verify Vercel dry-run framework
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           pnpm dlx vercel@59.23.1 deploy --dry --format=json --token="$VERCEL_TOKEN" > vercel-dry-run.json
           node scripts/verify-vercel-dry-run.mjs
-
       - name: Build Vercel output
         run: pnpm dlx vercel@59.23.1 build --prod --token="$VERCEL_TOKEN"
         env:
@@ -105,7 +137,6 @@ jobs:
           NEXT_PUBLIC_ORBIT_RELEASE_SHA: ${{ github.sha }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
       - name: Deploy prebuilt output
         id: deploy
         shell: bash
@@ -120,7 +151,6 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
       - name: Verify live rebuild surface
         env:
           ORBIT_LIVE_URL: ${{ steps.deploy.outputs.url }}
@@ -128,9 +158,11 @@ jobs:
         run: node scripts/verify-live-web.mjs
 
   git_provenance:
+    permissions:
+      contents: read
     name: Vercel Git provenance
-    needs: [quality, vercel_mode]
-    if: needs.vercel_mode.outputs.credentials == 'false'
+    needs: [quality, release_trigger, vercel_mode]
+    if: needs.release_trigger.outputs.triggered == 'true' && needs.vercel_mode.outputs.credentials == 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -143,10 +175,10 @@ jobs:
       - name: Verify Git deployment and live provenance
         env:
           ORBIT_LIVE_URL: https://orbit-marketing-os.vercel.app
-          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+          ORBIT_EXPECTED_RELEASE_SHA: ${{ needs.release_trigger.outputs.release_sha }}
         run: node scripts/verify-public-vercel-provenance.mjs
       - name: Verify full live web surface
         env:
           ORBIT_LIVE_URL: https://orbit-marketing-os.vercel.app
-          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+          ORBIT_EXPECTED_RELEASE_SHA: ${{ needs.release_trigger.outputs.release_sha }}
         run: node scripts/verify-live-web.mjs

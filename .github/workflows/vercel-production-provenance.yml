@@ -3,10 +3,9 @@ name: Vercel Production Provenance
 on:
   push:
     branches: ["main"]
+    paths:
+      - "release/PRODUCTION_RELEASE.json"
   workflow_dispatch:
-
-permissions:
-  contents: read
 
 concurrency:
   group: orbit-vercel-provenance
@@ -14,17 +13,41 @@ concurrency:
 
 jobs:
   verify:
+    permissions:
+      contents: read
+    if: github.ref_name == 'main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
+      - name: Resolve production release
+        id: resolve
+        run: |
+          set -euo pipefail
+          node scripts/resolve-production-release.mjs > /tmp/orbit-release-state.txt
+          cat /tmp/orbit-release-state.txt
+          if ! grep -q '^release_active=true$' /tmp/orbit-release-state.txt; then
+            echo "Production release marker is bootstrap/non-production; nothing to verify."
+            echo "verify=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! grep -q '^release_current=true$' /tmp/orbit-release-state.txt; then
+            echo "Production release marker is not on the current main commit; nothing to verify."
+            echo "verify=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          release_sha="$(sed -n 's/^release_sha=//p' /tmp/orbit-release-state.txt)"
+          test -n "$release_sha"
+          echo "ORBIT_EXPECTED_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
+          echo "verify=true" >> "$GITHUB_OUTPUT"
       - name: Verify public production provenance
+        if: steps.resolve.outputs.verify == 'true'
         env:
           ORBIT_LIVE_URL: https://orbit-marketing-os.vercel.app
-          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
         run: node scripts/verify-public-vercel-provenance.mjs

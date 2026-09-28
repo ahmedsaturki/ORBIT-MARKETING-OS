@@ -6,9 +6,9 @@ Updated: 2026-09-28
 
 The current merged release lives on the repository default branch `main`; this document intentionally avoids hard-coding a moving SHA.
 
-The release train now includes commercial proof hardening, static-export web provenance endpoints, reconciled readiness evidence, exact-SHA soak binding, soak-evidence durability, governed current-main Vercel Git provenance, protected-main governance, and durable release documentation.
+The release train includes commercial proof hardening, static-export web provenance endpoints, reconciled readiness evidence, exact-SHA soak binding, soak-evidence durability, governed Vercel Git provenance, protected-main governance, durable release documentation, and an explicit production-release marker.
 
-The remaining blockers are primarily production/runtime/external evidence, not missing core architecture or the verified web deployment path.
+The remaining blockers are primarily production/runtime/external evidence, not missing core architecture. Production deployment is intentionally separated from ordinary main/reconciliation commits.
 
 ## Vercel deployment evidence
 
@@ -22,10 +22,10 @@ Current verified facts:
 - selected seven-day runtime-error aggregation reports no runtime errors;
 - Vercel production metadata reports `framework: nextjs` and Git source on the verified deployment;
 - repository `vercel.json` expects Next.js static export to `packages/web/out`;
-- the repository ignore policy permits only `main` to deploy and explicitly includes release-truth changes;
+- the repository ignore policy permits only `main` and requires an explicit non-bootstrap `release/PRODUCTION_RELEASE.json` marker change for a Production deployment;
 - PR #129 hardens the ignore command against Vercel Root Directory cwd differences.
 
-Latest verified main production provenance was verified for SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`: deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is READY, Git-sourced, and production-targeted. Vercel Production Provenance run `36455009698` and Web Deploy run `36455009416` passed. The selected seven-day runtime-error aggregation is clean. The remaining Vercel action is the controlled rollback drill.
+Current-main provenance remains a separate release gate: the canonical alias must expose the exact production-release marker commit before that release is counted as production-proven. Production rollback is also separate and requires both directions of the drill.
 
 ## Reproducible installation
 
@@ -33,7 +33,7 @@ The canonical `pnpm-lock.yaml` and desktop `Cargo.lock` are present on main and 
 
 ## Governance
 
-The release controls record `main` as protected with required `ci` and `security:scan` checks. Any future release must preserve auditable governance evidence with verification timestamps.
+The release controls record `main` as protected with required `ci` and `security:scan` checks. Any future production release must preserve auditable governance evidence with verification timestamps.
 
 ## Release consequence
 
