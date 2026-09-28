@@ -11,7 +11,7 @@ jobs:
   release:
     permissions:
       contents: read
-    if: github.ref_name == 'main' && github.actor == 'ahmedsaturki'
+    if: github.ref_name == 'main'
     name: Verified web release from main
     runs-on: [self-hosted, x64, linux]
     timeout-minutes: 45
