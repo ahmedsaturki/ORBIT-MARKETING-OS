@@ -84,6 +84,8 @@ jobs:
         run: pnpm verify:release-docs
       - name: Vercel ignore command contract
         run: node scripts/vercel-ignore.test.mjs
+      - name: Production release trigger contract
+        run: node scripts/production-release-trigger.test.mjs
       - name: Stability soak runner resilience contract
         run: pnpm test:soak-runner-resilience
       - name: Workspace sanity
