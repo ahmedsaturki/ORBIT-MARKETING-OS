@@ -5,18 +5,14 @@ import { join } from "node:path";
 
 export const execFileAsync = promisify(execFile);
 
-async function runGit(cwd, args) {
-  await execFileAsync("git", args, { cwd });
-}
-
 export async function initGitFixture(cwd, marker) {
-  await runGit(cwd, ["init", "-q"]);
-  await runGit(cwd, [
-    "config",
-    "user.email",
-    "orbit-test@example.invalid",
-  ]);
-  await runGit(cwd, ["config", "user.name", "ORBIT Test"]);
+  await execFileAsync("git", ["init", "-q"], { cwd });
+  await execFileAsync(
+    "git",
+    ["config", "user.email", "orbit-test@example.invalid"],
+    { cwd },
+  );
+  await execFileAsync("git", ["config", "user.name", "ORBIT Test"], { cwd });
   await mkdir(join(cwd, "scripts"), { recursive: true });
   await mkdir(join(cwd, "release"), { recursive: true });
   await writeReleaseMarker(
@@ -27,8 +23,12 @@ export async function initGitFixture(cwd, marker) {
 }
 
 export async function commit(cwd) {
-  await runGit(cwd, ["add", "."]);
-  await runGit(cwd, ["commit", "-qm", "ORBIT fixture"]);
+  await execFileAsync("git", ["add", "."], { cwd });
+  await execFileAsync(
+    "git",
+    ["commit", "-qm", "ORBIT fixture"],
+    { cwd },
+  );
   return commitSha(cwd);
 }
 
