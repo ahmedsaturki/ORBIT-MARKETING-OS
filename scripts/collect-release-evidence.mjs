@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 const args = process.argv.slice(2);
@@ -16,8 +18,27 @@ if (!["verification", "commercial"].includes(mode)) {
   throw new Error("mode must be verification or commercial");
 }
 
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
 function git(args) {
-  return execFileSync("git", args, { encoding: "utf8" }).trim();
+  const env = { ...process.env };
+  for (const key of [
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_COMMON_DIR",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_NAMESPACE",
+  ]) {
+    delete env[key];
+  }
+
+  return execFileSync("git", args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env,
+  }).trim();
 }
 
 const packageJson = JSON.parse(
@@ -31,6 +52,8 @@ const releaseCritical = Object.entries(readiness.releaseCritical ?? {}).map(
     key,
     level: value.level,
     evidence: value.evidence,
+    evidenceRefs: value.evidenceRefs ?? [],
+    verifiedAt: value.verifiedAt ?? null,
     notes: value.notes,
   }),
 );
