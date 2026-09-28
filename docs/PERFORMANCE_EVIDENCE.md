@@ -53,7 +53,7 @@ Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/ru
 
 ## Current production provenance
 
-The current production deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is READY, Git-sourced, production-targeted, and reports the exact main SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`. Vercel Production Provenance run `36455009698` and Web Deploy run `36455009416` both passed.
+The latest verified production deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is READY, Git-sourced, production-targeted, and reports the exact main SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`. Vercel Production Provenance run `36455009698` and Web Deploy run `36455009416` both passed.
 
 The live verification checked `/`, `/api/health.json`, and `/api/release.json` against `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`.
 
