@@ -24,13 +24,15 @@ const checks = [
   },
   {
     id: "recovery-idempotency",
-    test: "interrupted_external_tasks_require_human_recovery_but_sync_tasks_requeue",
+    test:
+      "interrupted_external_tasks_require_human_recovery_but_sync_tasks_requeue",
     description:
       "Recover interrupted tasks once, prove a second recovery is a no-op, and preserve the sync-vs-external recovery state boundary.",
   },
   {
     id: "migration-idempotency",
-    test: "schema_migration_reaches_current_version_and_is_idempotent_afterwards",
+    test:
+      "schema_migration_reaches_current_version_and_is_idempotent_afterwards",
     description:
       "Apply the production schema migration to the current version and prove a second migration is a no-op.",
   },
