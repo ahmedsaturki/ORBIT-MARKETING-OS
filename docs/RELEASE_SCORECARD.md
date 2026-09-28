@@ -21,15 +21,15 @@ Updated: 2026-09-28.
 
 ## Data / Queue
 
-| Gate                             | Status   | Evidence                                                                                                                                                          |
-| -------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                                                                                                             |
-| DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                                                                                                              |
-| DATA-03 Search scale             | VERIFIED | CI 36450595461 on SHA `62cf100c1b5c09010acfcf030890e578a25ab827`; 1,000-contact search measured 2.075497ms                                                        |
-| QUE-01 Persistent queue recovery | VERIFIED | CI 36450595461 on SHA `62cf100c1b5c09010acfcf030890e578a25ab827`; recovery artifact `10983516710` proves 4/4 recovery/idempotency checks PASS                     |
-| QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                                                                                                               |
-| QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                                                                                                                   |
-| QUE-04 Human-intervention wait   | VERIFIED | Explicit wait/resume contract and tests                                                                                                                           |
+| Gate                             | Status   | Evidence                                                                                                                                      |
+| -------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                                                                                         |
+| DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                                                                                          |
+| DATA-03 Search scale             | VERIFIED | CI 36450595461 on SHA `62cf100c1b5c09010acfcf030890e578a25ab827`; 1,000-contact search measured 2.075497ms                                    |
+| QUE-01 Persistent queue recovery | VERIFIED | CI 36450595461 on SHA `62cf100c1b5c09010acfcf030890e578a25ab827`; recovery artifact `10983516710` proves 4/4 recovery/idempotency checks PASS |
+| QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                                                                                           |
+| QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                                                                                               |
+| QUE-04 Human-intervention wait   | VERIFIED | Explicit wait/resume contract and tests                                                                                                       |
 
 ## Product workflows
 
