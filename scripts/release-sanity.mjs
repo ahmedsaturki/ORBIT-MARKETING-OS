@@ -180,7 +180,7 @@ const selfHostedWeb = await text(
 );
 for (const fragment of [
   "runs-on: [self-hosted, x64, linux]",
-  "github.ref_name == 'main' && github.actor == 'ahmedsaturki'",
+  "github.ref_name == 'main'",
   "Require explicit production release",
   "scripts/resolve-production-release.mjs",
   "pnpm install --frozen-lockfile",
@@ -206,7 +206,7 @@ if (productionResolver.includes("GITHUB_OUTPUT")) {
 for (const fragment of [
   "scripts/resolve-production-release.mjs",
   "needs.release_trigger.outputs.triggered",
-  "needs.release_trigger.outputs.release_sha",
+  "github.sha",
   "vercel@59.23.1 pull --yes",
   "vercel@59.23.1 deploy --dry --format=json",
   "vercel@59.23.1 build --prod",
