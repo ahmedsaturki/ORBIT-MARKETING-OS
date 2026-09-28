@@ -28,7 +28,14 @@ The exact-main Rust benchmark created and searched a 1,000-contact workspace-sco
 `SEARCH_SCALE_BENCHMARK_JSON`
 
 ```json
-{"dataset":"1000 contacts","elapsed_ms":1.316917,"limit":50,"matched":1,"query":"Benchmark Contact 0999","workspace_scoped":true}
+{
+  "dataset": "1000 contacts",
+  "elapsed_ms": 1.316917,
+  "limit": 50,
+  "matched": 1,
+  "query": "Benchmark Contact 0999",
+  "workspace_scoped": true
+}
 ```
 
 Disposition: automated evidence is VERIFIED. No numeric DATA-03 latency threshold is published by the current acceptance contract.
@@ -40,7 +47,16 @@ The exact-main startup harness launched the production-shaped local runtime on l
 `STARTUP_MEMORY_BENCHMARK_JSON`
 
 ```json
-{"dataset":"local runtime startup","startup_ms":376.05,"peak_rss_mb":100.44,"rss_samples":14,"host":"127.0.0.1","port":40581,"server_announced":true,"provider":"ollama-local"}
+{
+  "dataset": "local runtime startup",
+  "startup_ms": 376.05,
+  "peak_rss_mb": 100.44,
+  "rss_samples": 14,
+  "host": "127.0.0.1",
+  "port": 40581,
+  "server_announced": true,
+  "provider": "ollama-local"
+}
 ```
 
 Disposition: measurement captured. Budget compliance remains PARTIAL because the current acceptance contract does not publish a numeric PERF-01 budget.
