@@ -102,10 +102,9 @@ try {
     if (rss > 0) samples += 1;
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:" + port + "/api/health",
-        { signal: AbortSignal.timeout(1_000) },
-      );
+      const response = await fetch("http://127.0.0.1:" + port + "/api/health", {
+        signal: AbortSignal.timeout(1_000),
+      });
       if (response.ok && serverAnnounced) {
         healthy = true;
         startupMs = performance.now() - startedAt;
