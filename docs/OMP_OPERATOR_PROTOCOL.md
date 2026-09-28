@@ -138,7 +138,7 @@ Prefer these in order unless fresh evidence changes the ordering:
 
 ## 10. Reference
 
-OMP is the open-source coding agent from Stencil Labs / can1357/oh-my-pi. It supports first-class subagents/worktrees, browser tooling, persistent code execution, LSP/debugging, and configurable agent roles. This repository should treat OMP as an execution engine; ORBIT's release contract remains authoritative.
+OMP is the open-source coding agent from Stencil Labs / can1357/oh-my-pi. It supports native `.omp` context/rules, project task agents, isolated worktrees, Agent Hub, advisors via `WATCHDOG.md`/`WATCHDOG.yml`, browser tooling, persistent code execution, LSP/debugging, and configurable agent roles. This repository should treat OMP as an execution engine; ORBIT's release contract remains authoritative.
 
 See:
 - https://github.com/can1357/oh-my-pi
