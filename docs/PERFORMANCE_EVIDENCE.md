@@ -14,40 +14,50 @@ CI runs the benchmark with `--nocapture` so the measured result is visible in th
 
 ### Exact-main evidence — DATA-03
 
-GitHub Actions CI run `36425376303` on exact main SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa` measured:
+GitHub Actions CI run `36450595461` on exact main SHA `62cf100c1b5c09010acfcf030890e578a25ab827` measured:
 
 - dataset: 1,000 contacts
 - query: `Benchmark Contact 0999`
 - workspace scoped: true
 - matched: 1
-- elapsed: 1.501363 ms
+- elapsed: 2.075497 ms
 
-This supports `VERIFIED` for DATA-03 at the automated-evidence level. It does not imply L3 production proof.
+The same CI run completed the benchmark successfully. This supports `VERIFIED` for DATA-03 at the automated-evidence level. It does not imply L3 production proof.
 
 ## PERF-01 / PERF-02
 
-The benchmark harness explicitly enforces these budgets:
+The repository performance harness enforces these budgets:
 
 - PERF-01 startup-to-health: <= 8,000 ms
 - PERF-02 peak RSS: <= 200 MB
-- PERF-02 heap used: <= 100 MB
+- PERF-02 heap used: <= 100 MB in the core performance workload test
 
-Exact-main CI run `36425376303` on `367c0de11cd7c075ff59448cb7dafdfaf98faffa` measured:
+Exact-main CI run `36450595461` on `62cf100c1b5c09010acfcf030890e578a25ab827` measured:
 
-- startup-to-health: 384.63 ms
-- peak RSS: 104.4 MB
+- startup-to-health: 379.39 ms
+- peak RSS: 102.63 MB
 - RSS samples: 14
-- listener: 127.0.0.1:34029
+- listener: 127.0.0.1:37387
 - server announced: true
 - provider: ollama-local
 
-The companion memory workload completed its assertions for 1,000 contacts, 500 queue tasks, 500 inbox messages, 200 media assets, and 100 generated variants before the memory result was accepted. The benchmark passes the configured RSS and heap budgets in this exact run.
+The core test suite also exercises the bounded memory workload and enforces the RSS/heap budgets before accepting its result. The startup benchmark's machine-readable output reports the measured RSS above; it does not emit a separate heap figure.
 
 These are fresh automated L2 evidence, not L3 production proof.
 
 ## Exact-main recovery evidence
 
-The same exact-main CI run produced recovery artifact `10971258468` for SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`. It records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
+The same exact-main CI run produced recovery artifact `10983516710` for SHA `62cf100c1b5c09010acfcf030890e578a25ab827`. The artifact records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
+
+Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595461#artifacts-10983516710
+
+## Current production provenance
+
+The current production deployment `dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2` is READY, Git-sourced, production-targeted, and reports the exact main SHA `62cf100c1b5c09010acfcf030890e578a25ab827`. Vercel Production Provenance run `36450595465` and Web Deploy run `36450595482` both passed.
+
+The live verification checked `/`, `/api/health.json`, and `/api/release.json` against `62cf100c1b5c09010acfcf030890e578a25ab827`.
+
+Deployment details: https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2
 
 ## Reproducibility
 

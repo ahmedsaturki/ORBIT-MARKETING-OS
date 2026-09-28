@@ -18,9 +18,9 @@ The Expo project supports local development and web export. The current GitHub A
 
 The public web surface is live on the connected Vercel production project and responds correctly on the verified production routes.
 
-The last verified production deployment is Git-sourced, uses the Next.js framework, targets production, exposes the canonical `orbit-marketing-os.vercel.app` alias, and reports main SHA `6e5d78db...` through the governed provenance endpoints.
+The current verified production deployment is `dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2`, READY, Git-sourced, targets production, uses the Next.js framework, exposes the canonical `orbit-marketing-os.vercel.app` alias, and reports exact main SHA `62cf100c1b5c09010acfcf030890e578a25ab827` through the governed provenance endpoints.
 
-The current `main` commit is not yet production-verified because no deployment for that commit was observed. The current Vercel rate limit is external; after current-SHA verification, the remaining Vercel action is the rollback drill to the previous verified candidate and back.
+Vercel Production Provenance run `36450595465` and Web Deploy run `36450595482` passed for the current SHA. The remaining Vercel release action is the rollback drill to the previous verified candidate and back.
 
 ## Release integrity
 
