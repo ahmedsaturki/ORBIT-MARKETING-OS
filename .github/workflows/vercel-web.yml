@@ -42,9 +42,30 @@ jobs:
       - name: Web E2E
         run: pnpm test:e2e
 
+  release_trigger:
+    name: Production release trigger
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      triggered: ${{ steps.resolve.outputs.release_current }}
+      release_sha: ${{ steps.resolve.outputs.release_sha }}
+      release_id: ${{ steps.resolve.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+      - name: Resolve production release
+        id: resolve
+        run: node scripts/resolve-production-release.mjs
+
   vercel_mode:
     name: Vercel release mode
-    needs: quality
+    needs: [quality, release_trigger]
+    if: needs.release_trigger.outputs.triggered == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -66,8 +87,8 @@ jobs:
             echo "Using governed Vercel Git production deployment."
           fi
   deploy:
-    needs: [quality, vercel_mode]
-    if: needs.vercel_mode.outputs.credentials == 'true'
+    needs: [quality, release_trigger, vercel_mode]
+    if: needs.release_trigger.outputs.triggered == 'true' && needs.vercel_mode.outputs.credentials == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -124,13 +145,13 @@ jobs:
       - name: Verify live rebuild surface
         env:
           ORBIT_LIVE_URL: ${{ steps.deploy.outputs.url }}
-          ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+          ORBIT_EXPECTED_RELEASE_SHA: ${{ needs.release_trigger.outputs.release_sha }}
         run: node scripts/verify-live-web.mjs
 
   git_provenance:
     name: Vercel Git provenance
-    needs: [quality, vercel_mode]
-    if: needs.vercel_mode.outputs.credentials == 'false'
+    needs: [quality, release_trigger, vercel_mode]
+    if: needs.release_trigger.outputs.triggered == 'true' && needs.vercel_mode.outputs.credentials == 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
