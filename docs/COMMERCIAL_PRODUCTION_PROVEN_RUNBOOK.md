@@ -69,8 +69,8 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 
 ## Current verified state — 2026-09-28
 
-- The current release cycle has a successful exact-SHA Release Evidence Bundle, Vercel Production Provenance, and Web Deploy verification recorded in GitHub Actions artifacts.
-- The canonical production deployment path is source=`git`, framework=`nextjs`, target=`production`, with the canonical `orbit-marketing-os.vercel.app` alias and public exact-SHA provenance endpoints.
+- The last verified release cycle has a successful exact-SHA Release Evidence Bundle, Vercel Production Provenance, and Web Deploy verification recorded in GitHub Actions artifacts for main SHA `6e5d78db...`.
+- The canonical production path remains source=`git`, framework=`nextjs`, target=`production`, with the canonical `orbit-marketing-os.vercel.app` alias and public exact-SHA provenance endpoints; current main `242820d6...` still requires fresh deployment verification.
 - GitHub `main` is protected with required `ci` and `security:scan` checks.
 - Exact SHA, deployment ID, workflow run IDs, and artifact digests are retained in per-release evidence and should not be hard-coded into this durable runbook.
 - Universal Search previously failed Windows Native E2E because of a real SQLite LIKE escaping defect; the defect has been fixed and literal `%`, `_`, and `!` regression coverage added.

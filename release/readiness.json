@@ -16,7 +16,7 @@
         "security:scan run 36414578451",
         "SonarCloud check-run on exact main SHA"
       ],
-      "notes": "Exact main SHA 6e5d78db8300cdfc53440ccfe738af76d81275ac passed repository CI/security checks, but SonarCloud Quality Gate is currently B Security Rating on New Code where A is required. No bypass or exclusion has been introduced."
+      "notes": "The last validated exact-main release line was 6e5d78db8300cdfc53440ccfe738af76d81275ac. Current main is 242820d6a5abbd998e69d5e493bd0a26d5dbe128; its SonarCloud result is not yet independently verified as meeting the required A rating."
     },
     "build": {
       "level": "L2_VERIFIED",
@@ -26,7 +26,7 @@
         "desktop native validation on validated release line",
         "mobile validation on validated release line"
       ],
-      "notes": "Current main CI and Rust quality passed on exact SHA; native desktop/mobile release-line validation remains retained as supporting evidence."
+      "notes": "The last validated release line passed main CI/Rust/native/mobile evidence. Current main 242820d6a5abbd998e69d5e493bd0a26d5dbe128 is source-current, but current production verification remains subject to fresh release-cycle evidence."
     },
     "runtime": {
       "level": "L2_VERIFIED",
@@ -36,7 +36,7 @@
         "runtime smoke",
         "Windows native E2E"
       ],
-      "notes": "Exact-main recovery artifact 10966503592 records 4/4 PASS for startup recovery, database recovery, recovery idempotency, and migration idempotency. Extended 24-hour stability and field evidence remain open."
+      "notes": "Exact-main recovery artifact 10966503592 records 4/4 PASS on 6e5d78db8300cdfc53440ccfe738af76d81275ac. Current main 242820d6a5abbd998e69d5e493bd0a26d5dbe128 still requires fresh release-cycle runtime/provenance reconciliation; field recovery and 24-hour stability remain open."
     },
     "product_workflows": {
       "level": "L2_VERIFIED",
@@ -74,7 +74,7 @@
         "previous verified Web Deploy run 36414577962",
         "deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa"
       ],
-      "notes": "Last verified production deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa is READY and Git-sourced from main SHA 6e5d78db8300cdfc53440ccfe738af76d81275ac. Current main is 242820d6a5abbd998e69d5e493bd0a26d5dbe128 and has not yet been verified in production; the latest Vercel provenance cycle did not observe a deployment for the current SHA."
+      "notes": "Last verified production deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa is Git-sourced from main SHA 6e5d78db8300cdfc53440ccfe738af76d81275ac. Current main is 242820d6a5abbd998e69d5e493bd0a26d5dbe128 and has not yet been production-verified; no current-SHA deployment is observed and Vercel is rate-limited."
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",
