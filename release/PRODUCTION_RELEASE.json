@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "bootstrap",
+  "mode": "EXPLICIT_PRODUCTION_RELEASE",
+  "notes": "Bootstrap marker. Future production releases must update this file in a reviewed main commit with a unique releaseId."
+}
