@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import {
   commit,
   execFileAsync,
-  git,
   initGitFixture,
   writeReleaseMarker,
 } from "./test-git-fixture.mjs";
@@ -144,7 +143,6 @@ test("vercel ignore rejects malformed Git revision values", async () => {
 test("vercel ignore builds when Git revision context is incomplete or unavailable", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "orbit-vercel-ignore-missing-"));
   try {
-    await git(cwd, ["init", "-q"]);
     assert.equal(await runIgnore(cwd, { VERCEL_GIT_COMMIT_REF: "main" }), 1);
     assert.equal(
       await runIgnore(cwd, {
