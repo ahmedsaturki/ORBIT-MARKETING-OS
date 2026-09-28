@@ -108,6 +108,7 @@ const requiredFiles = [
   "scripts/soak.ts",
   "scripts/verify-live-web.mjs",
   "scripts/vercel-ignore.test.mjs",
+  "scripts/test-git-fixture.mjs",
   "scripts/production-release-trigger.test.mjs",
   "scripts/resolve-production-release.mjs",
   "release/PRODUCTION_RELEASE.json",
