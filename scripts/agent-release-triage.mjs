@@ -1,12 +1,36 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const readinessPath = new URL("../release/readiness.json", import.meta.url);
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const repoRoot = dirname(scriptDir);
+const readinessPath = join(repoRoot, "release", "readiness.json");
 const readiness = JSON.parse(await readFile(readinessPath, "utf8"));
 
 function git(args) {
-  return execFileSync("git", args, { encoding: "utf8" }).trim();
+  const env = { ...process.env };
+  for (const key of [
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_COMMON_DIR",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_NAMESPACE",
+  ]) {
+    delete env[key];
+  }
+  return execFileSync("git", args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env,
+  }).trim();
+}
+
+if (git(["rev-parse", "--show-toplevel"]) !== repoRoot) {
+  throw new Error("release triage repository root mismatch");
 }
 
 const gates = Object.entries(readiness.releaseCritical ?? {}).map(
@@ -28,23 +52,47 @@ const ownerActionKeys = new Set([
   "commercial_billing",
   "legal_commercial",
 ]);
-
-const localVerificationKeys = new Set([
-  "source_integrity",
-  "build",
-  "runtime",
-  "product_workflows",
-  "security_governance",
-  "distribution",
-  "web_production",
-]);
+const mixedActionKeys = new Set(["distribution"]);
 
 const classify = (gate) => {
   if (gate.level === "L3_PRODUCTION_PROVEN") return "PRODUCTION_PROVEN";
   if (ownerActionKeys.has(gate.key)) return "OWNER_ACTION";
-  if (localVerificationKeys.has(gate.key)) return "ENGINEERING_OR_VERIFICATION";
+  if (mixedActionKeys.has(gate.key)) {
+    return "MIXED_ENGINEERING_AND_OWNER_ACTION";
+  }
+  if (
+    [
+      "source_integrity",
+      "build",
+      "runtime",
+      "product_workflows",
+      "security_governance",
+      "web_production",
+    ].includes(gate.key)
+  ) {
+    return "ENGINEERING_OR_VERIFICATION";
+  }
   return "REVIEW";
 };
+
+const nextActions = gates
+  .filter((gate) => gate.level !== "L3_PRODUCTION_PROVEN")
+  .map((gate) => {
+    const classification = classify(gate);
+    const action = {
+      key: gate.key,
+      class: classification,
+      level: gate.level,
+      action: gate.notes,
+    };
+    if (gate.key === "distribution") {
+      action.engineeringAction =
+        "Validate package generation, checksums, and release artifacts on the exact release SHA.";
+      action.ownerAction =
+        "Provide desktop signing/notarization identities and production mobile store signing/distribution credentials.";
+    }
+    return action;
+  });
 
 const payload = {
   schemaVersion: 1,
@@ -61,22 +109,22 @@ const payload = {
     productionProvenCount: gates.filter(
       (gate) => gate.level === "L3_PRODUCTION_PROVEN",
     ).length,
-    engineeringOrVerificationCount: gates.filter(
-      (gate) => classify(gate) === "ENGINEERING_OR_VERIFICATION",
+    engineeringOrVerificationCount: gates.filter((gate) =>
+      [
+        "ENGINEERING_OR_VERIFICATION",
+        "MIXED_ENGINEERING_AND_OWNER_ACTION",
+      ].includes(classify(gate)),
     ).length,
-    ownerActionCount: gates.filter((gate) => classify(gate) === "OWNER_ACTION")
-      .length,
-    blockedCount: gates.filter((gate) => gate.level !== "L3_PRODUCTION_PROVEN")
-      .length,
+    ownerActionCount: gates.filter((gate) =>
+      ["OWNER_ACTION", "MIXED_ENGINEERING_AND_OWNER_ACTION"].includes(
+        classify(gate),
+      ),
+    ).length,
+    blockedCount: gates.filter(
+      (gate) => gate.level !== "L3_PRODUCTION_PROVEN",
+    ).length,
   },
-  nextActions: gates
-    .filter((gate) => gate.level !== "L3_PRODUCTION_PROVEN")
-    .map((gate) => ({
-      key: gate.key,
-      class: classify(gate),
-      level: gate.level,
-      action: gate.notes,
-    })),
+  nextActions,
   gates,
 };
 
