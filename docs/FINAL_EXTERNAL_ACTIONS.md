@@ -2,7 +2,10 @@
 
 Updated: 2026-09-28.
 
-The merged core is strongly verified at L2 across the main product domains. Current-main web production provenance is also verified through the governed Git/Vercel path. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
+The merged core is strongly verified at L2 across the main product domains.
+
+**Current release-provenance note (2026-09-28):** Git `main` has advanced beyond the last production-verified SHA. Do not reuse the previous Vercel deployment as current-main proof; a fresh deployment/readback for the current exact SHA is required before restoring the production-provenance gate.
+ Current-main web production provenance is also verified through the governed Git/Vercel path. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
 
 ## A. Vercel
 
