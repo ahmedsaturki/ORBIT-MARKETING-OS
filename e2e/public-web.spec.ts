@@ -16,6 +16,23 @@ test.describe("ORBIT public web surface", () => {
     );
   });
 
+  test("home page exposes a public-safe release identity", async ({ page }) => {
+    await page.goto("/");
+    const root = page.locator("main");
+    await expect(root).toHaveAttribute("data-release", "0.2.0");
+    await expect(root).toHaveAttribute(
+      "data-release-sha",
+      /^(unreleased|[0-9a-f]{40})$/,
+    );
+    await expect(root).toHaveAttribute(
+      "data-release-sha-source",
+      /^(none|NEXT_PUBLIC_ORBIT_RELEASE_SHA|VERCEL_GIT_COMMIT_SHA)$/,
+    );
+    await expect(
+      page.getByRole("heading", { level: 2, name: "هوية الإصدار" }),
+    ).toBeVisible();
+  });
+
   test("document direction, language, and focusable controls meet baseline accessibility", async ({
     page,
   }) => {
@@ -85,6 +102,7 @@ test.describe("ORBIT public web surface", () => {
     const response = await request.get("/this-path-does-not-exist/");
     expect(response.status()).toBe(404);
   });
+
   test("release health endpoint is non-cacheable and schema-stable", async ({
     request,
   }) => {
