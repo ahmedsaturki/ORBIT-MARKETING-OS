@@ -78,7 +78,7 @@ if (
 
 const failures = [];
 
-for (const relativePath of durableReleaseFiles {
+for (const relativePath of durableReleaseFiles) {
   const content = await readFile(resolve(root, relativePath), "utf8");
   const lines = content.split(/\r?\n/);
 
