@@ -60,8 +60,8 @@ No unsupported external connector capability is implied by contracts or fixtures
 - final legal/commercial publication review;
 - current-main SonarCloud Security Rating on New Code = A.
 
-Protected-main CI/security governance is verified. Vercel production provenance is verified for the exact main release SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0` at deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`; each newer release must revalidate current-SHA deployment provenance before it is treated as current.
+Protected-main CI/security governance is verified. The latest independently verified Vercel production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` from the prior verified release line. Production is now explicitly controlled by the reviewed non-bootstrap `release/PRODUCTION_RELEASE.json` marker; ordinary moving-main commits are not treated as Production releases.
 
-Automated restart/recovery/migration evidence is now consolidated and passing on the exact main release line; dedicated forced-crash/field recovery, 24-hour soak, rollback, and the remaining external/commercial gates are still separate requirements.
+Automated restart/recovery/migration evidence is now consolidated and passing on current main; dedicated forced-crash/field recovery, 24-hour soak, rollback, and the remaining external/commercial gates are still separate requirements.
 
 Implementation and green CI are substantial evidence, but they do not by themselves establish commercial release readiness.
