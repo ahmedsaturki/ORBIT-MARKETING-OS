@@ -21,9 +21,29 @@ const durableReleaseFiles = [
 // SHA. Keep these patterns narrow so phrases such as 'last verified main SHA'
 // remain valid historical evidence.
 const forbiddenCurrentMainShaPatterns = [
-  /current[\s_-]+main\s*(?:is\s*)?(?:sha\s*[:=]\s*)?[`'\"]?[0-9a-f]{7,40}[`'\"]?/i,
-  /current[\s_-]+main\s+sha\s*[:=]\s*[`'\"]?[0-9a-f]{7,40}[`'\"]?/i,
+  /current[\s_-]+main\s*(?:is\s*)?(?:sha\s*)?[:=]?\s*[`'"]?[0-9a-f]{7,40}[`'"]?/i,
+  /current[\s_-]+main\s+sha\s*[:=]\s*[`'"]?[0-9a-f]{7,40}[`'"]?/i,
 ];
+
+const contractFixtures = [
+  { value: "Current main 1234567", forbidden: true },
+  { value: "Current main: 1234567", forbidden: true },
+  { value: "Current main is `1234567890abcdef1234567890abcdef12345678`", forbidden: true },
+  { value: "current-main SHA: 1234567", forbidden: true },
+  { value: "The last verified main SHA `1234567` is historical evidence.", forbidden: false },
+  { value: "The exact main SHA `1234567` was verified by CI.", forbidden: false },
+];
+
+for (const fixture of contractFixtures) {
+  const matched = forbiddenCurrentMainShaPatterns.some((pattern) =>
+    pattern.test(fixture.value),
+  );
+  if (matched !== fixture.forbidden) {
+    throw new Error(
+      "release docs guard self-test failed: " + fixture.value,
+    );
+  }
+}
 
 const failures = [];
 
