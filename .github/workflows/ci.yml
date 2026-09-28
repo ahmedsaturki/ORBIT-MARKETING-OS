@@ -132,6 +132,12 @@ jobs:
         timeout-minutes: 5
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
+      - name: Formatter diagnostic
+        run: |
+          pnpm exec prettier --write scripts/agent-release-triage.mjs scripts/startup-memory-benchmark.mjs
+          git diff --no-ext-diff --unified=80 -- scripts/agent-release-triage.mjs scripts/startup-memory-benchmark.mjs
+          exit 1
+
       - name: Format check
         run: pnpm format:check
 
