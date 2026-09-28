@@ -210,6 +210,16 @@ for (const fragment of [
 const vercelProvenanceWorkflow = await text(
   ".github/workflows/vercel-production-provenance.yml",
 );
+for (const [name, workflow] of [
+  ["Vercel web workflow", vercelWorkflow],
+  ["Vercel production provenance workflow", vercelProvenanceWorkflow],
+  ["Self-hosted web release workflow", selfHostedWeb],
+]) {
+  if (/\npermissions:\n  contents: read\n/.test(workflow)) {
+    throw new Error(name + " must scope permissions at job level");
+  }
+}
+
 for (const fragment of [
   "release/PRODUCTION_RELEASE.json",
   "scripts/resolve-production-release.mjs",
