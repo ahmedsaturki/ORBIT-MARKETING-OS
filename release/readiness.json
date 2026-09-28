@@ -103,17 +103,16 @@
     "web_production": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "Vercel Production Provenance run 36480198039",
+        "Historical verified production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp",
+        "Vercel Production Provenance run 36480198039 (bootstrap/non-release)",
         "Web Deploy run 36480197959",
-        "deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp",
-        "canonical production alias",
-        "exact Git SHA evidence for edc8c07f0527c7ea9b38827e293fd820b9f6cce0"
+        "canonical production alias"
       ],
-      "notes": "Latest verified production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp is READY, Git-sourced, target=production, framework=nextjs, and reports githubCommitSha=edc8c07f0527c7ea9b38827e293fd820b9f6cce0. Vercel Production Provenance and Web Deploy both passed. Live public verification checked /, /api/health.json and /api/release.json against the exact release SHA. Rollback evidence remains open.",
+      "notes": "The latest independently verified Production deployment remains dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp from the prior verified release line. Current main carries the bootstrap production marker, so run 36480198039 correctly performs no current-main Production verification. Web Deploy run 36480197959 passed the web quality path. Rollback evidence remains open.",
       "evidenceRefs": [
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009698",
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009416",
-        "https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2"
+        "https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480198039",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480197959"
       ],
       "verifiedAt": "2026-09-28T17:01:15Z"
     },
