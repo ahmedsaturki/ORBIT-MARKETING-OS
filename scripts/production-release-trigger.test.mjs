@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import {
   commit,
+  commitSha,
   execFileAsync,
   initGitFixture,
   writeReleaseMarker,
