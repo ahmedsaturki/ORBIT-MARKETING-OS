@@ -6,6 +6,7 @@ const source = await readFile("scripts/soak.ts", "utf8");
 for (const marker of [
   'import { createServer } from "node:net";',
   "const requestedPort = readNumericArg(\"--port\");",
+  "requestedPort === undefined || requestedPort <= 0",
   "async function findFreeLoopbackPort(): Promise<number>",
   "server?.signalCode !== null",
   "child.signalCode !== null",
