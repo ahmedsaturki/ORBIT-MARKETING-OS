@@ -2,13 +2,13 @@
 
 Updated: 2026-09-28.
 
-The merged core is strongly verified at L2 across the main product domains. Web production provenance is verified only for the last deployed main SHA `6e5d78db...`; the current `main` commit requires a fresh production deployment/readback. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
+The merged core is strongly verified at L2 across the main product domains. Web production provenance is verified for current main SHA `62cf100c1b5c09010acfcf030890e578a25ab827` via deployment `dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2`; Vercel Production Provenance and Web Deploy both passed. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
 
 ## A. Vercel
 
-Last verified production deployment and provenance are recorded for main SHA `6e5d78db...`; the current `main` commit is awaiting a production deployment for that commit.
+Current verified production deployment: `dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2`, READY, Git-sourced, target=production, exact SHA `62cf100c1b5c09010acfcf030890e578a25ab827`.
 
-- repository/main: the current repository SHA is available from Git; production verification of that SHA remains pending;
+- repository/main: current SHA `62cf100c1b5c09010acfcf030890e578a25ab827`; production verification is complete for this SHA;
 - project: `orbit-marketing-os`;
 - framework: Next.js;
 - source: Git;
@@ -35,7 +35,7 @@ No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acc
 
 ## C. Native / sync / accessibility / stability
 
-- Automated restart/recovery/migration evidence is consolidated and passed 4/4 on the later exact main SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa` (CI run `36425376303`; artifact `10971258468`).
+- Automated restart/recovery/migration evidence is consolidated and passed 4/4 on exact main SHA `62cf100c1b5c09010acfcf030890e578a25ab827` (CI run `36450595461`; artifact `10983516710`).
 - Complete the remaining forced-crash/field recovery evidence and consolidate any real-world recovery observations.
 - Run live multi-device CRDT convergence using real authorized devices/network.
 - Complete manual WCAG/RTL audit in addition to automated checks.
