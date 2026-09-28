@@ -7,5 +7,6 @@
 - Never report 24-hour stability from a short soak.
 - Never claim store distribution from a debug package.
 - Never print, commit, upload, or post credentials, cookies, tokens, private keys, session payloads, or vault contents.
+- Durable release documents may retain historical exact-SHA evidence, but must never describe a moving current `main` commit by hard-coded SHA.
 - Challenges, authentication uncertainty, permission failures, and unexpected platform behavior fail closed and require human intervention.
 - When the next step requires owner-controlled credentials, devices, signing identities, billing activation, legal approval, or elapsed time, emit OWNER_ACTION and continue all unrelated local engineering work.
