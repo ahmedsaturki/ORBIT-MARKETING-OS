@@ -117,6 +117,30 @@ test("ordinary web/docs commits are skipped; only a non-bootstrap marker change 
   }
 });
 
+test("vercel ignore rejects malformed Git revision values", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "orbit-vercel-ignore-malformed-"));
+  try {
+    assert.equal(
+      await runIgnore(cwd, {
+        VERCEL_GIT_COMMIT_REF: "main",
+        VERCEL_GIT_PREVIOUS_SHA: "--upload-pack=evil",
+        VERCEL_GIT_COMMIT_SHA: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      }),
+      1,
+    );
+    assert.equal(
+      await runIgnore(cwd, {
+        VERCEL_GIT_COMMIT_REF: "main",
+        VERCEL_GIT_PREVIOUS_SHA: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        VERCEL_GIT_COMMIT_SHA: "HEAD",
+      }),
+      1,
+    );
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 test("vercel ignore builds when Git revision context is incomplete or unavailable", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "orbit-vercel-ignore-missing-"));
   try {
