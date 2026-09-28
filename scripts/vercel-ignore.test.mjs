@@ -72,8 +72,6 @@ test("only the commit that changes the release marker can trigger a build", asyn
     assert.equal(
       await runIgnore(cwd, {
         VERCEL_GIT_COMMIT_REF: "main",
-        VERCEL_GIT_PREVIOUS_SHA: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        VERCEL_GIT_COMMIT_SHA: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       }),
       0,
     );
