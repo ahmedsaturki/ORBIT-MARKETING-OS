@@ -45,6 +45,8 @@ jobs:
 
       - name: Release sanity
         run: pnpm verify:release
+      - name: Release evidence collector contract
+        run: pnpm test:release-evidence-collector
 
       - name: Readiness contract
         run: pnpm verify:readiness -- --mode verification
