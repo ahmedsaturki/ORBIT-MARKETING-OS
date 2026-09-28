@@ -8,7 +8,7 @@ The merged core is strongly verified at L2 across the main product domains. The 
 
 The current main production deployment is READY and Git-sourced. Vercel Production Provenance run 36434671316 and Web Deploy run 36434671320 verify the current release cycle, including the canonical alias and live surface checks.
 
-- repository/main: the current repository SHA is available from Git; production verification of that SHA remains pending;
+- repository/main: the current repository SHA is available from Git; the current production deployment and exact-SHA live verification are recorded by the current Vercel/Web release cycle;
 - project: `orbit-marketing-os`;
 - framework: Next.js;
 - source: Git;
