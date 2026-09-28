@@ -4,7 +4,7 @@ Updated: 2026-09-28.
 
 ## DATA-03 — 1,000 contacts searchable
 
-The desktop Rust test `contact_search_1000_scale_benchmark` creates exactly 1,000 contacts in an in-memory SQLite database using the production `contacts` schema, then searches for the last contact through the same workspace-scoped display-name/email/phone matching predicate used by the desktop search path.
+The desktop Rust test `contact_search_1000_scale_benchmark` creates exactly 1,000 contacts in an in-memory SQLite database using the production `contacts` schema, then searches for the last contact through the same workspace-scoped display-name/email/phone matching predicate used by the desktop search path. The latest exact-main CI run `36434671261` measured 1.304414 ms.
 
 The test records elapsed query time and prints a machine-readable line:
 
