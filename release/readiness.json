@@ -78,7 +78,7 @@
         "CI run 36480198008",
         "security:scan current main"
       ],
-      "notes": "CI and security:scan passed on the exact release SHA. Final L3 commercial governance still requires auditable evidence references, real-world evidence, and verification time across all required gates.",
+      "notes": "CI and security:scan passed on the current main SHA. Final L3 commercial governance still requires auditable evidence references, real-world evidence, and verification time across all required gates.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480198008",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/24"
@@ -93,7 +93,7 @@
         "current exact-main CI run 36480198008",
         "latest verified production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp"
       ],
-      "notes": "CI and production web distribution/provenance for the exact release cycle are verified. Desktop signing/notarization and production mobile signing/store distribution remain open.",
+      "notes": "CI is verified on current main. The last independently verified production deployment remains dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp from the prior verified release line. Desktop signing/notarization and production mobile signing/store distribution remain open.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480198008",
         "https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2"
