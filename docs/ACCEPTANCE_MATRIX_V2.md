@@ -2,7 +2,7 @@
 
 Last evidence refresh: 2026-09-28
 
-Last exact-main verification reference: GitHub Actions CI run `36414578451` on `6e5d78db8300cdfc53440ccfe738af76d81275ac`; current main later advanced to `367c0de11cd7c075ff59448cb7dafdfaf98faffa`. DATA-03 measured `1.015757ms` for the 1,000-contact workspace-scoped search benchmark. The same run produced recovery evidence artifact `10966503592` with 4/4 recovery/migration checks passing. PERF-01/02 also executed on the same exact-main run; the benchmark enforces startup ≤8,000ms, RSS ≤200MB, and heap ≤100MB.
+Last exact-main verification reference: GitHub Actions CI run `36414578451` on `6e5d78db8300cdfc53440ccfe738af76d81275ac`; the repository later advanced beyond that verified SHA; exact current-SHA evidence is maintained by the release-evidence workflow. DATA-03 measured `1.015757ms` for the 1,000-contact workspace-scoped search benchmark. The same run produced recovery evidence artifact `10966503592` with 4/4 recovery/migration checks passing. PERF-01/02 also executed on the same exact-main run; the benchmark enforces startup ≤8,000ms, RSS ≤200MB, and heap ≤100MB.
 
 Status vocabulary: `PASS`, `FAIL`, `PARTIAL`, `UNVERIFIED`, `NOT_APPLICABLE`.
 

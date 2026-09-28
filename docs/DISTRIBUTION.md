@@ -20,7 +20,7 @@ The public web surface is live on the connected Vercel production project and re
 
 The last verified production deployment is Git-sourced, uses the Next.js framework, targets production, exposes the canonical `orbit-marketing-os.vercel.app` alias, and reports main SHA `6e5d78db...` through the governed provenance endpoints.
 
-Current main is `367c0de...` and is not yet production-verified because no deployment for that SHA was observed. The current Vercel rate limit is external; after current-SHA verification, the remaining Vercel action is the rollback drill to the previous verified candidate and back.
+The current `main` commit is not yet production-verified because no deployment for that commit was observed. The current Vercel rate limit is external; after current-SHA verification, the remaining Vercel action is the rollback drill to the previous verified candidate and back.
 
 ## Release integrity
 
