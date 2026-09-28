@@ -28,10 +28,19 @@ const forbiddenCurrentMainShaPatterns = [
 const contractFixtures = [
   { value: "Current main 1234567", forbidden: true },
   { value: "Current main: 1234567", forbidden: true },
-  { value: "Current main is `1234567890abcdef1234567890abcdef12345678`", forbidden: true },
+  {
+    value: "Current main is `1234567890abcdef1234567890abcdef12345678`",
+    forbidden: true,
+  },
   { value: "current-main SHA: 1234567", forbidden: true },
-  { value: "The last verified main SHA `1234567` is historical evidence.", forbidden: false },
-  { value: "The exact main SHA `1234567` was verified by CI.", forbidden: false },
+  {
+    value: "The last verified main SHA `1234567` is historical evidence.",
+    forbidden: false,
+  },
+  {
+    value: "The exact main SHA `1234567` was verified by CI.",
+    forbidden: false,
+  },
 ];
 
 for (const fixture of contractFixtures) {
@@ -39,9 +48,7 @@ for (const fixture of contractFixtures) {
     pattern.test(fixture.value),
   );
   if (matched !== fixture.forbidden) {
-    throw new Error(
-      "release docs guard self-test failed: " + fixture.value,
-    );
+    throw new Error("release docs guard self-test failed: " + fixture.value);
   }
 }
 
@@ -57,7 +64,9 @@ for (const relativePath of durableReleaseFiles) {
       if (!match) continue;
 
       failures.push(
-        relativePath + ":" + (index + 1) +
+        relativePath +
+          ":" +
+          (index + 1) +
           " contains a hard-coded moving-main SHA claim: " +
           line.trim(),
       );
