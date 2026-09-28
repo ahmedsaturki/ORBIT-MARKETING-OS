@@ -90,7 +90,7 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 The canonical Vercel project is live on the governed Git deployment path. The release contract requires each current-main production deployment to be sourced from Git `main`, use the `nextjs` framework, expose the canonical `orbit-marketing-os.vercel.app` alias, and prove the exact Git SHA through `/api/health.json`, `/api/release.json`, homepage provenance, security headers, routes, manifest/service worker, and 404 checks.
 
-The current production cycle passed the Vercel Git provenance workflow, full Web Deploy workflow, and live surface checks for main SHA `62cf100c1b5c09010acfcf030890e578a25ab827`. Deployment `dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2` is READY and exact-SHA provenance is verified. The controlled rollback drill remains open.
+The latest completed production verification cycle passed the Vercel Git provenance workflow, full Web Deploy workflow, and live surface checks for main SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`. Deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is READY and exact-SHA provenance is verified. The controlled rollback drill remains open.
 
 ## Distribution posture
 

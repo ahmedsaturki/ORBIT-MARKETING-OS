@@ -14,13 +14,13 @@ CI runs the benchmark with `--nocapture` so the measured result is visible in th
 
 ### Exact-main evidence — DATA-03
 
-GitHub Actions CI run `36450595461` on exact main SHA `62cf100c1b5c09010acfcf030890e578a25ab827` measured:
+GitHub Actions CI run `36455009654` on exact main SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0` measured:
 
 - dataset: 1,000 contacts
 - query: `Benchmark Contact 0999`
 - workspace scoped: true
 - matched: 1
-- elapsed: 2.075497 ms
+- elapsed: 1.50868 ms
 
 The same CI run completed the benchmark successfully. This supports `VERIFIED` for DATA-03 at the automated-evidence level. It does not imply L3 production proof.
 
@@ -32,12 +32,12 @@ The repository performance harness enforces these budgets:
 - PERF-02 peak RSS: <= 200 MB
 - PERF-02 heap used: <= 100 MB in the core performance workload test
 
-Exact-main CI run `36450595461` on `62cf100c1b5c09010acfcf030890e578a25ab827` measured:
+Exact-main CI run `36455009654` on `edc8c07f0527c7ea9b38827e293fd820b9f6cce0` measured:
 
-- startup-to-health: 379.39 ms
-- peak RSS: 102.63 MB
+- startup-to-health: 387.4 ms
+- peak RSS: 100.15 MB
 - RSS samples: 14
-- listener: 127.0.0.1:37387
+- listener: 127.0.0.1:38563
 - server announced: true
 - provider: ollama-local
 
@@ -47,17 +47,17 @@ These are fresh automated L2 evidence, not L3 production proof.
 
 ## Exact-main recovery evidence
 
-The same exact-main CI run produced recovery artifact `10983516710` for SHA `62cf100c1b5c09010acfcf030890e578a25ab827`. The artifact records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
+The same exact-main CI run produced recovery artifact `10985138175` for SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`. The artifact records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
 
-Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595461#artifacts-10983516710
+Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009654#artifacts-10985138175
 
 ## Current production provenance
 
-The current production deployment `dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2` is READY, Git-sourced, production-targeted, and reports the exact main SHA `62cf100c1b5c09010acfcf030890e578a25ab827`. Vercel Production Provenance run `36450595465` and Web Deploy run `36450595482` both passed.
+The latest verified production deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is READY, Git-sourced, production-targeted, and reports the exact main SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`. Vercel Production Provenance run `36455009698` and Web Deploy run `36455009416` both passed.
 
-The live verification checked `/`, `/api/health.json`, and `/api/release.json` against `62cf100c1b5c09010acfcf030890e578a25ab827`.
+The live verification checked `/`, `/api/health.json`, and `/api/release.json` against `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`.
 
-Deployment details: https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2
+Deployment details: https://vercel.com/jmls-projects/orbit-marketing-os/3YiUkYHNpQPRaPjTZvH5UrTztEQp
 
 ## Reproducibility
 
