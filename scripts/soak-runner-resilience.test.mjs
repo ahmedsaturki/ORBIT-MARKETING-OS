@@ -5,7 +5,7 @@ const source = await readFile("scripts/soak.ts", "utf8");
 
 for (const marker of [
   'import { createServer } from "node:net";',
-  "const requestedPort = readNumericArg(\"--port\");",
+  'const requestedPort = readNumericArg("--port");',
   "requestedPort === undefined || requestedPort <= 0",
   "async function findFreeLoopbackPort(): Promise<number>",
   "server?.signalCode !== null",
@@ -13,7 +13,11 @@ for (const marker of [
   "serverExitCode,",
   "serverSignalCode,",
 ]) {
-  assert.equal(source.includes(marker), true, `missing soak resilience marker: ${marker}`);
+  assert.equal(
+    source.includes(marker),
+    true,
+    `missing soak resilience marker: ${marker}`,
+  );
 }
 
 console.log("soak_runner_resilience_contract=PASS");
