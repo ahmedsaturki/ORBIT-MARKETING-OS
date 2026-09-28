@@ -1,18 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { promisify } from "node:util";
+import {
+  commitSha,
+  execFileAsync,
+  git,
+  initGitFixture,
+} from "./test-git-fixture.mjs";
+import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-const execFileAsync = promisify(execFile);
 const scriptPath = new URL("./vercel-ignore.sh", import.meta.url);
 const MARKER_PATH = "release/PRODUCTION_RELEASE.json";
-
-async function git(cwd, args) {
-  await execFileAsync("git", args, { cwd });
-}
 
 async function runIgnore(cwd, env) {
   try {
@@ -24,12 +23,6 @@ async function runIgnore(cwd, env) {
   } catch (error) {
     return error.code ?? 1;
   }
-}
-
-async function commitSha(cwd) {
-  return (
-    await execFileAsync("git", ["rev-parse", "HEAD"], { cwd })
-  ).stdout.trim();
 }
 
 test("vercel ignore script exposes the explicit production release contract", async () => {
@@ -51,23 +44,13 @@ test("vercel ignore script exposes the explicit production release contract", as
 test("ordinary web/docs commits are skipped; only a non-bootstrap marker change builds", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "orbit-vercel-ignore-"));
   try {
-    await git(cwd, ["init", "-q"]);
-    await git(cwd, ["config", "user.email", "orbit-test@example.invalid"]);
-    await git(cwd, ["config", "user.name", "ORBIT Test"]);
-    await execFileAsync("bash", [
-      "-lc",
-      "mkdir -p packages/web release",
-    ], { cwd });
-    await writeFile(
-      join(cwd, MARKER_PATH),
-      JSON.stringify({
-        schemaVersion: 1,
-        releaseId: "bootstrap",
-        mode: "EXPLICIT_PRODUCTION_RELEASE",
-        notes: "bootstrap rewrite",
-      }) + "\n",
-      "utf8",
-    );
+    await initGitFixture(cwd, {
+      schemaVersion: 1,
+      releaseId: "bootstrap",
+      mode: "EXPLICIT_PRODUCTION_RELEASE",
+      notes: "bootstrap base",
+    });
+    await mkdir(join(cwd, "packages", "web"), { recursive: true });
     await writeFile(join(cwd, "packages/web/index.html"), "v1\n", "utf8");
     await git(cwd, ["add", "."]);
     await git(cwd, ["commit", "-qm", "base"]);
@@ -97,6 +80,7 @@ test("ordinary web/docs commits are skipped; only a non-bootstrap marker change 
         schemaVersion: 1,
         releaseId: "bootstrap",
         mode: "EXPLICIT_PRODUCTION_RELEASE",
+        notes: "bootstrap rewrite",
       }) + "\n",
       "utf8",
     );
