@@ -12,8 +12,6 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const RESOLVER = join(ROOT, "scripts", "resolve-production-release.mjs");
 
 async function state(cwd) {
   const { stdout } = await execFileAsync(
