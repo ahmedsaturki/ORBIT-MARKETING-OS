@@ -80,6 +80,8 @@ jobs:
 
       - name: Vercel ignore command contract
         run: node scripts/vercel-ignore.test.mjs
+      - name: Stability soak runner resilience contract
+        run: pnpm test:soak-runner-resilience
       - name: Workspace sanity
         run: pnpm verify:workspace
 
