@@ -29,10 +29,6 @@ function git(args) {
   }).trim();
 }
 
-if (git(["rev-parse", "--show-toplevel"]) !== repoRoot) {
-  throw new Error("release triage repository root mismatch");
-}
-
 const gates = Object.entries(readiness.releaseCritical ?? {}).map(
   ([key, value]) => ({
     key,
