@@ -40,7 +40,9 @@
     },
     "product_workflows": {
       "level": "L2_VERIFIED",
-      "evidence": ["campaign/content/approval/CRM/inbox/search/publishing E2E"],
+      "evidence": [
+        "campaign/content/approval/CRM/inbox/search/publishing E2E"
+      ],
       "notes": "Real external connector workflows remain separate gates."
     },
     "security_governance": {
@@ -68,16 +70,17 @@
     "web_production": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "Vercel Production Provenance run 36414577994",
-        "Web Deploy run 36414577962",
-        "deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa",
-        "release-evidence artifact 10965998085"
+        "previous verified Vercel Production Provenance run 36414577994",
+        "previous verified Web Deploy run 36414577962",
+        "deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa"
       ],
-      "notes": "Current production deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa is READY, Git-sourced, production-targeted, and reports exact main SHA 6e5d78db8300cdfc53440ccfe738af76d81275ac. Rollback-to-previous-candidate-and-return remains unproven."
+      "notes": "Last verified production deployment dpl_H53pH6QHf4BkiAYj8wghV5BVHEKa is READY and Git-sourced from main SHA 6e5d78db8300cdfc53440ccfe738af76d81275ac. Current main is 242820d6a5abbd998e69d5e493bd0a26d5dbe128 and has not yet been verified in production; the latest Vercel provenance cycle did not observe a deployment for the current SHA."
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",
-      "evidence": ["connector contracts/fixtures/challenge handling"],
+      "evidence": [
+        "connector contracts/fixtures/challenge handling"
+      ],
       "notes": "Real Telegram and LinkedIn authorization/delivery evidence is still required; connector contracts, negative-path handling, and challenge stop behavior are verified."
     },
     "sync_network": {
@@ -91,22 +94,30 @@
     },
     "accessibility": {
       "level": "L2_VERIFIED",
-      "evidence": ["automated RTL/accessibility tests"],
+      "evidence": [
+        "automated RTL/accessibility tests"
+      ],
       "notes": "Automated accessibility/RTL tests passed on current CI. Manual WCAG/RTL audit remains open."
     },
     "stability_soak": {
       "level": "L2_VERIFIED",
-      "evidence": ["verified 10-minute soak harness/run"],
+      "evidence": [
+        "verified 10-minute soak harness/run"
+      ],
       "notes": "The release line has a verified 10-minute soak harness/run. A complete 24-hour stability soak on the exact release SHA remains open."
     },
     "commercial_billing": {
       "level": "L1_IMPLEMENTED",
-      "evidence": ["pricing surface and commercial contract docs"],
+      "evidence": [
+        "pricing surface and commercial contract docs"
+      ],
       "notes": "Pricing/commercial surfaces exist, but payment/billing provider activation is not configured."
     },
     "legal_commercial": {
       "level": "L1_IMPLEMENTED",
-      "evidence": ["privacy/terms/refunds/EULA surfaces"],
+      "evidence": [
+        "privacy/terms/refunds/EULA surfaces"
+      ],
       "notes": "Privacy, terms, refund and EULA surfaces exist. Final legal/commercial publication review remains open."
     }
   },
