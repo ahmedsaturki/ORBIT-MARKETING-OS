@@ -35,6 +35,8 @@ Updated: 2026-09-28.
 - PR #129: merged — repository-root-safe Vercel Ignore Build Step handling and nested-root regression coverage.
 - PR #132: merged — OMP-native project context, sticky rules, watchdog/advisor roster, operator agents, release triage and evidence/performance controls.
 - PR #136: merged — exact-SHA recovery/migration evidence harness and durable recovery artifact.
+- PR #145: merged — soak-runner resilience and fail-closed process-exit handling.
+- PR #148: merged — release-evidence Git-binding, recovery/security-scan hardening and hostile Git-environment contract coverage.
 
 ## Readiness rule
 
@@ -72,7 +74,7 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 - real Telegram authorization and controlled delivery;
 - real LinkedIn authorization and controlled publishing;
 - live multi-device CRDT verification;
-- dedicated restart/migration/crash recovery evidence consolidation; automated 4/4 recovery/migration proof is now complete, while forced-crash/field recovery evidence remains open;
+- forced-crash/field recovery evidence beyond the deterministic 4/4 recovery/migration harness;
 - manual WCAG/RTL audit;
 - 24-hour stability soak;
 - controlled real connector evidence captured with the owner-authorized proof harness;
@@ -88,7 +90,7 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 The canonical Vercel project is live on the governed Git deployment path. The release contract requires each current-main production deployment to be sourced from Git `main`, use the `nextjs` framework, expose the canonical `orbit-marketing-os.vercel.app` alias, and prove the exact Git SHA through `/api/health.json`, `/api/release.json`, homepage provenance, security headers, routes, manifest/service worker, and 404 checks.
 
-The last verified production cycle passed the Vercel Git provenance workflow, full Web Deploy workflow, release-evidence workflow, and live surface checks for main SHA `6e5d78db...`. The current `main` commit has not yet been production-verified because no deployment for that commit was observed; Vercel is currently rate-limited. The controlled rollback drill remains open after current-SHA production verification.
+The current production cycle passed the Vercel Git provenance workflow, full Web Deploy workflow, and live surface checks for main SHA `62cf100c1b5c09010acfcf030890e578a25ab827`. Deployment `dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2` is READY and exact-SHA provenance is verified. The controlled rollback drill remains open.
 
 ## Distribution posture
 
