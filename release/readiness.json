@@ -32,7 +32,7 @@
         "mobile validation on validated pre-merge tree",
         "current production deployment dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2"
       ],
-      "notes": "The exact main release SHA 62cf100c1b5c09010acfcf030890e578a25ab827 passed main CI and Rust quality. Current production provenance is also verified at dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2; native desktop/mobile packaging evidence remains from the validated pre-merge release tree and does not by itself claim an exact merge-SHA package artifact.",
+      "notes": "The exact main release SHA 62cf100c1b5c09010acfcf030890e578a25ab827 passed main CI and Rust quality. Production provenance for the same release cycle is also verified at dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2; native desktop/mobile packaging evidence remains from the validated pre-merge release tree and does not by itself claim an exact merge-SHA package artifact.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595461",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595465",
@@ -48,7 +48,7 @@
         "runtime smoke",
         "Windows native E2E"
       ],
-      "notes": "Exact-main recovery artifact 10983516710 for 62cf100c1b5c09010acfcf030890e578a25ab827 records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency. Current main CI, runtime smoke, and Web E2E also passed. Forced-crash/field recovery and 24-hour stability remain open.",
+      "notes": "Exact-main recovery artifact 10983516710 for 62cf100c1b5c09010acfcf030890e578a25ab827 records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency. The same release-cycle CI, runtime smoke, and Web E2E checks passed. Forced-crash/field recovery and 24-hour stability remain open.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595461",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595461#artifacts-10983516710"
@@ -61,7 +61,7 @@
         "current main CI",
         "campaign/content/approval/CRM/inbox/search/publishing E2E"
       ],
-      "notes": "Current main CI completed successfully, including tests, runtime smoke, browser E2E and accessibility/RTL checks. Real external connector workflows remain separate gates.",
+      "notes": "The exact main release CI completed successfully, including tests, runtime smoke, browser E2E and accessibility/RTL checks. Real external connector workflows remain separate gates.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595461"
       ],
@@ -78,7 +78,7 @@
         "CI run 36450595461",
         "security:scan current main"
       ],
-      "notes": "Current main CI and security:scan passed on the exact SHA. Final L3 commercial governance still requires auditable evidence references, real-world evidence, and verification time across all required gates.",
+      "notes": "CI and security:scan passed on the exact release SHA. Final L3 commercial governance still requires auditable evidence references, real-world evidence, and verification time across all required gates.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595461",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/24"
@@ -93,7 +93,7 @@
         "current exact-main CI run 36450595461",
         "current production deployment dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2"
       ],
-      "notes": "Current main CI and production web distribution/provenance are verified. Desktop signing/notarization and production mobile signing/store distribution remain open.",
+      "notes": "CI and production web distribution/provenance for the exact release cycle are verified. Desktop signing/notarization and production mobile signing/store distribution remain open.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595461",
         "https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2"
@@ -109,7 +109,7 @@
         "canonical production alias",
         "exact Git SHA verification 62cf100c1b5c09010acfcf030890e578a25ab827"
       ],
-      "notes": "Current production deployment dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2 is READY, Git-sourced, target=production, framework=nextjs, and reports githubCommitSha=62cf100c1b5c09010acfcf030890e578a25ab827. Vercel Production Provenance and Web Deploy both passed. Live public verification checked /, /api/health.json and /api/release.json against the exact current SHA. Rollback evidence remains open.",
+      "notes": "Verified production deployment dpl_4agH7CGGXx6z6dMtN9nG86HpMHc2 is READY, Git-sourced, target=production, framework=nextjs, and reports githubCommitSha=62cf100c1b5c09010acfcf030890e578a25ab827. Vercel Production Provenance and Web Deploy both passed. Live public verification checked /, /api/health.json and /api/release.json against the exact release SHA. Rollback evidence remains open.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595465",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595482",
@@ -119,9 +119,7 @@
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",
-      "evidence": [
-        "connector contracts/fixtures/challenge handling"
-      ],
+      "evidence": ["connector contracts/fixtures/challenge handling"],
       "notes": "Real Telegram and LinkedIn authorization/delivery evidence is still required; connector contracts, negative-path handling, and challenge stop behavior are verified."
     },
     "sync_network": {
@@ -135,30 +133,22 @@
     },
     "accessibility": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "automated RTL/accessibility tests"
-      ],
+      "evidence": ["automated RTL/accessibility tests"],
       "notes": "Automated accessibility/RTL tests passed on current CI. Manual WCAG/RTL audit remains open."
     },
     "stability_soak": {
       "level": "L2_VERIFIED",
-      "evidence": [
-        "verified 10-minute soak harness/run"
-      ],
+      "evidence": ["verified 10-minute soak harness/run"],
       "notes": "The release line has a verified 10-minute soak harness/run. A complete 24-hour stability soak on the exact release SHA remains open."
     },
     "commercial_billing": {
       "level": "L1_IMPLEMENTED",
-      "evidence": [
-        "pricing surface and commercial contract docs"
-      ],
+      "evidence": ["pricing surface and commercial contract docs"],
       "notes": "Pricing/commercial surfaces exist, but payment/billing provider activation is not configured."
     },
     "legal_commercial": {
       "level": "L1_IMPLEMENTED",
-      "evidence": [
-        "privacy/terms/refunds/EULA surfaces"
-      ],
+      "evidence": ["privacy/terms/refunds/EULA surfaces"],
       "notes": "Privacy, terms, refund and EULA surfaces exist. Final legal/commercial publication review remains open."
     }
   },
