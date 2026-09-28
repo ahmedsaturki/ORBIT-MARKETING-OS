@@ -194,9 +194,9 @@ for (const fragment of [
 
 const vercelWorkflow = await text(".github/workflows/vercel-web.yml");
 for (const fragment of [
-  "release/PRODUCTION_RELEASE.json",
   "scripts/resolve-production-release.mjs",
   "needs.release_trigger.outputs.triggered",
+  "needs.release_trigger.outputs.release_sha",
   "vercel@59.23.1 pull --yes",
   "vercel@59.23.1 deploy --dry --format=json",
   "vercel@59.23.1 build --prod",
@@ -204,6 +204,19 @@ for (const fragment of [
 ]) {
   if (!vercelWorkflow.includes(fragment))
     throw new Error("Vercel deployment gate missing: " + fragment);
+}
+
+const vercelProvenanceWorkflow = await text(
+  ".github/workflows/vercel-production-provenance.yml",
+);
+for (const fragment of [
+  "release/PRODUCTION_RELEASE.json",
+  "scripts/resolve-production-release.mjs",
+  "release_active=true",
+  "release_current=true",
+]) {
+  if (!vercelProvenanceWorkflow.includes(fragment))
+    throw new Error("Vercel provenance gate missing: " + fragment);
 }
 
 const selfHosted = await text(".github/workflows/self-hosted-verify.yml");
