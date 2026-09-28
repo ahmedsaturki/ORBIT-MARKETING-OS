@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const markerPath = join(root, "release", "PRODUCTION_RELEASE.json");
 
-function git(args) {
+function gitRevParseHead() {
   const env = { ...process.env };
   for (const key of [
     "GIT_DIR",
@@ -21,11 +21,35 @@ function git(args) {
   ]) {
     delete env[key];
   }
-  return execFileSync("git", args, {
+  return execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: root,
     encoding: "utf8",
     env,
   }).trim();
+}
+
+function gitMarkerCommit() {
+  const env = { ...process.env };
+  for (const key of [
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_COMMON_DIR",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_NAMESPACE",
+  ]) {
+    delete env[key];
+  }
+  return execFileSync(
+    "git",
+    ["log", "-1", "--format=%H", "--", markerPath],
+    {
+      cwd: root,
+      encoding: "utf8",
+      env,
+    },
+  ).trim();
 }
 
 const marker = JSON.parse(await readFile(markerPath, "utf8"));
@@ -38,17 +62,14 @@ if (
   throw new Error("Invalid production release marker");
 }
 
-const currentSha = git(["rev-parse", "HEAD"]);
-const markerCommitSha = git([
-  "log",
-  "-1",
-  "--format=%H",
-  "--",
-  "release/PRODUCTION_RELEASE.json",
-]);
+const currentSha = gitRevParseHead();
+const markerCommitSha = gitMarkerCommit();
 
-if (!/^[0-9a-f]{40}$/.test(markerCommitSha)) {
-  throw new Error("Production release marker has no Git commit");
+if (!/^[0-9a-f]{40}$/i.test(currentSha)) {
+  throw new Error("Current Git revision is not a full SHA");
+}
+if (!/^[0-9a-f]{40}$/i.test(markerCommitSha)) {
+  throw new Error("Production release marker has no full Git SHA");
 }
 
 const active = marker.releaseId !== "bootstrap";
