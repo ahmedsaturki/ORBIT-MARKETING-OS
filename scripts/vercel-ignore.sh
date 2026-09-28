@@ -14,6 +14,18 @@ if [[ -z "${VERCEL_GIT_PREVIOUS_SHA:-}" || -z "${VERCEL_GIT_COMMIT_SHA:-}" ]]; t
   exit 1
 fi
 
+# Vercel supplies commit SHAs. Reject every other shape before using the
+# values as Git revision arguments so the deployment hook cannot accept
+# option-like or otherwise malformed revision input.
+if [[ ! "${VERCEL_GIT_PREVIOUS_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  echo "Vercel Git deployment skipped: previous revision is not a full SHA."
+  exit 1
+fi
+if [[ ! "${VERCEL_GIT_COMMIT_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  echo "Vercel Git deployment skipped: current revision is not a full SHA."
+  exit 1
+fi
+
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 1
 cd "$REPO_ROOT" || exit 1
 
