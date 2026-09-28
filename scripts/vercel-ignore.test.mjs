@@ -32,10 +32,8 @@ test("vercel ignore script exposes the explicit production release contract", as
   assert.match(script, /PRODUCTION_RELEASE\.json/);
   assert.match(script, /releaseId/);
   assert.match(script, /bootstrap/);
-  assert.match(
-    script,
-    /last successful deployment, not necessarily the previous Git commit/,
-  );
+  assert.match(script, /last successful deployment/);
+  assert.match(script, /not necessarily the previous Git commit/);
   assert.match(script, /exit 0/);
   assert.match(script, /exit 1/);
 });
@@ -51,7 +49,11 @@ test("only the commit that changes the release marker can trigger a build", asyn
     await mkdir(join(cwd, "packages", "web"), { recursive: true });
     await writeFile(join(cwd, "packages/web/index.html"), "v1\n", "utf8");
     await commit(cwd);
-    assert.equal(await runIgnore(cwd), 0);
+    assert.equal(
+      await runIgnore(cwd),
+      1,
+      "a root commit should build because Git cannot establish HEAD^",
+    );
 
     await writeFile(
       join(cwd, "packages/web/index.html"),
