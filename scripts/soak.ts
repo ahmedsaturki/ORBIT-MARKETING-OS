@@ -46,7 +46,7 @@ const requestedMinutes =
   readNumericArg("--minutes") ?? (readNumericArg("--hours") ?? 0) * 60;
 const minutes = requestedMinutes > 0 ? requestedMinutes : 10;
 const requestedPort = readNumericArg("--port");
-let port = requestedPort ?? 0;
+let port = requestedPort !== undefined && requestedPort > 0 ? requestedPort : 0;
 const RSS_BUDGET_MB = 600;
 const CYCLE_MS = 2_000;
 const deadline = Date.now() + minutes * 60_000;
@@ -417,7 +417,7 @@ async function terminateProcess(child: ChildProcess): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  if (requestedPort === undefined) {
+  if (requestedPort === undefined || requestedPort <= 0) {
     port = await findFreeLoopbackPort();
   }
 
@@ -464,8 +464,16 @@ async function main(): Promise<void> {
   let lastSample = 0;
 
   while (Date.now() < deadline) {
-    if (server.exitCode !== null)
-      fail(`server exited with code ${server.exitCode}`);
+    if (
+      server.exitCode !== null ||
+      server.signalCode !== null ||
+      serverExitCode !== null ||
+      serverSignalCode !== null
+    ) {
+      fail(
+        `server exited with code ${serverExitCode ?? server.exitCode ?? "null"} signal ${serverSignalCode ?? server.signalCode ?? "null"}`,
+      );
+    }
 
     cycles += 1;
 
