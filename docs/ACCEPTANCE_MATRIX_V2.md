@@ -2,7 +2,7 @@
 
 Last evidence refresh: 2026-09-28
 
-Latest completed exact-main verification snapshot before this documentation change: GitHub Actions CI run `36425376303` on main SHA `367c0de11cd7c075ff59448cb7dafdfaf98faffa`. DATA-03 measured `1.501363ms` for the 1,000-contact workspace-scoped search benchmark. The same run produced recovery evidence artifact `10971258468` with 4/4 recovery/migration checks passing. PERF-01/02 also executed on that exact-main run; the benchmark enforces startup ≤8,000ms, RSS ≤200MB, and heap ≤100MB. These immutable run/SHA references are historical evidence, not a moving current-SHA claim.
+Latest completed exact-main verification snapshot: GitHub Actions CI run `36450595461` on main SHA `62cf100c1b5c09010acfcf030890e578a25ab827`. DATA-03 measured `2.075497ms` for the 1,000-contact workspace-scoped search benchmark. The same run produced recovery evidence artifact `10983516710` with 4/4 recovery/migration checks passing. PERF-01 measured 379.39ms startup-to-health and PERF-02 measured 102.63MB peak RSS; the configured budgets remain startup ≤8,000ms, RSS ≤200MB, and heap ≤100MB. These immutable run/SHA references are exact-run evidence, not a moving claim.
 
 Status vocabulary: `PASS`, `FAIL`, `PARTIAL`, `UNVERIFIED`, `NOT_APPLICABLE`.
 
