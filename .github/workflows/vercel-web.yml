@@ -73,6 +73,8 @@ jobs:
           grep -q '^release_current=' /tmp/orbit-release-state.txt
 
   vercel_mode:
+    permissions:
+      contents: read
     name: Vercel release mode
     needs: [quality, release_trigger]
     if: needs.release_trigger.outputs.triggered == 'true'
