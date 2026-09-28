@@ -1,16 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, mkdtemp, rm } from "node:fs/promises";
 import { promisify } from "node:util";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const execFileAsync = promisify(execFile);
 const scriptPath = new URL("./vercel-ignore.sh", import.meta.url);
 
 async function git(cwd, args) {
-  await execFileAsync("git", args, { cwd });
+  return execFileAsync("git", args, { cwd });
 }
 
 async function runIgnore(cwd, env) {
@@ -25,7 +24,7 @@ async function runIgnore(cwd, env) {
   }
 }
 
-test("vercel ignore script declares the release-truth deployment contract", async () => {
+test("vercel ignore script declares a fail-closed main deployment contract", async () => {
   const script = await readFile(scriptPath, "utf8");
 
   assert.match(script, /VERCEL_GIT_COMMIT_REF/);
@@ -35,21 +34,17 @@ test("vercel ignore script declares the release-truth deployment contract", asyn
     script,
     /only permits Vercel Git builds from the protected main branch/,
   );
-  assert.match(script, /packages\/web/);
-  assert.match(script, /release/);
-  assert.match(script, /docs\/RELEASE_READINESS\.md/);
-  assert.match(script, /docs\/LAUNCH_SCORECARD\.md/);
-  assert.match(script, /docs\/COMMERCIAL_PRODUCTION_PROVEN_RUNBOOK\.md/);
-  assert.match(script, /docs\/VERIFICATION_BLOCKERS\.md/);
-  assert.match(script, /scripts\/vercel-ignore\.sh/);
-  assert.match(script, /scripts\/vercel-install\.sh/);
-  assert.match(script, /git rev-parse --show-toplevel/);
+  assert.match(
+    script,
+    /main is fail-closed for deployment filtering/,
+  );
+  assert.match(script, /protected main is always deployable/);
   assert.match(script, /exit 0/);
   assert.match(script, /exit 1/);
 });
 
-test("main branch skips unrelated documentation but builds for release-truth changes from a nested root directory", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "orbit-vercel-ignore-"));
+test("main always builds while non-main branches stay skipped", async () => {
+  const cwd = await mkdtemp(tmpdir() + "/orbit-vercel-ignore-");
 
   try {
     await git(cwd, ["init", "-q"]);
@@ -60,75 +55,58 @@ test("main branch skips unrelated documentation but builds for release-truth cha
       "bash",
       [
         "-lc",
-        'mkdir -p packages/web release docs && printf "v1" > packages/web/index.html && printf "{}" > release/readiness.json && printf "base" > docs/README.md',
+        'printf "base" > README.md && git add README.md && git commit -qm base',
       ],
       { cwd },
     );
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "base"]);
-    const previous = (
-      await execFileAsync("git", ["rev-parse", "HEAD"], { cwd })
-    ).stdout.trim();
 
-    await writeFile(join(cwd, "docs", "README.md"), "unrelated docs");
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "docs"]);
-    const docsCommit = (
-      await execFileAsync("git", ["rev-parse", "HEAD"], { cwd })
-    ).stdout.trim();
+    const previous = (await git(cwd, ["rev-parse", "HEAD"])).stdout.trim();
 
-    const webRoot = join(cwd, "packages", "web");
+    await execFileAsync(
+      "bash",
+      [
+        "-lc",
+        'printf "next" > README.md && git add README.md && git commit -qm next',
+      ],
+      { cwd },
+    );
+
+    const current = (await git(cwd, ["rev-parse", "HEAD"])).stdout.trim();
+
     assert.equal(
-      await runIgnore(webRoot, {
+      await runIgnore(cwd, {
         VERCEL_GIT_COMMIT_REF: "main",
         VERCEL_GIT_PREVIOUS_SHA: previous,
-        VERCEL_GIT_COMMIT_SHA: docsCommit,
-      }),
-      0,
-      "unrelated documentation should remain skippable from a nested root",
-    );
-
-    await writeFile(
-      join(cwd, "release", "readiness.json"),
-      '{ "updated": "2026-09-28" }\n',
-    );
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "release-truth"]);
-    const releaseCommit = (
-      await execFileAsync("git", ["rev-parse", "HEAD"], { cwd })
-    ).stdout.trim();
-
-    assert.equal(
-      await runIgnore(webRoot, {
-        VERCEL_GIT_COMMIT_REF: "main",
-        VERCEL_GIT_PREVIOUS_SHA: docsCommit,
-        VERCEL_GIT_COMMIT_SHA: releaseCommit,
+        VERCEL_GIT_COMMIT_SHA: current,
       }),
       1,
-      "release-truth changes must force a Vercel deployment from a nested root",
+      "main must always request a Vercel deployment",
     );
 
     assert.equal(
-      await runIgnore(webRoot, {
+      await runIgnore(cwd, {
         VERCEL_GIT_COMMIT_REF: "feature/example",
-        VERCEL_GIT_PREVIOUS_SHA: docsCommit,
-        VERCEL_GIT_COMMIT_SHA: releaseCommit,
+        VERCEL_GIT_PREVIOUS_SHA: previous,
+        VERCEL_GIT_COMMIT_SHA: current,
       }),
       0,
-      "non-main branches must never deploy",
+      "non-main branches must remain skipped",
     );
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
 });
 
-test("vercel ignore script builds when Git revision context is incomplete or unavailable", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "orbit-vercel-ignore-missing-"));
+test("main builds when Git revision context is incomplete or unavailable", async () => {
+  const cwd = await mkdtemp(tmpdir() + "/orbit-vercel-ignore-missing-");
 
   try {
     await git(cwd, ["init", "-q"]);
 
-    assert.equal(await runIgnore(cwd, { VERCEL_GIT_COMMIT_REF: "main" }), 1);
+    assert.equal(
+      await runIgnore(cwd, { VERCEL_GIT_COMMIT_REF: "main" }),
+      1,
+    );
 
     assert.equal(
       await runIgnore(cwd, {
