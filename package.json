@@ -38,7 +38,8 @@
     "triage:release": "node scripts/agent-release-triage.mjs",
     "verify:omp": "node scripts/verify-omp-contract.mjs",
     "benchmark:startup-memory": "node scripts/startup-memory-benchmark.mjs",
-    "test:recovery:evidence": "node scripts/recovery-evidence.mjs"
+    "test:recovery:evidence": "node scripts/recovery-evidence.mjs",
+    "verify:release-docs": "node scripts/verify-release-docs.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
