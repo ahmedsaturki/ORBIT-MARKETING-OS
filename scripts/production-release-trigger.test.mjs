@@ -47,9 +47,7 @@ test("production release resolver binds the release to the marker commit", async
     assert.equal(result.release_current, "false");
 
     await writeFile(join(cwd, "README.md"), "ordinary docs\n", "utf8");
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "docs"]);
-    current = await commitSha(cwd);
+    current = await commit(cwd);
     result = await state(cwd);
     assert.notEqual(result.release_sha, current);
     assert.equal(result.release_current, "false");
@@ -63,9 +61,7 @@ test("production release resolver binds the release to the marker commit", async
       }) + "\n",
       "utf8",
     );
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "production release"]);
-    current = await commitSha(cwd);
+    current = await commit(cwd);
     result = await state(cwd);
     assert.equal(result.release_id, "2026-09-28-r1");
     assert.equal(result.release_sha, current);
@@ -74,9 +70,7 @@ test("production release resolver binds the release to the marker commit", async
     assert.equal(result.release_current, "true");
 
     await writeFile(join(cwd, "README.md"), "post-release docs\n", "utf8");
-    await git(cwd, ["add", "."]);
-    await git(cwd, ["commit", "-qm", "post-release docs"]);
-    current = await commitSha(cwd);
+    current = await commit(cwd);
     result = await state(cwd);
     assert.notEqual(result.release_sha, current);
     assert.equal(result.release_current, "false");
