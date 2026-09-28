@@ -25,3 +25,9 @@ Startup and memory targets remain separate gates. The existing soak harness meas
 ## Reproducibility
 
 Always record the exact Git SHA, workflow run, platform/runner, Node/Rust toolchain, dataset size, query, and elapsed measurement when promoting performance evidence.
+
+## PERF-01 / PERF-02 measurement harness
+
+The script `scripts/startup-memory-benchmark.mjs` starts the production-shaped local runtime on loopback, waits for `/api/health`, records startup-to-health time, and samples process RSS during startup and a short settling window. It prints `STARTUP_MEMORY_BENCHMARK_JSON` for exact-run evidence.
+
+The harness is intentionally measurement-only: it does not invent a pass/fail threshold where the release contract does not publish one. A release reconciliation must compare the recorded values with the accepted target before promoting PERF-01 or PERF-02.
