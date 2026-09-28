@@ -210,6 +210,13 @@ jobs:
       - name: Recovery evidence
         timeout-minutes: 5
         run: pnpm test:recovery:evidence
+      - name: Upload recovery evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: orbit-recovery-evidence-${{ github.sha }}
+          path: .artifacts/recovery-evidence.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Search scale benchmark
         run: cargo test --manifest-path packages/desktop/src-tauri/Cargo.toml contact_search_1000_scale_benchmark -- --nocapture
       - name: Startup and memory benchmark
