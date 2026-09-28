@@ -25,9 +25,7 @@ for (const marker of [
   );
 }
 
-const requiredGitHardening = [
-  'const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");',
-  "cwd: repoRoot,",
+const requiredGitOverrides = [
   '"GIT_DIR",',
   '"GIT_WORK_TREE",',
   '"GIT_INDEX_FILE",',
@@ -37,17 +35,27 @@ const requiredGitHardening = [
   '"GIT_NAMESPACE",',
 ];
 
-for (const [label, content] of [
-  ["security scan", securitySource],
-  ["recovery evidence", recoverySource],
-]) {
-  for (const marker of requiredGitHardening) {
+const requiredRepoBinding = [
+  ["security scan", securitySource, 'const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");', "cwd: repoRoot,"],
+  ["recovery evidence", recoverySource, 'const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");', "cwd: root,"],
+];
+
+for (const marker of requiredGitOverrides) {
+  for (const [label, content] of [
+    ["security scan", securitySource],
+    ["recovery evidence", recoverySource],
+  ]) {
     assert.equal(
       content.includes(marker),
       true,
-      `${label} missing Git hardening marker: ${marker}`,
+      `${label} missing Git override sanitization marker: ${marker}`,
     );
   }
+}
+
+for (const [label, content, rootMarker, cwdMarker] of requiredRepoBinding) {
+  assert.equal(content.includes(rootMarker), true, `${label} missing repository-root marker`);
+  assert.equal(content.includes(cwdMarker), true, `${label} missing bound Git cwd marker`);
 }
 
 console.log("release_evidence_collector_contract=PASS");
