@@ -25,7 +25,7 @@ Updated: 2026-09-28.
 | -------------------------------- | -------- | ---------------------------------------------------------------------------- |
 | DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                        |
 | DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                         |
-| DATA-03 Search scale             | VERIFIED | CI 36364156402; 1,000-contact search measured 1.316917ms                     |
+| DATA-03 Search scale             | VERIFIED | Main CI run 36364156402 on 6e1c744b78402bdfb0e1a3312f90aa2e98cc9710; 1,000-contact search measured 1.316917ms, 1 match, workspace-scoped |
 | QUE-01 Persistent queue recovery | PARTIAL  | Recovery implementation and E2E exist; consolidated release evidence remains |
 | QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                          |
 | QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                              |
@@ -78,7 +78,7 @@ Updated: 2026-09-28.
 | MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                                                                                  |
 | Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                                                                       |
 | Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                                                                      |
-| Web production provenance     | VERIFIED | Latest successful Vercel Production Provenance and Web Deploy gates verify exact-main SHA provenance, canonical alias, health/release endpoints, security headers, routes, manifest/service worker and 404 behavior |
+| Web production provenance     | VERIFIED | Main Vercel Production Provenance run 36364156344 and Web Deploy run 36364156390 passed on exact main SHA; canonical alias, health/release endpoints, security headers, routes, manifest/service worker and 404 behavior verified |
 
 ## Release / Operations
 
@@ -88,12 +88,12 @@ Updated: 2026-09-28.
 | REL-02 Signed desktop artifact | BLOCKED    | Signing identities not configured                                                              |
 | REL-03 Checksum verification   | PARTIAL    | Validation pipeline generates and checks checksums; final distributed release evidence remains |
 | LIC-01 Offline license         | PARTIAL    | Token/constraint tests pass; production distribution proof remains                             |
-| OPS-01 Crash/restart recovery  | PARTIAL    | Native restart/queue recovery E2E exists; final consolidated evidence remains                  |
+| OPS-01 Crash/restart recovery  | PARTIAL    | Native restart/queue recovery E2E exists; final consolidated release evidence remains          |
 | OPS-02 24h soak                | UNVERIFIED | No completed 24h evidence                                                                      |
-| PERF-01 Startup budget         | PARTIAL    | Fresh CI measurement 376.05ms; numeric budget not published                                    |
-| PERF-02 Memory budget          | PARTIAL    | Fresh CI measurement 100.44MB RSS; numeric budget not published                                |
+| PERF-01 Startup budget         | VERIFIED   | Main CI run 36364156402 on exact SHA measured 376.05ms startup-to-health; benchmark enforces ≤8000ms |
+| PERF-02 Memory budget          | VERIFIED   | Main CI run 36364156402 on exact SHA measured 100.44MB peak RSS; 200MB RSS and 100MB heap budgets enforced |
 | QA-01 Coverage threshold       | VERIFIED   | Hosted coverage gate passed                                                                    |
-| QA-02 Critical E2E             | VERIFIED   | Current validated feature line passed required E2E/native gates                                |
+| QA-02 Critical E2E             | VERIFIED   | Main CI Web E2E + Accessibility/RTL and native release validation passed                       |
 | DOC-01 Product docs            | VERIFIED   | Current release/readiness docs reconciled to merged main                                       |
 | DOC-02 Security model          | PARTIAL    | Threat model/security gates exist; final review remains                                        |
 
@@ -106,7 +106,7 @@ Updated: 2026-09-28.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.
-- Exact-main CI run `36364156402` completed successfully on `6e1c744b78402bdfb0e1a3312f90aa2e98cc9710`; current benchmark measurements are preserved in `docs/RELEASE_EVIDENCE_2026-09-28.md`.
+- Exact-main CI run `36364156402` completed successfully on `6e1c744b78402bdfb0e1a3312f90aa2e98cc9710`; its benchmark measurements are preserved in `docs/PERFORMANCE_EVIDENCE.md` and the generated release-evidence artifact.
 - GitHub `main` is protected with required `ci` and `security:scan`; final L3 governance evidence still requires auditable evidence references and verification time.
 
 ## Release rule
