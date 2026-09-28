@@ -6,7 +6,7 @@ The merged core is strongly verified at L2 across the main product domains. Web 
 
 ## A. Vercel
 
-Current verified production deployment: `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`, READY, Git-sourced, target=production, exact SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`.
+Latest verified production deployment: `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`, READY, Git-sourced, target=production, exact SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`.
 
 - repository/main: current SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; production verification is complete for this SHA;
 - project: `orbit-marketing-os`;
@@ -18,7 +18,7 @@ Current verified production deployment: `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`, READ
 
 The remaining Vercel action is only:
 
-1. Exercise rollback from the current verified production deployment to the previous verified candidate and back.
+1. Exercise rollback from the latest verified production deployment to the previous verified candidate and back.
 2. Preserve exact rollback evidence tied to deployment IDs and release SHA.
 
 ## B. Real connector verification
