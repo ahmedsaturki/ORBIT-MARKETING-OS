@@ -26,7 +26,7 @@ The repository starts with:
 
 `releaseId: "bootstrap"`
 
-The bootstrap marker is not a production release and cannot trigger a Production deployment.
+The bootstrap marker is not a production release and cannot trigger a Production deployment. It remains the expected state for ordinary development commits.
 
 ## Safety rules
 
