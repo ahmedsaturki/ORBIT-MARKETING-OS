@@ -5,15 +5,14 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 concurrency:
   group: orbit-web-deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   quality:
+    permissions:
+      contents: read
     name: Web quality gate
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -43,6 +42,8 @@ jobs:
         run: pnpm test:e2e
 
   release_trigger:
+    permissions:
+      contents: read
     name: Production release trigger
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -88,6 +89,8 @@ jobs:
           fi
 
   deploy:
+    permissions:
+      contents: read
     needs: [quality, release_trigger, vercel_mode]
     if: needs.release_trigger.outputs.triggered == 'true' && needs.vercel_mode.outputs.credentials == 'true'
     runs-on: ubuntu-24.04
@@ -144,6 +147,8 @@ jobs:
         run: node scripts/verify-live-web.mjs
 
   git_provenance:
+    permissions:
+      contents: read
     name: Vercel Git provenance
     needs: [quality, release_trigger, vercel_mode]
     if: needs.release_trigger.outputs.triggered == 'true' && needs.vercel_mode.outputs.credentials == 'false'
