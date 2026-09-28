@@ -16,7 +16,7 @@
         "security:scan run 36450595461",
         "SonarCloud current-main quality gate remains open at B; required A"
       ],
-      "notes": "Exact-main CI and security verification passed on 62cf100c1b5c09010acfcf030890e578a25ab827. SonarCloud remains the outstanding quality prerequisite: the latest observed main analysis is B Security Rating on New Code while the required threshold is A. No bypass or exclusion has been introduced.",
+      "notes": "Exact main release SHA 62cf100c1b5c09010acfcf030890e578a25ab827 passed CI and security verification. SonarCloud remains the outstanding quality prerequisite: the latest observed main analysis is B Security Rating on New Code while the required threshold is A. No bypass or exclusion has been introduced.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36450595461",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/112"
