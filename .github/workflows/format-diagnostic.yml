@@ -1,8 +1,8 @@
 name: Format Diagnostic
 
 on:
-  push:
-    branches: ["chore/omp-release-control-2026-09-28"]
+  pull_request:
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: \${{ github.event.after }}
+          ref: \${{ github.event.pull_request.head.sha }}
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
         with:
           version: 10.17.1
@@ -25,4 +25,5 @@ jobs:
       - name: Format target files
         run: pnpm exec prettier --write scripts/agent-release-triage.mjs scripts/startup-memory-benchmark.mjs
       - name: Print formatter diff
-        run: git diff -- scripts/agent-release-triage.mjs scripts/startup-memory-benchmark.mjs
+        run: |
+          git diff --no-ext-diff --unified=80 -- scripts/agent-release-triage.mjs scripts/startup-memory-benchmark.mjs
