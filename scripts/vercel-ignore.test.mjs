@@ -64,6 +64,7 @@ test("ordinary web/docs commits are skipped; only a non-bootstrap marker change 
         schemaVersion: 1,
         releaseId: "bootstrap",
         mode: "EXPLICIT_PRODUCTION_RELEASE",
+        notes: "bootstrap rewrite",
       }) + "\n",
       "utf8",
     );
