@@ -111,6 +111,7 @@ const requiredFiles = [
   "scripts/production-release-trigger.test.mjs",
   "scripts/resolve-production-release.mjs",
   "release/PRODUCTION_RELEASE.json",
+  "docs/PRODUCTION_RELEASES.md",
   "scripts/recovery-evidence.mjs",
 ];
 
