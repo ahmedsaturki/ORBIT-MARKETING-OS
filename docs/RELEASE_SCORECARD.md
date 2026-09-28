@@ -21,15 +21,15 @@ Updated: 2026-09-28.
 
 ## Data / Queue
 
-| Gate                             | Status     | Evidence                                                                     |
-| -------------------------------- | ---------- | ---------------------------------------------------------------------------- |
-| DATA-01 Local SQLite             | VERIFIED   | Native implementation and validated Rust/native gates                        |
-| DATA-02 Migration safety         | VERIFIED   | Versioned migrations through v16 and migration tests                         |
-| DATA-03 Search scale             | UNVERIFIED | Contract exists; large-contact benchmark still needs fresh measured evidence |
-| QUE-01 Persistent queue recovery | PARTIAL    | Recovery implementation and E2E exist; consolidated release evidence remains |
-| QUE-02 Bounded retries           | VERIFIED   | Core/native retry validation passed                                          |
-| QUE-03 Circuit breaker           | VERIFIED   | Policy/runtime controls covered                                              |
-| QUE-04 Human-intervention wait   | VERIFIED   | Explicit wait/resume contract and tests                                      |
+| Gate                             | Status   | Evidence                                                                     |
+| -------------------------------- | -------- | ---------------------------------------------------------------------------- |
+| DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                        |
+| DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                         |
+| DATA-03 Search scale             | VERIFIED | CI 36364156402; 1,000-contact search measured 1.316917ms                     |
+| QUE-01 Persistent queue recovery | PARTIAL  | Recovery implementation and E2E exist; consolidated release evidence remains |
+| QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                          |
+| QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                              |
+| QUE-04 Human-intervention wait   | VERIFIED | Explicit wait/resume contract and tests                                      |
 
 ## Product workflows
 
@@ -90,8 +90,8 @@ Updated: 2026-09-28.
 | LIC-01 Offline license         | PARTIAL    | Token/constraint tests pass; production distribution proof remains                             |
 | OPS-01 Crash/restart recovery  | PARTIAL    | Native restart/queue recovery E2E exists; final consolidated evidence remains                  |
 | OPS-02 24h soak                | UNVERIFIED | No completed 24h evidence                                                                      |
-| PERF-01 Startup budget         | UNVERIFIED | Fresh measured benchmark pending                                                               |
-| PERF-02 Memory budget          | UNVERIFIED | Fresh measured benchmark pending                                                               |
+| PERF-01 Startup budget         | PARTIAL    | Fresh CI measurement 376.05ms; numeric budget not published                                    |
+| PERF-02 Memory budget          | PARTIAL    | Fresh CI measurement 100.44MB RSS; numeric budget not published                                |
 | QA-01 Coverage threshold       | VERIFIED   | Hosted coverage gate passed                                                                    |
 | QA-02 Critical E2E             | VERIFIED   | Current validated feature line passed required E2E/native gates                                |
 | DOC-01 Product docs            | VERIFIED   | Current release/readiness docs reconciled to merged main                                       |
@@ -106,6 +106,7 @@ Updated: 2026-09-28.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.
+- Exact-main CI run `36364156402` completed successfully on `6e1c744b78402bdfb0e1a3312f90aa2e98cc9710`; current benchmark measurements are preserved in `docs/RELEASE_EVIDENCE_2026-09-28.md`.
 - GitHub `main` is protected with required `ci` and `security:scan`; final L3 governance evidence still requires auditable evidence references and verification time.
 
 ## Release rule
