@@ -18,10 +18,10 @@ for (const key of [
 }
 
 const tracked = execFileSync("git", ["ls-files", "-z"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    env: gitEnv,
-  })
+  cwd: repoRoot,
+  encoding: "utf8",
+  env: gitEnv,
+})
   .split("\0")
   .filter(Boolean);
 
