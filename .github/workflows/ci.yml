@@ -134,12 +134,6 @@ jobs:
         timeout-minutes: 5
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
-      - name: Format diagnostic (temporary)
-        run: |
-          for file in docs/FINAL_EXTERNAL_ACTIONS.md docs/LAUNCH_SCORECARD.md docs/RELEASE_SCORECARD.md; do
-            pnpm exec prettier "$file" > /tmp/orbit-prettier-output.md
-            diff -u "$file" /tmp/orbit-prettier-output.md || true
-          done
       - name: Format check
         run: pnpm format:check
 
