@@ -78,7 +78,7 @@ Updated: 2026-09-28.
 | MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                             |
 | Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                  |
 | Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                 |
-| Web production provenance     | PARTIAL  | Last verified production SHA is `6e5d78db...`; the current `main` commit is not yet production-verified because no deployment for the current SHA was observed |
+| Web production provenance     | VERIFIED | Vercel Production Provenance run 36434671316 + Web Deploy run 36434671320; current main deployment dpl_CVTi4TwkUUntjsCrNonMwVJT32qm is READY and live health/release readback matches the deployed SHA |
 
 ## Release / Operations
 
@@ -100,8 +100,8 @@ Updated: 2026-09-28.
 ## External / commercial prerequisites
 
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
-- Vercel production provenance is verified only for the last deployed main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac`; current main requires fresh deployment/readback before it is treated as production-current.
-- The last verified Vercel release cycle passed governed Git provenance and Web Deploy for main SHA `6e5d78db8300cdfc53440ccfe738af76d81275ac`. The current `main` commit is not yet production-verified because no deployment for that commit was observed; the rollback drill remains separate.
+- Vercel production provenance is verified for the current main release cycle through Vercel Production Provenance run 36434671316 and live exact-SHA readback; current deployment dpl_CVTi4TwkUUntjsCrNonMwVJT32qm is READY and Git-sourced from main.
+- The current Vercel release cycle passed governed Git provenance and Web Deploy for the current main deployment. The remaining Vercel action is the controlled rollback drill to the previous verified candidate and back.
 - The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
