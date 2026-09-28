@@ -40,9 +40,17 @@ const results = [];
 for (const check of checks) {
   const started = Date.now();
   try {
-    execFileSync(
+    const output = execFileSync(
       "cargo",
-      ["test", "--manifest-path", manifest, check.test, "--", "--nocapture"],
+      [
+        "test",
+        "--manifest-path",
+        manifest,
+        check.test,
+        "--",
+        "--exact",
+        "--nocapture",
+      ],
       {
         cwd: root,
         stdio: ["ignore", "pipe", "pipe"],
@@ -51,6 +59,94 @@ for (const check of checks) {
         env: process.env,
       },
     );
+
+    const escapedTestName = check.test.replace(/[.*+?^$\{}()|[\]\\]/g, "\\        env: process.env,
+      },
+    );
+    results.push({
+");
+    const ranNamedTest = new RegExp(
+      `^test ${escapedTestName} \\.\\.\\. ok#!/usr/bin/env node
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const manifest = resolve(root, "packages/desktop/src-tauri/Cargo.toml");
+const evidenceDir = resolve(root, ".artifacts");
+mkdirSync(evidenceDir, { recursive: true });
+
+const checks = [
+  {
+    id: "startup-recovery",
+    test: "startup_recovery_requeues_sync_and_halts_external_work",
+    description:
+      "Requeue interrupted sync work, park interrupted external work for human recovery, write recovery audit events, and verify the audit chain.",
+  },
+  {
+    id: "database-recovery",
+    test: "database_recovery_restores_missing_primary_and_cleans_transients",
+    description:
+      "Restore a missing primary SQLite database from the previous copy and remove stale restore/backup source artifacts.",
+  },
+  {
+    id: "recovery-idempotency",
+    test: "interrupted_external_tasks_require_human_recovery_but_sync_tasks_requeue",
+    description:
+      "Recover interrupted tasks once, prove a second recovery is a no-op, and preserve the sync-vs-external recovery state boundary.",
+  },
+  {
+    id: "migration-idempotency",
+    test: "schema_migration_reaches_current_version_and_is_idempotent_afterwards",
+    description:
+      "Apply the production schema migration to the current version and prove a second migration is a no-op.",
+  },
+];
+
+const results = [];
+for (const check of checks) {
+  const started = Date.now();
+  try {
+    const output = execFileSync(
+      "cargo",
+      [
+        "test",
+        "--manifest-path",
+        manifest,
+        check.test,
+        "--",
+        "--exact",
+        "--nocapture",
+      ],
+      {
+        cwd: root,
+        stdio: ["ignore", "pipe", "pipe"],
+        encoding: "utf8",
+        timeout: 4 * 60 * 1000,
+,
+      "m",
+    ).test(output);
+    const testResults = [
+      ...output.matchAll(
+        /^test result: (?:ok|FAILED)\\. (\\d+) passed; (\\d+) failed;/gm,
+      ),
+    ];
+    const passed = testResults.reduce(
+      (total, match) => total + Number(match[1]),
+      0,
+    );
+    const failed = testResults.reduce(
+      (total, match) => total + Number(match[2]),
+      0,
+    );
+
+    if (!ranNamedTest || passed !== 1 || failed !== 0) {
+      throw new Error(
+        `Expected exactly one successful matching Cargo test; ranNamedTest=${ranNamedTest} passed=${passed} failed=${failed}`,
+      );
+    }
+
     results.push({
       id: check.id,
       test: check.test,

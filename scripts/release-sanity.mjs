@@ -147,8 +147,14 @@ if (!ci.includes("node scripts/vercel-ignore.test.mjs"))
   throw new Error("Vercel ignore-command contract test missing");
 if (!ci.includes("pnpm test:recovery:evidence"))
   throw new Error("Recovery evidence CI gate missing");
-if (!ci.includes("orbit-recovery-evidence-${{ github.sha }}"))
-  throw new Error("Recovery evidence artifact retention missing");
+if (!ci.includes("if: ${{ !cancelled() }}"))
+  throw new Error("Recovery evidence artifact failure upload condition missing");
+if (
+  !ci.includes(
+    "orbit-recovery-evidence-${{ github.event.pull_request.head.sha || github.sha }}",
+  )
+)
+  throw new Error("Recovery evidence artifact SHA selection missing");
 
 const selfHostedWeb = await text(
   ".github/workflows/web-release-selfhosted.yml",
