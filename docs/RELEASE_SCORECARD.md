@@ -89,7 +89,7 @@ Updated: 2026-09-28.
 | REL-03 Checksum verification   | PARTIAL    | Validation pipeline generates and checks checksums; final distributed release evidence remains |
 | LIC-01 Offline license         | PARTIAL    | Token/constraint tests pass; production distribution proof remains                             |
 | OPS-01 Crash/restart recovery  | PARTIAL    | Native restart/queue recovery E2E exists; final consolidated evidence remains                  |
-| OPS-02 24h soak                | UNVERIFIED | No completed 24h evidence                                                                      |
+| OPS-02 24h soak                | UNVERIFIED | No completed 24-hour evidence                                                                      |
 | PERF-01 Startup budget         | VERIFIED   | CI 36414578451; startup-to-health 266.68ms; enforced budget ≤8000ms                            |
 | PERF-02 Memory budget          | VERIFIED   | CI 36414578451; peak RSS 96.79MB; enforced budgets 200MB RSS / 100MB heap                      |
 | QA-01 Coverage threshold       | VERIFIED   | Hosted coverage gate passed                                                                    |
