@@ -4,7 +4,7 @@ Updated: 2026-09-29.
 
 ## Current state
 
-The production implementation is consolidated on the current main lineage. The current release train has strong L2 evidence across the core architecture, execution controls, research intelligence, experimentation/learning, anomaly detection, governed agent operations, Universal Search, publishing, platform foundation, native desktop/mobile validation, web production, and release-readiness controls. The live Production alias currently serves `9ba07318f4d580e670be9d27ec76888e66013340`; current main `70dc187d...` is a release-truth/documentation reconciliation commit and is not the serving Production SHA.
+The production implementation is consolidated on the current main lineage. The current release train has strong L2 evidence across the core architecture, execution controls, research intelligence, experimentation/learning, anomaly detection, governed agent operations, Universal Search, publishing, platform foundation, native desktop/mobile validation, web production, and release-readiness controls. The live Production alias currently serves `9ba07318f4d580e670be9d27ec76888e66013340`; moving `main` is intentionally separate from the serving Production release, and its exact current SHA is recorded in run-bound evidence rather than this durable status document.
 
 ## Product surface
 
