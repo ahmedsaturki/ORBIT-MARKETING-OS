@@ -75,7 +75,7 @@
         "CI run 36496595601",
         "security:scan in CI run 36496595601"
       ],
-      "notes": "CI and security:scan passed on exact current main SHA be22a0550bf92e39e04688d501ec41d518cb5aba. Final L3 commercial governance still requires auditable evidence references, real-world evidence, and verification time across all required gates.",
+      "notes": "CI and security:scan passed on the exact current main verification run 36496595601. Final L3 commercial governance still requires auditable evidence references, real-world evidence, and verification time across all required gates.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36496595601",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/24"
@@ -102,7 +102,7 @@
         "current exact-main Web Deploy run 36496595591",
         "canonical production alias"
       ],
-      "notes": "The canonical production alias is READY on historical deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp at SHA edc8c07f0527c7ea9b38827e293fd820b9f6cce0. Current main SHA be22a0550bf92e39e04688d501ec41d518cb5aba has no production proof because its Vercel deployment was intentionally canceled by the bootstrap-marker ignore rule. Web Deploy run 36496595591 passed the current-main web quality path. Rollback evidence remains open.",
+      "notes": "The canonical production alias is READY on historical deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp at SHA edc8c07f0527c7ea9b38827e293fd820b9f6cce0. The current main commit is not production-proven because its production marker remains bootstrap and its Vercel deployment was intentionally canceled by the ignore rule. Web Deploy run 36496595591 passed the current-main web quality path. Rollback evidence remains open.",
       "evidenceRefs": [
         "https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36496595591"
