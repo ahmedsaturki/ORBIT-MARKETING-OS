@@ -21,6 +21,10 @@ if (
   observation?.schemaVersion !== 1 ||
   observation?.environment !== "production" ||
   typeof observation?.observedAt !== "string" ||
+  observation?.releaseTruth?.commercialProductionProven !== false ||
+  !observation?.runtimeErrors ||
+  observation.runtimeErrors.window !== "7d" ||
+  observation.runtimeErrors.count !== 0 ||
   !deployment ||
   !/^dpl_[A-Za-z0-9_-]+$/.test(deployment.id) ||
   deployment.state !== "READY" ||
@@ -33,6 +37,10 @@ if (
   release.provenanceSource !== "VERCEL_GIT_COMMIT_SHA"
 ) {
   fail("Invalid production observation schema");
+}
+
+if (!Array.isArray(observation.endpointChecks) || observation.endpointChecks.length !== 3) {
+  fail("Expected exactly three production endpoint checks");
 }
 
 for (const check of observation.endpointChecks ?? []) {
