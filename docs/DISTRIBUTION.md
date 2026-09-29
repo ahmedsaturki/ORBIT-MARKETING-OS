@@ -1,6 +1,6 @@
 # ORBIT Distribution
 
-Updated: 2026-09-28.
+Updated: 2026-09-29.
 
 ## Desktop
 
@@ -20,7 +20,7 @@ The public web surface is live on the connected Vercel production project and re
 
 The latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`, READY, Git-sourced, production-targeted, and Next.js. It belongs to the prior verified release line. Current main is not treated as a Production release because `release/PRODUCTION_RELEASE.json` remains on the bootstrap marker.
 
-Vercel Production Provenance run `36480198039` completed successfully in bootstrap/non-release mode and Web Deploy run `36480197959` passed its web quality path. The next Production release must first update the reviewed non-bootstrap marker, then re-establish exact production provenance before the rollback drill.
+Vercel Production Provenance remains a bootstrap/non-release check while the marker is `bootstrap`; current exact-main Web Deploy run `36496595591` passed the web quality path. The next Production release must first update the reviewed non-bootstrap marker, then re-establish exact production provenance before the rollback drill.
 
 ## Release integrity
 
