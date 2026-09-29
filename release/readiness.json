@@ -170,7 +170,7 @@
     "sha": "70dc187d2e6648fbff08562dcdded3331902a7f0",
     "observedAt": "2026-09-29T19:50:35Z",
     "changeClass": "documentation-release-truth-reconciliation",
-    "productionServing": "false",
+    "productionServing": false,
     "evidenceRefs": [
       "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773",
       "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459863",
