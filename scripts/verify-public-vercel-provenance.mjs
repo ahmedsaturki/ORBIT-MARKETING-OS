@@ -2,7 +2,7 @@ const base = (
   process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app"
 ).replace(/\/$/, "");
 const expected = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
-if (!expected) throw new Error("ORBIT_EXPECTED_RELEASE_SHA is required");
+const expectedVersion = process.env.ORBIT_EXPECTED_RELEASE_VERSION ?? "1.0.0";
 
 async function get(pathname) {
   return fetch(base + pathname, {
@@ -24,6 +24,8 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
         "VERCEL_GIT_COMMIT_SHA",
       ]);
       if (
+        healthBody?.version === expectedVersion &&
+        releaseBody?.version === expectedVersion &&
         healthBody?.releaseSha === expected &&
         releaseBody?.releaseSha === expected &&
         releaseBody?.releaseProvenance?.declaredByEnvironment === true &&
@@ -44,6 +46,8 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
             status: "PASS",
             origin: base,
             expectedReleaseSha: expected,
+            expectedReleaseVersion: expectedVersion,
+            verifiedVersion: healthBody?.version,
             verifiedPaths: ["/", "/api/health.json", "/api/release.json"],
             attempt,
           }),

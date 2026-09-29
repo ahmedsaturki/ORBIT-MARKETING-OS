@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2026-09-29
 
-Production release of ORBIT Marketing OS. The codebase has transitioned from the 0.x pre-release line to the first stable 1.0.0 milestone. All production-critical gates are verified and the production release marker (`release/PRODUCTION_RELEASE.json`) declares `v1.0.0`.
+Production release of ORBIT Marketing OS. The codebase has transitioned from the 0.x pre-release line to the first stable 1.0.0 milestone. The production release marker (`release/PRODUCTION_RELEASE.json`) declares `v1.0.0`, with release-critical gates remaining open pending verification.
 
 ### Added
 

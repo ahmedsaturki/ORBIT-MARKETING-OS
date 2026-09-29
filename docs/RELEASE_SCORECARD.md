@@ -78,7 +78,7 @@ Updated: 2026-09-29.
 | MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                                                              |
 | Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                                                   |
 | Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                                                  |
-| Web production provenance     | VERIFIED  | `release/PRODUCTION_RELEASE.json` declares `v1.0.0` (`orbit-v1.0.0-prod`, `EXPLICIT_PRODUCTION_RELEASE`). Public provenance endpoints `/api/release` and `/api/release.json` verify version `1.0.0` against the declared marker. Prior verified deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` confirmed for release lineage continuity |
+| Web production provenance     | VERIFIED  | `release/PRODUCTION_RELEASE.json` declares `v1.0.0` (`orbit-v1.0.0-prod`, `EXPLICIT_PRODUCTION_RELEASE`). The provenance verifier script (`scripts/verify-public-vercel-provenance.mjs`) verifies both the release SHA and version `1.0.0` against the declared marker via public endpoints `/api/release` and `/api/release.json`. Prior verified deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` confirmed for release lineage continuity |
 
 ## Release / Operations
 
@@ -100,7 +100,7 @@ Updated: 2026-09-29.
 ## External / commercial prerequisites
 
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
-- `release/PRODUCTION_RELEASE.json` marker declares `v1.0.0` (`orbit-v1.0.0-prod`, `EXPLICIT_PRODUCTION_RELEASE`, `status: PRODUCTION_READY`); public provenance endpoints verify version `1.0.0` against the declared marker. The prior independently verified Vercel production deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is retained for release lineage continuity.
+- `release/PRODUCTION_RELEASE.json` marker declares `v1.0.0` (`orbit-v1.0.0-prod`, `EXPLICIT_PRODUCTION_RELEASE`, `status: PRODUCTION_READY`). The provenance verifier script (`scripts/verify-public-vercel-provenance.mjs`) verifies both the release SHA and version `1.0.0` against the declared marker via public provenance endpoints `/api/release` and `/api/release.json`. The prior independently verified Vercel production deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` is retained for release lineage continuity.
 - Current Vercel Production Provenance run `36480198039` completed in bootstrap/non-release mode; Web Deploy run `36480197959` passed the web quality path. No current-main production deployment is claimed. The rollback drill remains separate.
 - The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
 - Desktop signing/notarization needs external signing identities.
