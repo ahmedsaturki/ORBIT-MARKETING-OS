@@ -67,7 +67,7 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 - Billing/payment activation, if monetization is enabled.
 - Final terms/privacy/refund/EULA publication review.
 
-## Current verified state — 2026-09-28
+## Current verified state — 2026-09-29
 
 - The latest independently verified production release cycle has successful CI/security/Rust evidence plus Vercel Production Provenance and Web Deploy verification on its historical production SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; the current main verification cycle is separately tracked by exact-main CI run `36496595601` and is not a production release.
 - The latest verified production deployment is `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`: source=`git`, framework=`nextjs`, target=`production`, canonical `orbit-marketing-os.vercel.app` alias, and public exact-SHA provenance endpoints are verified. Current main remains outside production until a reviewed non-bootstrap marker is selected and proven.
