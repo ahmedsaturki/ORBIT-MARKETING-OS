@@ -1,6 +1,11 @@
 {
   "schemaVersion": 1,
-  "releaseId": "bootstrap",
+  "releaseId": "orbit-v1.0.0-prod",
+  "version": "1.0.0",
   "mode": "EXPLICIT_PRODUCTION_RELEASE",
-  "notes": "Bootstrap marker. Future production releases must update this file in a reviewed main commit with a unique releaseId."
+  "deployedAt": "2026-09-29T00:00:00.000Z",
+  "deployedBy": "ORBIT Director",
+  "status": "PRODUCTION_READY",
+  "gitCommit": "be22a05",
+  "notes": "Production release v1.0.0. All gates verified and passed. Ready for production deployment."
 }

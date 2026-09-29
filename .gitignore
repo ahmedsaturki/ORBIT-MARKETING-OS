@@ -13,3 +13,10 @@ packages/desktop/src-tauri/target/
 *.pem
 *.key
 .orbit-secrets/
+.vercel/
+packages/web/.next/
+packages/*/coverage/
+.playwright/
+test-results/
+playwright-report/
+attachment/
