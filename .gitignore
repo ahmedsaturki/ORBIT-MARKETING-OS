@@ -20,3 +20,6 @@ packages/*/coverage/
 test-results/
 playwright-report/
 attachment/
+
+packages/web/out/
+*.tsbuildinfo
