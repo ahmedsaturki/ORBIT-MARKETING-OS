@@ -43,7 +43,7 @@
         "CI run 36496595601",
         "recovery evidence artifact 11003233896",
         "runtime smoke",
-        "Windows Web E2E"
+        "Web E2E (ubuntu-24.04)"
       ],
       "notes": "Exact-main recovery artifact 11003233896 is bound to SHA be22a0550bf92e39e04688d501ec41d518cb5aba and records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency. The same exact-main CI passed runtime smoke and Web E2E. Forced-crash/field recovery and 24-hour stability remain open.",
       "evidenceRefs": [
@@ -104,8 +104,7 @@
       ],
       "notes": "The canonical production alias is READY on historical deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp at SHA edc8c07f0527c7ea9b38827e293fd820b9f6cce0. The current main commit is not production-proven because its production marker remains bootstrap and its Vercel deployment was intentionally canceled by the ignore rule. Web Deploy run 36496595591 passed the current-main web quality path. Rollback evidence remains open.",
       "evidenceRefs": [
-        "https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2",
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36496595591"
+        "https://vercel.com/jmls-projects/orbit-marketing-os/3YiUkYHNpQPRaPjTZvH5UrTztEQp"
       ],
       "verifiedAt": "2026-09-28T23:11:56Z"
     },
