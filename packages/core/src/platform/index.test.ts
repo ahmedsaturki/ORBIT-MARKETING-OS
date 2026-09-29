@@ -33,7 +33,7 @@ function connector(): ConnectorExtensionManifest {
     supportsWebhooks: false,
     capabilities: [capability()],
     requiredPermissions: ["connector:execute"],
-    minOrbitVersion: "0.2.0",
+    minOrbitVersion: "1.0.0",
     enabledByDefault: false,
   };
 }
@@ -61,7 +61,7 @@ function verticalPack(): VerticalPackManifest {
       },
     ],
     requiredPermissions: ["vertical:read"],
-    minOrbitVersion: "0.2.0",
+    minOrbitVersion: "1.0.0",
     enabledByDefault: false,
   };
 }

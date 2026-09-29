@@ -101,7 +101,7 @@ test.describe("ORBIT public web surface", () => {
     };
     expect(body.status).toBe("ok");
     expect(body.service).toBe("ORBIT Marketing OS Web");
-    expect(body.version).toBe("0.2.0");
+    expect(body.version).toBe("1.0.0");
     expect(body.releaseSha).toMatch(/^(unreleased|[0-9a-f]{40})$/);
     expect(["unproven", "declared"]).toContain(body.provenance);
     expect([
@@ -127,7 +127,7 @@ test.describe("ORBIT public web surface", () => {
       };
     };
     expect(body.application).toBe("ORBIT Marketing OS");
-    expect(body.version).toBe("0.2.0");
+    expect(body.version).toBe("1.0.0");
     expect(body.releaseSha).toMatch(/^(unreleased|[0-9a-f]{40})$/);
     if (body.releaseSha === "unreleased") {
       expect(body.releaseProvenance.declaredByEnvironment).toBe(false);

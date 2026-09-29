@@ -53,7 +53,7 @@ function vertical(
       },
     ],
     requiredPermissions: ["vertical:read"],
-    minOrbitVersion: "0.2.0",
+    minOrbitVersion: "1.0.0",
     enabledByDefault: false,
   };
 }
@@ -96,7 +96,7 @@ export const BUILT_IN_CONNECTOR_MANIFESTS: readonly ConnectorExtensionManifest[]
         ),
       ],
       requiredPermissions: ["connector:execute", "connector:read"],
-      minOrbitVersion: "0.2.0",
+      minOrbitVersion: "1.0.0",
       enabledByDefault: false,
     },
     {
@@ -127,7 +127,7 @@ export const BUILT_IN_CONNECTOR_MANIFESTS: readonly ConnectorExtensionManifest[]
         ),
       ],
       requiredPermissions: ["connector:execute", "connector:read"],
-      minOrbitVersion: "0.2.0",
+      minOrbitVersion: "1.0.0",
       enabledByDefault: false,
     },
   ];
