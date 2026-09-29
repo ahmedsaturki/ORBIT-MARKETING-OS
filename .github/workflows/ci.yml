@@ -142,10 +142,6 @@ jobs:
         timeout-minutes: 5
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
-      - name: Temporary exact Prettier repair output
-        run: |
-          pnpm exec prettier --write docs/PERFORMANCE_EVIDENCE.md release/readiness.json scripts/verify-live-production-observation.mjs
-          git diff -- docs/PERFORMANCE_EVIDENCE.md release/readiness.json scripts/verify-live-production-observation.mjs
       - name: Format check
         run: pnpm format:check
 
