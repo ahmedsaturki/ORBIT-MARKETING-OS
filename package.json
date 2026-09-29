@@ -41,7 +41,8 @@
     "test:release-evidence-collector": "node scripts/release-evidence-collector-contract.test.mjs",
     "test:recovery:evidence": "node scripts/recovery-evidence.mjs",
     "test:soak-runner-resilience": "node scripts/soak-runner-resilience.test.mjs",
-    "verify:release-docs": "node scripts/verify-release-docs.mjs"
+    "verify:release-docs": "node scripts/verify-release-docs.mjs",
+    "verify:production-observation": "node scripts/verify-live-production-observation.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
