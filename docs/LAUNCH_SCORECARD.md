@@ -1,6 +1,6 @@
 # ORBIT Launch Scorecard
 
-Updated: 2026-09-28.
+Updated: 2026-09-29.
 
 Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evidence exists; UNVERIFIED = required runtime evidence is missing; PARTIAL = mixed evidence; BLOCKED = external prerequisite prevents completion.
 
@@ -39,7 +39,7 @@ Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evide
 | Production web provenance                    | PARTIAL    | Latest independently verified deployment `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` belongs to the prior verified release line. Current main is controlled by the bootstrap production marker, so current-main Production provenance is not claimed; L3 remains open pending rollback and other release-critical evidence |
 | Native desktop packaging                     | VERIFIED   | All four desktop packaging targets passed on validated native release lines                                                                                                                                                                                                                                       |
 | Android debug validation                     | VERIFIED   | Mobile validation produced validated debug artifact                                                                                                                                                                                                                                                               |
-| Native recovery                              | VERIFIED   | Current-main recovery artifact `10995738209` from CI run `36480198008` records 4/4 PASS for startup/database recovery, recovery idempotency, and migration idempotency                                                                                                                                            |
+| Native recovery                              | VERIFIED   | Current-main recovery artifact `11003233896` from CI run `36496595601` records 4/4 PASS for startup/database recovery, recovery idempotency, and migration idempotency                                                                                                                                            |
 | Real Telegram connector E2E                  | UNVERIFIED | Real-account authorization/delivery evidence required                                                                                                                                                                                                                                                             |
 | Real LinkedIn connector E2E                  | UNVERIFIED | Real-account authorization/publish evidence required                                                                                                                                                                                                                                                              |
 | CRDT multi-device network                    | UNVERIFIED | Live multi-device network evidence required                                                                                                                                                                                                                                                                       |
