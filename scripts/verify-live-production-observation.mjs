@@ -5,7 +5,9 @@ import { dirname, join } from "node:path";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const observationPath = join(root, "release", "OBSERVED_PRODUCTION.json");
-const base = (process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app").replace(/\/$/, "");
+const base = (
+  process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app"
+).replace(/\/$/, "");
 
 const observation = JSON.parse(await readFile(observationPath, "utf8"));
 const deployment = observation?.deployment;
@@ -39,12 +41,19 @@ if (
   fail("Invalid production observation schema");
 }
 
-if (!Array.isArray(observation.endpointChecks) || observation.endpointChecks.length !== 3) {
+if (
+  !Array.isArray(observation.endpointChecks) ||
+  observation.endpointChecks.length !== 3
+) {
   fail("Expected exactly three production endpoint checks");
 }
 
 for (const check of observation.endpointChecks ?? []) {
-  if (!check?.path || check.httpStatus !== 200 || typeof check.assertion !== "string") {
+  if (
+    !check?.path ||
+    check.httpStatus !== 200 ||
+    typeof check.assertion !== "string"
+  ) {
     fail("Invalid endpoint check contract");
   }
 }
@@ -61,7 +70,9 @@ const releaseResponse = await get("/api/release.json");
 const home = await get("/");
 
 if (!health.ok || !releaseResponse.ok || !home.ok) {
-  fail(`Production endpoint failure: health=${health.status} release=${releaseResponse.status} home=${home.status}`);
+  fail(
+    `Production endpoint failure: health=${health.status} release=${releaseResponse.status} home=${home.status}`,
+  );
 }
 
 const healthBody = await health.json();
@@ -78,15 +89,19 @@ if (
   releaseBody?.releaseProvenance?.declaredByEnvironment !== true ||
   !html.includes(`data-release-sha="${release.releaseSha}"`)
 ) {
-  fail("Live production identity does not match release/OBSERVED_PRODUCTION.json");
+  fail(
+    "Live production identity does not match release/OBSERVED_PRODUCTION.json",
+  );
 }
 
-console.log(JSON.stringify({
-  status: "PASS",
-  origin: base,
-  deploymentId: deployment.id,
-  releaseVersion: release.version,
-  releaseSha: release.releaseSha,
-  provenanceSource: release.provenanceSource,
-  verifiedPaths: ["/", "/api/health.json", "/api/release.json"]
-}));
+console.log(
+  JSON.stringify({
+    status: "PASS",
+    origin: base,
+    deploymentId: deployment.id,
+    releaseVersion: release.version,
+    releaseSha: release.releaseSha,
+    provenanceSource: release.provenanceSource,
+    verifiedPaths: ["/", "/api/health.json", "/api/release.json"],
+  }),
+);
