@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "product": "ORBIT Marketing OS",
-  "updated": "2026-09-28",
+  "updated": "2026-09-29",
   "readinessLevels": [
     "L0_DESIGNED",
     "L1_IMPLEMENTED",
@@ -12,33 +12,35 @@
     "source_integrity": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "CI run 36480198008",
-        "security:scan run 36480198008",
+        "CI run 36480198008 (prior line)",
+        "CI run on 9ba07318 (ci, security:scan, Rust quality)",
         "SonarCloud current-main quality gate remains open at B; required A"
       ],
-      "notes": "The latest verified main CI/security cycle is run 36480198008; the current main production-release marker is bootstrap, so it is not a production release. SonarCloud remains the outstanding quality prerequisite: the latest observed main analysis is B Security Rating on New Code while the required threshold is A. No bypass or exclusion has been introduced.",
+      "notes": "The most recent verified main CI/security cycle is the run executed on commit 9ba07318 (ci 2m9s, security:scan 25s, Rust quality 5m41s), superseding the earlier run 36480198008 referenced by other gates. SonarCloud remains the outstanding quality prerequisite: the latest observed main analysis is B Security Rating on New Code while the required threshold is A. No bypass or exclusion has been introduced. The production-release marker pins releaseId orbit-v1.0.0-prod at gitCommit f65c153 and is a pinned historical release identifier by design, so it is not expected to equal the moving main HEAD and its being different from main HEAD does not by itself make the marker a bootstrap or downgrade the release.",
       "evidenceRefs": [
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486448",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480198008",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/112"
       ],
-      "verifiedAt": "2026-09-28T20:40:26Z"
+      "verifiedAt": "2026-09-29T18:45:25Z"
     },
     "build": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "CI run 36480198008",
-        "Rust quality run 36480198008",
+        "CI run on 9ba07318 (ci, security:scan, Rust quality)",
+        "CI run 36480198008 (prior line)",
         "desktop native validation on validated pre-merge tree",
         "mobile validation on validated pre-merge tree",
         "latest verified production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp"
       ],
-      "notes": "Current main CI and Rust quality passed in run 36480198008. Native desktop/mobile packaging evidence remains from the previously validated release line and does not by itself claim an exact artifact for every subsequent main commit. The latest verified Production deployment remains dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp; current main uses a bootstrap production marker.",
+      "notes": "CI, security:scan and Rust quality all passed in the run executed on commit 9ba07318. Native desktop/mobile packaging evidence remains from the previously validated release line and does not by itself claim an exact artifact for every subsequent main commit. The latest verified Production deployment remains dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp; the current main production-release marker pins gitCommit f65c153 as the historical release identifier and is not expected to track the moving main HEAD.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480198008",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486448",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009698",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36455009416"
       ],
-      "verifiedAt": "2026-09-28T20:40:26Z"
+      "verifiedAt": "2026-09-29T18:45:25Z"
     },
     "runtime": {
       "level": "L2_VERIFIED",
@@ -103,18 +105,24 @@
     "web_production": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "Historical verified production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp",
-        "Vercel Production Provenance run 36480198039 (bootstrap/non-release)",
-        "Web Deploy run 36480197959",
-        "canonical production alias"
+        "Current production serves commit 9ba07318f4d580e670be9d27ec76888e66013340",
+        "scripts/verify-public-vercel-provenance.mjs PASS on attempt 1 with ORBIT_EXPECTED_RELEASE_SHA=9ba07318f4d580e670be9d27ec76888e66013340",
+        "/api/health, /api/health.json, /api/release and /api/release.json all report version 1.0.0 and releaseSha 9ba07318f4d580e670be9d27ec76888e66013340 with provenance source VERCEL_GIT_COMMIT_SHA",
+        "home page data-release-sha attribute confirmed by the provenance verifier",
+        "Vercel Production Provenance run 36609486608 on 9ba07318",
+        "Web Deploy run 36609486630 on 9ba07318",
+        "ORBIT Release Evidence Bundle run 36609486555 on 9ba07318",
+        "Historical verified production deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp"
       ],
-      "notes": "The latest independently verified Production deployment remains dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp from the prior verified release line. Current main carries the bootstrap production marker, so run 36480198039 correctly performs no current-main Production verification. Web Deploy run 36480197959 passed the web quality path. Rollback evidence remains open.",
+      "notes": "Production at https://orbit-marketing-os.vercel.app serves commit 9ba07318f4d580e670be9d27ec76888e66013340, and the public provenance drift where /api/release returned 'unreleased' before the shared release-identity module landed in 88d54d20 is now fixed and verified: all four endpoints agree on version 1.0.0 and that SHA, and scripts/verify-public-vercel-provenance.mjs returned status PASS on attempt 1 against /, /api/health.json and /api/release.json including the home page data-release-sha attribute. All three 9ba07318 workflow runs passed. The level deliberately remains L2_VERIFIED and is NOT L3_PRODUCTION_PROVEN: rollback drill evidence is still open, so the observed rollout and release-critical gate evidence is insufficient for a production-proven claim.",
       "evidenceRefs": [
-        "https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2",
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480198039",
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480197959"
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486608",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486630",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486555",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486448",
+        "https://vercel.com/jmls-projects/orbit-marketing-os/4agH7CGGXx6z6dMtN9nG86HpMHc2"
       ],
-      "verifiedAt": "2026-09-28T17:01:15Z"
+      "verifiedAt": "2026-09-29T18:45:25Z"
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",
