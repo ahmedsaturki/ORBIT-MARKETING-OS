@@ -6,6 +6,6 @@
   "deployedAt": "2026-09-29T00:00:00.000Z",
   "deployedBy": "ORBIT Director",
   "status": "PRODUCTION_READY",
-  "gitCommit": "07c7d58",
+  "gitCommit": "5ca62b5",
   "notes": "Production release v1.0.0. Health endpoints and version bumped to 1.0.0. Release-critical gates remain open; production provenance UNVERIFIED."
 }
