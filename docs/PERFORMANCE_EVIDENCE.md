@@ -53,7 +53,7 @@ Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/ru
 
 ## Current production provenance
 
-The canonical Production alias currently serves deployment `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV` on commit `9ba07318f4d580e670be9d27ec76888e66013340`. Public checks of `/`, `/api/health.json`, and `/api/release.json` passed at 2026-09-29T20:32:47Z with version `1.0.0`, matching release SHA, and `VERCEL_GIT_COMMIT_SHA` provenance. Current main `70dc187d...` is a release-truth/documentation reconciliation commit and its Vercel deployment was intentionally skipped/canceled; it is not the serving Production SHA.
+The canonical Production alias currently serves deployment `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV` on commit `9ba07318f4d580e670be9d27ec76888e66013340`. Public checks of `/`, `/api/health.json`, and `/api/release.json` passed at 2026-09-29T20:32:47Z with version `1.0.0`, matching release SHA, and `VERCEL_GIT_COMMIT_SHA` provenance. Moving `main` is a release-truth/documentation stream; its ordinary Vercel deployment is intentionally skipped/canceled and is not the serving Production SHA.
 
 The durable machine-readable observation is `release/OBSERVED_PRODUCTION.json`, and CI now verifies that observation against the live public production alias.
 
