@@ -34,8 +34,8 @@ The repository performance harness enforces these budgets:
 
 Exact-main CI run `36621459773` measured:
 
-- startup-to-health: 378.15 ms
-- peak RSS: 96.65 MB
+- startup-to-health: 381.11 ms
+- peak RSS: 96.81 MB
 - RSS samples: 14
 - listener: 127.0.0.1:38563
 - server announced: true
@@ -56,6 +56,7 @@ Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/ru
 The canonical Production alias currently serves deployment `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV` on commit `9ba07318f4d580e670be9d27ec76888e66013340`. Public checks of `/`, `/api/health.json`, and `/api/release.json` passed at 2026-09-29T20:32:47Z with version `1.0.0`, matching release SHA, and `VERCEL_GIT_COMMIT_SHA` provenance. Current main `70dc187d...` is a release-truth/documentation reconciliation commit and its Vercel deployment was intentionally skipped/canceled; it is not the serving Production SHA.
 
 The durable machine-readable observation is `release/OBSERVED_PRODUCTION.json`, and CI now verifies that observation against the live public production alias.
+
 ## Reproducibility
 
 Always record the exact Git SHA, workflow run, platform/runner, Node/Rust toolchain, dataset size, query, and elapsed measurement when promoting performance evidence.
