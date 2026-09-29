@@ -174,7 +174,8 @@
     "evidenceRefs": [
       "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773",
       "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459863",
-      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459764"
+      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459764",
+      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773"
     ],
     "metrics": {
       "recoveryArtifact": "11059010547",
@@ -218,7 +219,8 @@
       "https://vercel.com/jmls-projects/orbit-marketing-os/9KyEbWzvAYvhvzZPmtXNJXrP16xV",
       "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486608",
       "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486630",
-      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486555"
+      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486555",
+      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/blob/main/release/OBSERVED_PRODUCTION.json"
     ],
     "note": "This is the latest directly observed canonical production state. It is distinct from the moving main SHA and from the pinned release-marker gitCommit."
   },
