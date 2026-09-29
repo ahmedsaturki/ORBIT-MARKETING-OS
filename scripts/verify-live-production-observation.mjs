@@ -41,14 +41,20 @@ if (
   fail("Invalid production observation schema");
 }
 
+const expectedPaths = ["/", "/api/health.json", "/api/release.json"];
+const actualPaths = (observation.endpointChecks ?? []).map((check) => check?.path);
 if (
   !Array.isArray(observation.endpointChecks) ||
-  observation.endpointChecks.length !== 3
+  observation.endpointChecks.length !== expectedPaths.length ||
+  new Set(actualPaths).size !== expectedPaths.length ||
+  !expectedPaths.every((path) => actualPaths.includes(path))
 ) {
-  fail("Expected exactly three production endpoint checks");
+  fail(
+    "Endpoint checks must contain exactly /, /api/health.json, and /api/release.json",
+  );
 }
 
-for (const check of observation.endpointChecks ?? []) {
+for (const check of observation.endpointChecks) {
   if (
     !check?.path ||
     check.httpStatus !== 200 ||
