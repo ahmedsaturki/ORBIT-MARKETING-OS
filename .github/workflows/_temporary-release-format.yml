@@ -4,13 +4,12 @@ on:
   push:
     branches:
       - chore/release-truth-20260929
-  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  format:
+  format-and-clean:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -22,14 +21,17 @@ jobs:
           node-version: 22
           package-manager-cache: true
       - run: pnpm install --frozen-lockfile
-      - name: Format release-truth files
+      - name: Apply repository Prettier
         run: pnpm exec prettier --write docs/LAUNCH_SCORECARD.md docs/RELEASE_SCORECARD.md release/readiness.json scripts/verify-live-production-observation.mjs
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: exact-release-format
-          path: |
-            docs/LAUNCH_SCORECARD.md
-            docs/RELEASE_SCORECARD.md
-            release/readiness.json
-            scripts/verify-live-production-observation.mjs
-          retention-days: 1
+      - name: Verify formatting
+        run: pnpm format:check
+      - name: Commit formatted files and remove temporary workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/LAUNCH_SCORECARD.md docs/RELEASE_SCORECARD.md release/readiness.json scripts/verify-live-production-observation.mjs
+          git rm .github/workflows/_temporary-release-format.yml
+          git commit -m "style(release): apply exact repository formatting"
+          git push origin HEAD:chore/release-truth-20260929
