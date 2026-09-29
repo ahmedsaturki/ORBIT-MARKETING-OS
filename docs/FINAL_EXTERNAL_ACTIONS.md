@@ -1,8 +1,8 @@
 # ORBIT — Final External Actions
 
-Updated: 2026-09-28.
+Updated: 2026-09-29.
 
-The merged core is strongly verified at L2 across the main product domains. The last independently verified Vercel production deployment remains a READY Git deployment from a prior verified release SHA; the current main is not treated as production-proven until an explicit production-release marker is deployed and its public provenance passes. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
+The merged core is strongly verified at L2 across the main product domains. The canonical Production alias is live and currently serves a READY Git deployment `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV` on `9ba07318f4d580e670be9d27ec76888e66013340`; public version and provenance checks are passing. Current `main` (`70dc187d...`) is a release-truth/documentation reconciliation commit and its Vercel deployment is intentionally not counted as the serving Production deployment. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
 
 ## A. Vercel
 
@@ -11,7 +11,7 @@ Production deployment is controlled by the reviewed `release/PRODUCTION_RELEASE.
 - Ordinary `main` commits do not become Production deployments merely because web or release documentation changed.
 - A non-bootstrap marker update on `main` identifies the exact release commit.
 - The Vercel deployment/provenance workflow verifies the public deployment against that marker commit SHA.
-- The zero-cost self-hosted release workflow uses the same marker and refuses to deploy an arbitrary moving `main`.
+- The release observation contract records the live Production deployment separately from moving `main`, and CI can fail closed when the live public identity drifts from that committed observation.
 - Rollback remains a separate operation and is not claimed until both rollback and return-to-current are observed.
 
 ## B. Real connector verification
