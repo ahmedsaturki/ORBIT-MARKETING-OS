@@ -21,7 +21,7 @@ const releaseShaSource = declaredReleaseSha
 
 export default function HomePage(): ReactElement {
   return (
-    <main data-release="0.2.0" data-release-sha={releaseSha}>
+    <main data-release="1.0.0" data-release-sha={releaseSha}>
       <header className="topbar">
         <div className="container nav">
           <strong>ORBIT</strong>
@@ -73,7 +73,7 @@ export default function HomePage(): ReactElement {
       </section>
 
       <footer className="container footer" aria-label="معلومات الإصدار">
-        ORBIT Marketing OS • v0.2.0 • Local-first • إصدار:{" "}
+        ORBIT Marketing OS • v1.0.0 • Local-first • إصدار:{" "}
         <code data-release-source={releaseShaSource}>
           {releaseSha === "unreleased" ? "غير منشور" : releaseSha.slice(0, 12)}
         </code>
