@@ -1,6 +1,6 @@
 # ORBIT Commercial Production Proven — Release Runbook
 
-Updated: 2026-09-28.
+Updated: 2026-09-29.
 
 ## Release rule
 
@@ -69,8 +69,8 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 
 ## Current verified state — 2026-09-28
 
-- The latest completed exact-main release cycle has successful CI/security/Rust evidence plus Vercel Production Provenance and Web Deploy verification on SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`.
-- The latest verified production deployment is `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`: source=`git`, framework=`nextjs`, target=`production`, canonical `orbit-marketing-os.vercel.app` alias, and public exact-SHA provenance endpoints are verified.
+- The latest independently verified production release cycle has successful CI/security/Rust evidence plus Vercel Production Provenance and Web Deploy verification on its historical production SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; the current main verification cycle is separately tracked by exact-main CI run `36496595601` and is not a production release.
+- The latest verified production deployment is `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`: source=`git`, framework=`nextjs`, target=`production`, canonical `orbit-marketing-os.vercel.app` alias, and public exact-SHA provenance endpoints are verified. Current main remains outside production until a reviewed non-bootstrap marker is selected and proven.
 - GitHub `main` is protected with required `ci` and `security:scan` checks.
 - Exact SHA, deployment ID, workflow run IDs, and artifact digests are retained in per-release evidence and should not be hard-coded into this durable runbook.
 - Universal Search previously failed Windows Native E2E because of a real SQLite LIKE escaping defect; the defect has been fixed and literal `%`, `_`, and `!` regression coverage added.
