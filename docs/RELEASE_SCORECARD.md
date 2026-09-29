@@ -78,7 +78,7 @@ Updated: 2026-09-29.
 | MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                                                              |
 | Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                                                   |
 | Web production availability   | VERIFIED | Historical READY deployment responds successfully; current main has no production deployment because the marker is bootstrap                                                                                                                                                  |
-| Web production provenance     | PARTIAL  | Latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` at prior SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; current main `be22a0550bf92e39e04688d501ec41d518cb5aba` is not production-proven because its marker remains bootstrap |
+| Web production provenance     | PARTIAL  | Latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` at prior SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; current main is not production-proven because its marker remains bootstrap |
 
 ## Release / Operations
 
