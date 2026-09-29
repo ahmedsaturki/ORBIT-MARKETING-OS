@@ -1,10 +1,10 @@
 # Implementation Status
 
-Updated: 2026-09-28.
+Updated: 2026-09-29.
 
 ## Current state
 
-The production implementation is consolidated on the current main lineage. The current release train has strong L2 evidence across the core architecture, execution controls, research intelligence, experimentation/learning, anomaly detection, governed agent operations, Universal Search, publishing, platform foundation, native desktop/mobile validation, web production, and release-readiness controls.
+The production implementation is consolidated on the current main lineage. The current release train has strong L2 evidence across the core architecture, execution controls, research intelligence, experimentation/learning, anomaly detection, governed agent operations, Universal Search, publishing, platform foundation, native desktop/mobile validation, web production, and release-readiness controls. The live Production alias currently serves `9ba07318f4d580e670be9d27ec76888e66013340`; current main `70dc187d...` is a release-truth/documentation reconciliation commit and is not the serving Production SHA.
 
 ## Product surface
 
@@ -60,7 +60,7 @@ No unsupported external connector capability is implied by contracts or fixtures
 - final legal/commercial publication review;
 - current-main SonarCloud Security Rating on New Code = A.
 
-Protected-main CI/security governance is verified. The latest independently verified Vercel production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` from the prior verified release line. Production is now explicitly controlled by the reviewed non-bootstrap `release/PRODUCTION_RELEASE.json` marker; ordinary moving-main commits are not treated as Production releases.
+Protected-main CI/security governance is verified. Production is explicitly controlled by the reviewed non-bootstrap `release/PRODUCTION_RELEASE.json` marker. The canonical alias is currently served by `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV` on `9ba07318f4d580e670be9d27ec76888e66013340`, with public version/provenance checks passing. Ordinary moving-main commits are not automatically treated as the serving Production release.
 
 Automated restart/recovery/migration evidence is now consolidated and passing on current main; dedicated forced-crash/field recovery, 24-hour soak, rollback, and the remaining external/commercial gates are still separate requirements.
 
