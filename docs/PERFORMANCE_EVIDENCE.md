@@ -53,7 +53,7 @@ Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/ru
 
 ## Current production provenance
 
-The latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` from the prior verified release line. Current main carries the bootstrap production marker; Vercel Production Provenance run `36480198039` therefore completed in non-release mode, while Web Deploy run `36480197959` passed its web quality path. Current-main production provenance is not claimed.
+The latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` from the prior verified release line. Current main carries the bootstrap production marker; Vercel Production Provenance run `36480198039` therefore completed in non-release mode, while current exact-main Web Deploy run `36496595591` passed its web quality path. Current-main production provenance is not claimed.
 
 The previous live verification checked `/`, `/api/health.json`, and `/api/release.json` against the prior verified release. A new current-main production verification will only occur after a reviewed non-bootstrap production marker is selected.
 
