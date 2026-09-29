@@ -104,7 +104,7 @@
       ],
       "notes": "The canonical production alias is READY on historical deployment dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp at SHA edc8c07f0527c7ea9b38827e293fd820b9f6cce0. The current main commit is not production-proven because its production marker remains bootstrap and its Vercel deployment was intentionally canceled by the ignore rule. Web Deploy run 36496595591 passed the current-main web quality path. Rollback evidence remains open.",
       "evidenceRefs": [
-        "https://vercel.com/jmls-projects/orbit-marketing-os/3YiUkYHNpQPRaPjTZvH5UrTztEQp"
+        "https://orbit-marketing-jv3v45it7-jmls-projects.vercel.app"
       ],
       "verifiedAt": "2026-09-28T23:11:56Z"
     },
