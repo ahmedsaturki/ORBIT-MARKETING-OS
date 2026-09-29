@@ -1,6 +1,6 @@
 # ORBIT Release Scorecard
 
-Updated: 2026-09-28.
+Updated: 2026-09-29.
 
 ## Status meanings
 
@@ -25,8 +25,8 @@ Updated: 2026-09-28.
 | -------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
 | DATA-01 Local SQLite             | VERIFIED | Native implementation and validated Rust/native gates                                                       |
 | DATA-02 Migration safety         | VERIFIED | Versioned migrations through v16 and migration tests                                                        |
-| DATA-03 Search scale             | VERIFIED | CI 36480198008 on current main; 1,000-contact search measured 1.147968ms                                    |
-| QUE-01 Persistent queue recovery | VERIFIED | CI 36480198008 on current main; recovery artifact `10995738209` proves 4/4 recovery/idempotency checks PASS |
+| DATA-03 Search scale             | VERIFIED | CI 36496595601 on exact current main SHA; 1,000-contact search measured 0.66228ms                                    |
+| QUE-01 Persistent queue recovery | VERIFIED | CI 36496595601 on exact current main SHA; recovery artifact `11003233896` proves 4/4 recovery/idempotency checks PASS |
 | QUE-02 Bounded retries           | VERIFIED | Core/native retry validation passed                                                                         |
 | QUE-03 Circuit breaker           | VERIFIED | Policy/runtime controls covered                                                                             |
 | QUE-04 Human-intervention wait   | VERIFIED | Explicit wait/resume contract and tests                                                                     |
@@ -77,8 +77,8 @@ Updated: 2026-09-28.
 | WEB-01 PWA                    | VERIFIED | Web build/E2E and live checks                                                                                                                                                                   |
 | MOB-01 Mobile control surface | VERIFIED | Mobile validation passed on validated release line                                                                                                                                              |
 | Native desktop packaging      | VERIFIED | Windows/Linux/macOS x64/ARM validation passed                                                                                                                                                   |
-| Web production availability   | VERIFIED | Current READY deployment responds successfully                                                                                                                                                  |
-| Web production provenance     | PARTIAL  | Latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`; current main is controlled by bootstrap marker, so current-main production proof is not claimed |
+| Web production availability   | VERIFIED | Historical READY deployment responds successfully; current main has no production deployment because the marker is bootstrap                                                                                                                                                  |
+| Web production provenance     | PARTIAL  | Latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` at prior SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`; current main `be22a0550bf92e39e04688d501ec41d518cb5aba` is not production-proven because its marker remains bootstrap |
 
 ## Release / Operations
 
@@ -88,10 +88,10 @@ Updated: 2026-09-28.
 | REL-02 Signed desktop artifact | BLOCKED    | Signing identities not configured                                                                        |
 | REL-03 Checksum verification   | PARTIAL    | Validation pipeline generates and checks checksums; final distributed release evidence remains           |
 | LIC-01 Offline license         | PARTIAL    | Token/constraint tests pass; production distribution proof remains                                       |
-| OPS-01 Crash/restart recovery  | VERIFIED   | CI 36480198008 + recovery artifact `10995738209`; 4/4 startup/database/idempotency/migration checks PASS |
+| OPS-01 Crash/restart recovery  | VERIFIED   | CI 36496595601 + recovery artifact `11003233896`; 4/4 startup/database/idempotency/migration checks PASS |
 | OPS-02 24h soak                | UNVERIFIED | No completed 24-hour evidence                                                                            |
-| PERF-01 Startup budget         | VERIFIED   | CI 36480198008 on current main; startup-to-health 378.15ms; enforced budget ≤8000ms                      |
-| PERF-02 Memory budget          | VERIFIED   | CI 36480198008 on current main; peak RSS 96.65MB; enforced budgets 200MB RSS / 100MB heap                |
+| PERF-01 Startup budget         | VERIFIED   | CI 36496595601 on exact current main; startup-to-health 249.94ms; enforced budget ≤8000ms                      |
+| PERF-02 Memory budget          | VERIFIED   | CI 36496595601 on exact current main; peak RSS 100.83MB; enforced budgets 200MB RSS / 100MB heap                |
 | QA-01 Coverage threshold       | VERIFIED   | Hosted coverage gate passed                                                                              |
 | QA-02 Critical E2E             | VERIFIED   | Current validated feature line passed required E2E/native gates                                          |
 | DOC-01 Product docs            | VERIFIED   | Current release/readiness docs reconciled to merged main                                                 |
@@ -101,12 +101,12 @@ Updated: 2026-09-28.
 
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
 - The last independently verified Vercel production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`; the current main `release/PRODUCTION_RELEASE.json` marker is bootstrap, so the current main is not treated as a Production release.
-- Current Vercel Production Provenance run `36480198039` completed in bootstrap/non-release mode; Web Deploy run `36480197959` passed the web quality path. No current-main production deployment is claimed. The rollback drill remains separate.
+- Current exact-main Web Deploy run `36496595591` passed the web quality path. Vercel Production Provenance is not a current-main production proof while the marker remains bootstrap; the current-SHA Vercel deployment was canceled by the ignore rule as intended. No current-main production deployment is claimed. The rollback drill remains separate.
 - The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.
-- Exact-main CI run `36480198008` completed successfully; current recovery/performance measurements are preserved in recovery artifact `10995738209` and the CI log.
+- Exact-main CI run `36496595601` completed successfully; current recovery/performance measurements are preserved in recovery artifact `11003233896` and the CI log.
 - GitHub `main` is protected with required `ci` and `security:scan`; final L3 governance evidence still requires auditable evidence references and verification time.
 
 ## Release rule
