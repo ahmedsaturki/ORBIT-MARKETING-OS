@@ -142,10 +142,6 @@ jobs:
         timeout-minutes: 5
         run: pnpm exec playwright test e2e/accessibility-rtl.spec.ts
 
-      - name: Temporary readiness Prettier diff
-        run: |
-          pnpm exec prettier --write release/readiness.json
-          git diff -- release/readiness.json
       - name: Format check
         run: pnpm format:check
 
