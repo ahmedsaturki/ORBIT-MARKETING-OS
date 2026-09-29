@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
+import { resolveReleaseIdentity } from "../../../lib/release-identity";
 
 export const dynamic = "force-static";
 
-const version = "1.0.0";
-const releaseSha = process.env.NEXT_PUBLIC_ORBIT_RELEASE_SHA ?? "unreleased";
+const { version, releaseSha, source } = resolveReleaseIdentity();
 
 export function GET(): NextResponse {
   return NextResponse.json(
@@ -13,7 +13,7 @@ export function GET(): NextResponse {
       releaseSha,
       releaseProvenance: {
         declaredByEnvironment: releaseSha !== "unreleased",
-        source: "NEXT_PUBLIC_ORBIT_RELEASE_SHA",
+        source,
       },
     },
     {

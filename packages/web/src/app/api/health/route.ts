@@ -1,16 +1,9 @@
 import { NextResponse } from "next/server";
+import { resolveReleaseIdentity } from "../../../lib/release-identity";
 
 export const dynamic = "force-static";
 
-const version = "1.0.0";
-const declaredReleaseSha = process.env.NEXT_PUBLIC_ORBIT_RELEASE_SHA?.trim();
-const vercelGitCommitSha = process.env.VERCEL_GIT_COMMIT_SHA?.trim();
-const releaseSha = declaredReleaseSha || vercelGitCommitSha || "unreleased";
-const releaseShaSource = declaredReleaseSha
-  ? "NEXT_PUBLIC_ORBIT_RELEASE_SHA"
-  : vercelGitCommitSha
-    ? "VERCEL_GIT_COMMIT_SHA"
-    : "none";
+const { version, releaseSha, source } = resolveReleaseIdentity();
 
 export function GET(): NextResponse {
   return NextResponse.json(
@@ -20,7 +13,7 @@ export function GET(): NextResponse {
       version,
       releaseSha,
       provenance: releaseSha === "unreleased" ? "unproven" : "declared",
-      provenanceSource: releaseShaSource,
+      provenanceSource: source,
     },
     {
       headers: {
