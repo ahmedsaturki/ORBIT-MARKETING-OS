@@ -42,7 +42,9 @@ if (
 }
 
 const expectedPaths = ["/", "/api/health.json", "/api/release.json"];
-const actualPaths = (observation.endpointChecks ?? []).map((check) => check?.path);
+const actualPaths = (observation.endpointChecks ?? []).map(
+  (check) => check?.path,
+);
 if (
   !Array.isArray(observation.endpointChecks) ||
   observation.endpointChecks.length !== expectedPaths.length ||
