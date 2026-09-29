@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-static";
 
-const version = "0.2.0";
+const version = "1.0.0";
 const releaseSha = process.env.NEXT_PUBLIC_ORBIT_RELEASE_SHA ?? "unreleased";
 
 export function GET(): NextResponse {

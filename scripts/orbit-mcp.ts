@@ -12,7 +12,7 @@ const registry = new CommandRegistry();
 let legacyInitialized = false;
 
 const SERVER_NAME = "orbit-governed-surface";
-const SERVER_VERSION = "0.2.0";
+const SERVER_VERSION = "1.0.0";
 const MODERN_PROTOCOL_VERSION = "2026-07-28";
 const LATEST_HANDSHAKE_PROTOCOL_VERSION = "2025-11-25";
 const HANDSHAKE_PROTOCOL_VERSIONS = [
