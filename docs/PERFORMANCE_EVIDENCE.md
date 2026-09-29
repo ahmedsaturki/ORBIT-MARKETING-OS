@@ -1,6 +1,6 @@
 # ORBIT Performance Evidence
 
-Updated: 2026-09-28.
+Updated: 2026-09-29.
 
 ## DATA-03 — 1,000 contacts searchable
 
@@ -14,13 +14,13 @@ CI runs the benchmark with `--nocapture` so the measured result is visible in th
 
 ### Exact-main evidence — DATA-03
 
-GitHub Actions CI run `36480198008` on current main measured:
+GitHub Actions CI run `36496595601` on current main measured:
 
 - dataset: 1,000 contacts
 - query: `Benchmark Contact 0999`
 - workspace scoped: true
 - matched: 1
-- elapsed: 1.147968 ms
+- elapsed: 0.66228 ms
 
 The same CI run completed the benchmark successfully. This supports `VERIFIED` for DATA-03 at the automated-evidence level. It does not imply L3 production proof.
 
@@ -32,10 +32,10 @@ The repository performance harness enforces these budgets:
 - PERF-02 peak RSS: <= 200 MB
 - PERF-02 heap used: <= 100 MB in the core performance workload test
 
-Exact-main CI run `36480198008` measured:
+Exact-main CI run `36496595601` measured:
 
-- startup-to-health: 378.15 ms
-- peak RSS: 96.65 MB
+- startup-to-health: 249.94 ms
+- peak RSS: 100.83 MB
 - RSS samples: 14
 - listener: 127.0.0.1:38563
 - server announced: true
@@ -47,9 +47,9 @@ These are fresh automated L2 evidence, not L3 production proof.
 
 ## Exact-main recovery evidence
 
-Current main CI run `36480198008` produced recovery artifact `10995738209`. The artifact records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
+Exact current-main CI run `36496595601` produced recovery artifact `11003233896`. The artifact records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
 
-Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480198008#artifacts-10995738209
+Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36496595601#artifacts-11003233896
 
 ## Current production provenance
 
