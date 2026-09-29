@@ -81,8 +81,6 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 
 The release-truth reconciliation intentionally keeps moving `main` separate from the currently serving Production SHA. CI now verifies the committed live-production observation against the public alias and fails closed on release-identity drift.
 
-## Current hardening note
-
 The release-proof lane is fail-closed: readiness cannot declare L3 without auditable evidence references and verification time, connector proof requires durable per-platform delivery evidence with external IDs, and the Vercel lane requires exact release-SHA verification before promotion.
 
 ## Gates that cannot be fabricated
