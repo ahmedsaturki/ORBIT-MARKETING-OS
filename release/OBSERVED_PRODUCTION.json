@@ -46,5 +46,16 @@
   "releaseTruth": {
     "commercialProductionProven": false,
     "reason": "Required release-critical gates remain open; this observation proves live availability and public provenance, not full L3/commercial readiness."
+  },
+  "formatVerification": {
+    "workflowRunId": 36632997337,
+    "completedAt": "2026-09-29T21:24:29Z",
+    "scope": [
+      "docs/LAUNCH_SCORECARD.md",
+      "docs/RELEASE_SCORECARD.md",
+      "release/readiness.json",
+      "scripts/verify-live-production-observation.mjs"
+    ],
+    "result": "PASS"
   }
 }
