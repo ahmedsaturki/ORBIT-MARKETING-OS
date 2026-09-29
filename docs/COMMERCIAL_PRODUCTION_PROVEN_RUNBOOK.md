@@ -67,17 +67,19 @@ SPEC → IMPLEMENT → UNIT TEST → INTEGRATION → E2E → SECURITY → PERFOR
 - Billing/payment activation, if monetization is enabled.
 - Final terms/privacy/refund/EULA publication review.
 
-## Current verified state — 2026-09-28
+## Current verified state — 2026-09-29
 
-- The latest completed exact-main release cycle has successful CI/security/Rust evidence plus Vercel Production Provenance and Web Deploy verification on SHA `edc8c07f0527c7ea9b38827e293fd820b9f6cce0`.
-- The latest verified production deployment is `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`: source=`git`, framework=`nextjs`, target=`production`, canonical `orbit-marketing-os.vercel.app` alias, and public exact-SHA provenance endpoints are verified.
+- The latest production-serving code cycle has successful CI/security/Rust evidence plus Vercel Production Provenance and Web Deploy verification on SHA `9ba07318f4d580e670be9d27ec76888e66013340`.
+- The canonical Production alias currently serves `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV`: source=`git`, framework=`nextjs`, target=`production`, canonical `orbit-marketing-os.vercel.app` alias, with public version/provenance endpoints verified against SHA `9ba07318f4d580e670be9d27ec76888e66013340`.
 - GitHub `main` is protected with required `ci` and `security:scan` checks.
-- Exact SHA, deployment ID, workflow run IDs, and artifact digests are retained in per-release evidence and should not be hard-coded into this durable runbook.
+- Exact SHA, deployment ID, workflow run IDs, and artifact digests are retained in per-release evidence; the canonical machine-readable live observation is `release/OBSERVED_PRODUCTION.json`.
 - Universal Search previously failed Windows Native E2E because of a real SQLite LIKE escaping defect; the defect has been fixed and literal `%`, `_`, and `!` regression coverage added.
 - PR #124 consolidated bounded Windows Native E2E staging, LinkedIn ambiguous-delivery fail-closed semantics, and governed Vercel Git provenance. Its exact-head Windows Native E2E and four desktop packaging targets passed before merge.
 - Commercial production is still not proven: the 24-hour soak, rollback drill, real Telegram/LinkedIn evidence, multi-device CRDT network proof, manual accessibility audit, signing/store distribution, final L3 governance evidence, billing activation, legal/commercial review, and the current-main Sonar A requirement remain open.
 
 ## Current hardening note
+
+The release-truth reconciliation intentionally keeps moving `main` separate from the currently serving Production SHA. CI now verifies the committed live-production observation against the public alias and fails closed on release-identity drift.
 
 The release-proof lane is fail-closed: readiness cannot declare L3 without auditable evidence references and verification time, connector proof requires durable per-platform delivery evidence with external IDs, and the Vercel lane requires exact release-SHA verification before promotion.
 

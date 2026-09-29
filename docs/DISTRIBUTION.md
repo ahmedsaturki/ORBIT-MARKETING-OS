@@ -1,6 +1,6 @@
 # ORBIT Distribution
 
-Updated: 2026-09-28.
+Updated: 2026-09-29.
 
 ## Desktop
 
@@ -18,9 +18,9 @@ The Expo project supports local development and web export. The current GitHub A
 
 The public web surface is live on the connected Vercel production project and responds correctly on the verified production routes.
 
-The latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`, READY, Git-sourced, production-targeted, and Next.js. It belongs to the prior verified release line. Current main is not treated as a Production release because `release/PRODUCTION_RELEASE.json` remains on the bootstrap marker.
+The canonical Production alias currently serves deployment `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV`, READY, Git-sourced, production-targeted, and Next.js, on release SHA `9ba07318f4d580e670be9d27ec76888e66013340`. This serving state is recorded separately from moving `main`; the release marker remains the explicit Production control plane.
 
-Vercel Production Provenance run `36480198039` completed successfully in bootstrap/non-release mode and Web Deploy run `36480197959` passed its web quality path. The next Production release must first update the reviewed non-bootstrap marker, then re-establish exact production provenance before the rollback drill.
+Vercel Production Provenance run `36609486608` completed successfully in bootstrap/non-release mode and Web Deploy run `36609486630` passed its web quality path. The current Production alias is already serving the observed v1.0.0 release baseline above; the current main documentation commit is not counted as a new serving deployment. The rollback drill remains open.
 
 ## Release integrity
 

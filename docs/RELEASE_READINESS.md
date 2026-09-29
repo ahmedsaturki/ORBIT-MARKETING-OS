@@ -1,6 +1,6 @@
 # ORBIT Marketing OS — Release Readiness
 
-Updated: 2026-09-28.
+Updated: 2026-09-29.
 
 ## Canonical state
 
@@ -90,7 +90,7 @@ A Windows Native E2E run previously found a real SQLite LIKE-escaping defect in 
 
 The canonical Vercel project is live on the governed Git deployment path. The release contract requires an explicit reviewed non-bootstrap `release/PRODUCTION_RELEASE.json` marker on `main` before a Production deployment is considered active; the deployment must be sourced from Git `main`, use the `nextjs` framework, expose the canonical alias, and prove the marker commit through `/api/health.json`, `/api/release.json`, homepage provenance, security headers, routes, manifest/service worker, and 404 checks.
 
-The latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp`. Current main carries the bootstrap production marker; Vercel Production Provenance run `36480198039` therefore performs no current-main Production verification, while Web Deploy run `36480197959` validates the web quality path. The controlled rollback drill remains open.
+The latest directly observed canonical Production deployment is `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV` (READY, Production), serving `9ba07318f4d580e670be9d27ec76888e66013340`. Direct checks on 2026-09-29T20:32:47Z confirmed `/`, `/api/health.json`, and `/api/release.json` return HTTP 200 with version `1.0.0`, matching release SHA, and `VERCEL_GIT_COMMIT_SHA` provenance. The latest main `70dc187d...` is a release-truth/documentation reconciliation commit whose Vercel deployment was skipped/canceled and is not the serving Production SHA. The controlled rollback drill remains open.
 
 ## Distribution posture
 

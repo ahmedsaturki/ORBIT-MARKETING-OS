@@ -1,6 +1,6 @@
 # ORBIT Performance Evidence
 
-Updated: 2026-09-28.
+Updated: 2026-09-29.
 
 ## DATA-03 — 1,000 contacts searchable
 
@@ -14,13 +14,13 @@ CI runs the benchmark with `--nocapture` so the measured result is visible in th
 
 ### Exact-main evidence — DATA-03
 
-GitHub Actions CI run `36480198008` on current main measured:
+GitHub Actions CI run `36621459773` on current main measured:
 
 - dataset: 1,000 contacts
 - query: `Benchmark Contact 0999`
 - workspace scoped: true
 - matched: 1
-- elapsed: 1.147968 ms
+- elapsed: 1.520954 ms
 
 The same CI run completed the benchmark successfully. This supports `VERIFIED` for DATA-03 at the automated-evidence level. It does not imply L3 production proof.
 
@@ -32,10 +32,10 @@ The repository performance harness enforces these budgets:
 - PERF-02 peak RSS: <= 200 MB
 - PERF-02 heap used: <= 100 MB in the core performance workload test
 
-Exact-main CI run `36480198008` measured:
+Exact-main CI run `36621459773` measured:
 
-- startup-to-health: 378.15 ms
-- peak RSS: 96.65 MB
+- startup-to-health: 381.11 ms
+- peak RSS: 96.81 MB
 - RSS samples: 14
 - listener: 127.0.0.1:38563
 - server announced: true
@@ -47,17 +47,15 @@ These are fresh automated L2 evidence, not L3 production proof.
 
 ## Exact-main recovery evidence
 
-Current main CI run `36480198008` produced recovery artifact `10995738209`. The artifact records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
+Current main CI run `36621459773` produced recovery artifact `11059010547`. The artifact records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
 
-Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36480198008#artifacts-10995738209
+Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773#artifacts-11059010547
 
 ## Current production provenance
 
-The latest independently verified production deployment remains `dpl_3YiUkYHNpQPRaPjTZvH5UrTztEQp` from the prior verified release line. Current main carries the bootstrap production marker; Vercel Production Provenance run `36480198039` therefore completed in non-release mode, while Web Deploy run `36480197959` passed its web quality path. Current-main production provenance is not claimed.
+The canonical Production alias currently serves deployment `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV` on commit `9ba07318f4d580e670be9d27ec76888e66013340`. Public checks of `/`, `/api/health.json`, and `/api/release.json` passed at 2026-09-29T20:32:47Z with version `1.0.0`, matching release SHA, and `VERCEL_GIT_COMMIT_SHA` provenance. Current main `70dc187d...` is a release-truth/documentation reconciliation commit and its Vercel deployment was intentionally skipped/canceled; it is not the serving Production SHA.
 
-The previous live verification checked `/`, `/api/health.json`, and `/api/release.json` against the prior verified release. A new current-main production verification will only occur after a reviewed non-bootstrap production marker is selected.
-
-Deployment details: https://vercel.com/jmls-projects/orbit-marketing-os/3YiUkYHNpQPRaPjTZvH5UrTztEQp
+The durable machine-readable observation is `release/OBSERVED_PRODUCTION.json`, and CI now verifies that observation against the live public production alias.
 
 ## Reproducibility
 

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "repository": "ahmedsaturki/ORBIT-MARKETING-OS",
+  "environment": "production",
+  "observedAt": "2026-09-29T20:32:47Z",
+  "alias": "https://orbit-marketing-os.vercel.app",
+  "deployment": {
+    "id": "dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV",
+    "state": "READY",
+    "target": "production",
+    "gitCommitSha": "9ba07318f4d580e670be9d27ec76888e66013340",
+    "gitCommitRef": "main"
+  },
+  "release": {
+    "version": "1.0.0",
+    "releaseSha": "9ba07318f4d580e670be9d27ec76888e66013340",
+    "provenanceSource": "VERCEL_GIT_COMMIT_SHA"
+  },
+  "endpointChecks": [
+    {
+      "path": "/",
+      "httpStatus": 200,
+      "assertion": "data-release-sha matches deployed SHA"
+    },
+    {
+      "path": "/api/health.json",
+      "httpStatus": 200,
+      "assertion": "version, releaseSha and provenance source match"
+    },
+    {
+      "path": "/api/release.json",
+      "httpStatus": 200,
+      "assertion": "version, releaseSha and provenance source match"
+    }
+  ],
+  "runtimeErrors": {
+    "window": "7d",
+    "count": 0
+  },
+  "evidenceRefs": [
+    "https://vercel.com/jmls-projects/orbit-marketing-os/9KyEbWzvAYvhvzZPmtXNJXrP16xV",
+    "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486608",
+    "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486630",
+    "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486555"
+  ],
+  "releaseTruth": {
+    "commercialProductionProven": false,
+    "reason": "Required release-critical gates remain open; this observation proves live availability and public provenance, not full L3/commercial readiness."
+  },
+  "formatVerification": {
+    "workflowRunId": 36632997337,
+    "completedAt": "2026-09-29T21:24:29Z",
+    "scope": [
+      "docs/LAUNCH_SCORECARD.md",
+      "docs/RELEASE_SCORECARD.md",
+      "release/readiness.json",
+      "scripts/verify-live-production-observation.mjs"
+    ],
+    "result": "PASS"
+  }
+}
