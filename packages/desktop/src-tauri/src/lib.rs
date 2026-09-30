@@ -12075,6 +12075,20 @@ mod tests {
     }
 
     #[test]
+    fn escape_like_literal_escapes_without_wrapping() {
+        // `global_search` binds the bare escaped pattern (no `%` wrapper) as its
+        // `:q` parameter, so the shared helper's unwrapped contract needs direct
+        // coverage rather than only the `like_contains_pattern` wrapper's.
+        assert_eq!(escape_like_literal("100%"), "100!%");
+        assert_eq!(escape_like_literal("a_b"), "a!_b");
+        // The escape character itself must round-trip as a literal.
+        assert_eq!(escape_like_literal("boom!"), "boom!!");
+        assert_eq!(escape_like_literal("100!% cotton"), "100!!!% cotton");
+        // Text without metacharacters passes through unchanged.
+        assert_eq!(escape_like_literal("cotton"), "cotton");
+    }
+
+    #[test]
     fn like_contains_pattern_matches_literal_text_only() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
         connection
