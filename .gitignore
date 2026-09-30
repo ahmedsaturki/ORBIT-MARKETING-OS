@@ -26,6 +26,3 @@ attachment/
 
 packages/web/out/
 *.tsbuildinfo
-
-# Local agent session scratch/evidence record. Never part of a release diff.
-SESSION_SUMMARY.md
