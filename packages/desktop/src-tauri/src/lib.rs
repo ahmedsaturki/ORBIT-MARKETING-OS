@@ -4428,6 +4428,18 @@ fn media_asset_delete(app: tauri::AppHandle, id: String) -> Result<bool, String>
     Ok(changed > 0)
 }
 
+/// Build a contains-pattern for a LIKE query, escaping the metacharacters that
+/// would otherwise let a user's search text act as a wildcard. `!` is the escape
+/// character, so any query using this must declare `ESCAPE '!'`.
+fn like_contains_pattern(value: &str) -> String {
+    let escaped = value
+        .trim()
+        .replace('!', "!!")
+        .replace('%', "!%")
+        .replace('_', "!_");
+    format!("%{escaped}%")
+}
+
 #[tauri::command]
 fn media_asset_list(
     app: tauri::AppHandle,
@@ -4442,7 +4454,7 @@ fn media_asset_list(
         &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
     )
     .map_err(|error| error.to_string())?;
-    let pattern = search.map(|value| "%".to_string() + value.trim() + "%");
+    let pattern = search.as_deref().map(like_contains_pattern);
     let kind = kind
         .map(|value| validate_media_kind(&value))
         .transpose()
@@ -4454,7 +4466,7 @@ fn media_asset_list(
                     local_path, tags_json, created_at, updated_at
              FROM media_assets
              WHERE workspace_id=?1
-               AND (?2 IS NULL OR filename LIKE ?2 OR local_path LIKE ?2 OR tags_json LIKE ?2)
+               AND (?2 IS NULL OR filename LIKE ?2 ESCAPE '!' OR local_path LIKE ?2 ESCAPE '!' OR tags_json LIKE ?2 ESCAPE '!')
                AND (?3 IS NULL OR kind=?3)
              ORDER BY updated_at DESC",
         )
@@ -5874,13 +5886,13 @@ fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<Con
         &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
     )
     .map_err(|error| error.to_string())?;
-    let pattern = search.map(|value| "%".to_string() + value.trim() + "%");
+    let pattern = search.as_deref().map(like_contains_pattern);
     let mut statement = connection
         .prepare(
             "SELECT id, display_name, phone, email, source_platform, status, notes, updated_at
              FROM contacts
              WHERE workspace_id=?1
-               AND (?2 IS NULL OR display_name LIKE ?2 OR phone LIKE ?2 OR email LIKE ?2)
+               AND (?2 IS NULL OR display_name LIKE ?2 ESCAPE '!' OR phone LIKE ?2 ESCAPE '!' OR email LIKE ?2 ESCAPE '!')
              ORDER BY updated_at DESC",
         )
         .map_err(|error| error.to_string())?;
@@ -12043,6 +12055,117 @@ mod tests {
 
         assert!(!verify_audit_chain(&connection, "workspace-1")
             .expect("audit verification should work"));
+    }
+
+    #[test]
+    fn like_contains_pattern_escapes_wildcard_metacharacters() {
+        assert_eq!(like_contains_pattern("100%"), "%100!%%");
+        assert_eq!(like_contains_pattern("a_b"), "%a!_b%");
+        assert_eq!(like_contains_pattern("boom!"), "%boom!!%");
+        assert_eq!(like_contains_pattern("  report  "), "%report%");
+    }
+
+    #[test]
+    fn like_contains_pattern_matches_literal_text_only() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(
+                "CREATE TABLE assets(name TEXT NOT NULL);
+                 INSERT INTO assets(name) VALUES ('100% cotton'), ('100x cotton'), ('a_b'), ('a b'), ('axb');",
+            )
+            .expect("asset fixture should insert");
+
+        let matches = |search: &str| -> Vec<String> {
+            let mut statement = connection
+                .prepare("SELECT name FROM assets WHERE name LIKE ?1 ESCAPE '!' ORDER BY name")
+                .expect("query should prepare");
+            let rows = statement
+                .query_map(params![like_contains_pattern(search)], |row| row.get(0))
+                .expect("query should run");
+            rows.map(|row| row.expect("row should map")).collect()
+        };
+
+        // A literal % must not behave as a wildcard and match '100x cotton'.
+        assert_eq!(matches("100%"), vec!["100% cotton".to_string()]);
+        // A literal _ must match only a name with a real underscore, not 'a b'
+        // (space) and not 'axb' (which _ would otherwise wildcard).
+        assert_eq!(matches("a_b"), vec!["a_b".to_string()]);
+        // A search with no metacharacters still behaves as a substring match.
+        assert_eq!(matches("cotton"), vec!["100% cotton", "100x cotton"]);
+    }
+
+    #[test]
+    fn redact_event_json_replaces_credential_values() {
+        let mut value: serde_json::Value =
+            serde_json::from_str(r#"{"token":"do-not-store","api_key":"k-123","attempt":2}"#)
+                .expect("redaction fixture should parse");
+
+        redact_event_json(&mut value);
+
+        assert_eq!(value["token"], serde_json::json!("[REDACTED]"));
+        assert_eq!(value["api_key"], serde_json::json!("[REDACTED]"));
+    }
+
+    #[test]
+    fn redact_event_json_leaves_non_sensitive_values_intact() {
+        let mut value: serde_json::Value =
+            serde_json::from_str(r#"{"command":"deploy","attempt":2,"enabled":true}"#)
+                .expect("redaction fixture should parse");
+
+        redact_event_json(&mut value);
+
+        assert_eq!(value["command"], serde_json::json!("deploy"));
+        assert_eq!(value["attempt"], serde_json::json!(2));
+        assert_eq!(value["enabled"], serde_json::json!(true));
+    }
+
+    #[test]
+    fn redact_event_json_walks_nested_objects_and_arrays() {
+        let mut value: serde_json::Value = serde_json::from_str(
+            r#"{
+                 "secret":"top-level-secret",
+                 "connector":{
+                   "label":"okta",
+                   "session":{ "id":"sess-9", "issued_at":"2026-01-01T00:00:00Z" },
+                   "auth":{ "id":"user-7", "password":"p@ss" }
+                 },
+                 "attempts":[
+                   { "id":1, "api-key":"ak-1" },
+                   { "id":2, "cookie":"c-2" }
+                 ]
+               }"#,
+        )
+        .expect("redaction fixture should parse");
+
+        redact_event_json(&mut value);
+
+        assert_eq!(value["secret"], serde_json::json!("[REDACTED]"));
+        assert_eq!(value["connector"]["label"], serde_json::json!("okta"));
+        assert_eq!(
+            value["connector"]["auth"]["id"],
+            serde_json::json!("user-7")
+        );
+        assert_eq!(
+            value["connector"]["auth"]["password"],
+            serde_json::json!("[REDACTED]")
+        );
+        assert_eq!(value["attempts"][0]["id"], serde_json::json!(1));
+        assert_eq!(
+            value["attempts"][0]["api-key"],
+            serde_json::json!("[REDACTED]")
+        );
+        assert_eq!(value["attempts"][1]["id"], serde_json::json!(2));
+        assert_eq!(
+            value["attempts"][1]["cookie"],
+            serde_json::json!("[REDACTED]")
+        );
+
+        // A redacted key replaces its whole subtree, so nothing below it leaks.
+        assert_eq!(
+            value["connector"]["session"],
+            serde_json::json!("[REDACTED]")
+        );
+        assert_eq!(value["connector"]["session"]["id"], serde_json::Value::Null);
     }
 
     #[test]
