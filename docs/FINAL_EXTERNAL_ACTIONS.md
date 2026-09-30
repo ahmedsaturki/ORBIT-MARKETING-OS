@@ -45,6 +45,8 @@ No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acc
 - Preserve final L3 governance evidence for protected-main policy and exact verification timestamps/evidence references.
 - Configure actual payment/billing and verify checkout/refund behavior.
 - Perform final legal/commercial publication review.
+- Resolve the current-main SonarCloud requirement: Security Rating on New Code must reach A.
+
 ## F. Snyk account quota
 
 The Snyk check `security/snyk (ahmedsaturki)` reports `fail` with the message "You have used your limit of private tests". This is an Snyk account/billing quota limit, NOT a code defect, NOT a vulnerability finding, and NOT agent-fixable. It requires the owner's Snyk account or billing action.
@@ -57,6 +59,7 @@ Owner options:
 - Change branch-protection required checks (a repo-policy change, not a security gate change).
 
 Evidence: PR #171, head `dfe10694` (non-merged), CI run `36765988640` (success on `ci` and `security:scan`). The current `main` branch serves the observed 9ba07318 deployment, not the PR head. This entry is a dated snapshot; it does NOT claim a specific `main` SHA.
+
 ## Release rule
 
 Commercial Production Proven means every release-critical item has L3 evidence. Do not infer L3 from source presence, a live deployment, a green CI run, or a prior release artifact alone.
