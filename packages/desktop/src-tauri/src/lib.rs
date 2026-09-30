@@ -4428,16 +4428,28 @@ fn media_asset_delete(app: tauri::AppHandle, id: String) -> Result<bool, String>
     Ok(changed > 0)
 }
 
+/// The escape character used for every LIKE pattern in this crate. Queries must
+/// declare `ESCAPE '!'` for escaping to take effect, and `global_search` does
+/// so on its own ~50 inline predicates. Changing this value without updating
+/// those clauses would silently stop all escaping.
+const LIKE_ESCAPE: char = '!';
+
 /// Build a contains-pattern for a LIKE query, escaping the metacharacters that
-/// would otherwise let a user's search text act as a wildcard. `!` is the escape
-/// character, so any query using this must declare `ESCAPE '!'`.
+/// would otherwise let a user's search text act as a wildcard. The query must
+/// declare `ESCAPE '!'`.
 fn like_contains_pattern(value: &str) -> String {
-    let escaped = value
-        .trim()
-        .replace('!', "!!")
-        .replace('%', "!%")
-        .replace('_', "!_");
-    format!("%{escaped}%")
+    format!("%{}%", escape_like_literal(value.trim()))
+}
+
+/// Escape the LIKE metacharacters (`%`, `_`, and the escape character itself)
+/// in a user-supplied fragment. `global_search` uses this for its bare pattern;
+/// `like_contains_pattern` wraps the result in `%` for contains-style filters.
+fn escape_like_literal(value: &str) -> String {
+    let doubled = format!("{LIKE_ESCAPE}{LIKE_ESCAPE}");
+    value
+        .replace(LIKE_ESCAPE, &doubled)
+        .replace('%', &format!("{LIKE_ESCAPE}%"))
+        .replace('_', &format!("{LIKE_ESCAPE}_"))
 }
 
 #[tauri::command]
@@ -7362,10 +7374,7 @@ fn global_search(
     )
     .map_err(|error| error.to_string())?;
 
-    let escaped = query
-        .replace('!', "!!")
-        .replace('%', "!%")
-        .replace('_', "!_");
+    let escaped = escape_like_literal(&query);
     let sql = r#"
       SELECT kind, id, title, subtitle, score
       FROM (
