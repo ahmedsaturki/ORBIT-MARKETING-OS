@@ -16,7 +16,7 @@
         "CI run 36609486448 on production-serving code 9ba07318",
         "SonarCloud latest observed main quality gate remains B Security Rating on New Code; required A"
       ],
-      "notes": "Current main 1133a073, which merged PR #170 code (+748/-42 across 10 files); its tree is identical to f0fd5630 and is NOT the serving deployment. The latest production-serving code baseline is 9ba07318 and its CI/security cycle passed. SonarCloud remains the outstanding quality prerequisite: the latest observed main analysis is B Security Rating on New Code while the required threshold is A. The pinned production marker remains orbit-v1.0.0-prod at gitCommit f65c153 by design and is not a moving-HEAD pointer.",
+      "notes": "The observation bound to CI run 36736876944 covers the main-branch commit that merged PR #170 code (+748/-42 across 10 files); its tree is identical to f0fd5630 and it is NOT the serving deployment. The latest production-serving code baseline is 9ba07318 and its CI/security cycle passed. SonarCloud remains the outstanding quality prerequisite: the latest observed main analysis is B Security Rating on New Code while the required threshold is A. The pinned production marker remains orbit-v1.0.0-prod at gitCommit f65c153 by design and is not a moving-HEAD pointer.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36736876944",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486448",
