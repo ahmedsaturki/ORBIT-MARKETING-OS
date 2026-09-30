@@ -26,3 +26,12 @@ attachment/
 
 packages/web/out/
 *.tsbuildinfo
+
+# Agent session scratch (untracked, local only; must not enter release PRs)
+SESSION_SUMMARY.md
+
+# Collector/tool output dirs (untracked, local only; must not enter release PRs)
+.artifacts/
+
+# Diagnostic scratch reports (untracked, local only)
+.diagnr/
