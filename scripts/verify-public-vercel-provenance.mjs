@@ -1,6 +1,9 @@
-const base = (
-  process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app"
-).replace(/\/$/, "");
+import { sanitizeOrigin, sanitizeText } from "./child-env.mjs";
+
+const base = sanitizeOrigin(
+  process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app",
+);
+
 const expected = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
 const expectedVersion = process.env.ORBIT_EXPECTED_RELEASE_VERSION ?? "1.0.0";
 
@@ -54,12 +57,12 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
         );
         process.exit(0);
       }
-      last = JSON.stringify({ healthBody, releaseBody });
+      last = sanitizeText(JSON.stringify({ healthBody, releaseBody }));
     } else {
-      last = `health=${health.status} release=${release.status}`;
+      last = sanitizeText(`health=${health.status} release=${release.status}`);
     }
   } catch (error) {
-    last = error instanceof Error ? error.message : String(error);
+    last = sanitizeText(error instanceof Error ? error.message : String(error));
   }
   await new Promise((resolve) => setTimeout(resolve, 15_000));
 }

@@ -3,21 +3,26 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { childEnv, resolveTool } from "./child-env.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = resolve(root, "packages/desktop/src-tauri/Cargo.toml");
 const evidenceDir = resolve(root, ".artifacts");
-const gitEnv = { ...process.env };
-for (const key of [
-  "GIT_DIR",
-  "GIT_WORK_TREE",
-  "GIT_INDEX_FILE",
-  "GIT_COMMON_DIR",
-  "GIT_OBJECT_DIRECTORY",
-  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-  "GIT_NAMESPACE",
-]) {
-  delete gitEnv[key];
+const gitBinary = resolveTool("git");
+const gitEnv = childEnv("git");
+// cargo shells out to rustc/cc/linker, which live in the OS-owned system
+// toolchain directories rather than next to the cargo shim. Resolution is
+// lazy so a missing cargo records a per-check FAIL instead of crashing.
+let cargoBinary;
+let cargoEnv;
+function cargo() {
+  if (!cargoBinary) {
+    cargoBinary = resolveTool("cargo");
+    cargoEnv = childEnv("cargo", process.env, {
+      includeSystemToolchain: true,
+    });
+  }
+  return cargoBinary;
 }
 mkdirSync(evidenceDir, { recursive: true });
 
@@ -53,7 +58,7 @@ for (const check of checks) {
   const started = Date.now();
   try {
     const output = execFileSync(
-      "cargo",
+      cargo(),
       [
         "test",
         "--manifest-path",
@@ -68,7 +73,7 @@ for (const check of checks) {
         stdio: ["ignore", "pipe", "pipe"],
         encoding: "utf8",
         timeout: 4 * 60 * 1000,
-        env: gitEnv,
+        env: cargoEnv,
       },
     );
 
@@ -125,7 +130,7 @@ const payload = {
   schemaVersion: 1,
   repository: "ahmedsaturki/ORBIT-MARKETING-OS",
   generatedAt: new Date().toISOString(),
-  sha: execFileSync("git", ["rev-parse", "HEAD"], {
+  sha: execFileSync(gitBinary, ["rev-parse", "HEAD"], {
     cwd: root,
     encoding: "utf8",
     env: gitEnv,

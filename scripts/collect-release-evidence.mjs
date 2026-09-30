@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { childEnv, resolveTool } from "./child-env.mjs";
 
 const args = process.argv.slice(2);
 const outputIndex = args.indexOf("--output");
@@ -20,24 +21,13 @@ if (!["verification", "commercial"].includes(mode)) {
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-function git(args) {
-  const env = { ...process.env };
-  for (const key of [
-    "GIT_DIR",
-    "GIT_WORK_TREE",
-    "GIT_INDEX_FILE",
-    "GIT_COMMON_DIR",
-    "GIT_OBJECT_DIRECTORY",
-    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-    "GIT_NAMESPACE",
-  ]) {
-    delete env[key];
-  }
+const gitBinary = resolveTool("git");
 
-  return execFileSync("git", args, {
+function git(args) {
+  return execFileSync(gitBinary, args, {
     cwd: repoRoot,
     encoding: "utf8",
-    env,
+    env: childEnv("git"),
   }).trim();
 }
 

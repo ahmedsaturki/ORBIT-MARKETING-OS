@@ -3,47 +3,25 @@ import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { childEnv, resolveTool } from "./child-env.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const markerPath = join(root, "release", "PRODUCTION_RELEASE.json");
+const git = resolveTool("git");
 
 function gitRevParseHead() {
-  const env = { ...process.env };
-  for (const key of [
-    "GIT_DIR",
-    "GIT_WORK_TREE",
-    "GIT_INDEX_FILE",
-    "GIT_COMMON_DIR",
-    "GIT_OBJECT_DIRECTORY",
-    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-    "GIT_NAMESPACE",
-  ]) {
-    delete env[key];
-  }
-  return execFileSync("git", ["rev-parse", "HEAD"], {
+  return execFileSync(git, ["rev-parse", "HEAD"], {
     cwd: root,
     encoding: "utf8",
-    env,
+    env: childEnv("git"),
   }).trim();
 }
 
 function gitMarkerCommit() {
-  const env = { ...process.env };
-  for (const key of [
-    "GIT_DIR",
-    "GIT_WORK_TREE",
-    "GIT_INDEX_FILE",
-    "GIT_COMMON_DIR",
-    "GIT_OBJECT_DIRECTORY",
-    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-    "GIT_NAMESPACE",
-  ]) {
-    delete env[key];
-  }
-  return execFileSync("git", ["log", "-1", "--format=%H", "--", markerPath], {
+  return execFileSync(git, ["log", "-1", "--format=%H", "--", markerPath], {
     cwd: root,
     encoding: "utf8",
-    env,
+    env: childEnv("git"),
   }).trim();
 }
 

@@ -16,6 +16,10 @@ const RESOLVER = join(
   dirname(fileURLToPath(import.meta.url)),
   "resolve-production-release.mjs",
 );
+const CHILD_ENV = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "child-env.mjs",
+);
 
 async function state(cwd) {
   const { stdout } = await execFileAsync(
@@ -39,6 +43,7 @@ test("production release resolver binds the release to the marker commit", async
       releaseId: "bootstrap",
     });
     await cp(RESOLVER, join(cwd, "scripts", "resolve-production-release.mjs"));
+    await cp(CHILD_ENV, join(cwd, "scripts", "child-env.mjs"));
     await commit(cwd, "bootstrap");
 
     let current = await commitSha(cwd);

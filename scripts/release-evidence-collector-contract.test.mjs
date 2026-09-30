@@ -5,23 +5,19 @@ import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { childEnv, resolveTool } from "./child-env.mjs";
 
 const source = await readFile("scripts/collect-release-evidence.mjs", "utf8");
 const securitySource = await readFile("scripts/security-scan.mjs", "utf8");
 const recoverySource = await readFile("scripts/recovery-evidence.mjs", "utf8");
+const childEnvSource = await readFile("scripts/child-env.mjs", "utf8");
 
 for (const marker of [
   'const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");',
   "cwd: repoRoot,",
-  '"GIT_DIR",',
-  '"GIT_WORK_TREE",',
-  '"GIT_INDEX_FILE",',
-  '"GIT_COMMON_DIR",',
-  '"GIT_OBJECT_DIRECTORY",',
-  '"GIT_ALTERNATE_OBJECT_DIRECTORIES",',
-  '"GIT_NAMESPACE",',
   "evidenceRefs: value.evidenceRefs ?? [],",
   "verifiedAt: value.verifiedAt ?? null,",
+  'import { childEnv, resolveTool } from "./child-env.mjs";',
 ]) {
   assert.equal(
     source.includes(marker),
@@ -55,17 +51,26 @@ const requiredRepoBinding = [
   ],
 ];
 
+// The Git override sanitization now lives in the shared child-env module that
+// every spawning script imports, so assert it there.
 for (const marker of requiredGitOverrides) {
-  for (const [label, content] of [
-    ["security scan", securitySource],
-    ["recovery evidence", recoverySource],
-  ]) {
-    assert.equal(
-      content.includes(marker),
-      true,
-      `${label} missing Git override sanitization marker: ${marker}`,
-    );
-  }
+  assert.equal(
+    childEnvSource.includes(marker),
+    true,
+    `shared child env missing Git override sanitization marker: ${marker}`,
+  );
+}
+
+for (const [label, content] of [
+  ["collector", source],
+  ["security scan", securitySource],
+  ["recovery evidence", recoverySource],
+]) {
+  assert.equal(
+    content.includes('from "./child-env.mjs"'),
+    true,
+    `${label} must spawn through the sanitized child environment`,
+  );
 }
 
 for (const [label, content, rootMarker, cwdMarker] of requiredRepoBinding) {
@@ -82,9 +87,10 @@ for (const [label, content, rootMarker, cwdMarker] of requiredRepoBinding) {
 }
 
 const testRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const expectedSha = execFileSync("git", ["rev-parse", "HEAD"], {
+const expectedSha = execFileSync(resolveTool("git"), ["rev-parse", "HEAD"], {
   cwd: testRoot,
   encoding: "utf8",
+  env: childEnv("git"),
 }).trim();
 
 const hostileDir = mkdtempSync(join(tmpdir(), "orbit-release-evidence-"));

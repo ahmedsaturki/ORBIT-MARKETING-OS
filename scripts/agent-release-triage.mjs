@@ -3,30 +3,20 @@ import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { childEnv, resolveTool } from "./child-env.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = dirname(scriptDir);
 const readinessPath = join(repoRoot, "release", "readiness.json");
 const readiness = JSON.parse(await readFile(readinessPath, "utf8"));
 
-function git(args) {
-  const env = { ...process.env };
-  for (const key of [
-    "GIT_DIR",
-    "GIT_WORK_TREE",
-    "GIT_INDEX_FILE",
-    "GIT_COMMON_DIR",
-    "GIT_OBJECT_DIRECTORY",
-    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-    "GIT_NAMESPACE",
-  ]) {
-    delete env[key];
-  }
+const gitBinary = resolveTool("git");
 
-  return execFileSync("git", args, {
+function git(args) {
+  return execFileSync(gitBinary, args, {
     cwd: repoRoot,
     encoding: "utf8",
-    env,
+    env: childEnv("git"),
   }).trim();
 }
 

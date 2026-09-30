@@ -2,22 +2,13 @@ import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFile } from "node:fs/promises";
+import { childEnv, resolveTool } from "./child-env.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const gitEnv = { ...process.env };
-for (const key of [
-  "GIT_DIR",
-  "GIT_WORK_TREE",
-  "GIT_INDEX_FILE",
-  "GIT_COMMON_DIR",
-  "GIT_OBJECT_DIRECTORY",
-  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-  "GIT_NAMESPACE",
-]) {
-  delete gitEnv[key];
-}
+const git = resolveTool("git");
+const gitEnv = childEnv("git");
 
-const tracked = execFileSync("git", ["ls-files", "-z"], {
+const tracked = execFileSync(git, ["ls-files", "-z"], {
   cwd: repoRoot,
   encoding: "utf8",
   env: gitEnv,

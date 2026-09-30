@@ -1,6 +1,7 @@
 import { execFileSync, spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { readFileSync } from "node:fs";
+import { childEnv, resolveTool } from "./child-env.mjs";
 
 const root = process.cwd();
 
@@ -12,18 +13,27 @@ function rssMb(pid) {
   }
 
   if (process.platform === "darwin") {
-    const value = execFileSync("ps", ["-o", "rss=", "-p", String(pid)], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
+    const value = execFileSync(
+      resolveTool("ps"),
+      ["-o", "rss=", "-p", String(pid)],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        env: childEnv("ps"),
+      },
+    ).trim();
     const kb = Number(value);
     return Number.isFinite(kb) ? kb / 1024 : 0;
   }
 
   const out = execFileSync(
-    "tasklist",
+    resolveTool("tasklist"),
     ["/FI", "PID eq " + pid, "/FO", "CSV", "/NH"],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      env: childEnv("tasklist"),
+    },
   );
   const match = out.match(/"([\d,]+) K"/);
   return match ? Number(match[1].replaceAll(",", "")) / 1024 : 0;
