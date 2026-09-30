@@ -4429,9 +4429,10 @@ fn media_asset_delete(app: tauri::AppHandle, id: String) -> Result<bool, String>
 }
 
 /// The escape character used for every LIKE pattern in this crate. Queries must
-/// declare `ESCAPE '!'` for escaping to take effect, and `global_search` does
-/// so on its own ~50 inline predicates. Changing this value without updating
-/// those clauses would silently stop all escaping.
+/// declare `ESCAPE '!'` for escaping to take effect. `media_asset_list_query` and
+/// `contact_list_query` interpolate this constant, so they cannot drift from it.
+/// `global_search` still hardcodes `'!'` on its own ~50 inline predicates and is
+/// therefore coupled to this value by convention only.
 const LIKE_ESCAPE: char = '!';
 
 /// Build a contains-pattern for a LIKE query, escaping the metacharacters that
@@ -4450,6 +4451,32 @@ fn escape_like_literal(value: &str) -> String {
         .replace(LIKE_ESCAPE, &doubled)
         .replace('%', &format!("{LIKE_ESCAPE}%"))
         .replace('_', &format!("{LIKE_ESCAPE}_"))
+}
+
+/// The `media_asset_list` search predicate. Named so the exact production SQL —
+/// including its `ESCAPE` clause — is exercisable by tests instead of a copy.
+fn media_asset_list_query() -> String {
+    format!(
+        "SELECT id, kind, filename, mime_type, size_bytes, sha256,
+                local_path, tags_json, created_at, updated_at
+         FROM media_assets
+         WHERE workspace_id=?1
+           AND (?2 IS NULL OR filename LIKE ?2 ESCAPE '{LIKE_ESCAPE}' OR local_path LIKE ?2 ESCAPE '{LIKE_ESCAPE}' OR tags_json LIKE ?2 ESCAPE '{LIKE_ESCAPE}')
+           AND (?3 IS NULL OR kind=?3)
+         ORDER BY updated_at DESC"
+    )
+}
+
+/// The `contact_list` search predicate, sharing the same `LIKE_ESCAPE` constant
+/// as `media_asset_list_query` for the same testability reason.
+fn contact_list_query() -> String {
+    format!(
+        "SELECT id, display_name, phone, email, source_platform, status, notes, updated_at
+         FROM contacts
+         WHERE workspace_id=?1
+           AND (?2 IS NULL OR display_name LIKE ?2 ESCAPE '{LIKE_ESCAPE}' OR phone LIKE ?2 ESCAPE '{LIKE_ESCAPE}' OR email LIKE ?2 ESCAPE '{LIKE_ESCAPE}')
+         ORDER BY updated_at DESC"
+    )
 }
 
 #[tauri::command]
@@ -4472,16 +4499,9 @@ fn media_asset_list(
         .transpose()
         .map_err(|error| error.to_string())?;
 
+    let sql = media_asset_list_query();
     let mut statement = connection
-        .prepare(
-            "SELECT id, kind, filename, mime_type, size_bytes, sha256,
-                    local_path, tags_json, created_at, updated_at
-             FROM media_assets
-             WHERE workspace_id=?1
-               AND (?2 IS NULL OR filename LIKE ?2 ESCAPE '!' OR local_path LIKE ?2 ESCAPE '!' OR tags_json LIKE ?2 ESCAPE '!')
-               AND (?3 IS NULL OR kind=?3)
-             ORDER BY updated_at DESC",
-        )
+        .prepare(&sql)
         .map_err(|error| error.to_string())?;
     let rows = statement
         .query_map(params![&workspace_id, pattern, kind], |row| {
@@ -5899,14 +5919,9 @@ fn contact_list(app: tauri::AppHandle, search: Option<String>) -> Result<Vec<Con
     )
     .map_err(|error| error.to_string())?;
     let pattern = search.as_deref().map(like_contains_pattern);
+    let sql = contact_list_query();
     let mut statement = connection
-        .prepare(
-            "SELECT id, display_name, phone, email, source_platform, status, notes, updated_at
-             FROM contacts
-             WHERE workspace_id=?1
-               AND (?2 IS NULL OR display_name LIKE ?2 ESCAPE '!' OR phone LIKE ?2 ESCAPE '!' OR email LIKE ?2 ESCAPE '!')
-             ORDER BY updated_at DESC",
-        )
+        .prepare(&sql)
         .map_err(|error| error.to_string())?;
 
     let rows = statement
@@ -12115,6 +12130,73 @@ mod tests {
         assert_eq!(matches("a_b"), vec!["a_b".to_string()]);
         // A search with no metacharacters still behaves as a substring match.
         assert_eq!(matches("cotton"), vec!["100% cotton", "100x cotton"]);
+    }
+
+    #[test]
+    fn media_asset_list_query_filters_on_literal_wildcards() {
+        // Exercises the production SQL rather than a copy, so the `ESCAPE` clause
+        // cannot silently drop out of the real command's predicate.
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(
+                "CREATE TABLE media_assets(
+                     id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, kind TEXT,
+                     filename TEXT, mime_type TEXT, size_bytes INTEGER, sha256 TEXT,
+                     local_path TEXT, tags_json TEXT, created_at TEXT, updated_at TEXT);
+                 INSERT INTO media_assets VALUES
+                     ('a1','ws-1','image','100% cotton.png','image/png',1,'s1','p1','t','1','1'),
+                     ('a2','ws-1','image','100x cotton.png','image/png',1,'s2','p2','t','1','1'),
+                     ('a3','ws-2','image','100% other.png','image/png',1,'s3','p3','t','1','1');",
+            )
+            .expect("media asset fixture should insert");
+
+        let sql = media_asset_list_query();
+        let mut statement = connection
+            .prepare(&sql)
+            .expect("production media asset query should prepare");
+        let rows = statement
+            .query_map(
+                params!["ws-1", like_contains_pattern("100%"), None::<String>],
+                |row| row.get::<_, String>(0),
+            )
+            .expect("production media asset query should run")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("media asset rows should collect");
+
+        // '100x cotton.png' must not match (wildcard regression) and
+        // '100% other.png' must not match (different workspace).
+        assert_eq!(rows, vec!["a1".to_string()]);
+    }
+
+    #[test]
+    fn contact_list_query_filters_on_literal_wildcards() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(
+                "CREATE TABLE contacts(
+                     id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, display_name TEXT,
+                     phone TEXT, email TEXT, source_platform TEXT, status TEXT,
+                     notes TEXT, updated_at TEXT);
+                 INSERT INTO contacts VALUES
+                     ('c1','ws-1','100% cotton','p','e100','web','active','n','1'),
+                     ('c2','ws-1','100x cotton','p','e200','web','active','n','1'),
+                     ('c3','ws-2','100% other','p','e300','web','active','n','1');",
+            )
+            .expect("contact fixture should insert");
+
+        let sql = contact_list_query();
+        let mut statement = connection
+            .prepare(&sql)
+            .expect("production contact query should prepare");
+        let rows = statement
+            .query_map(params!["ws-1", like_contains_pattern("100%")], |row| {
+                row.get::<_, String>(0)
+            })
+            .expect("production contact query should run")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("contact rows should collect");
+
+        assert_eq!(rows, vec!["c1".to_string()]);
     }
 
     #[test]
