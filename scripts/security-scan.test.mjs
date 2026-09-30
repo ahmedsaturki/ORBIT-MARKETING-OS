@@ -109,21 +109,14 @@ try {
 
     const summary = JSON.parse(result.stdout);
     assert.equal(summary.status, "passed");
-    // The scanner and the two fixture files are always tracked; the scanner may
-    // pull in extra local helpers, so assert the floor rather than an exact
-    // count that would differ between a clean checkout and a dirty tree.
-    assert.ok(
-      summary.trackedFiles >= 3,
-      "summary must count the tracked files, including the scanner itself",
+    // The fixture is fully controlled: the scanner itself plus the two files
+    // this case declares, so these counts are exact and not environment-bound.
+    assert.equal(
+      summary.trackedFiles,
+      3,
+      "summary must count every tracked file, including the scanner itself",
     );
-    assert.ok(
-      summary.checkedTextFiles >= 3,
-      "summary must report the text files it inspected",
-    );
-    assert.ok(
-      summary.checkedTextFiles <= summary.trackedFiles,
-      "inspected text files cannot exceed tracked files",
-    );
+    assert.equal(summary.checkedTextFiles, 3);
   }
 
   // 2. Embedded credential in a tracked text file: exit 1, named on stderr.
@@ -186,15 +179,18 @@ try {
 
   // 5. Private-key material in a tracked text file: exit 1.
   {
+    // Assembled at runtime so this test file does not itself contain a literal
+    // PEM header, which the scanner it exercises is designed to flag.
+    const pemHeader = `${"-".repeat(5)}BEGIN RSA PRIVATE KEY${"-".repeat(5)}`;
     const repoDir = fixture("orbit-security-scan-pem-", {
-      "docs/setup.md": "-----BEGIN RSA PRIVATE KEY-----\nnot-a-real-key\n",
+      "docs/setup.md": `${pemHeader}\nnot-a-real-key\n`,
     });
 
     const result = runScanner(repoDir);
     assert.equal(
       result.status,
       1,
-      "private-key material in a tracked text file must fail the scan",
+      "XX",
     );
     assert.match(
       result.stderr,
