@@ -30,7 +30,6 @@ const scriptsDir = resolve(dirname(fileURLToPath(import.meta.url)));
 const git = "git";
 const gitEnv = { ...process.env };
 
-
 /** A syntactically valid, deliberately meaningless token fixture. */
 const FAKE_GITHUB_TOKEN = "ghp_" + "A".repeat(36);
 
@@ -56,12 +55,17 @@ function runScanner(repoDir) {
   };
 }
 
+const fixtureDirs = [];
+
 /**
  * Build a throwaway repository whose scripts/ dir is the shipped scanner, and
  * whose tracked files are exactly `files`.
  */
 function createFixtureRepo(name, files) {
   const repoDir = mkdtempSync(join(tmpdir(), name));
+  // Register before any further setup so a failure part-way through still gets
+  // cleaned up by the finally block rather than orphaning a temp directory.
+  fixtureDirs.push(repoDir);
   mkdirSync(join(repoDir, "scripts"), { recursive: true });
   copyFileSync(
     join(scriptsDir, "security-scan.mjs"),
@@ -84,11 +88,10 @@ function createFixtureRepo(name, files) {
   return repoDir;
 }
 
-const fixtureDirs = [];
+// createFixtureRepo registers the directory for cleanup itself, so this is
+// just a readability alias at the call sites.
 function fixture(name, files) {
-  const dir = createFixtureRepo(name, files);
-  fixtureDirs.push(dir);
-  return dir;
+  return createFixtureRepo(name, files);
 }
 
 try {
@@ -187,11 +190,7 @@ try {
     });
 
     const result = runScanner(repoDir);
-    assert.equal(
-      result.status,
-      1,
-      "XX",
-    );
+    assert.equal(result.status, 1, "XX");
     assert.match(
       result.stderr,
       /docs\/setup\.md: possible embedded credential\/token pattern/u,
