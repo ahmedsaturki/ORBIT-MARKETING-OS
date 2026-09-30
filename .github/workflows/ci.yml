@@ -178,6 +178,8 @@ jobs:
 
       - name: Secret scan
         run: pnpm security:scan
+      - name: Secret scan contract test
+        run: pnpm test:security:scan
 
   rust:
     name: Rust quality
