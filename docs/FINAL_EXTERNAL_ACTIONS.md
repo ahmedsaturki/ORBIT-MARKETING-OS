@@ -54,6 +54,7 @@ The Snyk check `security/snyk (ahmedsaturki)` reports `fail` with the message "Y
 As observed on 2026-09-30, this was the reason PR #171 reported `mergeStateStatus: UNSTABLE` on GitHub. Branch protection requires exactly `["ci", "security:scan"]` and BOTH PASS. `required_pull_request_reviews` is `{}` and `reviewDecision` is `""`. Therefore GitHub does NOT block the merge on this check. Refusing to merge over it is a deliberate policy decision under the ORBIT contract (never merge over a failing security check), not a GitHub-enforced protection rule. State this plainly so the owner does not wait on a rule that does not exist.
 
 Owner options:
+
 - Wait for the quota to reset and re-run `security:scan` on PR #171.
 - Resolve or upgrade the Snyk account/billing plan.
 - Change branch-protection required checks (a repo-policy change, not a security gate change).
