@@ -6,6 +6,9 @@ test-results/
 playwright-report/
 .playwright/
 packages/desktop/src-tauri/target/
+packages/desktop/src-tauri/icons/
+packages/desktop/src-tauri/gen/
+.turbo/
 .DS_Store
 *.log
 .env*

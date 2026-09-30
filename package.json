@@ -41,6 +41,7 @@
     "test:release-evidence-collector": "node scripts/release-evidence-collector-contract.test.mjs",
     "test:recovery:evidence": "node scripts/recovery-evidence.mjs",
     "test:soak-runner-resilience": "node scripts/soak-runner-resilience.test.mjs",
+    "test:security:scan": "node scripts/security-scan.test.mjs",
     "verify:release-docs": "node scripts/verify-release-docs.mjs",
     "verify:production-observation": "node scripts/verify-live-production-observation.mjs"
   },
