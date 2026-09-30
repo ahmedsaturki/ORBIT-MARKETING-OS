@@ -92,10 +92,16 @@ actually proves.
 - **Event redaction is duplicated and only half-tested.** The TypeScript and
   Rust redaction implementations are independent; only the TypeScript copy has
   a covering test.
-- **Audit tamper detection depends on the chain being the only writer.** The
-  chain detects edits to stored records, but nothing binds it to the audit
-  event stream, so wholesale replacement of a chain is detected only as a
-  broken `previousHash` link — not as a substituted history.
+- **Audit tamper detection depends on the chain being the only writer, and
+  the TypeScript chain is not the persisted one.** The TypeScript
+  `AuditIntegrityChain` holds an in-memory array; the cases added to its test
+  file exercise the verification logic, not the tampering of stored records.
+  The persisted, tamper-relevant chain is the Rust `verify_audit_chain`, which
+  has its own negative test (`audit_chain_helper_rejects_tampered_rows`)
+  updating a row directly and asserting verification fails. Even there,
+  nothing binds the chain to the audit event stream, so wholesale replacement
+  of a chain is detected only as a broken `previousHash` link — not as a
+  substituted history.
 - **The execution policy is a runtime convention, and one live path already
   bypasses it.** `connector.execute()` is public and takes no policy handle.
   `workflows/executionRunner.ts` evaluates `evaluateExecutionPolicy` before
