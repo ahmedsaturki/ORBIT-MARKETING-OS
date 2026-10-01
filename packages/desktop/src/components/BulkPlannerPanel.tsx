@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Layers3, ShieldCheck } from "lucide-react";
@@ -32,6 +32,7 @@ interface BulkPlannerProps {
   readonly accounts: readonly AccountOption[];
   readonly campaigns: readonly CampaignOption[];
   readonly contentItems: readonly ContentOption[];
+  readonly conversations: readonly ConversationOption[];
   readonly onTasksChanged: () => Promise<void>;
 }
 
@@ -54,6 +55,7 @@ export function BulkPlannerPanel({
   accounts,
   campaigns,
   contentItems,
+  conversations,
   onTasksChanged,
 }: BulkPlannerProps): ReactElement {
   const [campaignId, setCampaignId] = useState("");
@@ -71,41 +73,27 @@ export function BulkPlannerPanel({
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<readonly BulkPlanItem[]>([]);
   const [planSeed, setPlanSeed] = useState(() => `bulk-${Date.now()}`);
-  const [conversations, setConversations] = useState<
-    readonly ConversationOption[]
-  >([]);
+  // A destination is only submittable when it is a conversation this workspace
+  // tracks AND its platform matches the selected account's platform, because
+  // validate_task_destination compares conversations.platform against the
+  // task's platform. Conversations with no external_thread_id can never match
+  // and are filtered out so an empty destination is never offered.
+  const selectedPlatform = useMemo(
+    () => accounts.find((account) => account.id === accountId)?.platform,
+    [accountId, accounts],
+  );
 
   const destinationOptions = useMemo(
     () =>
       conversations.filter(
         (conversation): boolean =>
           typeof conversation.external_thread_id === "string" &&
-          conversation.external_thread_id.length > 0,
+          conversation.external_thread_id.length > 0 &&
+          Boolean(selectedPlatform) &&
+          conversation.platform === selectedPlatform,
       ),
-    [conversations],
+    [conversations, selectedPlatform],
   );
-
-  useEffect(() => {
-    let active = true;
-    const loadConversations = async (): Promise<void> => {
-      try {
-        const items = await invoke<readonly ConversationOption[]>(
-          "inbox_list",
-        );
-        if (active) {
-          setConversations(items);
-        }
-      } catch {
-        if (active) {
-          setConversations([]);
-        }
-      }
-    };
-    void loadConversations();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const selectedContent = useMemo(
     () => contentItems.find((item) => item.id === contentId),

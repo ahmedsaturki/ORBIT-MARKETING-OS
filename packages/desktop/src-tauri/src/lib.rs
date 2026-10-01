@@ -12858,7 +12858,13 @@ mod tests {
              )
              VALUES ('conv-a', 'workspace-a', 'account-a', 'telegram', 'chat-in-workspace', 'open', '1', '1'),
                     ('conv-b', 'workspace-b', 'account-b', 'telegram', 'chat-foreign', 'open', '1', '1'),
-                    ('conv-null-account', 'workspace-a', NULL, 'telegram', 'chat-orphaned-account', 'open', '1', '1');"
+                    ('conv-null-account', 'workspace-a', NULL, 'telegram', 'chat-orphaned-account', 'open', '1', '1');
+             INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+             VALUES ('account-fb', 'workspace-a', 'facebook', 'FB', 'connected', '1', '1');
+             INSERT INTO conversations(
+               id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
+             )
+             VALUES ('conv-facebook', 'workspace-a', 'account-fb', 'facebook', 'chat-facebook', 'open', '1', '1');"
         ).expect("conversation fixtures should be insertable");
         connection
     }
@@ -12896,6 +12902,25 @@ mod tests {
 
         validate_task_destination(&connection, "workspace-a", "facebook", "chat-in-workspace")
             .expect_err("a destination must match the task platform");
+    }
+
+    #[test]
+    fn task_enqueue_rejects_cross_platform_conversation_destination() {
+        let connection = destination_membership_fixture();
+
+        let error =
+            validate_task_destination(&connection, "workspace-a", "telegram", "chat-facebook")
+                .expect_err("a conversation on another platform must be rejected as a destination");
+
+        assert_eq!(error, "destination is not part of workspace");
+    }
+
+    #[test]
+    fn task_enqueue_accepts_destination_matching_task_platform() {
+        let connection = destination_membership_fixture();
+
+        validate_task_destination(&connection, "workspace-a", "facebook", "chat-facebook")
+            .expect("a same-workspace conversation on the task platform should be accepted");
     }
 
     #[test]
