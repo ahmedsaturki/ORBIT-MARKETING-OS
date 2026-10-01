@@ -5154,6 +5154,38 @@ struct BulkTaskInput {
     destination_id: Option<String>,
 }
 
+// Telegram destinations are external platform thread identifiers, so they must
+// resolve to a conversation this workspace already tracks on the task's
+// platform. Validating only the label shape let any workspace member address an
+// arbitrary chat_id and exfiltrate approved content outside the workspace.
+fn validate_task_destination(
+    connection: &Connection,
+    workspace_id: &str,
+    platform: &str,
+    destination_id: &str,
+) -> Result<(), String> {
+    let known: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1
+               FROM conversations cv
+               JOIN accounts a ON a.id=cv.account_id
+               WHERE cv.workspace_id=?1
+                 AND cv.platform=?2
+                 AND cv.external_thread_id=?3
+                 AND a.workspace_id=?1
+                 AND a.platform=?2
+             )",
+            params![workspace_id, platform, destination_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !known {
+        return Err("destination is not part of workspace".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn task_enqueue(
@@ -5249,6 +5281,10 @@ fn task_enqueue(
         if !content_attached {
             return Err("content is not part of campaign".to_string());
         }
+    }
+
+    if let Some(destination_id) = destination_id.as_ref() {
+        validate_task_destination(&connection, &workspace_id, &platform, destination_id)?;
     }
 
     let created_at = chrono_like_timestamp();
@@ -12793,6 +12829,63 @@ mod tests {
             )
             .expect("task count should be readable");
         assert_eq!(count, 2);
+    }
+
+    fn destination_membership_fixture() -> Connection {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        connection.execute_batch(
+            "INSERT INTO workspaces(id, name, created_at)
+             VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+             INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+             VALUES ('account-a', 'workspace-a', 'telegram', 'A', 'connected', '1', '1'),
+                    ('account-b', 'workspace-b', 'telegram', 'B', 'connected', '1', '1');
+             INSERT INTO conversations(
+               id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
+             )
+             VALUES ('conv-a', 'workspace-a', 'account-a', 'telegram', 'chat-in-workspace', 'open', '1', '1'),
+                    ('conv-b', 'workspace-b', 'account-b', 'telegram', 'chat-foreign', 'open', '1', '1');"
+        ).expect("conversation fixtures should be insertable");
+        connection
+    }
+
+    #[test]
+    fn task_enqueue_rejects_destination_outside_workspace() {
+        let connection = destination_membership_fixture();
+
+        let error =
+            validate_task_destination(&connection, "workspace-a", "telegram", "chat-foreign")
+                .expect_err("a destination tracked only by another workspace must be rejected");
+
+        assert_eq!(error, "destination is not part of workspace");
+    }
+
+    #[test]
+    fn task_enqueue_rejects_untracked_destination() {
+        let connection = destination_membership_fixture();
+
+        validate_task_destination(&connection, "workspace-a", "telegram", "@attacker")
+            .expect_err("an arbitrary attacker-chosen chat_id must be rejected");
+    }
+
+    #[test]
+    fn task_enqueue_accepts_destination_in_workspace() {
+        let connection = destination_membership_fixture();
+
+        validate_task_destination(&connection, "workspace-a", "telegram", "chat-in-workspace")
+            .expect("a conversation tracked in the same workspace should be accepted");
+    }
+
+    #[test]
+    fn task_enqueue_rejects_destination_on_other_platform() {
+        let connection = destination_membership_fixture();
+
+        validate_task_destination(&connection, "workspace-a", "facebook", "chat-in-workspace")
+            .expect_err("a destination must match the task platform");
     }
 
     #[test]
