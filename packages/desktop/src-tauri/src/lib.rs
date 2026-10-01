@@ -5158,6 +5158,13 @@ struct BulkTaskInput {
 // resolve to a conversation this workspace already tracks on the task's
 // platform. Validating only the label shape let any workspace member address an
 // arbitrary chat_id and exfiltrate approved content outside the workspace.
+//
+// conversations.account_id is nullable, and the schema's own
+// orbit_conversations_insert_workspace trigger only enforces account scoping
+// "WHEN NEW.account_id IS NOT NULL". account_delete also orphans a
+// conversation by setting account_id=NULL. The join is therefore a LEFT JOIN
+// and the account conditions apply only when an account is present, matching
+// the trigger exactly rather than being stricter than the schema invariant.
 fn validate_task_destination(
     connection: &Connection,
     workspace_id: &str,
@@ -5169,12 +5176,14 @@ fn validate_task_destination(
             "SELECT EXISTS(
                SELECT 1
                FROM conversations cv
-               JOIN accounts a ON a.id=cv.account_id
+               LEFT JOIN accounts a ON a.id = cv.account_id
                WHERE cv.workspace_id=?1
                  AND cv.platform=?2
                  AND cv.external_thread_id=?3
-                 AND a.workspace_id=?1
-                 AND a.platform=?2
+                 AND (
+                   cv.account_id IS NULL
+                   OR (a.workspace_id=?1 AND a.platform=?2)
+                 )
              )",
             params![workspace_id, platform, destination_id],
             |row| row.get(0),
@@ -12848,7 +12857,8 @@ mod tests {
                id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
              )
              VALUES ('conv-a', 'workspace-a', 'account-a', 'telegram', 'chat-in-workspace', 'open', '1', '1'),
-                    ('conv-b', 'workspace-b', 'account-b', 'telegram', 'chat-foreign', 'open', '1', '1');"
+                    ('conv-b', 'workspace-b', 'account-b', 'telegram', 'chat-foreign', 'open', '1', '1'),
+                    ('conv-null-account', 'workspace-a', NULL, 'telegram', 'chat-orphaned-account', 'open', '1', '1');"
         ).expect("conversation fixtures should be insertable");
         connection
     }
@@ -12886,6 +12896,81 @@ mod tests {
 
         validate_task_destination(&connection, "workspace-a", "facebook", "chat-in-workspace")
             .expect_err("a destination must match the task platform");
+    }
+
+    #[test]
+    fn task_enqueue_accepts_null_account_conversation_destination() {
+        let connection = destination_membership_fixture();
+
+        validate_task_destination(
+            &connection,
+            "workspace-a",
+            "telegram",
+            "chat-orphaned-account",
+        )
+        .expect(
+            "a conversation with a NULL account_id is legitimate: the schema trigger only \
+                 scopes the account when it is present, and account_delete orphans conversations \
+                 by nulling account_id",
+        );
+    }
+
+    #[test]
+    fn task_enqueue_rejects_null_account_conversation_from_other_workspace() {
+        let connection = destination_membership_fixture();
+        connection
+            .execute_batch(
+                "INSERT INTO conversations(
+                   id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
+                 )
+                 VALUES ('conv-null-foreign', 'workspace-b', NULL, 'telegram', 'chat-null-foreign', 'open', '1', '1');",
+            )
+            .expect("foreign null-account conversation should be insertable");
+
+        validate_task_destination(&connection, "workspace-a", "telegram", "chat-null-foreign")
+            .expect_err("workspace scoping must still apply when account_id is NULL");
+    }
+
+    #[test]
+    fn task_enqueue_rejects_conversation_bound_to_other_workspace_account() {
+        let connection = destination_membership_fixture();
+        create_integrity_triggers(&connection).expect("integrity triggers should be creatable");
+        connection
+            .execute_batch(
+                "INSERT INTO conversations(
+                   id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
+                 )
+                 VALUES ('conv-foreign-account', 'workspace-a', 'account-b', 'telegram', 'chat-foreign-account', 'open', '1', '1');",
+            )
+            .expect_err("the schema trigger must reject an account from another workspace");
+
+        validate_task_destination(
+            &connection,
+            "workspace-a",
+            "telegram",
+            "chat-foreign-account",
+        )
+        .expect_err("an account_id from another workspace must still be rejected");
+    }
+
+    #[test]
+    fn task_enqueue_rejects_destination_whose_account_is_absent_from_workspace() {
+        let connection = destination_membership_fixture();
+        // Simulate a conversation whose account_id points at an account that is no longer
+        // visible to this workspace. The destination must still be rejected.
+        connection
+            .execute_batch(
+                "INSERT INTO conversations(
+                   id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
+                 )
+                 VALUES ('conv-stale-account', 'workspace-a', 'account-a', 'telegram', 'chat-stale', 'open', '1', '1');
+                 DELETE FROM accounts WHERE id='account-a';",
+            )
+            .expect("orphaned conversation should be insertable once the account is removed");
+
+        validate_task_destination(&connection, "workspace-a", "telegram", "chat-stale").expect_err(
+            "a destination whose account no longer exists in this workspace is rejected",
+        );
     }
 
     #[test]
