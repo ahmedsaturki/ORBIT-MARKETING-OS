@@ -64,6 +64,8 @@ Evidence: as observed on 2026-10-01, PR #171's `ci` and `security:scan` checks p
 
 Evidence (fresh observation, not a carry-over): PR #171 on head `1c47fc98` (exact `1c47fc98503125626c65999538421b86220927b4`), run `36808382310`, observed 2026-10-01, passed `ci`, `security:scan` and `Rust quality`, while `security/snyk (ahmedsaturki)` again reported state `ERROR` with the same quota message "You have used your limit of private tests" — this time under a distinct StatusContext id `55327446652` (target url `.../pr-checks/cf53741d-66db-422e-b53a-db38d5bf20e3`, `created_at` 2026-10-01T02:59:12Z), different from the id recorded for the `ead1a942` observation above. The new id confirms the status was re-created for this commit rather than reused from the earlier head. This entry is a dated observation, not a live status claim; the PR head advances independently and `1c47fc98` is cited only as historical exact-SHA evidence.
 
+- **bbfa1dfc** — Snyk StatusContext id `e0902067-955c-40c6-bc15-ce6758d1db39`, CI run `36816942017`, state `error`, description verbatim "You have used your limit of private tests", no tests executed, `createdAt 2026-10-01T03:10:12Z` (the three-head sequence of this failure).
+
 ## Release rule
 
 Commercial Production Proven means every release-critical item has L3 evidence. Do not infer L3 from source presence, a live deployment, a green CI run, or a prior release artifact alone.
