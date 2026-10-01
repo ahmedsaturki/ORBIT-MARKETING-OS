@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Layers3, ShieldCheck } from "lucide-react";
@@ -95,6 +95,23 @@ export function BulkPlannerPanel({
     [conversations, selectedPlatform],
   );
 
+  // A stale destination must not survive an account switch. When the selected
+  // platform changes the allowed set of conversations changes, so the selection
+  // is cleared; defence-in-depth, isDestinationValid recomputes membership in
+  // destinationOptions independently of when any effect fires.
+  const isDestinationValid = useMemo(
+    () =>
+      Boolean(destinationId) &&
+      destinationOptions.some(
+        (option) => option.external_thread_id === destinationId,
+      ),
+    [destinationId, destinationOptions],
+  );
+
+  useEffect(() => {
+    setDestinationId("");
+  }, [selectedPlatform]);
+
   const selectedContent = useMemo(
     () => contentItems.find((item) => item.id === contentId),
     [contentId, contentItems],
@@ -126,7 +143,7 @@ export function BulkPlannerPanel({
     setError("");
     setMessage("");
 
-    if (!campaignId || !accountId || !contentId || !destinationId.trim()) {
+    if (!campaignId || !accountId || !contentId || !isDestinationValid) {
       setError("اختر الحملة والحساب والمحتوى وأدخل الوجهة قبل المعاينة.");
       return;
     }
@@ -146,7 +163,7 @@ export function BulkPlannerPanel({
     setError("");
     setMessage("");
 
-    if (!campaignId || !accountId || !contentId || !destinationId.trim()) {
+    if (!campaignId || !accountId || !contentId || !isDestinationValid) {
       setError("أكمل الحملة والحساب والمحتوى والوجهة أولاً.");
       return;
     }
