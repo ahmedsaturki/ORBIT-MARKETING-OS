@@ -13,9 +13,4 @@
 *.eot binary
 *.mp4 binary
 *.mov binary
-*.pdf binary
-*.zip binary
-*.gz binary
-*.wasm binary
-*.sqlite3 binary
-*.db binary
+
