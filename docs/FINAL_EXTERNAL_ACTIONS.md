@@ -62,6 +62,8 @@ Owner options:
 
 Evidence: as observed on 2026-10-01, PR #171's `ci` and `security:scan` checks passed on head `ead1a9420faadf2f4f2061073ffc53751e8d26ef` in run `36792517476`, while `security/snyk` reported `ERROR` on the account quota above. The serving Production deployment remains 9ba07318 and is unrelated to this branch. This entry is a dated observation, not a live status claim; the PR head advances independently and `ead1a942` is cited only as historical exact-SHA evidence.
 
+Evidence (fresh observation, not a carry-over): PR #171 on head `1c47fc98` (exact `1c47fc98503125626c65999538421b86220927b4`), run `36808382310`, observed 2026-10-01, passed `ci`, `security:scan` and `Rust quality`, while `security/snyk (ahmedsaturki)` again reported state `ERROR` with the same quota message "You have used your limit of private tests" — this time under a distinct StatusContext id `55327446652` (target url `.../pr-checks/cf53741d-66db-422e-b53a-db38d5bf20e3`, `created_at` 2026-10-01T02:59:12Z), different from the id recorded for the `ead1a942` observation above. The new id confirms the status was re-created for this commit rather than reused from the earlier head. This entry is a dated observation, not a live status claim; the PR head advances independently and `1c47fc98` is cited only as historical exact-SHA evidence.
+
 ## Release rule
 
 Commercial Production Proven means every release-critical item has L3 evidence. Do not infer L3 from source presence, a live deployment, a green CI run, or a prior release artifact alone.
