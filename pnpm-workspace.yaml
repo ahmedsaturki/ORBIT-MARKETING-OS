@@ -1,2 +1,17 @@
 packages:
   - "packages/*"
+
+# pnpm >=10 no longer reads the `pnpm` field from package.json; these settings
+# must live here or they are silently ignored.
+overrides:
+  query-string>decode-uri-component: 0.5.0
+  xcode>uuid: 11.1.1
+
+# Backport of digitalbazaar/forge#1152 for CVE-2026-85393 (GHSA-86w9-cpqp-85rv).
+# The CVE-2026-33894 fix in 1.4.0 only checked the element count of the outer
+# DigestInfo SEQUENCE, leaving the nested DigestAlgorithm SEQUENCE open to
+# garbage bytes and low-exponent (e.g. e=3) PKCS#1 v1.5 signature forgery.
+# Upstream has no released fix; this patch is the maintainer-endorsed fix
+# (PR #1152), unreleased as of node-forge 1.4.0.
+patchedDependencies:
+  node-forge@1.4.0: patches/node-forge@1.4.0.patch

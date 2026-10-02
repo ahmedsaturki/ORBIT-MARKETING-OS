@@ -47,6 +47,19 @@ No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acc
 - Perform final legal/commercial publication review.
 - Resolve the current-main SonarCloud requirement: Security Rating on New Code must reach A.
 
+## F. node-forge CVE-2026-85393 (dependency audit, no upstream release)
+
+`pnpm audit --audit-level=moderate` reports one HIGH finding that cannot be
+cleared by any available dependency update.
+
+- Advisory: GHSA-86w9-cpqp-85rv / CVE-2026-85393, <https://github.com/advisories/GHSA-86w9-cpqp-85rv>. CVSS v4 8.7, CWE-347.
+- Affected versions: `<= 1.4.0`. Patched versions: `None` (reported as `<0.0.0`).
+- Path: `packages__mobile > expo > @expo/cli > node-forge`, via `@expo/code-signing-certificates`.
+- Upstream status: node-forge 1.4.0 is the latest release and the only one in range. The maintainer-endorsed fix is pull request <https://github.com/digitalbazaar/forge/pull/1152>, opened against issue #1149; it is still open and unreleased.
+- Containment applied: the `digitalbazaar/forge#1152` fix is backported through pnpm `patchedDependencies` in `pnpm-workspace.yaml`, covering `lib/rsa.js` and both minified `dist/` bundles. `packages/mobile/test/nodeForgeDigestInfo.test.ts` fails if the patched validator is not the one enforcing the check.
+- Why the audit still reports it: `pnpm audit` matches the declared version against the advisory, so it cannot observe a local patch. The audit finding is therefore expected to persist until node-forge publishes a release containing the fix; it is not evidence that the backport was lost.
+- Unblock requires: an upstream node-forge release including #1152, at which point the local patch should be removed in favour of the normal dependency range.
+
 ## Release rule
 
 Commercial Production Proven means every release-critical item has L3 evidence. Do not infer L3 from source presence, a live deployment, a green CI run, or a prior release artifact alone.
