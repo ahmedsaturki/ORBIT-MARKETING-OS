@@ -1,6 +1,6 @@
 # ORBIT Release Scorecard
 
-Updated: 2026-09-29.
+Updated: 2026-09-30.
 
 ## Status meanings
 
@@ -102,7 +102,7 @@ Updated: 2026-09-29.
 - Vercel production infrastructure is live and currently has no grouped runtime errors in the selected seven-day window.
 - `release/PRODUCTION_RELEASE.json` declares `orbit-v1.0.0-prod` (`version 1.0.0`, `status: PRODUCTION_READY`, `gitCommit f65c153`) and its own notes state that release-critical gates remain open and production provenance is UNVERIFIED. The marker pins `f65c153` **by design**: `scripts/vercel-ignore.sh` triggers a Vercel build when a commit _changes_ the marker file, not when `marker.gitCommit` equals HEAD, so the marker is a pinned historical release identifier and is not expected to track the moving main HEAD. It must not be "fixed" to match HEAD; that SHA-chasing loop was already stopped.
 - The observed live production release identity is separate from that pinned marker: production serves `9ba07318f4d580e670be9d27ec76888e66013340` and reports it through the shared release-identity endpoints. Vercel Production Provenance run `36609486608`, Web Deploy run `36609486630` and ORBIT Release Evidence Bundle run `36609486555` all passed on that commit, as did CI run `36609486448` (jobs `ci`, `security:scan`, `Rust quality`). The rollback drill remains separate and open; overall release state is UNVERIFIED, not production-proven.
-- The latest main SonarCloud analysis remains failed on `B Security Rating on New Code` (required `A`); this predates the current documentation-only reconciliation and has not been masked as a pass.
+- The SonarCloud Code Analysis check FAILED on 1133a073 at 2026-09-30T15:29:24Z; SonarCloud reports `new_security_rating=2.0` (B) against a required threshold of `1.0` (A). The failure occurred on the merge commit itself, not before it. Issue #112 remains open.
 - Desktop signing/notarization needs external signing identities.
 - Mobile production signing/store publication needs external store credentials.
 - Commercial billing/payment is not configured.

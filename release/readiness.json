@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "product": "ORBIT Marketing OS",
-  "updated": "2026-09-29",
+  "updated": "2026-09-30",
   "readinessLevels": [
     "L0_DESIGNED",
     "L1_IMPLEMENTED",
@@ -12,59 +12,59 @@
     "source_integrity": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "CI run 36621459773 on current main (docs-only release-truth reconciliation)",
+        "CI run 36736876944 on current main (jobs ci, security:scan, Rust quality; all success; carries PR #170 code: +748/-42 across 10 files, tree identical to f0fd5630)",
         "CI run 36609486448 on production-serving code 9ba07318",
         "SonarCloud latest observed main quality gate remains B Security Rating on New Code; required A"
       ],
-      "notes": "Current main, a documentation-only release-truth reconciliation commit. The latest production-serving code baseline is 9ba07318 and its CI/security cycle passed. SonarCloud remains the outstanding quality prerequisite: the latest observed main analysis is B Security Rating on New Code while the required threshold is A. The pinned production marker remains orbit-v1.0.0-prod at gitCommit f65c153 by design and is not a moving-HEAD pointer.",
+      "notes": "The observation bound to CI run 36736876944 covers the main-branch commit that merged PR #170 code (+748/-42 across 10 files); its tree is identical to f0fd5630 and it is NOT the serving deployment. The latest production-serving code baseline is 9ba07318 and its CI/security cycle passed. SonarCloud remains the outstanding quality prerequisite: the latest observed main analysis is B Security Rating on New Code while the required threshold is A. The pinned production marker remains orbit-v1.0.0-prod at gitCommit f65c153 by design and is not a moving-HEAD pointer.",
       "evidenceRefs": [
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36736876944",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486448",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/112"
       ],
-      "verifiedAt": "2026-09-29T19:50:35Z"
+      "verifiedAt": "2026-09-30T15:32:52Z"
     },
     "build": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "CI run 36621459773 on current main",
+        "CI run 36736876944 on current main (jobs ci, security:scan, Rust quality; all success)",
         "Native desktop/mobile validation remains from the validated release line",
         "current observed Production deployment dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV serving 9ba07318"
       ],
-      "notes": "Current main CI passes, including build validation. The main commit is documentation-only relative to the production-serving code baseline, so production artifact identity remains the observed 9ba07318 deployment. Native desktop/mobile packaging evidence remains separate from the Vercel web deployment and final signing/store gates remain open.",
+      "notes": "Current main CI passes, including build validation. The main commit carries PR #170 code (Cargo.lock, lib.rs, security-scan.*), but production artifact identity still remains the observed 9ba07318 deployment, because that deployment is what the alias serves. Native desktop/mobile packaging evidence remains separate from the Vercel web deployment and final signing/store gates remain open.",
       "evidenceRefs": [
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36736876944",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486448",
         "https://vercel.com/jmls-projects/orbit-marketing-os/9KyEbWzvAYvhvzZPmtXNJXrP16xV"
       ],
-      "verifiedAt": "2026-09-29T20:32:47Z"
+      "verifiedAt": "2026-09-30T15:32:52Z"
     },
     "runtime": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "CI run 36621459773 on current main",
-        "recovery evidence artifact 11059010547",
+        "CI run 36736876944 on current main (jobs ci, security:scan, Rust quality; all success)",
+        "recovery evidence artifact 11059010547 (prior run 36621459773; not re-emitted by 36736876944)",
         "runtime smoke",
         "Windows native E2E"
       ],
-      "notes": "Exact current-main recovery evidence artifact 11059010547 records 4/4 PASS. Current main CI runtime smoke, Web E2E and accessibility/RTL automation also passed. Forced-crash/field recovery and 24-hour stability remain open.",
+      "notes": "Recovery evidence artifact 11059010547 records 4/4 PASS but was emitted by the PRIOR run 36621459773, not by current-main run 36736876944; that run's own jobs (ci, security:scan, Rust quality) all passed. Current main CI runtime smoke, Web E2E and accessibility/RTL automation also passed. Forced-crash/field recovery and 24-hour stability remain open.",
       "evidenceRefs": [
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36736876944",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773#artifacts-11059010547"
       ],
-      "verifiedAt": "2026-09-29T19:50:35Z"
+      "verifiedAt": "2026-09-30T15:32:52Z"
     },
     "product_workflows": {
       "level": "L2_VERIFIED",
       "evidence": [
-        "CI run 36621459773 on current main",
+        "CI run 36736876944 on current main (jobs ci, security:scan, Rust quality; all success)",
         "campaign/content/approval/CRM/inbox/search/publishing E2E"
       ],
-      "notes": "Current main CI completed successfully, including tests, runtime smoke, browser E2E and accessibility/RTL checks. The commit is release-documentation-only relative to the production-serving baseline; real external connector workflows remain separate gates.",
+      "notes": "Current main CI completed successfully, including tests, runtime smoke, browser E2E and accessibility/RTL checks. The commit carries PR #170 code relative to the production-serving baseline 9ba07318, which is still the only serving deployment; real external connector workflows remain separate gates.",
       "evidenceRefs": [
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773"
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36736876944"
       ],
-      "verifiedAt": "2026-09-29T19:50:35Z"
+      "verifiedAt": "2026-09-30T15:32:52Z"
     },
     "security_governance": {
       "level": "L2_VERIFIED",
@@ -74,30 +74,30 @@
         "vault",
         "audit",
         "policy tests",
-        "CI 36621459773",
-        "security:scan 36621459773"
+        "CI 36736876944",
+        "security:scan 36736876944"
       ],
       "notes": "Current main CI and security:scan passed. Final L3 commercial governance still requires auditable evidence references, real-world evidence, and verification time across all remaining required gates.",
       "evidenceRefs": [
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36736876944",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/24"
       ],
-      "verifiedAt": "2026-09-29T19:50:35Z"
+      "verifiedAt": "2026-09-30T15:32:52Z"
     },
     "distribution": {
       "level": "L2_VERIFIED",
       "evidence": [
         "validated Windows/Linux/macOS artifacts",
         "validated Android debug validation",
-        "CI run 36621459773 on current main",
+        "CI run 36736876944 on current main (jobs ci, security:scan, Rust quality; all success)",
         "current observed Production deployment dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV serving 9ba07318"
       ],
       "notes": "Current main verification passes, while the web production alias currently serves the observed 9ba07318 deployment. Desktop signing/notarization and production mobile signing/store distribution remain open.",
       "evidenceRefs": [
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36736876944",
         "https://vercel.com/jmls-projects/orbit-marketing-os/9KyEbWzvAYvhvzZPmtXNJXrP16xV"
       ],
-      "verifiedAt": "2026-09-29T20:32:47Z"
+      "verifiedAt": "2026-09-30T15:32:52Z"
     },
     "web_production": {
       "level": "L2_VERIFIED",
@@ -115,14 +115,15 @@
         "https://vercel.com/jmls-projects/orbit-marketing-os/9KyEbWzvAYvhvzZPmtXNJXrP16xV",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486608",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486630",
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486555",
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773"
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36609486555"
       ],
       "verifiedAt": "2026-09-29T20:32:47Z"
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",
-      "evidence": ["connector contracts/fixtures/challenge handling"],
+      "evidence": [
+        "connector contracts/fixtures/challenge handling"
+      ],
       "notes": "Real Telegram and LinkedIn authorization/delivery evidence is still required; connector contracts, negative-path handling, and challenge stop behavior are verified."
     },
     "sync_network": {
@@ -136,46 +137,56 @@
     },
     "accessibility": {
       "level": "L2_VERIFIED",
-      "evidence": ["automated RTL/accessibility tests"],
-      "notes": "Automated accessibility/RTL tests passed on current CI. Manual WCAG/RTL audit remains open."
+      "evidence": [
+        "automated RTL/accessibility tests"
+      ],
+      "notes": "Automated a11y/RTL testing only: CI step 'Accessibility and RTL audit' (Playwright e2e/accessibility-rtl.spec.ts) passed in run 36736876944; verifiedAt is the timestamp of that automated run, not of a manual audit. The manual WCAG/RTL audit remains open, consistent with the PARTIAL Accessibility/RTL row in docs/LAUNCH_SCORECARD.md.",
+      "verifiedAt": "2026-09-30T15:27:29Z"
     },
     "stability_soak": {
       "level": "L2_VERIFIED",
-      "evidence": ["verified 10-minute soak harness/run"],
-      "notes": "The release line has a verified 10-minute soak harness/run. A complete 24-hour stability soak on the exact release SHA remains open."
+      "evidence": [
+        "soak harness and runner resilience contract test in CI run 36736876944"
+      ],
+      "notes": "The verified artifact is the soak harness itself: CI step 'Stability soak runner resilience contract' (pnpm test:soak-runner-resilience) passed in run 36736876944, and verifiedAt is the timestamp of that harness-contract verification. No soak of any duration was executed by that step, and a 24-hour stability soak on the exact release SHA has NOT been performed; it remains open, consistent with the UNVERIFIED 24h soak row in docs/LAUNCH_SCORECARD.md.",
+      "verifiedAt": "2026-09-30T15:27:29Z"
     },
     "commercial_billing": {
       "level": "L1_IMPLEMENTED",
-      "evidence": ["pricing surface and commercial contract docs"],
+      "evidence": [
+        "pricing surface and commercial contract docs"
+      ],
       "notes": "Pricing/commercial surfaces exist, but payment/billing provider activation is not configured."
     },
     "legal_commercial": {
       "level": "L1_IMPLEMENTED",
-      "evidence": ["privacy/terms/refunds/EULA surfaces"],
+      "evidence": [
+        "privacy/terms/refunds/EULA surfaces"
+      ],
       "notes": "Privacy, terms, refund and EULA surfaces exist. Final legal/commercial publication review remains open."
     }
   },
   "rule": "Commercial Production Proven requires every release-critical gate to be L3_PRODUCTION_PROVEN.",
   "currentMainObservation": {
-    "observedAt": "2026-09-29T19:50:35Z",
-    "changeClass": "documentation-release-truth-reconciliation",
+    "observedAt": "2026-09-30T09:59:23Z",
+    "changeClass": "main-code-addition",
     "productionServing": false,
     "evidenceRefs": [
-      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773",
-      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459863",
-      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459764",
-      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773"
+      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36736876944",
+      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36736876786",
+      "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36736877279"
     ],
     "metrics": {
-      "recoveryArtifact": "11059010547",
+      "recoveryArtifact": "11059010547 (prior run 36621459773, NOT re-emitted by current-main run 36736876944)",
       "recoveryChecks": "4/4 PASS",
       "search1000ContactsMs": 1.520954,
       "startupToHealthMs": 381.11,
       "peakRssMb": 96.81
     },
-    "note": "Point-in-time observation of the moving main branch. The exact SHA is bound by GitHub Actions run 36621459773 and remains in that run's immutable execution context/artifacts; durable readiness text does not hard-code the moving-main SHA.",
+    "metricsProvenance": "recoveryArtifact, startupToHealthMs (381.11) and peakRssMb (96.81) were measured by prior run 36621459773. Current main run 36736876944 (jobs ci, security:scan, Rust quality) passed but did not re-emit those measurements.",
+    "note": "Point-in-time observation of the moving main branch, NOT a production observation. The exact SHA is bound by GitHub Actions run 36736876944 and remains in that run's immutable execution context/artifacts; production continues to serve 9ba07318. Durable readiness text does not hard-code the moving-main SHA.",
     "ref": "main",
-    "verificationRunId": 36621459773
+    "verificationRunId": 36736876944
   },
   "observedProduction": {
     "observedAt": "2026-09-29T20:32:47Z",
