@@ -954,6 +954,27 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     );
     expect(attached).toBe(true);
 
+    // The good bulk item must target a conversation this workspace tracks,
+    // otherwise task_enqueue_bulk rejects it as outside the workspace.
+    const destination = "e2e-bulk-chat-" + suffix;
+    const conversation = (await page!.evaluate(
+      async ({ id, accountId, threadId }) =>
+        window.__TAURI_INTERNALS__.invoke("conversation_upsert", {
+          id,
+          accountId,
+          contactId: null,
+          platform: "telegram",
+          externalThreadId: threadId,
+          status: "new",
+        }),
+      {
+        id: "e2e-bulk-conversation-" + suffix,
+        accountId: account.id,
+        threadId: destination,
+      },
+    )) as { id: string; externalThreadId: string | null };
+    expect(conversation.externalThreadId).toBe(destination);
+
     const approval = (await page!.evaluate(
       async ({ contentId, approvalId }) =>
         window.__TAURI_INTERNALS__.invoke("approval_request", {
@@ -1006,7 +1027,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
             maxAttempts: 3,
             idempotencyKey: "e2e-bulk-good-" + suffix,
             contentId: content.id,
-            destinationId: "@e2e-bulk",
+            destinationId: destination,
           },
           {
             id: "e2e-bulk-bad-" + suffix,

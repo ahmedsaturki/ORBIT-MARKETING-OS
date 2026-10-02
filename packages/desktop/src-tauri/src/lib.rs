@@ -5361,6 +5361,14 @@ fn task_enqueue_bulk(
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
 
+    enqueue_bulk_tasks(&mut connection, &workspace_id, inputs)
+}
+
+fn enqueue_bulk_tasks(
+    connection: &mut Connection,
+    workspace_id: &str,
+    inputs: Vec<BulkTaskInput>,
+) -> Result<Vec<TaskView>, String> {
     let transaction = connection
         .transaction()
         .map_err(|error| error.to_string())?;
@@ -5451,6 +5459,10 @@ fn task_enqueue_bulk(
             }
         }
 
+        if let Some(destination_id) = destination_id.as_ref() {
+            validate_task_destination(&transaction, workspace_id, &platform, destination_id)?;
+        }
+
         let created_at = chrono_like_timestamp();
         transaction
             .execute(
@@ -5480,7 +5492,7 @@ fn task_enqueue_bulk(
 
         append_audit_event(
             &transaction,
-            &workspace_id,
+            workspace_id,
             "task",
             "enqueue_bulk",
             "success",
@@ -12996,6 +13008,92 @@ mod tests {
         validate_task_destination(&connection, "workspace-a", "telegram", "chat-stale").expect_err(
             "a destination whose account no longer exists in this workspace is rejected",
         );
+    }
+
+    fn bulk_enqueue_fixture() -> Connection {
+        let connection = destination_membership_fixture();
+        connection
+            .execute_batch(
+                "INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                 VALUES ('campaign-a', 'workspace-a', 'A campaign', 'active', '1');
+                 INSERT INTO content_items(
+                   id, workspace_id, title, body, approval_status, tags_json, created_at, updated_at
+                 )
+                 VALUES ('content-a', 'workspace-a', 'A content', 'body', 'approved', '[]', '1', '1');
+                 INSERT INTO campaign_accounts(workspace_id, campaign_id, account_id)
+                 VALUES ('workspace-a', 'campaign-a', 'account-a');
+                 INSERT INTO campaign_content(workspace_id, campaign_id, content_id)
+                 VALUES ('workspace-a', 'campaign-a', 'content-a');",
+            )
+            .expect("bulk enqueue fixtures should be insertable");
+        connection
+    }
+
+    fn bulk_task_input(id: &str, destination_id: Option<&str>) -> BulkTaskInput {
+        BulkTaskInput {
+            id: id.to_string(),
+            campaign_id: "campaign-a".to_string(),
+            account_id: "account-a".to_string(),
+            platform: "telegram".to_string(),
+            kind: "publish".to_string(),
+            priority: 5,
+            available_at: "2026-01-01T00:00:00Z".to_string(),
+            max_attempts: 3,
+            idempotency_key: None,
+            content_id: Some("content-a".to_string()),
+            destination_id: destination_id.map(|value| value.to_string()),
+        }
+    }
+
+    #[test]
+    fn task_enqueue_bulk_rejects_destination_outside_workspace() {
+        let mut connection = bulk_enqueue_fixture();
+
+        let error = enqueue_bulk_tasks(
+            &mut connection,
+            "workspace-a",
+            vec![bulk_task_input("task-bulk-foreign", Some("chat-foreign"))],
+        )
+        .expect_err("a bulk destination tracked only by another workspace must be rejected");
+
+        assert_eq!(error, "destination is not part of workspace");
+        let written: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM tasks WHERE id='task-bulk-foreign'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("task count should be readable");
+        assert_eq!(written, 0);
+    }
+
+    #[test]
+    fn task_enqueue_bulk_accepts_destination_in_workspace() {
+        let mut connection = bulk_enqueue_fixture();
+
+        let created = enqueue_bulk_tasks(
+            &mut connection,
+            "workspace-a",
+            vec![bulk_task_input(
+                "task-bulk-local",
+                Some("chat-in-workspace"),
+            )],
+        )
+        .expect("a bulk destination tracked in the same workspace should be accepted");
+
+        assert_eq!(created.len(), 1);
+        assert_eq!(
+            created[0].destination_id.as_deref(),
+            Some("chat-in-workspace")
+        );
+        let written: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM tasks WHERE id='task-bulk-local'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("task count should be readable");
+        assert_eq!(written, 1);
     }
 
     #[test]
