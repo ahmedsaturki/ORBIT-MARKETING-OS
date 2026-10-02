@@ -54,7 +54,7 @@ Connected Vercel project: `orbit-marketing-os`.
 
 The public surface currently responds successfully for the home, pricing and privacy routes, returns 404 for an unknown route, uses Arabic RTL markup, and the selected seven-day runtime-error aggregation is clean.
 
-The current READY production deployment predates `main=08e0f61` and does not expose the merged release SHA in its deployment metadata. Therefore live availability is verified, but current-main production provenance is not.
+The current READY production deployment was created before `main=08e0f61` and does not expose the merged release SHA in its deployment metadata. Therefore live availability is verified, but current-main production provenance is not.
 
 ## Current release gate correction
 
