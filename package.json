@@ -69,11 +69,5 @@
   },
   "engines": {
     "node": ">=22 <25"
-  },
-  "pnpm": {
-    "overrides": {
-      "query-string>decode-uri-component": "0.5.0",
-      "xcode>uuid": "11.1.1"
-    }
   }
 }
