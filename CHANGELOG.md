@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Verification scripts now resolve the package-manager executable per platform through the shared `scripts/lib/spawn.mjs` helper. Previously `spawnSync("pnpm.cmd", ...)` returned `status: null` with `EINVAL` on Windows (Node cannot execute `.cmd` shims without a shell), leaving `stdout`/`stderr` undefined and making `test:surface` and `test:commercial-proof` fail on every Windows checkout while CI (ubuntu-only) never caught it. `ORBIT_PNPM_BIN` can pin the executable for self-hosted runs.
+
 ## [1.0.0] - 2026-09-29
 
 Production release of ORBIT Marketing OS. The codebase has transitioned from the 0.x pre-release line to the first stable 1.0.0 milestone. The production release marker (`release/PRODUCTION_RELEASE.json`) declares `v1.0.0`, with release-critical gates remaining open pending verification.

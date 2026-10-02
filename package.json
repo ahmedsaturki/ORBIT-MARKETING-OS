@@ -34,6 +34,7 @@
     "verify:readiness": "node scripts/verify-release-readiness.mjs",
     "release:evidence": "node scripts/collect-release-evidence.mjs",
     "test:commercial-proof": "node scripts/commercial-connector-proof.safe.test.mjs",
+    "test:spawn-helper": "node scripts/spawn-helper.test.mjs",
     "test:soak:evidence": "node scripts/soak-failure-evidence.test.mjs",
     "triage:release": "node scripts/agent-release-triage.mjs",
     "verify:omp": "node scripts/verify-omp-contract.mjs",
