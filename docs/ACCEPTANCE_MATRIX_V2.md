@@ -1,8 +1,8 @@
 # ORBIT Acceptance Matrix v2
 
-Last evidence refresh: 2026-09-29
+Last evidence refresh: 2026-10-02
 
-Latest completed exact-main verification snapshot: GitHub Actions CI run `36621459773` on current main. DATA-03 measured `1.520954ms` for the 1,000-contact workspace-scoped search benchmark. The same run produced recovery evidence artifact `11059010547` with 4/4 recovery/migration checks passing. PERF-01 measured 381.11ms startup-to-health and PERF-02 measured 96.81MB peak RSS; the configured budgets remain startup ≤8,000ms, RSS ≤200MB, and heap ≤100MB. These run references are exact-run evidence and do not by themselves establish L3 production proof.
+Latest completed verification snapshot: GitHub Actions CI run `36621459773`, whose head SHA is `70dc187d2e6648fbff08562dcdded3331902a7f0` — a pinned historical commit, 56 commits behind the current release SHA. DATA-03 measured `1.520954ms` for the 1,000-contact workspace-scoped search benchmark. The same run produced recovery evidence artifact `11059010547` with 4/4 recovery/migration checks passing. PERF-01 measured 381.11ms startup-to-health and PERF-02 measured 96.81MB peak RSS; the configured budgets remain startup ≤8,000ms, RSS ≤200MB, and heap ≤100MB. These metric values were measured by run `36621459773` on `70dc187d` and were not re-emitted by release-SHA run `36736876944`, which passed its own gate suite without publishing replacement performance/recovery artifacts. These run references are exact-run evidence and do not by themselves establish L3 production proof.
 
 Status vocabulary: `PASS`, `FAIL`, `PARTIAL`, `UNVERIFIED`, `NOT_APPLICABLE`.
 
