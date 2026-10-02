@@ -7,11 +7,11 @@ overrides:
   query-string>decode-uri-component: 0.5.0
   xcode>uuid: 11.1.1
 
-# Backport of digitalbazaar/forge#1152 for CVE-2026-85393 (GHSA-86w9-cpqp-85rv).
-# The CVE-2026-33894 fix in 1.4.0 only checked the element count of the outer
-# DigestInfo SEQUENCE, leaving the nested DigestAlgorithm SEQUENCE open to
-# garbage bytes and low-exponent (e.g. e=3) PKCS#1 v1.5 signature forgery.
-# Upstream has no released fix; this patch is the maintainer-endorsed fix
-# (PR #1152), unreleased as of node-forge 1.4.0.
+# Backport of the proposed fix digitalbazaar/forge#1152 for CVE-2026-85393
+# (GHSA-86w9-cpqp-85rv). node-forge has no released fix: 1.4.0 is the latest
+# version and the advisory declares firstPatchedVersion = null. PR #1152 is open
+# and not merged; its only approval is from a non-maintainer contributor, so this
+# is a community-proposed fix, not maintainer-endorsed. It was selected because it
+# is the most complete fix proposed upstream. Review the patch before trusting it.
 patchedDependencies:
   node-forge@1.4.0: patches/node-forge@1.4.0.patch

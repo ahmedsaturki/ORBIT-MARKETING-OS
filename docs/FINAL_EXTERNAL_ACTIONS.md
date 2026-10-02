@@ -47,19 +47,32 @@ No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acc
 - Perform final legal/commercial publication review.
 - Resolve the current-main SonarCloud requirement: Security Rating on New Code must reach A.
 
-## F. node-forge CVE-2026-85393 (dependency audit, no upstream release)
+## F. node-forge GHSA-86w9-cpqp-85rv — HIGH, no upstream release
+- CVSS 3.1 7.5, CWE-347 (improper verification of cryptographic signature)
+- Vulnerable: node-forge <= 1.4.0. Fixed: none. 1.4.0 is the latest release.
+  (also @expo/code-signing-certificates@0.0.6 > node-forge@1.4.0)
+- Reachability: build/dev only. @expo/code-signing-certificates is part of the
+  Expo EAS build/signing toolchain; no runtime, web, or desktop artifact
+  references node-forge. The vulnerable RSA PKCS#1 v1.5 verification path is not
+  reached by that package, which only performs signing operations.
+- Why \`pnpm audit\` stays red: pnpm audit matches the DECLARED version. The patch
+  in patches/node-forge@1.4.0.patch fixes the code in place but does not change
+  the resolved version, so the finding persists by design. The advisory was
+  updated 2026-10-01T21:09:10Z, after the last green main run (2026-09-30), so any
+  fresh \`ci\` run fails.
+- Proposed upstream fix: digitalbazaar/forge#1152 is OPEN and unmerged, with one
+  approval from a non-maintainer contributor. It is NOT maintainer-endorsed and
+  NOT merged. Review patches/node-forge@1.4.0.patch before relying on it.
+- Regression proof: packages/mobile/test/nodeForgeDigestInfo.test.ts drives the
+  upstream PoC vectors and asserts a forged PKCS#1 v1.5 signature is rejected;
+  the test fails if the patch is removed.
 
+OWNER_ACTION: decide whether to (a) accept a red \`ci\` dependency-audit step until
+node-forge ships a release, or (b) record an explicit, scoped, reviewable
+exception referencing this advisory. Do not silently suppress it.
 `pnpm audit --audit-level=moderate` reports one HIGH finding that cannot be
 cleared by any available dependency update.
 
 - Advisory: GHSA-86w9-cpqp-85rv / CVE-2026-85393, <https://github.com/advisories/GHSA-86w9-cpqp-85rv>. CVSS v4 8.7, CWE-347.
-- Affected versions: `<= 1.4.0`. Patched versions: `None` (reported as `<0.0.0`).
-- Path: `packages__mobile > expo > @expo/cli > node-forge`, via `@expo/code-signing-certificates`.
-- Upstream status: node-forge 1.4.0 is the latest release and the only one in range. The maintainer-endorsed fix is pull request <https://github.com/digitalbazaar/forge/pull/1152>, opened against issue #1149; it is still open and unreleased.
-- Containment applied: the `digitalbazaar/forge#1152` fix is backported through pnpm `patchedDependencies` in `pnpm-workspace.yaml`, covering `lib/rsa.js` and both minified `dist/` bundles. `packages/mobile/test/nodeForgeDigestInfo.test.ts` fails if the patched validator is not the one enforcing the check.
-- Why the audit still reports it: `pnpm audit` matches the declared version against the advisory, so it cannot observe a local patch. The audit finding is therefore expected to persist until node-forge publishes a release containing the fix; it is not evidence that the backport was lost.
-- Unblock requires: an upstream node-forge release including #1152, at which point the local patch should be removed in favour of the normal dependency range.
-
-## Release rule
 
 Commercial Production Proven means every release-critical item has L3 evidence. Do not infer L3 from source presence, a live deployment, a green CI run, or a prior release artifact alone.
