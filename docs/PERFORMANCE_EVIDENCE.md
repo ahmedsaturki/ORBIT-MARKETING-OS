@@ -1,6 +1,6 @@
 # ORBIT Performance Evidence
 
-Updated: 2026-09-29.
+Updated: 2026-10-02.
 
 ## DATA-03 — 1,000 contacts searchable
 
@@ -12,9 +12,9 @@ The test records elapsed query time and prints a machine-readable line:
 
 CI runs the benchmark with `--nocapture` so the measured result is visible in the workflow log.
 
-### Exact-main evidence — DATA-03
+### Data-03 evidence — measured by run `36621459773` @ `70dc187d`
 
-GitHub Actions CI run `36621459773` on current main measured:
+GitHub Actions CI run `36621459773`, head SHA `70dc187d2e6648fbff08562dcdded3331902a7f0` (a pinned historical commit, 56 commits behind the current release SHA), measured:
 
 - dataset: 1,000 contacts
 - query: `Benchmark Contact 0999`
@@ -32,7 +32,7 @@ The repository performance harness enforces these budgets:
 - PERF-02 peak RSS: <= 200 MB
 - PERF-02 heap used: <= 100 MB in the core performance workload test
 
-Exact-main CI run `36621459773` measured:
+CI run `36621459773` @ `70dc187d` measured (not re-emitted by release-SHA run `36736876944`):
 
 - startup-to-health: 381.11 ms
 - peak RSS: 96.81 MB
@@ -45,9 +45,9 @@ The core test suite also exercises the bounded memory workload and enforces the 
 
 These are fresh automated L2 evidence, not L3 production proof.
 
-## Exact-main recovery evidence
+## Recovery evidence — measured by run `36621459773` @ `70dc187d`
 
-Current main CI run `36621459773` produced recovery artifact `11059010547`. The artifact records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency.
+CI run `36621459773`, head SHA `70dc187d2e6648fbff08562dcdded3331902a7f0` (a pinned historical commit, 56 commits behind the current release SHA), produced recovery artifact `11059010547`. The artifact records 4/4 PASS across startup recovery, database recovery, recovery idempotency, and migration idempotency. That artifact was not re-emitted by release-SHA run `36736876944`.
 
 Recovery artifact: https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/36621459773#artifacts-11059010547
 
