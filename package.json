@@ -43,7 +43,7 @@
     "test:soak-runner-resilience": "node scripts/soak-runner-resilience.test.mjs",
     "test:security:scan": "node scripts/security-scan.test.mjs",
     "test:exec-trusted": "node --test scripts/lib/exec.test.mjs",
-    "test:script-contracts": "node --test scripts/verify-workspace.test.mjs scripts/vercel-install.test.mjs scripts/build-all.test.mjs scripts/lib/spawn-pnpm.test.mjs",
+    "test:script-contracts": "node --test scripts/verify-workspace.test.mjs scripts/vercel-install.test.mjs scripts/build-all.test.mjs scripts/lib/spawn-pnpm.test.mjs && node scripts/verify-public-vercel-provenance.test.mjs",
     "verify:release-docs": "node scripts/verify-release-docs.mjs",
     "verify:production-observation": "node scripts/verify-live-production-observation.mjs",
     "test:node-forge-audit-exception": "node scripts/node-forge-audit-exception.test.mjs"
