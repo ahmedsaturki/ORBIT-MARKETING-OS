@@ -90,6 +90,8 @@ jobs:
         run: node scripts/production-release-trigger.test.mjs
       - name: Stability soak runner resilience contract
         run: pnpm test:soak-runner-resilience
+      - name: Package manager spawn resolution contract
+        run: pnpm test:spawn-helper
       - name: Workspace sanity
         run: pnpm verify:workspace
 
