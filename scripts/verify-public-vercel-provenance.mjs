@@ -10,48 +10,43 @@ function sanitizeForLog(value) {
 }
 
 /**
- * Only HTTPS origins that pass an explicit allowlist may be fetched. The base
- * URL arrives from the environment (SonarCloud jssecurity:S5145: tainted
- * input reaching `fetch`), and every value interpolated into the error or the
- * summary is sanitized on the way out (log injection).
+ * The fetch target is always one of these literal origins. The environment
+ * may only *select* among them by exact string match; it can never contribute
+ * characters to a URL that is requested. That makes the SSRF surface
+ * unreachable by construction rather than by validation order, and keeps the
+ * tainted env value out of the fetch call entirely (SonarCloud
+ * jssecurity:S5145).
  */
-const ALLOWED_HOSTS = new Set([
-  "orbit-marketing-os.vercel.app",
-  "orbit-marketing-os-git-main-team.vercel.app",
-]);
+const CANONICAL_ORIGIN = "https://orbit-marketing-os.vercel.app";
+const PREVIEW_ORIGIN = "https://orbit-marketing-os-git-main-team.vercel.app";
+const ALLOWED_ORIGINS = [CANONICAL_ORIGIN, PREVIEW_ORIGIN];
 
 function resolveLiveOrigin() {
-  const raw = (
-    process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app"
-  ).trim();
-  let url;
-  try {
-    url = new URL(raw);
-  } catch {
+  const raw = (process.env.ORBIT_LIVE_URL ?? CANONICAL_ORIGIN).trim();
+  // Exact match against a fixed list: no prefix, suffix, or host-parsing rules,
+  // so `...vercel.app.evil.test` and userinfo tricks cannot match.
+  const match = ALLOWED_ORIGINS.find((origin) => origin === raw);
+  if (!match) {
     throw new Error(
-      `ORBIT_LIVE_URL is not a valid absolute URL: ${sanitizeForLog(raw)}`,
+      `ORBIT_LIVE_URL must be exactly one of the allowed deployment origins, got: ${sanitizeForLog(raw)}`,
     );
   }
-  if (url.protocol !== "https:") {
-    throw new Error(
-      `ORBIT_LIVE_URL must use https, got ${sanitizeForLog(url.protocol)}`,
-    );
-  }
-  if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) {
-    throw new Error(
-      `ORBIT_LIVE_URL host is not an allowed deployment host: ${sanitizeForLog(url.hostname)}`,
-    );
-  }
-  return raw.replace(/\/$/, "");
+  return match;
 }
 
 const base = resolveLiveOrigin();
 const expected = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
 const expectedVersion = process.env.ORBIT_EXPECTED_RELEASE_VERSION ?? "1.0.0";
 
+/** Endpoints this script is allowed to read. Literal paths, never caller data. */
+const ENDPOINTS = {
+  home: "/",
+  health: "/api/health.json",
+  release: "/api/release.json",
+};
+
 async function get(pathname) {
-  // All callers pass literal path constants.
-  return fetch(new URL(pathname, base), {
+  return fetch(base + pathname, {
     headers: { accept: "application/json,text/html" },
     signal: AbortSignal.timeout(15_000),
     redirect: "error",
@@ -61,8 +56,8 @@ async function get(pathname) {
 let last = "";
 for (let attempt = 1; attempt <= 12; attempt += 1) {
   try {
-    const health = await get("/api/health.json");
-    const release = await get("/api/release.json");
+    const health = await get(ENDPOINTS.health);
+    const release = await get(ENDPOINTS.release);
     if (health.ok && release.ok) {
       const healthBody = await health.json();
       const releaseBody = await release.json();
@@ -80,7 +75,7 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
         allowedSources.has(releaseBody?.releaseProvenance?.source) &&
         healthBody.provenanceSource === releaseBody.releaseProvenance.source
       ) {
-        const home = await get("/");
+        const home = await get(ENDPOINTS.home);
         if (!home.ok) {
           throw new Error("production home HTTP " + home.status);
         }
