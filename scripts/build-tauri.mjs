@@ -8,6 +8,10 @@
  * - release builds enable the `custom-protocol` feature so dist/ is embedded
  *
  * Usage: node scripts/build-tauri.mjs [--release]
+ *
+ * Note: this helper invokes cargo directly and does not run the Tauri
+ * beforeBuildCommand; use `pnpm --dir packages/desktop tauri build` for a
+ * launchable application binary.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, statfsSync, writeFileSync, unlinkSync } from "node:fs";
