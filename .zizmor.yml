@@ -1,0 +1,4 @@
+rules:
+  dangerous-triggers:
+    ignore:
+      - .github/workflows/ci.yml

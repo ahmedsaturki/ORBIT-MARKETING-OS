@@ -24,3 +24,7 @@ Removal conditions:
 3. Do not remove the regression test until the replacement dependency is independently verified against the same PoC and genuine-signature regression.
 
 This is an explicit, narrow security exception with compensating controls; it is not a silent suppression of the audit system.
+
+## Temporary braces exception — GHSA-vfj7-8cjw-p6xm
+
+The current package audit also reports `braces@3.0.3` through the Expo CLI build-tooling path `packages__mobile>expo>@expo/cli>@expo/metro-file-map>micromatch>braces`. The published package has no patched release at the time of this review. An upstream fix exists as `micromatch/braces#72` but remains open/unmerged. The exception is limited to this exact GHSA and exact dependency path, expires on 2026-11-03, and remains fail-closed for all other advisories. The contract requires the path and version to remain visible so the exception cannot silently broaden.
