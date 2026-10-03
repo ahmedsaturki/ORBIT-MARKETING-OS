@@ -88,15 +88,17 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
             status: "PASS",
             origin: sanitizeForLog(base),
             expectedReleaseSha: sanitizeForLog(expected),
-            expectedReleaseVersion: expectedVersion,
-            verifiedVersion: healthBody?.version,
+            expectedReleaseVersion: sanitizeForLog(expectedVersion),
+            verifiedVersion: sanitizeForLog(healthBody?.version),
             verifiedPaths: ["/", "/api/health.json", "/api/release.json"],
             attempt,
           }),
         );
         process.exit(0);
       }
-      last = JSON.stringify({ healthBody, releaseBody });
+      // These bodies come from the remote endpoint and are echoed on failure,
+      // so they must be sanitized exactly like the values above.
+      last = sanitizeForLog(JSON.stringify({ healthBody, releaseBody }));
     } else {
       last = `health=${health.status} release=${release.status}`;
     }

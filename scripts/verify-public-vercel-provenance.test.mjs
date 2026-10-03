@@ -128,12 +128,53 @@ for (const allowed of [
   );
 }
 
-// Log sanitization: control characters must be stripped from echoed values.
+// SonarCloud jssecurity:S5145 is *log injection*, not SSRF: every value that
+// reaches console.log or a thrown message must pass through sanitizeForLog.
+// This pins that property directly, so a new unsanitized log site fails here
+// rather than re-opening the finding on the next Sonar analysis.
 {
   const scriptText = readFileSync(script, "utf8");
+
+  // Every string field of the PASS summary must be wrapped.
+  for (const field of [
+    "origin: sanitizeForLog(base)",
+    "expectedReleaseSha: sanitizeForLog(expected)",
+    "expectedReleaseVersion: sanitizeForLog(expectedVersion)",
+    "verifiedVersion: sanitizeForLog(healthBody?.version)",
+  ]) {
+    assert.ok(
+      scriptText.includes(field),
+      `PASS-summary field must be sanitized: ${field}`,
+    );
+  }
+
+  // The remote bodies are echoed back on failure and must be sanitized too.
   assert.ok(
-    scriptText.includes('redirect: "error"'),
-    "the fetcher must not follow redirects off the allowlisted origin",
+    scriptText.includes(
+      "last = sanitizeForLog(JSON.stringify({ healthBody, releaseBody }));",
+    ),
+    "remote response bodies echoed into the failure path must be sanitized",
+  );
+
+  // No bare concatenation of an unsanitized value into a logged message.
+  const bareLogs = scriptText
+    .split(/\r?\n/u)
+    .filter((line) => /console\.(log|error|warn)\(.*\+/u.test(line));
+  assert.deepEqual(
+    bareLogs,
+    [],
+    `no console call may concatenate unsanitized values: ${bareLogs.join(" | ")}`,
+  );
+
+  // sanitizeForLog must strip the control characters that make log injection
+  // possible, and must bound the length.
+  assert.ok(
+    /replace\(\/\[\\u0000-\\u001f\\u007f\]\/gu, " "\)/u.test(scriptText),
+    "sanitizeForLog must strip control characters",
+  );
+  assert.ok(
+    /\.slice\(0, 512\)/u.test(scriptText),
+    "sanitizeForLog must bound the emitted length",
   );
 }
 

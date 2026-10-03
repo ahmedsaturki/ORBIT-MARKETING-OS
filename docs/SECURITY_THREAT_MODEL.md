@@ -141,15 +141,16 @@ actually proves.
   `scripts/build-tauri.mjs`, `scripts/commit-lockfiles.mjs`, and several
   `*.test.mjs` fixtures. A new spawn site therefore fails open until someone
   converts it.
-- **Outbound fetches are allowlisted per script, not centrally enforced.**
-  `scripts/verify-public-vercel-provenance.mjs` validates `ORBIT_LIVE_URL`
-  against an explicit host allowlist, requires HTTPS, refuses redirects, and
-  sanitizes every value it echoes; `scripts/verify-public-vercel-provenance.test.mjs`
-  drives loopback, cloud-metadata, userinfo-embedded, and prefix-trick hosts
-  through the real script and asserts each is refused before any request. That
-  is one script fixed one way. There is no shared HTTP client carrying the
-  allowlist, so the next script that fetches an env-derived URL can reintroduce
-  the same sink.
+- **Outbound fetching and log sanitization are enforced per script, not
+  centrally.** `scripts/verify-public-vercel-provenance.mjs` selects its fetch
+  target from a literal origin list by exact match (so no environment text ever
+  reaches a requested URL), refuses redirects, and passes every value it prints
+  or throws through `sanitizeForLog`. Its test drives 16 hostile origins
+  through the real script and asserts every logged field is sanitized. That is
+  one script fixed one way: there is no shared HTTP client carrying the origin
+  allowlist and no lint rule forcing `sanitizeForLog` at log sites, so the next
+  script that fetches an env-derived URL — or logs one — can reintroduce the
+  same class of issue.
 
 ## Release gate
 
