@@ -26,3 +26,11 @@ attachment/
 
 packages/web/out/
 *.tsbuildinfo
+
+# Local SQLite databases (rusqlite: vault_records, orbit.previous.sqlite3)
+*.db
+*.sqlite3
+*.sqlite
+*.db-journal
+*.db-wal
+*.db-shm
