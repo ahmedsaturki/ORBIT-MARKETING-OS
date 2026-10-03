@@ -114,7 +114,9 @@ for (const [ghsa, reviewAfter] of [
     throw new Error("invalid review date for " + ghsa);
   }
   if (Date.now() >= reviewDate.valueOf()) {
-    throw new Error("audit exception review date reached: " + reviewAfter + " (" + ghsa + ")");
+    throw new Error(
+      "audit exception review date reached: " + reviewAfter + " (" + ghsa + ")",
+    );
   }
 }
 

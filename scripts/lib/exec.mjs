@@ -35,7 +35,12 @@ function assertBareName(command) {
   if (typeof command !== "string" || command.length === 0) {
     throw new UntrustedExecutableError(String(command), []);
   }
-  if (isAbsolute(command) || command.includes(sep) || command.includes("/") || command.includes("\\")) {
+  if (
+    isAbsolute(command) ||
+    command.includes(sep) ||
+    command.includes("/") ||
+    command.includes("\\")
+  ) {
     throw new UntrustedExecutableError(command, []);
   }
 }
@@ -63,7 +68,9 @@ function gitCmdDirCandidates() {
   for (const base of [
     process.env.ProgramFiles,
     process.env["ProgramFiles(x86)"],
-    process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, "Programs") : undefined,
+    process.env.LOCALAPPDATA
+      ? join(process.env.LOCALAPPDATA, "Programs")
+      : undefined,
   ]) {
     if (base) candidates.push(join(base, "Git", "cmd"));
   }
@@ -89,7 +96,12 @@ export function resolveTrustedExecutable(command) {
   if (process.platform === "win32") {
     const names = /\.(?:exe|cmd|bat|com)$/iu.test(command)
       ? [command]
-      : [command + ".exe", command + ".cmd", command + ".bat", command + ".com"];
+      : [
+          command + ".exe",
+          command + ".cmd",
+          command + ".bat",
+          command + ".com",
+        ];
     const dirs = windowsTrustedDirs();
     for (const dir of dirs) {
       for (const name of names) {

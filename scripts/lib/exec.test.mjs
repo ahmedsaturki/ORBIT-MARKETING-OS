@@ -38,7 +38,10 @@ test("untrusted bare names fail closed with UntrustedExecutableError", () => {
 
 test("path-bearing commands are rejected outright", () => {
   for (const name of ["./git", "../malware/git", "C:/Windows/foo.exe"]) {
-    assert.throws(() => resolveTrustedExecutable(name), UntrustedExecutableError);
+    assert.throws(
+      () => resolveTrustedExecutable(name),
+      UntrustedExecutableError,
+    );
   }
 });
 

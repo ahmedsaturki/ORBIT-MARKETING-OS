@@ -40,11 +40,15 @@ function gitMarkerCommit() {
   ]) {
     delete env[key];
   }
-  return execFileTracked("git", ["log", "-1", "--format=%H", "--", markerPath], {
-    cwd: root,
-    encoding: "utf8",
-    env,
-  }).trim();
+  return execFileTracked(
+    "git",
+    ["log", "-1", "--format=%H", "--", markerPath],
+    {
+      cwd: root,
+      encoding: "utf8",
+      env,
+    },
+  ).trim();
 }
 
 const marker = JSON.parse(await readFile(markerPath, "utf8"));
