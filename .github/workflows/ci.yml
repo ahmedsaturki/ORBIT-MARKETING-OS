@@ -100,7 +100,7 @@ jobs:
         run: pnpm test:commercial-proof
 
       - name: Governed node-forge audit exception
-        run: pnpm test:node-forge-audit-exception
+        run: pnpm test:audit-exceptions
 
       - name: Dependency audit
         run: pnpm audit --audit-level=moderate
