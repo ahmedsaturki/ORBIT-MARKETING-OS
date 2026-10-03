@@ -5154,6 +5154,47 @@ struct BulkTaskInput {
     destination_id: Option<String>,
 }
 
+// Telegram destinations are external platform thread identifiers, so they must
+// resolve to a conversation this workspace already tracks on the task's
+// platform. Validating only the label shape let any workspace member address an
+// arbitrary chat_id and exfiltrate approved content outside the workspace.
+//
+// conversations.account_id is nullable, and the schema's own
+// orbit_conversations_insert_workspace trigger only enforces account scoping
+// "WHEN NEW.account_id IS NOT NULL". account_delete also orphans a
+// conversation by setting account_id=NULL. The join is therefore a LEFT JOIN
+// and the account conditions apply only when an account is present, matching
+// the trigger exactly rather than being stricter than the schema invariant.
+fn validate_task_destination(
+    connection: &Connection,
+    workspace_id: &str,
+    platform: &str,
+    destination_id: &str,
+) -> Result<(), String> {
+    let known: bool = connection
+        .query_row(
+            "SELECT EXISTS(
+               SELECT 1
+               FROM conversations cv
+               LEFT JOIN accounts a ON a.id = cv.account_id
+               WHERE cv.workspace_id=?1
+                 AND cv.platform=?2
+                 AND cv.external_thread_id=?3
+                 AND (
+                   cv.account_id IS NULL
+                   OR (a.workspace_id=?1 AND a.platform=?2)
+                 )
+             )",
+            params![workspace_id, platform, destination_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !known {
+        return Err("destination is not part of workspace".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 fn task_enqueue(
@@ -5251,6 +5292,10 @@ fn task_enqueue(
         }
     }
 
+    if let Some(destination_id) = destination_id.as_ref() {
+        validate_task_destination(&connection, &workspace_id, &platform, destination_id)?;
+    }
+
     let created_at = chrono_like_timestamp();
     connection
         .execute(
@@ -5316,6 +5361,14 @@ fn task_enqueue_bulk(
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
 
+    enqueue_bulk_tasks(&mut connection, &workspace_id, inputs)
+}
+
+fn enqueue_bulk_tasks(
+    connection: &mut Connection,
+    workspace_id: &str,
+    inputs: Vec<BulkTaskInput>,
+) -> Result<Vec<TaskView>, String> {
     let transaction = connection
         .transaction()
         .map_err(|error| error.to_string())?;
@@ -5406,6 +5459,10 @@ fn task_enqueue_bulk(
             }
         }
 
+        if let Some(destination_id) = destination_id.as_ref() {
+            validate_task_destination(&transaction, workspace_id, &platform, destination_id)?;
+        }
+
         let created_at = chrono_like_timestamp();
         transaction
             .execute(
@@ -5435,7 +5492,7 @@ fn task_enqueue_bulk(
 
         append_audit_event(
             &transaction,
-            &workspace_id,
+            workspace_id,
             "task",
             "enqueue_bulk",
             "success",
@@ -12793,6 +12850,250 @@ mod tests {
             )
             .expect("task count should be readable");
         assert_eq!(count, 2);
+    }
+
+    fn destination_membership_fixture() -> Connection {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        connection.execute_batch(
+            "INSERT INTO workspaces(id, name, created_at)
+             VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+             INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+             VALUES ('account-a', 'workspace-a', 'telegram', 'A', 'connected', '1', '1'),
+                    ('account-b', 'workspace-b', 'telegram', 'B', 'connected', '1', '1');
+             INSERT INTO conversations(
+               id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
+             )
+             VALUES ('conv-a', 'workspace-a', 'account-a', 'telegram', 'chat-in-workspace', 'open', '1', '1'),
+                    ('conv-b', 'workspace-b', 'account-b', 'telegram', 'chat-foreign', 'open', '1', '1'),
+                    ('conv-null-account', 'workspace-a', NULL, 'telegram', 'chat-orphaned-account', 'open', '1', '1');
+             INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+             VALUES ('account-fb', 'workspace-a', 'facebook', 'FB', 'connected', '1', '1');
+             INSERT INTO conversations(
+               id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
+             )
+             VALUES ('conv-facebook', 'workspace-a', 'account-fb', 'facebook', 'chat-facebook', 'open', '1', '1');"
+        ).expect("conversation fixtures should be insertable");
+        connection
+    }
+
+    #[test]
+    fn task_enqueue_rejects_destination_outside_workspace() {
+        let connection = destination_membership_fixture();
+
+        let error =
+            validate_task_destination(&connection, "workspace-a", "telegram", "chat-foreign")
+                .expect_err("a destination tracked only by another workspace must be rejected");
+
+        assert_eq!(error, "destination is not part of workspace");
+    }
+
+    #[test]
+    fn task_enqueue_rejects_untracked_destination() {
+        let connection = destination_membership_fixture();
+
+        validate_task_destination(&connection, "workspace-a", "telegram", "@attacker")
+            .expect_err("an arbitrary attacker-chosen chat_id must be rejected");
+    }
+
+    #[test]
+    fn task_enqueue_accepts_destination_in_workspace() {
+        let connection = destination_membership_fixture();
+
+        validate_task_destination(&connection, "workspace-a", "telegram", "chat-in-workspace")
+            .expect("a conversation tracked in the same workspace should be accepted");
+    }
+
+    #[test]
+    fn task_enqueue_rejects_destination_on_other_platform() {
+        let connection = destination_membership_fixture();
+
+        validate_task_destination(&connection, "workspace-a", "facebook", "chat-in-workspace")
+            .expect_err("a destination must match the task platform");
+    }
+
+    #[test]
+    fn task_enqueue_rejects_cross_platform_conversation_destination() {
+        let connection = destination_membership_fixture();
+
+        let error =
+            validate_task_destination(&connection, "workspace-a", "telegram", "chat-facebook")
+                .expect_err("a conversation on another platform must be rejected as a destination");
+
+        assert_eq!(error, "destination is not part of workspace");
+    }
+
+    #[test]
+    fn task_enqueue_accepts_destination_matching_task_platform() {
+        let connection = destination_membership_fixture();
+
+        validate_task_destination(&connection, "workspace-a", "facebook", "chat-facebook")
+            .expect("a same-workspace conversation on the task platform should be accepted");
+    }
+
+    #[test]
+    fn task_enqueue_accepts_null_account_conversation_destination() {
+        let connection = destination_membership_fixture();
+
+        validate_task_destination(
+            &connection,
+            "workspace-a",
+            "telegram",
+            "chat-orphaned-account",
+        )
+        .expect(
+            "a conversation with a NULL account_id is legitimate: the schema trigger only \
+                 scopes the account when it is present, and account_delete orphans conversations \
+                 by nulling account_id",
+        );
+    }
+
+    #[test]
+    fn task_enqueue_rejects_null_account_conversation_from_other_workspace() {
+        let connection = destination_membership_fixture();
+        connection
+            .execute_batch(
+                "INSERT INTO conversations(
+                   id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
+                 )
+                 VALUES ('conv-null-foreign', 'workspace-b', NULL, 'telegram', 'chat-null-foreign', 'open', '1', '1');",
+            )
+            .expect("foreign null-account conversation should be insertable");
+
+        validate_task_destination(&connection, "workspace-a", "telegram", "chat-null-foreign")
+            .expect_err("workspace scoping must still apply when account_id is NULL");
+    }
+
+    #[test]
+    fn task_enqueue_rejects_conversation_bound_to_other_workspace_account() {
+        let connection = destination_membership_fixture();
+        create_integrity_triggers(&connection).expect("integrity triggers should be creatable");
+        connection
+            .execute_batch(
+                "INSERT INTO conversations(
+                   id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
+                 )
+                 VALUES ('conv-foreign-account', 'workspace-a', 'account-b', 'telegram', 'chat-foreign-account', 'open', '1', '1');",
+            )
+            .expect_err("the schema trigger must reject an account from another workspace");
+
+        validate_task_destination(
+            &connection,
+            "workspace-a",
+            "telegram",
+            "chat-foreign-account",
+        )
+        .expect_err("an account_id from another workspace must still be rejected");
+    }
+
+    #[test]
+    fn task_enqueue_rejects_destination_whose_account_is_absent_from_workspace() {
+        let connection = destination_membership_fixture();
+        // Simulate a conversation whose account_id points at an account that is no longer
+        // visible to this workspace. The destination must still be rejected.
+        connection
+            .execute_batch(
+                "INSERT INTO conversations(
+                   id, workspace_id, account_id, platform, external_thread_id, status, created_at, updated_at
+                 )
+                 VALUES ('conv-stale-account', 'workspace-a', 'account-a', 'telegram', 'chat-stale', 'open', '1', '1');
+                 DELETE FROM accounts WHERE id='account-a';",
+            )
+            .expect("orphaned conversation should be insertable once the account is removed");
+
+        validate_task_destination(&connection, "workspace-a", "telegram", "chat-stale").expect_err(
+            "a destination whose account no longer exists in this workspace is rejected",
+        );
+    }
+
+    fn bulk_enqueue_fixture() -> Connection {
+        let connection = destination_membership_fixture();
+        connection
+            .execute_batch(
+                "INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                 VALUES ('campaign-a', 'workspace-a', 'A campaign', 'active', '1');
+                 INSERT INTO content_items(
+                   id, workspace_id, title, body, approval_status, tags_json, created_at, updated_at
+                 )
+                 VALUES ('content-a', 'workspace-a', 'A content', 'body', 'approved', '[]', '1', '1');
+                 INSERT INTO campaign_accounts(workspace_id, campaign_id, account_id)
+                 VALUES ('workspace-a', 'campaign-a', 'account-a');
+                 INSERT INTO campaign_content(workspace_id, campaign_id, content_id)
+                 VALUES ('workspace-a', 'campaign-a', 'content-a');",
+            )
+            .expect("bulk enqueue fixtures should be insertable");
+        connection
+    }
+
+    fn bulk_task_input(id: &str, destination_id: Option<&str>) -> BulkTaskInput {
+        BulkTaskInput {
+            id: id.to_string(),
+            campaign_id: "campaign-a".to_string(),
+            account_id: "account-a".to_string(),
+            platform: "telegram".to_string(),
+            kind: "publish".to_string(),
+            priority: 5,
+            available_at: "2026-01-01T00:00:00Z".to_string(),
+            max_attempts: 3,
+            idempotency_key: None,
+            content_id: Some("content-a".to_string()),
+            destination_id: destination_id.map(|value| value.to_string()),
+        }
+    }
+
+    #[test]
+    fn task_enqueue_bulk_rejects_destination_outside_workspace() {
+        let mut connection = bulk_enqueue_fixture();
+
+        let error = enqueue_bulk_tasks(
+            &mut connection,
+            "workspace-a",
+            vec![bulk_task_input("task-bulk-foreign", Some("chat-foreign"))],
+        )
+        .expect_err("a bulk destination tracked only by another workspace must be rejected");
+
+        assert_eq!(error, "destination is not part of workspace");
+        let written: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM tasks WHERE id='task-bulk-foreign'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("task count should be readable");
+        assert_eq!(written, 0);
+    }
+
+    #[test]
+    fn task_enqueue_bulk_accepts_destination_in_workspace() {
+        let mut connection = bulk_enqueue_fixture();
+
+        let created = enqueue_bulk_tasks(
+            &mut connection,
+            "workspace-a",
+            vec![bulk_task_input(
+                "task-bulk-local",
+                Some("chat-in-workspace"),
+            )],
+        )
+        .expect("a bulk destination tracked in the same workspace should be accepted");
+
+        assert_eq!(created.len(), 1);
+        assert_eq!(
+            created[0].destination_id.as_deref(),
+            Some("chat-in-workspace")
+        );
+        let written: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM tasks WHERE id='task-bulk-local'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("task count should be readable");
+        assert_eq!(written, 1);
     }
 
     #[test]

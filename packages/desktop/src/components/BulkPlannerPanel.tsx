@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Layers3, ShieldCheck } from "lucide-react";
@@ -21,10 +21,18 @@ interface ContentOption {
   readonly approval_status: string;
 }
 
+interface ConversationOption {
+  readonly id: string;
+  readonly platform: string;
+  readonly external_thread_id: string | null;
+  readonly message_count: number;
+}
+
 interface BulkPlannerProps {
   readonly accounts: readonly AccountOption[];
   readonly campaigns: readonly CampaignOption[];
   readonly contentItems: readonly ContentOption[];
+  readonly conversations: readonly ConversationOption[];
   readonly onTasksChanged: () => Promise<void>;
 }
 
@@ -47,6 +55,7 @@ export function BulkPlannerPanel({
   accounts,
   campaigns,
   contentItems,
+  conversations,
   onTasksChanged,
 }: BulkPlannerProps): ReactElement {
   const [campaignId, setCampaignId] = useState("");
@@ -64,6 +73,44 @@ export function BulkPlannerPanel({
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<readonly BulkPlanItem[]>([]);
   const [planSeed, setPlanSeed] = useState(() => `bulk-${Date.now()}`);
+  // A destination is only submittable when it is a conversation this workspace
+  // tracks AND its platform matches the selected account's platform, because
+  // validate_task_destination compares conversations.platform against the
+  // task's platform. Conversations with no external_thread_id can never match
+  // and are filtered out so an empty destination is never offered.
+  const selectedPlatform = useMemo(
+    () => accounts.find((account) => account.id === accountId)?.platform,
+    [accountId, accounts],
+  );
+
+  const destinationOptions = useMemo(
+    () =>
+      conversations.filter(
+        (conversation): boolean =>
+          typeof conversation.external_thread_id === "string" &&
+          conversation.external_thread_id.length > 0 &&
+          Boolean(selectedPlatform) &&
+          conversation.platform === selectedPlatform,
+      ),
+    [conversations, selectedPlatform],
+  );
+
+  // A stale destination must not survive an account switch. When the selected
+  // platform changes the allowed set of conversations changes, so the selection
+  // is cleared; defence-in-depth, isDestinationValid recomputes membership in
+  // destinationOptions independently of when any effect fires.
+  const isDestinationValid = useMemo(
+    () =>
+      Boolean(destinationId) &&
+      destinationOptions.some(
+        (option) => option.external_thread_id === destinationId,
+      ),
+    [destinationId, destinationOptions],
+  );
+
+  useEffect(() => {
+    setDestinationId("");
+  }, [selectedPlatform]);
 
   const selectedContent = useMemo(
     () => contentItems.find((item) => item.id === contentId),
@@ -96,7 +143,7 @@ export function BulkPlannerPanel({
     setError("");
     setMessage("");
 
-    if (!campaignId || !accountId || !contentId || !destinationId.trim()) {
+    if (!campaignId || !accountId || !contentId || !isDestinationValid) {
       setError("اختر الحملة والحساب والمحتوى وأدخل الوجهة قبل المعاينة.");
       return;
     }
@@ -116,7 +163,7 @@ export function BulkPlannerPanel({
     setError("");
     setMessage("");
 
-    if (!campaignId || !accountId || !contentId || !destinationId.trim()) {
+    if (!campaignId || !accountId || !contentId || !isDestinationValid) {
       setError("أكمل الحملة والحساب والمحتوى والوجهة أولاً.");
       return;
     }
@@ -257,14 +304,28 @@ export function BulkPlannerPanel({
 
         <label>
           الوجهة
-          <input
+          <select
             value={destinationId}
             onChange={(event) => {
               setDestinationId(event.target.value);
               invalidatePreview();
             }}
-            placeholder="page-or-channel-001"
-          />
+          >
+            <option value="">
+              {destinationOptions.length
+                ? "اختر وجهة"
+                : "لا توجد محادثات مسجلة"}
+            </option>
+            {destinationOptions.map((conversation) => (
+              <option
+                key={conversation.id}
+                value={conversation.external_thread_id ?? ""}
+              >
+                {conversation.external_thread_id} • {conversation.platform} •{" "}
+                {conversation.message_count}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label>
