@@ -99,8 +99,8 @@ jobs:
       - name: Commercial connector proof safety
         run: pnpm test:commercial-proof
 
-      - name: Governed node-forge audit exception
-        run: pnpm test:node-forge-audit-exception
+      - name: Governed dependency audit exceptions
+        run: pnpm test:dependency-audit-exceptions
 
       - name: Dependency audit
         run: pnpm audit --audit-level=moderate

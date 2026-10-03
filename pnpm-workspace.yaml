@@ -15,6 +15,7 @@ overrides:
 # is the most complete fix proposed upstream. Review the patch before trusting it.
 patchedDependencies:
   node-forge@1.4.0: patches/node-forge@1.4.0.patch
+  braces@3.0.3: patches/braces@3.0.3.patch
 
 # Temporary, explicit governance exception for an unfixable advisory.
 # The matching CI contract requires the local patch + regression test and a review
@@ -22,3 +23,4 @@ patchedDependencies:
 auditConfig:
   ignoreGhsas:
     - GHSA-86w9-cpqp-85rv
+    - GHSA-vfj7-8cjw-p6xm
