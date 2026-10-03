@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: orbit-release-\${{ github.ref }}
+  group: orbit-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -73,11 +73,11 @@ jobs:
         run: pnpm format:check
 
   build:
-    name: Build \${{ matrix.os }}
+    name: Build ${{ matrix.os }}
     permissions:
       contents: read
     needs: quality
-    runs-on: \${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -145,7 +145,7 @@ jobs:
       - name: Upload desktop bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: orbit-desktop-\${{ matrix.artifact }}
+          name: orbit-desktop-${{ matrix.artifact }}
           path: packages/desktop/src-tauri/target/release/bundle/**
           if-no-files-found: error
           retention-days: 14
@@ -177,7 +177,7 @@ jobs:
           path: .
           format: spdx-json
           output-file: release-assets/ORBIT-SBOM.spdx.json
-          artifact-name: orbit-sbom-\${{ github.ref_name }}
+          artifact-name: orbit-sbom-${{ github.ref_name }}
           upload-artifact: true
           upload-artifact-retention: 30
           upload-release-assets: false
@@ -213,7 +213,7 @@ jobs:
 
       - name: Publish release
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           mapfile -d '' ASSETS < <(
@@ -221,7 +221,7 @@ jobs:
           )
           test "\${#ASSETS[@]}" -gt 0
           gh release create "\${GITHUB_REF_NAME}" \
-            --title "ORBIT Marketing OS \${{ github.ref_name }} — validation build" \
+            --title "ORBIT Marketing OS ${{ github.ref_name }} — validation build" \
             --prerelease \
             --generate-notes \
             release-assets/SHA256SUMS.txt \
