@@ -12,12 +12,13 @@ This layer complements the existing product and release verification rather than
 | Dependency change safety | Dependency Review | Detect vulnerable dependency changes introduced by pull requests |
 | Supply-chain posture | OpenSSF Scorecard | Assess repository supply-chain controls and publish results |
 | Web experience | Lighthouse CI | Measure performance, accessibility, best practices, SEO, and PWA behavior against the actual static export |
-| Documentation quality | markdownlint-cli2 | Detect documentation structure/style issues; initially report-first |
+| Documentation quality | markdownlint-cli2 + Lychee | Detect documentation structure/style issues and broken links; report-first |
 | Release artifacts | SBOM + artifact attestations | Produce CycloneDX SBOMs and GitHub artifact provenance/SBOM attestations for desktop release bundles |
 | Reproducibility | committed lockfiles + frozen installs | Keep dependency resolution deterministic |
 | Runtime quality | existing smoke/E2E/recovery/performance suites | Validate product behavior beyond static analysis |
 | Native quality | existing Rust/Desktop/Mobile validation | Validate native build and runtime surfaces |
 | Developer governance | CONTRIBUTING, PR template, issue forms, CODEOWNERS | Require evidence, risk notes, ownership, and release-truth discipline |
+| Link integrity | Lychee | Check external/internal links in the maintained documentation set; report-first |
 
 ## Workflow-quality findings resolved during rollout
 
