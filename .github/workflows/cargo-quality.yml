@@ -1,0 +1,38 @@
+name: Rust Dependency Quality
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "packages/desktop/src-tauri/Cargo.toml"
+      - "packages/desktop/src-tauri/Cargo.lock"
+      - "deny.toml"
+      - ".github/workflows/cargo-quality.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orbit-cargo-quality-\${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cargo-deny:
+    name: cargo-deny
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@30f817c6f72275c6d54dc744fbca09ebc958599f # v2.0.12
+        with:
+          manifest-path: ./packages/desktop/src-tauri/Cargo.toml
+          command: check
+          arguments: --all-features
