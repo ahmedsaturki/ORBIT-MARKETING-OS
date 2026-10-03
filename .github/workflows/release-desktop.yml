@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: orbit-release-${{ github.ref }}
+  group: orbit-release-\${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -73,11 +73,11 @@ jobs:
         run: pnpm format:check
 
   build:
-    name: Build ${{ matrix.os }}
+    name: Build \${{ matrix.os }}
     permissions:
       contents: read
     needs: quality
-    runs-on: ${{ matrix.os }}
+    runs-on: \${{ matrix.os }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -145,7 +145,7 @@ jobs:
       - name: Upload desktop bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: orbit-desktop-${{ matrix.artifact }}
+          name: orbit-desktop-\${{ matrix.artifact }}
           path: packages/desktop/src-tauri/target/release/bundle/**
           if-no-files-found: error
           retention-days: 14
@@ -154,41 +154,75 @@ jobs:
     name: Publish GitHub Release
     permissions:
       contents: write
+      attestations: write
+      id-token: write
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [quality, build]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: orbit-desktop-*
           path: release-assets
           merge-multiple: true
 
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: .
+          format: spdx-json
+          output-file: release-assets/ORBIT-SBOM.spdx.json
+          artifact-name: orbit-sbom-\${{ github.ref_name }}
+          upload-artifact: true
+          upload-artifact-retention: 30
+          upload-release-assets: false
+
       - name: Build release manifest
         shell: bash
         run: |
           cat > release-assets/RELEASE-MANIFEST.txt <<EOF
           product=ORBIT Marketing OS
-          version=${GITHUB_REF_NAME}
-          commit=${GITHUB_SHA}
+          version=\${GITHUB_REF_NAME}
+          commit=\${GITHUB_SHA}
           source=verified-main-lineage
-          build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          build_date=\$(date -u +%Y-%m-%dT%H:%M:%SZ)
           signing=unsigned
+          sbom=ORBIT-SBOM.spdx.json
+          provenance=github-artifact-attestation
           EOF
 
       - name: Build checksums
         shell: bash
         run: |
-          find release-assets -type f -not -name 'SHA256SUMS.txt' -print0             | sort -z             | xargs -0 sha256sum > release-assets/SHA256SUMS.txt
+          find release-assets -type f -not -name 'SHA256SUMS.txt' -print0 |
+            sort -z |
+            xargs -0 sha256sum > release-assets/SHA256SUMS.txt
           test -s release-assets/SHA256SUMS.txt
           (cd release-assets && sha256sum -c SHA256SUMS.txt)
 
+      - name: Attest release provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-checksums: release-assets/SHA256SUMS.txt
+          show-summary: true
+
       - name: Publish release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: \${{ github.token }}
         shell: bash
         run: |
-          mapfile -d '' ASSETS < <(find release-assets -type f ! -name 'SHA256SUMS.txt' -print0)
-          test "${#ASSETS[@]}" -gt 0
-          gh release create "${GITHUB_REF_NAME}"             --title "ORBIT Marketing OS ${{ github.ref_name }} — validation build"             --prerelease --generate-notes             release-assets/SHA256SUMS.txt             "${ASSETS[@]}"
+          mapfile -d '' ASSETS < <(
+            find release-assets -type f ! -name 'SHA256SUMS.txt' -print0
+          )
+          test "\${#ASSETS[@]}" -gt 0
+          gh release create "\${GITHUB_REF_NAME}" \
+            --title "ORBIT Marketing OS \${{ github.ref_name }} — validation build" \
+            --prerelease \
+            --generate-notes \
+            release-assets/SHA256SUMS.txt \
+            "\${ASSETS[@]}"
