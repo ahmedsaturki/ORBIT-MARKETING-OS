@@ -3,20 +3,8 @@ name: Web Experience Quality
 on:
   pull_request:
     branches: ["main"]
-    paths:
-      - "packages/web/**"
-      - "e2e/**"
-      - "playwright.config.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
   push:
     branches: ["main"]
-    paths:
-      - "packages/web/**"
-      - "e2e/**"
-      - "playwright.config.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
   workflow_dispatch:
 
 permissions:
