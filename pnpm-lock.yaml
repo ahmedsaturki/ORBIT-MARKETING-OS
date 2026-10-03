@@ -12,6 +12,9 @@ patchedDependencies:
   node-forge@1.4.0:
     hash: 1da5306df32cb00fb9309034ffcd35c1126ccd13ce79f5f0031825ad79bbab27
     path: patches/node-forge@1.4.0.patch
+  braces@3.0.3:
+    hash: 9d1ffe2be7e7f25f441142f22858033812dfbcb6b65665c5034116186a9c1a5d
+    path: patches/braces@3.0.3.patch
 
 importers:
 
@@ -36,6 +39,9 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
     devDependencies:
+      braces:
+        specifier: 3.0.3
+        version: 3.0.3
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
