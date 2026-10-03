@@ -32,6 +32,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
+          package-manager-cache: false
       - name: Require committed lockfile
         run: test -f pnpm-lock.yaml
       - name: Install dependencies
@@ -73,6 +74,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
+          package-manager-cache: false
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
