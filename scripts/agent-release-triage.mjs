@@ -108,16 +108,16 @@ const payload = {
     productionProvenCount: gates.filter(
       (gate) => gate.level === "L3_PRODUCTION_PROVEN",
     ).length,
-    engineeringOrVerificationCount: gates.filter((gate) =>
-      [
-        "ENGINEERING_OR_VERIFICATION",
-        "MIXED_ENGINEERING_AND_OWNER_ACTION",
-      ].includes(classify(gate)),
+    engineeringOrVerificationCount: gates.filter(
+      (gate) => classify(gate) === "ENGINEERING_OR_VERIFICATION",
     ).length,
-    ownerActionCount: gates.filter((gate) =>
-      ["OWNER_ACTION", "MIXED_ENGINEERING_AND_OWNER_ACTION"].includes(
-        classify(gate),
-      ),
+    ownerActionCount: gates.filter((gate) => classify(gate) === "OWNER_ACTION")
+      .length,
+    // Gates that require both an engineering action and an owner action are
+    // counted here exactly once instead of being double-counted in both
+    // buckets.
+    mixedActionCount: gates.filter(
+      (gate) => classify(gate) === "MIXED_ENGINEERING_AND_OWNER_ACTION",
     ).length,
     blockedCount: gates.filter((gate) => gate.level !== "L3_PRODUCTION_PROVEN")
       .length,

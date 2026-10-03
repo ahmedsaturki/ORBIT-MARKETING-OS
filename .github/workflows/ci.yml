@@ -77,6 +77,18 @@ jobs:
           if (!Array.isArray(report.nextActions)) {
             throw new Error("agent triage nextActions must be an array");
           }
+          const summary = report.summary ?? {};
+          if (
+            (summary.productionProvenCount ?? 0) +
+              (summary.engineeringOrVerificationCount ?? 0) +
+              (summary.ownerActionCount ?? 0) +
+              (summary.mixedActionCount ?? 0) !==
+            summary.releaseCriticalCount
+          ) {
+            throw new Error(
+              "agent triage summary counts must partition the release critical total",
+            );
+          }
           NODE
           node /tmp/verify-triage.mjs
       - name: OMP contract
@@ -185,6 +197,8 @@ jobs:
         run: pnpm test:security:scan
       - name: Trusted executable resolution contract test
         run: pnpm test:exec-trusted
+      - name: Script contract tests (verify-workspace, vercel-install, build-all)
+        run: pnpm test:script-contracts
 
   rust:
     name: Rust quality

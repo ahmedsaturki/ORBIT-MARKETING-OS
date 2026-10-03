@@ -65,6 +65,15 @@ test("migrated agent-release-triage.mjs still prints its summary counts", () => 
   assert.equal(typeof payload.summary.productionProvenCount, "number");
   assert.equal(typeof payload.summary.engineeringOrVerificationCount, "number");
   assert.equal(typeof payload.summary.ownerActionCount, "number");
+  assert.equal(typeof payload.summary.mixedActionCount, "number");
+  assert.equal(
+    payload.summary.productionProvenCount +
+      payload.summary.engineeringOrVerificationCount +
+      payload.summary.ownerActionCount +
+      payload.summary.mixedActionCount,
+    payload.summary.releaseCriticalCount,
+    "the four action counts must partition the release-critical gate total",
+  );
 });
 
 test("migrated resolve-production-release.mjs still prints release flags", () => {
