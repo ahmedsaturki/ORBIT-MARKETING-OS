@@ -85,7 +85,9 @@ if (Number.isNaN(reviewDate.valueOf())) {
   throw new Error("invalid review date");
 }
 if (Date.now() >= reviewDate.valueOf()) {
-  throw new Error("node-forge audit exception review date reached: " + REVIEW_AFTER);
+  throw new Error(
+    "node-forge audit exception review date reached: " + REVIEW_AFTER,
+  );
 }
 
 console.log(
