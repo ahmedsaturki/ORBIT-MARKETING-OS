@@ -45,7 +45,10 @@ assert.equal(
   "lockfile patch hash must match the reviewed patch artifact",
 );
 
-assert(existsSync("patches/node-forge@1.4.0.patch"), "node-forge patch file is missing");
+assert(
+  existsSync("patches/node-forge@1.4.0.patch"),
+  "node-forge patch file is missing",
+);
 const patch = readFileSync("patches/node-forge@1.4.0.patch", "utf8");
 assert(patch.length > 0, "node-forge patch file is empty");
 const actualPatchHash = createHash("sha256").update(patch).digest("hex");
@@ -86,5 +89,8 @@ if (Date.now() >= reviewDate.valueOf()) {
 }
 
 console.log(
-  "node-forge-audit-exception=PASS ghsa=" + GHSA + " review_after=" + REVIEW_AFTER,
+  "node-forge-audit-exception=PASS ghsa=" +
+    GHSA +
+    " review_after=" +
+    REVIEW_AFTER,
 );
