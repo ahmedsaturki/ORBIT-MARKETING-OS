@@ -62,6 +62,9 @@ jobs:
       - name: Release sanity
         run: pnpm verify:release
 
+      - name: Governed audit exceptions
+        run: pnpm test:node-forge-audit-exception
+
       - name: Dependency audit
         run: pnpm audit --audit-level=moderate
 
