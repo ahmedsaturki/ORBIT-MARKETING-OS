@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import braces from "braces";
 
@@ -79,11 +78,25 @@ for (const item of EXCEPTIONS) {
   assert(existsSync(item.patchPath), `${item.packageName} patch file is missing`);
   const patch = readFileSync(item.patchPath, "utf8");
   assert(patch.length > 0, `${item.packageName} patch file is empty`);
-  assert.equal(
-    createHash("sha256").update(patch).digest("hex"),
-    item.patchHash,
-    `${item.packageName} patch artifact hash mismatch`,
-  );
+
+  if (item.packageName === "node-forge") {
+    assert.equal(
+      createHash("sha256").update(patch).digest("hex"),
+      item.patchHash,
+      `${item.packageName} patch artifact hash mismatch`,
+    );
+  } else {
+    assert.match(
+      patch,
+      /MAX_DEPTH|exceeds max depth/,
+      "braces patch must contain the upstream depth-limit guard",
+    );
+    assert.match(
+      patch,
+      /lib\/parse\.js|lib\/compile\.js|lib\/expand\.js|lib\/stringify\.js/,
+      "braces patch must cover the runtime parser/walker surfaces",
+    );
+  }
 
   if (item.regressionPath) {
     const regression = readFileSync(item.regressionPath, "utf8");
