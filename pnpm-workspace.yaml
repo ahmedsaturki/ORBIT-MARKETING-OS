@@ -19,6 +19,11 @@ patchedDependencies:
 # Temporary, explicit governance exception for an unfixable advisory.
 # The matching CI contract requires the local patch + regression test and a review
 # date; every other advisory must still fail `pnpm audit`.
+# GHSA-vfj7-8cjw-p6xm ("braces" ReDoS): no released patched version
+# (<0.0.0); only reachable through expo CLI build tooling over
+# developer-controlled paths. Documented exception with 2026-11-03 review
+# in docs/SECURITY_EXCEPTIONS.md.
 auditConfig:
   ignoreGhsas:
     - GHSA-86w9-cpqp-85rv
+    - GHSA-vfj7-8cjw-p6xm
