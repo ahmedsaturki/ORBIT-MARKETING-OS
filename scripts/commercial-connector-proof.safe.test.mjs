@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { runPackageManager } from "./lib/spawn.mjs";
 
 const env = { ...process.env };
 delete env.ORBIT_TELEGRAM_TEST_TOKEN;
@@ -6,8 +6,7 @@ delete env.ORBIT_TELEGRAM_TEST_CHAT_ID;
 delete env.ORBIT_LINKEDIN_TEST_TOKEN;
 delete env.ORBIT_LINKEDIN_TEST_AUTHOR_URN;
 
-const result = spawnSync(
-  process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+const result = runPackageManager(
   ["exec", "tsx", "scripts/commercial-connector-proof.ts", "--confirm-live"],
   {
     env,
@@ -38,8 +37,7 @@ for (const argv of [
   ["--confirm-live", "--output"],
   ["--confirm-live", "--output", "--confirm-live"],
 ]) {
-  const invalidOutput = spawnSync(
-    process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+  const invalidOutput = runPackageManager(
     ["exec", "tsx", "scripts/commercial-connector-proof.ts", ...argv],
     { env: process.env, encoding: "utf8" },
   );
