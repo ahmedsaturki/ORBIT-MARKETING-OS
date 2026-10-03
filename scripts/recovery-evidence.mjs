@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { execFileTracked } from "./lib/exec.mjs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -52,7 +52,7 @@ const results = [];
 for (const check of checks) {
   const started = Date.now();
   try {
-    const output = execFileSync(
+    const output = execFileTracked(
       "cargo",
       [
         "test",
@@ -125,7 +125,7 @@ const payload = {
   schemaVersion: 1,
   repository: "ahmedsaturki/ORBIT-MARKETING-OS",
   generatedAt: new Date().toISOString(),
-  sha: execFileSync("git", ["rev-parse", "HEAD"], {
+  sha: execFileTracked("git", ["rev-parse", "HEAD"], {
     cwd: root,
     encoding: "utf8",
     env: gitEnv,

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
-import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
+import { execFileTracked } from "./lib/exec.mjs";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -20,7 +20,7 @@ function gitRevParseHead() {
   ]) {
     delete env[key];
   }
-  return execFileSync("git", ["rev-parse", "HEAD"], {
+  return execFileTracked("git", ["rev-parse", "HEAD"], {
     cwd: root,
     encoding: "utf8",
     env,
@@ -40,7 +40,7 @@ function gitMarkerCommit() {
   ]) {
     delete env[key];
   }
-  return execFileSync("git", ["log", "-1", "--format=%H", "--", markerPath], {
+  return execFileTracked("git", ["log", "-1", "--format=%H", "--", markerPath], {
     cwd: root,
     encoding: "utf8",
     env,

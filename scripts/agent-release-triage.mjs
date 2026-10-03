@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
-import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
+import { execFileTracked } from "./lib/exec.mjs";
 import { fileURLToPath } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -23,7 +23,7 @@ function git(args) {
     delete env[key];
   }
 
-  return execFileSync("git", args, {
+  return execFileTracked("git", args, {
     cwd: repoRoot,
     encoding: "utf8",
     env,

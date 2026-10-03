@@ -42,6 +42,7 @@
     "test:recovery:evidence": "node scripts/recovery-evidence.mjs",
     "test:soak-runner-resilience": "node scripts/soak-runner-resilience.test.mjs",
     "test:security:scan": "node scripts/security-scan.test.mjs",
+    "test:exec-trusted": "node --test scripts/lib/exec.test.mjs",
     "verify:release-docs": "node scripts/verify-release-docs.mjs",
     "verify:production-observation": "node scripts/verify-live-production-observation.mjs",
     "test:node-forge-audit-exception": "node scripts/node-forge-audit-exception.test.mjs"
