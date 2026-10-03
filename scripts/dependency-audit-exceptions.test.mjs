@@ -59,14 +59,14 @@ for (const item of EXCEPTIONS) {
   assert.match(
     workspace,
     new RegExp(
-      `patchedDependencies:\\\\s*\\\\n\\\\s*${item.packageName.replace("-", "\\-")}@${item.packageVersion.replace(".", "\\.")}:\\s*${item.patchPath.replaceAll("/", "\\/")}`,
+      `patchedDependencies:\\s*\\n\\s*${item.packageName.replace("-", "\\-")}@${item.packageVersion.replace(".", "\\.")}:\\s*${item.patchPath.replaceAll("/", "\\/")}`,
     ),
     `${item.packageName} must be wired through patchedDependencies`,
   );
 
   const lockMatch = lockfile.match(
     new RegExp(
-      `patchedDependencies:\\\\s*[\\\\s\\\\S]*?\\\\s+${item.packageName.replace("-", "\\-")}@${item.packageVersion.replace(".", "\\.")}:\\\\s*\\\\n\\\\s+hash:\\\\s+([^\\\\n]+)\\\\s+path:\\\\s+${item.patchPath.replaceAll("/", "\\/")}`,
+      `patchedDependencies:\\s*[\\s\\S]*?\\s+${item.packageName.replace("-", "\\-")}@${item.packageVersion.replace(".", "\\.")}:\\s*\\n\\s+hash:\\s+([^\\n]+)\\s+path:\\s+${item.patchPath.replaceAll("/", "\\/")}`,
     ),
   );
   assert(lockMatch, `${item.packageName} patch must be pinned in the lockfile`);
