@@ -48,6 +48,16 @@ export type ExecutionPolicyDecision =
     };
 
 /**
+ * Production execution-safety defaults mirrored by the native shell
+ * (packages/desktop/src-tauri/src/lib.rs: DEFAULT_DAILY_EXECUTION_LIMIT and
+ * DEFAULT_CIRCUIT_BREAKER_THRESHOLD). Keep both copies in sync. The
+ * commercial connector proof harness routes live-token execution through
+ * these same budgets.
+ */
+export const DEFAULT_EXECUTION_DAILY_LIMIT = 10;
+export const DEFAULT_EXECUTION_CIRCUIT_BREAKER_THRESHOLD = 3;
+
+/**
  * Applies deterministic pre-flight safety gates before a connector is allowed
  * to perform an external side effect.
  */
