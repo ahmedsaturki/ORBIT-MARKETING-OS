@@ -1,0 +1,15 @@
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": "./packages/web/out",
+      "numberOfRuns": 1,
+      "settings": {
+        "chromeFlags": "--no-sandbox --disable-dev-shm-usage"
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": "./.lighthouseci"
+    }
+  }
+}
