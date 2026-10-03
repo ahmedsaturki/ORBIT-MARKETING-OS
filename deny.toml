@@ -1,0 +1,29 @@
+[graph]
+all-features = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+
+[licenses]
+version = 2
+confidence-threshold = 0.8
+allow = [
+  "0BSD",
+  "Apache-2.0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "CC0-1.0",
+  "ISC",
+  "MIT",
+  "MPL-2.0",
+  "NCSA",
+  "OpenSSL",
+  "Unicode-3.0",
+  "Zlib",
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-git = []
