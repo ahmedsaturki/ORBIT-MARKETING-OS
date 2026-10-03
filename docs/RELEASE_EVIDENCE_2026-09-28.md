@@ -59,7 +59,14 @@ The exact-main startup harness launched the production-shaped local runtime on l
 }
 ```
 
-Disposition: measurement captured. Budget compliance remains PARTIAL because the current acceptance contract does not publish a numeric PERF-01 budget.
+Disposition: measurement captured, budget compliance now enforceable. At the
+time this run was recorded the acceptance contract published no numeric
+PERF-01 budget, so the measurement could not be judged. `scripts/startup-memory-benchmark.mjs`
+now enforces `STARTUP_BUDGET_MS = 8000` fail-closed (it exits non-zero with a
+named breach when exceeded), and the measured 3199ms is within it. The
+historical measurement below is preserved as recorded; the enforced-budget
+claim in `docs/RELEASE_SCORECARD.md` rests on the later exact-main runs, not on
+this one.
 
 ### PERF-02
 
@@ -67,7 +74,12 @@ The same exact-main run measured process RSS during startup and the settling win
 
 Peak RSS: `100.44MB`.
 
-Disposition: measurement captured. Budget compliance remains PARTIAL because the current acceptance contract does not publish a numeric PERF-02 budget.
+Disposition: measurement captured, budget compliance now enforceable.
+`scripts/startup-memory-benchmark.mjs` enforces `RSS_BUDGET_MB = 200`
+fail-closed; the measured 80.5MB in the post-enforcement run is within it.
+No heap budget is claimed anywhere: nothing in the repository instruments or
+measures it, and the 24-hour soak ceiling (600MB) is a separate, explicitly
+recorded limit in `logs/soak-summary.json`, not a heap figure.
 
 ## Release-truth boundary
 

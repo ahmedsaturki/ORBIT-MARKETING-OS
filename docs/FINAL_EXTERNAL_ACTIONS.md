@@ -47,20 +47,38 @@ No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acc
 - Perform final legal/commercial publication review.
 - Resolve the current-main SonarCloud requirement: Security Rating on New Code must reach A.
 
-## F. node-forge GHSA-86w9-cpqp-85rv — HIGH, no upstream release
+## F. node-forge advisories — HIGH, no upstream release (governed exception recorded)
 
-- CVSS 3.1 7.5, CWE-347 (improper verification of cryptographic signature)
+Covered advisories: `GHSA-86w9-cpqp-85rv` (PKCS#1 v1.5 signature verification,
+CWE-347) and `GHSA-vfj7-8cjw-p6xm` (ReDoS in brace expansion). Neither has a
+patched release; both are pinned to the current latest version, so
+`pnpm audit` reports them permanently by design.
+
+**Decision (recorded, not pending).** Option (b) was taken: a scoped, explicit,
+reviewable exception. Both GHSAs are listed in `pnpm-workspace.yaml` under
+`auditConfig.ignoreGhsas`, registered with review dates in
+`docs/SECURITY_EXCEPTIONS.md`, and enforced by
+`scripts/node-forge-audit-exception.test.mjs`. That test asserts the exact
+allowlist contents, the presence and hash of the local patch, the recorded
+review dates, and the documentation registration, and it runs as a required
+`pnpm test:node-forge-audit-exception` step in `ci.yml`,
+`release-desktop.yml`, `release-mobile.yml`, `self-hosted-verify.yml` and
+`web-release-selfhosted.yml` before `pnpm audit` in each. Removing the patch or
+narrowing the allowlist fails the gate. Any advisory outside this allowlist
+still fails `pnpm audit --audit-level=moderate`.
+
+Review dates: 2026-10-03 (both). Re-review on the earlier of node-forge
+shipping a release or 2026-11-03.
+
 - Vulnerable: node-forge <= 1.4.0. Fixed: none. 1.4.0 is the latest release.
   (also @expo/code-signing-certificates@0.0.6 > node-forge@1.4.0)
 - Reachability: build/dev only. @expo/code-signing-certificates is part of the
   Expo EAS build/signing toolchain; no runtime, web, or desktop artifact
   references node-forge. The vulnerable RSA PKCS#1 v1.5 verification path is not
   reached by that package, which only performs signing operations.
-- Why `pnpm audit` stays red: pnpm audit matches the DECLARED version. The patch
-  in patches/node-forge@1.4.0.patch fixes the code in place but does not change
-  the resolved version, so the finding persists by design. The advisory was
-  updated 2026-10-01T21:09:10Z, after the last green main run (2026-09-30), so any
-  fresh `ci` run fails.
+- Why the audit finding persists by design: pnpm audit matches the DECLARED
+  version. The patch in patches/node-forge@1.4.0.patch fixes the code in place
+  but does not change the resolved version.
 - Proposed upstream fix: digitalbazaar/forge#1152 is OPEN and unmerged, with one
   approval from a non-maintainer contributor. It is NOT maintainer-endorsed and
   NOT merged. Review patches/node-forge@1.4.0.patch before relying on it.
@@ -68,13 +86,12 @@ No bypass, stealth, anti-ban, or unauthorized bulk automation is part of the acc
   upstream PoC vectors and asserts a forged PKCS#1 v1.5 signature is rejected;
   the test fails if the patch is removed.
 
-OWNER_ACTION: decide whether to (a) accept a red `ci` dependency-audit step until
-node-forge ships a release, or (b) record an explicit, scoped, reviewable
-exception referencing this advisory. Do not silently suppress it.
-`pnpm audit --audit-level=moderate` reports one HIGH finding that cannot be
-cleared by any available dependency update.
+STATUS: decided and implemented. The red-`ci` alternative was rejected; the
+governed, time-boxed exception described above is the recorded outcome. This
+item is no longer an open owner question.
 
 - Advisory: GHSA-86w9-cpqp-85rv / CVE-2026-85393, <https://github.com/advisories/GHSA-86w9-cpqp-85rv>. CVSS v4 8.7, CWE-347.
+- Advisory: GHSA-vfj7-8cjw-p6xm, <https://github.com/advisories/GHSA-vfj7-8cjw-p6xm> (ReDoS in brace expansion; no patched version).
 
 Commercial Production Proven means every release-critical item has L3 evidence. Do not infer L3 from source presence, a live deployment, a green CI run, or a prior release artifact alone.
 

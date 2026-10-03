@@ -6,7 +6,7 @@ Updated: 2026-09-27.
 | ------------------------------------ | ------------------ | ----------------------------------------------------------------------------------------------------- | --------------- |
 | Core domain                          | yes                | Main/PR exact-head typecheck/tests/coverage passed                                                    | VERIFIED        |
 | Marketing Brain / Strategy           | yes                | Workspace-local persistence and governed strategy commands                                            | PARTIAL         |
-| Research Intelligence                | yes                | Native schema v15, commands, evidence rules and Research Studio                                       | PARTIAL         |
+| Research Intelligence                | yes                | Native schema v16, commands, evidence rules and Research Studio                                       | PARTIAL         |
 | Universal Search + Mission Control   | yes                | Workspace-scoped native E2E and bounded deterministic contract                                        | VERIFIED*       |
 | Publishing Calendar / Workbench      | yes                | Queue-backed calendar over canonical tasks; native/E2E surface assertions                             | PARTIAL         |
 | Bulk Planner                         | yes                | Approval-gated queue task generation; unit/native surface coverage                                    | PARTIAL         |

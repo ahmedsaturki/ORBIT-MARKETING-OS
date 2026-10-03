@@ -64,18 +64,29 @@ actually proves.
   and mirrored by the Rust validator. No digest or signature verification of a
   rule pack exists anywhere in the repository, so an attacker who can write the
   pack file is not detected by these controls.
-- **The dependency and secret-scanning gates are not behaviorally tested.**
-  Lockfile enforcement, pinned action SHAs, and the `pnpm audit` gate run in
-  `scripts/verify-workspace.mjs` and CI. `scripts/security-scan.mjs` has no test
-  that seeds a fake secret and asserts a non-zero exit, so a regression that
-  made the scanner always pass would not be caught by the unit suite.
-- **Sync encryption is a library property, not an observed transport
-  property.** `encryptSyncUpdate` runs before any `SyncEnvelope` can be
-  constructed, so an unencrypted envelope is not representable, and ciphertext
-  opacity is asserted in `sync.test.ts` and `sync-network.test.ts`. But no
-  shipped replication path calls it: the only callers are tests, whose
-  "transport" is an in-memory queue. Trust boundary 4 therefore holds for the
-  primitive and is unproven for any real network path.
+- **The scanner is behaviorally tested; what it can reach is bounded by
+  `git ls-files`.** `scripts/security-scan.test.mjs` is a five-case behavioral
+  contract that copies the shipped scanner into a throwaway repository and
+  asserts: a clean repository exits 0 with a machine-readable summary; an
+  embedded credential in a tracked file exits 1 and names the file; a tracked
+  non-example `.env` is treated as a secret; `.env.example` stays allowed; and
+  PEM private-key material exits 1. It runs in CI as
+  `pnpm test:security:scan`. The remaining gap is reach, not behavior: the
+  scanner enumerates `git ls-files`, so an untracked working-tree file or a
+  secret that exists only in git history is outside its scope. Separately,
+  `pnpm audit` is not invoked by `scripts/verify-workspace.mjs`; it runs in
+  `ci.yml`, `release-desktop.yml`, `release-mobile.yml`,
+  `self-hosted-verify.yml` and `web-release-selfhosted.yml`.
+- **Sync encryption is a library property, and no shipped replication path
+  calls it.** `encryptSyncUpdate` runs before any `SyncEnvelope` can be
+  constructed, so an unencrypted envelope is not representable.
+  `sync-network.test.ts` exercises two devices over a real `node:http`
+  loopback relay, asserting convergence and tampering rejection before any
+  state is applied, so the transport is no longer an in-memory queue. The
+  residual gap is narrower: the only callers of `encryptSyncUpdate` are
+  `src/sync/yjs.ts` and two test files, so trust boundary 4 holds for the
+  primitive and for the test relay, and remains unproven for a real
+  multi-device network.
 - **Challenge handling fails closed structurally, not by the named control.**
   `handleChallenge` has no production caller. The connectors themselves emit a
   `ConnectorOutcome` whose reason is `authorization_required`,
@@ -89,9 +100,14 @@ actually proves.
   selected in this process" rather than a caller-proven identity. Defensible
   for a single-user local desktop runtime; it is not per-request authorization
   and must not be relied on as such.
-- **Event redaction is duplicated and only half-tested.** The TypeScript and
-  Rust redaction implementations are independent; only the TypeScript copy has
-  a covering test.
+- **Event redaction is duplicated, and the two implementations can drift.**
+  The TypeScript and Rust redaction paths are independent. Both are covered
+  today — the TypeScript copy by its own suite, and the Rust
+  `redact_event_json` by `redact_event_json_replaces_credential_values`,
+  `redact_event_json_leaves_non_sensitive_values_intact`, and
+  `redact_event_json_walks_nested_objects_and_arrays` — but nothing asserts the
+  two redact the same key set, so a key added to one side can silently be
+  absent from the other.
 - **Audit tamper detection depends on the chain being the only writer, and
   the TypeScript chain is not the persisted one.** The TypeScript
   `AuditIntegrityChain` holds an in-memory array; the cases added to its test
@@ -102,16 +118,29 @@ actually proves.
   nothing binds the chain to the audit event stream, so wholesale replacement
   of a chain is detected only as a broken `previousHash` link — not as a
   substituted history.
-- **The execution policy is a runtime convention, and one live path already
-  bypasses it.** `connector.execute()` is public and takes no policy handle.
-  `workflows/executionRunner.ts` evaluates `evaluateExecutionPolicy` before
-  calling it, but `scripts/commercial-connector-proof.ts` also calls
-  `connector.execute()` directly — at the Telegram call and again at the
-  LinkedIn call — with a hand-built task and `userConfirmed: true`, and it is
-  wired to a workflow that runs with real platform tokens. That path enforces
-  only the weaker `assertUserConfirmed` check inside the connector, so approval
-  state, daily budget, and circuit breaker are not evaluated for it. Any future
-  direct caller would have the same gap.
+- **The execution policy is a runtime convention enforced at every known call
+  site, not a property of the connector.** `connector.execute()` is public and
+  takes no policy handle; `workflows/executionRunner.ts` evaluates
+  `evaluateExecutionPolicy` before calling it. `scripts/commercial-connector-proof.ts`
+  previously called `connector.execute()` directly — at the Telegram call and
+  again at the LinkedIn call — with a hand-built task and `userConfirmed: true`,
+  on a path wired to real platform tokens, so approval state, daily budget, and
+  circuit breaker were never evaluated there. Both call sites now evaluate
+  `evaluateExecutionPolicy` with explicit policy inputs, and
+  `packages/core/test/commercialProofPolicy.test.ts` asserts the connector is
+  never invoked when the policy blocks (`campaign_not_runnable`,
+  `daily_limit_reached`, `circuit_breaker_open`). The structural risk stands for
+  any future direct caller that skips the gate, because the connector itself
+  cannot enforce it.
+- **Command execution hardening is applied site-by-site, not by type.**
+  `scripts/lib/exec.mjs` resolves every spawned binary through an allowlist and
+  throws `UntrustedExecutableError` outside it, and the nine highest-risk
+  callers (release resolution, evidence collection, security scan, recovery
+  evidence, release triage, startup benchmark) now use it. The remaining
+  callers still spawn by name: `scripts/soak.ts`,
+  `scripts/build-tauri.mjs`, `scripts/commit-lockfiles.mjs`, and several
+  `*.test.mjs` fixtures. A new spawn site therefore fails open until someone
+  converts it.
 
 ## Release gate
 

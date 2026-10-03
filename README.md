@@ -71,7 +71,7 @@ Agent execution control: `docs/OMP_OPERATOR_PROTOCOL.md` and `pnpm triage:releas
 
 Executable release truth: `pnpm verify:readiness` for verification and `pnpm verify:readiness -- --mode commercial` for the fail-closed commercial gate.
 
-Canonical release evidence snapshot: `docs/RELEASE_EVIDENCE_2026-09-26.md`
+Canonical release evidence snapshot: `docs/RELEASE_EVIDENCE_2026-09-28.md` (supersedes `docs/RELEASE_EVIDENCE_2026-09-26.md`, which is retained for history)
 
 The current web product is live on Vercel; desktop artifacts and Android validation artifacts are built by GitHub Actions. Commercial launch remains gated by signing, real connector E2E, soak/rollback, and billing evidence.
 
