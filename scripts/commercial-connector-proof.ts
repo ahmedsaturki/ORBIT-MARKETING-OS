@@ -3,6 +3,19 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { TelegramConnector } from "../packages/core/src/connectors/telegram.js";
 import { LinkedInConnector } from "../packages/core/src/connectors/linkedin.js";
+import {
+  DEFAULT_EXECUTION_CIRCUIT_BREAKER_THRESHOLD,
+  DEFAULT_EXECUTION_DAILY_LIMIT,
+  evaluateExecutionPolicy,
+} from "../packages/core/src/workflows/executionPolicy.js";
+import type {
+  Approval,
+  Campaign,
+  ContentItem,
+  Platform,
+  SocialAccount,
+  Task,
+} from "../packages/core/src/types/index.js";
 
 const argv = process.argv.slice(2);
 const args = new Set(argv);
@@ -50,6 +63,101 @@ const testContent = {
   linkedin:
     "ORBIT connector proof test — do not treat as customer-facing content.",
 } as const;
+
+// The proof harness runs with real platform tokens, so it must fail closed on
+// the same execution policy as the queue layer rather than bypassing it. The
+// --confirm-live flag is the operator's explicit confirmation and is
+// represented as an approved Approval tied to the proof content; the daily
+// budget and circuit breaker use the production defaults with counters at
+// zero (this process is a single deliberate proof action).
+const PROOF_WORKSPACE_ID = "commercial-proof";
+const PROOF_CAMPAIGN_ID = "commercial-proof";
+
+type ProofPolicyInputs = {
+  account: SocialAccount;
+  campaign: Campaign;
+  content: ContentItem;
+  approval: Approval;
+};
+
+function buildProofPolicyInputs(
+  platform: Platform,
+  accountId: string,
+  task: Task & { contentId: string },
+  body: string,
+): ProofPolicyInputs {
+  const now = new Date().toISOString();
+  const account: SocialAccount = {
+    id: accountId,
+    workspaceId: PROOF_WORKSPACE_ID,
+    platform,
+    displayName: "commercial-proof " + platform,
+    status: "connected",
+    healthScore: 100,
+    createdAt: now,
+  };
+  const campaign: Campaign = {
+    id: PROOF_CAMPAIGN_ID,
+    workspaceId: PROOF_WORKSPACE_ID,
+    name: "commercial-proof",
+    status: "running",
+    accountIds: [accountId],
+    contentIds: [task.contentId],
+    taskCount: 1,
+    createdAt: now,
+  };
+  const content: ContentItem = {
+    id: task.contentId,
+    workspaceId: PROOF_WORKSPACE_ID,
+    title: "commercial-proof",
+    body,
+    platformVariants: {
+      facebook: undefined,
+      instagram: undefined,
+      telegram: platform === "telegram" ? body : undefined,
+      whatsapp: undefined,
+      linkedin: platform === "linkedin" ? body : undefined,
+      tiktok: undefined,
+    },
+    approvalStatus: "approved",
+    tags: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+  // The --confirm-live flag is the operator's explicit approved approval for
+  // this exact proof content; without it the script already exits (2) above.
+  const approval: Approval = {
+    id: "commercial-proof-approval-" + platform,
+    workspaceId: PROOF_WORKSPACE_ID,
+    contentId: task.contentId,
+    requestedBy: "commercial-proof-operator",
+    reviewerIds: ["commercial-proof-operator"],
+    status: "approved",
+    decidedBy: "commercial-proof-operator",
+    decidedAt: now,
+    note: "--confirm-live operator confirmation",
+  };
+  return { account, campaign, content, approval };
+}
+
+function policyBeforeExecute(
+  inputs: ProofPolicyInputs,
+  task: Task,
+): string | null {
+  const decision = evaluateExecutionPolicy({
+    account: inputs.account,
+    campaign: inputs.campaign,
+    task,
+    content: inputs.content,
+    approval: inputs.approval,
+    actionsToday: 0,
+    dailyLimit: DEFAULT_EXECUTION_DAILY_LIMIT,
+    consecutiveFailures: 0,
+    circuitBreakerThreshold: DEFAULT_EXECUTION_CIRCUIT_BREAKER_THRESHOLD,
+  });
+  if (decision.allowed) return null;
+  return decision.message + " (policy: " + decision.reason + ")";
+}
 
 type PlatformProof = {
   authorized: boolean;
@@ -127,34 +235,50 @@ try {
     telegram.authorized = connection.status === "succeeded";
 
     if (telegram.authorized) {
-      const outcome = await telegramConnector.execute(
-        {
-          id: "commercial-proof-telegram-task",
-          workspaceId: "commercial-proof",
-          campaignId: "commercial-proof",
-          accountId: "commercial-proof-telegram",
-          platform: "telegram",
-          kind: "publish",
-          contentId: "commercial-proof-telegram-content",
-          destinationId: telegramChatId!,
-          priority: 1,
-          status: "pending",
-          attempts: 0,
-          maxAttempts: 1,
-          availableAt: new Date().toISOString(),
-          idempotencyKey: "commercial-proof-telegram",
-          createdAt: new Date().toISOString(),
-        },
-        { accountId: "commercial-proof-telegram", userConfirmed: true },
+      const telegramTask = {
+        id: "commercial-proof-telegram-task",
+        workspaceId: PROOF_WORKSPACE_ID,
+        campaignId: PROOF_CAMPAIGN_ID,
+        accountId: "commercial-proof-telegram",
+        platform: "telegram",
+        kind: "publish",
+        contentId: "commercial-proof-telegram-content",
+        destinationId: telegramChatId!,
+        priority: 1,
+        status: "pending",
+        attempts: 0,
+        maxAttempts: 1,
+        availableAt: new Date().toISOString(),
+        idempotencyKey: "commercial-proof-telegram",
+        createdAt: new Date().toISOString(),
+      } as const;
+      // Fail closed on the production execution policy before any real-token
+      // connector call, exactly as the queue layer does.
+      const blockedBy = policyBeforeExecute(
+        buildProofPolicyInputs(
+          "telegram",
+          "commercial-proof-telegram",
+          telegramTask,
+          testContent.telegram,
+        ),
+        telegramTask,
       );
+      if (blockedBy) {
+        telegram.message = blockedBy;
+      } else {
+        const outcome = await telegramConnector.execute(telegramTask, {
+          accountId: "commercial-proof-telegram",
+          userConfirmed: true,
+        });
 
-      telegram.status =
-        outcome.status === "succeeded" && Boolean(outcome.externalId)
-          ? "succeeded"
-          : "failed";
-      telegram.delivered = telegram.status === "succeeded";
-      telegram.externalId = outcome.externalId ?? null;
-      telegram.message = outcome.message ?? outcome.reason;
+        telegram.status =
+          outcome.status === "succeeded" && Boolean(outcome.externalId)
+            ? "succeeded"
+            : "failed";
+        telegram.delivered = telegram.status === "succeeded";
+        telegram.externalId = outcome.externalId ?? null;
+        telegram.message = outcome.message ?? outcome.reason;
+      }
     } else {
       telegram.message =
         connection.message ?? connection.reason ?? "authorization failed";
@@ -179,38 +303,51 @@ try {
     linkedin.authorized = connection.status === "succeeded";
 
     if (linkedin.authorized) {
-      const outcome = await linkedinConnector.execute(
-        {
-          id: "commercial-proof-linkedin-task",
-          workspaceId: "commercial-proof",
-          campaignId: "commercial-proof",
-          accountId: "commercial-proof-linkedin",
-          platform: "linkedin",
-          kind: "publish",
-          contentId: "commercial-proof-linkedin-content",
-          destinationId: "member",
-          priority: 1,
-          status: "pending",
-          attempts: 0,
-          maxAttempts: 1,
-          availableAt: new Date().toISOString(),
-          idempotencyKey: "commercial-proof-linkedin",
-          createdAt: new Date().toISOString(),
-        },
-        {
+      const linkedinTask = {
+        id: "commercial-proof-linkedin-task",
+        workspaceId: PROOF_WORKSPACE_ID,
+        campaignId: PROOF_CAMPAIGN_ID,
+        accountId: "commercial-proof-linkedin",
+        platform: "linkedin",
+        kind: "publish",
+        contentId: "commercial-proof-linkedin-content",
+        destinationId: "member",
+        priority: 1,
+        status: "pending",
+        attempts: 0,
+        maxAttempts: 1,
+        availableAt: new Date().toISOString(),
+        idempotencyKey: "commercial-proof-linkedin",
+        createdAt: new Date().toISOString(),
+      } as const;
+      // Fail closed on the production execution policy before any real-token
+      // connector call, exactly as the queue layer does.
+      const blockedBy = policyBeforeExecute(
+        buildProofPolicyInputs(
+          "linkedin",
+          "commercial-proof-linkedin",
+          linkedinTask,
+          testContent.linkedin,
+        ),
+        linkedinTask,
+      );
+      if (blockedBy) {
+        linkedin.message = blockedBy;
+      } else {
+        const outcome = await linkedinConnector.execute(linkedinTask, {
           accountId: "commercial-proof-linkedin",
           userConfirmed: true,
           signal: AbortSignal.timeout(30_000),
-        },
-      );
+        });
 
-      linkedin.status =
-        outcome.status === "succeeded" && Boolean(outcome.externalId)
-          ? "succeeded"
-          : "failed";
-      linkedin.delivered = linkedin.status === "succeeded";
-      linkedin.externalId = outcome.externalId ?? null;
-      linkedin.message = outcome.message ?? outcome.reason;
+        linkedin.status =
+          outcome.status === "succeeded" && Boolean(outcome.externalId)
+            ? "succeeded"
+            : "failed";
+        linkedin.delivered = linkedin.status === "succeeded";
+        linkedin.externalId = outcome.externalId ?? null;
+        linkedin.message = outcome.message ?? outcome.reason;
+      }
     } else {
       linkedin.message =
         connection.message ?? connection.reason ?? "authorization failed";

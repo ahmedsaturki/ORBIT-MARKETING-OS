@@ -48,6 +48,10 @@ const extensionAllowlist = new Set([
   ".mdx",
   ".txt",
   ".json",
+  // Soak logs (logs/soak-*.jsonl) are JSON Lines and must be content-scanned
+  // for credentials, but only when tracked; untracked logs and git history
+  // remain a documented blind spot.
+  ".jsonl",
   ".yaml",
   ".yml",
   ".toml",
