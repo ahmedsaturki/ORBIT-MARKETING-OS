@@ -26,11 +26,12 @@ The same CI run completed the benchmark successfully. This supports `VERIFIED` f
 
 ## PERF-01 / PERF-02
 
-The repository performance harness enforces these budgets:
+The repository performance harness enforces these budgets fail-closed in `scripts/startup-memory-benchmark.mjs`:
 
 - PERF-01 startup-to-health: <= 8,000 ms
 - PERF-02 peak RSS: <= 200 MB
-- PERF-02 heap used: <= 100 MB in the core performance workload test
+
+Heap is not instrumented; no heap budget is claimed. The long-running soak test deliberately enforces a distinct 600 MB RSS ceiling (scripts/soak.ts) because it bounds process lifetime, not startup.
 
 Exact-main CI run `36621459773` measured:
 
@@ -41,7 +42,7 @@ Exact-main CI run `36621459773` measured:
 - server announced: true
 - provider: ollama-local
 
-The core test suite also exercises the bounded memory workload and enforces the RSS/heap budgets before accepting its result. The startup benchmark's machine-readable output reports the measured RSS above; it does not emit a separate heap figure.
+The core test suite exercises the bounded memory workload; heap is not instrumented and no heap budget is enforced anywhere. The startup benchmark's machine-readable output reports the measured RSS (and emits the enforced `startupBudgetMs`/`rssBudgetMb` values); it does not emit a heap figure.
 
 These are fresh automated L2 evidence, not L3 production proof.
 

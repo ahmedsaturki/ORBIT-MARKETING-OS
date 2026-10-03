@@ -47,6 +47,9 @@ const requestedMinutes =
 const minutes = requestedMinutes > 0 ? requestedMinutes : 10;
 const requestedPort = readNumericArg("--port");
 let port = requestedPort !== undefined && requestedPort > 0 ? requestedPort : 0;
+// 600 MB bounds RSS across a long-running soak deliberately; it is a
+// distinct budget from the 200 MB startup-time peak enforced in
+// scripts/startup-memory-benchmark.mjs. Do not conflate the two.
 const RSS_BUDGET_MB = 600;
 const CYCLE_MS = 2_000;
 const deadline = Date.now() + minutes * 60_000;

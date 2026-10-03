@@ -2,7 +2,7 @@
 
 Last evidence refresh: 2026-09-29
 
-Latest completed exact-main verification snapshot: GitHub Actions CI run `36621459773` on current main. DATA-03 measured `1.520954ms` for the 1,000-contact workspace-scoped search benchmark. The same run produced recovery evidence artifact `11059010547` with 4/4 recovery/migration checks passing. PERF-01 measured 381.11ms startup-to-health and PERF-02 measured 96.81MB peak RSS; the configured budgets remain startup ≤8,000ms, RSS ≤200MB, and heap ≤100MB. These run references are exact-run evidence and do not by themselves establish L3 production proof.
+Latest completed exact-main verification snapshot: GitHub Actions CI run `36621459773` on current main. DATA-03 measured `1.520954ms` for the 1,000-contact workspace-scoped search benchmark. The same run produced recovery evidence artifact `11059010547` with 4/4 recovery/migration checks passing. PERF-01 measured 381.11ms startup-to-health and PERF-02 measured 96.81MB peak RSS; the enforced budgets are startup ≤8,000ms and RSS ≤200MB (fail-closed in scripts/startup-memory-benchmark.mjs); heap is not instrumented and no heap budget is claimed. These run references are exact-run evidence and do not by themselves establish L3 production proof.
 
 Status vocabulary: `PASS`, `FAIL`, `PARTIAL`, `UNVERIFIED`, `NOT_APPLICABLE`.
 

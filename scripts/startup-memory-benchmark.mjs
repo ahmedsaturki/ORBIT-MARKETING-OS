@@ -3,6 +3,14 @@ import { execFileTracked } from "./lib/exec.mjs";
 import { createServer } from "node:net";
 import { readFileSync } from "node:fs";
 
+// Published performance budgets (docs/RELEASE_SCORECARD.md PERF-01/PERF-02).
+// These are fail-closed enforcement: exceeding either throws after the
+// measurement. Note the soak test deliberately uses a distinct 600 MB RSS
+// ceiling for a long-running process (scripts/soak.ts); the 200 MB figure
+// bounds startup-time peak RSS only.
+const STARTUP_BUDGET_MS = 8000;
+const RSS_BUDGET_MB = 200;
+
 const root = process.cwd();
 
 function rssMb(pid) {
@@ -131,8 +139,21 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
+  if (startupMs !== null && startupMs > STARTUP_BUDGET_MS) {
+    throw new Error(
+      `startup budget breached: startup_ms=${startupMs.toFixed(2)} exceeds STARTUP_BUDGET_MS=${STARTUP_BUDGET_MS}`,
+    );
+  }
+  if (peakRssMb > RSS_BUDGET_MB) {
+    throw new Error(
+      `RSS budget breached: peak_rss_mb=${peakRssMb.toFixed(2)} exceeds RSS_BUDGET_MB=${RSS_BUDGET_MB}`,
+    );
+  }
+
   const result = {
     dataset: "local runtime startup",
+    startupBudgetMs: STARTUP_BUDGET_MS,
+    rssBudgetMb: RSS_BUDGET_MB,
     startup_ms: Number(startupMs?.toFixed(2)),
     peak_rss_mb: Number(peakRssMb.toFixed(2)),
     rss_samples: samples,
