@@ -19,7 +19,7 @@ const EXCEPTIONS = [
     packageVersion: "3.0.3",
     patchPath: "patches/braces@3.0.3.patch",
     patchHash:
-      "9d1ffe2be7e7f25f441142f22858033812dfbcb6b65665c5034116186a9c1a5d",
+      "f7b8577c6aa409a18d650762cce9bae178d30e4c9dbacf017b9fa94e46f788d1",
   },
 ];
 
