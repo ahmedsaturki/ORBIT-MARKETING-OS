@@ -46,3 +46,9 @@ Removal conditions:
 3. Keep regression coverage until the replacement is independently verified against the same nested-input failure mode.
 
 This is an explicit, narrow exception with compensating controls; it is not a blanket audit suppression.
+
+Implementation note — braces 3.0.3
+
+- pnpm 10 regenerated and accepted the patch lock entry with canonical patch hash `f7b8577c6aa409a18d650762cce9bae178d30e4c9dbacf017b9fa94e46f788d1`.
+- The canonical hash is intentionally treated as a pnpm patch identifier, not as a raw SHA-256 claim.
+- Upstream `micromatch/braces#72` remains the source of the runtime backport while no fixed published release is available.
