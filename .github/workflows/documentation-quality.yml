@@ -1,0 +1,40 @@
+name: Documentation Quality
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "**/*.md"
+  push:
+    branches: ["main"]
+    paths:
+      - "**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orbit-docs-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  markdownlint:
+    name: markdownlint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned existing checkout
+        with:
+          persist-credentials: false
+      - name: Lint Markdown
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        with:
+          globs: |
+            README.md
+            CHANGELOG.md
+            SECURITY.md
+            WATCHDOG.md
+            docs/**/*.md
