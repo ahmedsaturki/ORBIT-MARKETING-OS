@@ -56,11 +56,14 @@ assert.equal(
 );
 
 for (const item of EXCEPTIONS) {
-  assert.match(
-    workspace,
-    new RegExp(
-      `patchedDependencies:\\s*\\n\\s*${item.packageName.replace("-", "\\-")}@${item.packageVersion.replace(".", "\\.")}:\\s*${item.patchPath.replaceAll("/", "\\/")}`,
-    ),
+  assert(
+    workspace
+      .split("\n")
+      .some(
+        (line) =>
+          line.trim() ===
+          `${item.packageName}@${item.packageVersion}: ${item.patchPath}`,
+      ),
     `${item.packageName} must be wired through patchedDependencies`,
   );
 
