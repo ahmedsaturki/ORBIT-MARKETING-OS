@@ -15,3 +15,10 @@ overrides:
 # is the most complete fix proposed upstream. Review the patch before trusting it.
 patchedDependencies:
   node-forge@1.4.0: patches/node-forge@1.4.0.patch
+
+# Temporary, explicit governance exception for an unfixable advisory.
+# The matching CI contract requires the local patch + regression test and a review
+# date; every other advisory must still fail `pnpm audit`.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-86w9-cpqp-85rv
