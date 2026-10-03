@@ -1,6 +1,6 @@
 # ORBIT — Final External Actions
 
-Updated: 2026-09-29.
+Updated: 2026-10-03.
 
 The merged core is strongly verified at L2 across the main product domains. The canonical Production alias is live and currently serves a READY Git deployment `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV` on `9ba07318f4d580e670be9d27ec76888e66013340`; public version and provenance checks are passing. The current `main` branch contains the release-truth/documentation reconciliation and live-production observation verifier; its exact moving SHA is intentionally maintained by run-bound evidence rather than hard-coded here. Its ordinary Vercel deployment is not counted as the serving Production deployment. The remaining actions below require real platform accounts, provider credentials, signing identities, physical/store infrastructure, elapsed-time evidence, or a human-controlled commercial decision.
 
@@ -76,3 +76,8 @@ cleared by any available dependency update.
 - Advisory: GHSA-86w9-cpqp-85rv / CVE-2026-85393, <https://github.com/advisories/GHSA-86w9-cpqp-85rv>. CVSS v4 8.7, CWE-347.
 
 Commercial Production Proven means every release-critical item has L3 evidence. Do not infer L3 from source presence, a live deployment, a green CI run, or a prior release artifact alone.
+
+
+## Upstream verification note — 2026-10-03
+
+`digitalbazaar/forge#1152` is the upstream PR that implements the same nested `DigestAlgorithm` element-count fix. It remains open/unmerged; its diff explicitly adds the nested element-count check and a regression test. ORBIT therefore keeps the backport as a local patch rather than waiting for a published upstream version.
