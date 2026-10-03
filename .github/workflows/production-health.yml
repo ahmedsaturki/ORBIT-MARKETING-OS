@@ -66,3 +66,29 @@ jobs:
             provenanceSource: health.provenanceSource
           }));
           NODE
+
+      - name: WCAG 2.2 accessibility audit
+        uses: AccessLint/audit@ed90abdd631a044d622a4a0db9078bc750a5069b # v0.3.2
+        with:
+          urls: |
+            https://orbit-marketing-os.vercel.app/
+            https://orbit-marketing-os.vercel.app/pricing/
+            https://orbit-marketing-os.vercel.app/legal/privacy/
+            https://orbit-marketing-os.vercel.app/legal/terms/
+            https://orbit-marketing-os.vercel.app/legal/refunds/
+            https://orbit-marketing-os.vercel.app/legal/eula/
+          wcag-level: AA
+          min-impact: serious
+          fail-on: serious
+
+      - name: Upload accessibility report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: production-accessibility-${{ github.run_id }}
+          path: |
+            accesslint-report.json
+            accesslint-report.md
+            accesslint-report.sarif
+          if-no-files-found: ignore
+          retention-days: 30
