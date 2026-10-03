@@ -1,0 +1,9 @@
+# ORBIT repository ownership
+# Keep release, CI, security, and production-control changes explicitly owned.
+
+* @ahmedsaturki
+
+/.github/ @ahmedsaturki
+/release/ @ahmedsaturki
+/scripts/ @ahmedsaturki
+/docs/ @ahmedsaturki
