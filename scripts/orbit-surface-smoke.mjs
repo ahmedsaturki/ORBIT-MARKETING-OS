@@ -1,10 +1,8 @@
-import { spawnSync } from "node:child_process";
+import { spawnPnpm } from "./lib/spawn-pnpm.mjs";
 
-const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const env = { ...process.env, CI: "1" };
 
-const list = spawnSync(
-  command,
+const list = spawnPnpm(
   [
     "exec",
     "tsx",
@@ -14,7 +12,7 @@ const list = spawnSync(
     "--surface",
     "mcp",
   ],
-  { encoding: "utf8", env },
+  { env },
 );
 if (list.status !== 0) {
   process.stderr.write(list.stderr || list.stdout);
@@ -30,8 +28,7 @@ if (
   throw new Error("orbit_mcp_surface_smoke_failed");
 }
 
-const preview = spawnSync(
-  command,
+const preview = spawnPnpm(
   [
     "exec",
     "tsx",
@@ -46,7 +43,7 @@ const preview = spawnSync(
     "--scopes",
     "task:execute",
   ],
-  { encoding: "utf8", env },
+  { env },
 );
 if (preview.status !== 0) {
   process.stderr.write(preview.stderr || preview.stdout);
@@ -62,8 +59,7 @@ if (
 }
 
 function runMcp(input) {
-  const result = spawnSync(command, ["exec", "tsx", "scripts/orbit-mcp.ts"], {
-    encoding: "utf8",
+  const result = spawnPnpm(["exec", "tsx", "scripts/orbit-mcp.ts"], {
     env,
     input: input.trim() + "\n",
   });

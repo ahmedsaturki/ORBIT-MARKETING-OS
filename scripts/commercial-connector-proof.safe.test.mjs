@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawnPnpm } from "./lib/spawn-pnpm.mjs";
 
 const env = { ...process.env };
 delete env.ORBIT_TELEGRAM_TEST_TOKEN;
@@ -6,13 +6,9 @@ delete env.ORBIT_TELEGRAM_TEST_CHAT_ID;
 delete env.ORBIT_LINKEDIN_TEST_TOKEN;
 delete env.ORBIT_LINKEDIN_TEST_AUTHOR_URN;
 
-const result = spawnSync(
-  process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+const result = spawnPnpm(
   ["exec", "tsx", "scripts/commercial-connector-proof.ts", "--confirm-live"],
-  {
-    env,
-    encoding: "utf8",
-  },
+  { env },
 );
 
 if (result.status !== 2) {
@@ -38,10 +34,9 @@ for (const argv of [
   ["--confirm-live", "--output"],
   ["--confirm-live", "--output", "--confirm-live"],
 ]) {
-  const invalidOutput = spawnSync(
-    process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+  const invalidOutput = spawnPnpm(
     ["exec", "tsx", "scripts/commercial-connector-proof.ts", ...argv],
-    { env: process.env, encoding: "utf8" },
+    { env },
   );
   if (invalidOutput.status !== 2) {
     throw new Error(

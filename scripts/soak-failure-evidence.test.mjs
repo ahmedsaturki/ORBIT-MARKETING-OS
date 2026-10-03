@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { spawnPnpm } from "./lib/spawn-pnpm.mjs";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,26 +7,23 @@ import { join } from "node:path";
 const outputDir = mkdtempSync(join(tmpdir(), "orbit-soak-evidence-"));
 
 try {
-  try {
-    execFileSync(
-      process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-      ["exec", "tsx", "scripts/soak.ts", "--minutes", "1"],
-      {
-        cwd: process.cwd(),
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          GITHUB_SHA: "actual-sha",
-          ORBIT_EXPECTED_RELEASE_SHA: "different-sha",
-          ORBIT_SOAK_LOG_DIR: outputDir,
-        },
-        stdio: ["ignore", "pipe", "pipe"],
+  const result = spawnPnpm(
+    ["exec", "tsx", "scripts/soak.ts", "--minutes", "1"],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        GITHUB_SHA: "actual-sha",
+        ORBIT_EXPECTED_RELEASE_SHA: "different-sha",
+        ORBIT_SOAK_LOG_DIR: outputDir,
       },
-    );
-    throw new Error("soak mismatch test unexpectedly succeeded");
-  } catch (error) {
-    assert.equal(error?.status, 1);
-  }
+    },
+  );
+  assert.notEqual(
+    result.status,
+    0,
+    "soak source-SHA mismatch must fail closed with a non-zero exit",
+  );
 
   const summaryPath = join(outputDir, "soak-summary.json");
   const summary = JSON.parse(readFileSync(summaryPath, "utf8"));
