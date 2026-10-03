@@ -1,4 +1,5 @@
-import { execFileSync, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
+import { execFileTracked } from "./lib/exec.mjs";
 import { createServer } from "node:net";
 import { readFileSync } from "node:fs";
 
@@ -12,7 +13,7 @@ function rssMb(pid) {
   }
 
   if (process.platform === "darwin") {
-    const value = execFileSync("ps", ["-o", "rss=", "-p", String(pid)], {
+    const value = execFileTracked("ps", ["-o", "rss=", "-p", String(pid)], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
@@ -20,7 +21,7 @@ function rssMb(pid) {
     return Number.isFinite(kb) ? kb / 1024 : 0;
   }
 
-  const out = execFileSync(
+  const out = execFileTracked(
     "tasklist",
     ["/FI", "PID eq " + pid, "/FO", "CSV", "/NH"],
     { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },

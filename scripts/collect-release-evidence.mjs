@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
+import { execFileTracked } from "./lib/exec.mjs";
 import { fileURLToPath } from "node:url";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
@@ -34,7 +34,7 @@ function git(args) {
     delete env[key];
   }
 
-  return execFileSync("git", args, {
+  return execFileTracked("git", args, {
     cwd: repoRoot,
     encoding: "utf8",
     env,

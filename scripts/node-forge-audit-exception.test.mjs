@@ -7,9 +7,16 @@ const REVIEW_AFTER = "2026-11-03";
 const EXPECTED_PATCH_HASH =
   "1da5306df32cb00fb9309034ffcd35c1126ccd13ce79f5f0031825ad79bbab27";
 
+// GHSA-vfj7-8cjw-p6xm ("braces" stack-exhaustion ReDoS) has no released
+// patched version and is only reachable through the expo CLI build tooling
+// chain, which globs developer-controlled repository paths at build time.
+const BRACES_GHSA = "GHSA-vfj7-8cjw-p6xm";
+const BRACES_REVIEW_AFTER = "2026-11-03";
+
 const workspace = readFileSync("pnpm-workspace.yaml", "utf8");
 const lockfile = readFileSync("pnpm-lock.yaml", "utf8");
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+const exceptionsDoc = readFileSync("docs/SECURITY_EXCEPTIONS.md", "utf8");
 const regression = readFileSync(
   "packages/mobile/test/nodeForgeDigestInfo.test.ts",
   "utf8",
@@ -25,14 +32,14 @@ const ignoredGhsas = ignoreMatch[1]
   .filter(Boolean);
 assert.deepEqual(
   ignoredGhsas,
-  [GHSA],
-  "only the approved GHSA may be ignored by the package-manager audit",
+  [GHSA, BRACES_GHSA],
+  "only the approved GHSAs may be ignored by the package-manager audit",
 );
 
 assert.match(
   workspace,
   /patchedDependencies:\s*\n\s*node-forge@1\.4\.0:\s*patches\/node-forge@1\.4\.0\.patch/,
-  "the ignored GHSA must have a local node-forge patch",
+  "the ignored node-forge GHSA must have a local node-forge patch",
 );
 
 const lockMatch = lockfile.match(
@@ -80,14 +87,37 @@ assert.equal(
   "exception contract is tied to the repository's pinned package manager",
 );
 
-const reviewDate = new Date(REVIEW_AFTER + "T00:00:00Z");
-if (Number.isNaN(reviewDate.valueOf())) {
-  throw new Error("invalid review date");
-}
-if (Date.now() >= reviewDate.valueOf()) {
-  throw new Error(
-    "node-forge audit exception review date reached: " + REVIEW_AFTER,
+// The exception register is the human-readable authority; both governed
+// exceptions must be recorded there with their review dates.
+for (const [ghsa, reviewAfter] of [
+  [GHSA, REVIEW_AFTER],
+  [BRACES_GHSA, BRACES_REVIEW_AFTER],
+]) {
+  assert.match(
+    exceptionsDoc,
+    new RegExp(ghsa.replace(/-/gu, "\\u002d"), "u"),
+    `security exception register must record ${ghsa}`,
   );
+  assert.match(
+    exceptionsDoc,
+    new RegExp(`${ghsa.replace(/-/gu, "\\u002d")}[\\s\\S]*${reviewAfter}`, "u"),
+    `security exception register must carry the review date for ${ghsa}`,
+  );
+}
+
+for (const [ghsa, reviewAfter] of [
+  [GHSA, REVIEW_AFTER],
+  [BRACES_GHSA, BRACES_REVIEW_AFTER],
+]) {
+  const reviewDate = new Date(reviewAfter + "T00:00:00Z");
+  if (Number.isNaN(reviewDate.valueOf())) {
+    throw new Error("invalid review date for " + ghsa);
+  }
+  if (Date.now() >= reviewDate.valueOf()) {
+    throw new Error(
+      "audit exception review date reached: " + reviewAfter + " (" + ghsa + ")",
+    );
+  }
 }
 
 console.log(

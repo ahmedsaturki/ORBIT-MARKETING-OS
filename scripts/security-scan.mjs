@@ -1,5 +1,5 @@
-import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
+import { execFileTracked } from "./lib/exec.mjs";
 import { fileURLToPath } from "node:url";
 import { readFile } from "node:fs/promises";
 
@@ -17,7 +17,7 @@ for (const key of [
   delete gitEnv[key];
 }
 
-const tracked = execFileSync("git", ["ls-files", "-z"], {
+const tracked = execFileTracked("git", ["ls-files", "-z"], {
   cwd: repoRoot,
   encoding: "utf8",
   env: gitEnv,

@@ -1,3 +1,14 @@
+/**
+ * Strip CR/LF and other control characters from externally sourced values
+ * before they reach logs or thrown errors (SonarCloud jssecurity:S5145).
+ * Verification semantics always use the unsanitized originals.
+ */
+function sanitizeForLog(value) {
+  return String(value ?? "")
+    .replace(/[\u0000-\u001f\u007f]/gu, " ")
+    .slice(0, 512);
+}
+
 const base = (
   process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app"
 ).replace(/\/$/, "");
@@ -44,8 +55,8 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
         console.log(
           JSON.stringify({
             status: "PASS",
-            origin: base,
-            expectedReleaseSha: expected,
+            origin: sanitizeForLog(base),
+            expectedReleaseSha: sanitizeForLog(expected),
             expectedReleaseVersion: expectedVersion,
             verifiedVersion: healthBody?.version,
             verifiedPaths: ["/", "/api/health.json", "/api/release.json"],
@@ -65,5 +76,5 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
 }
 
 throw new Error(
-  `Vercel production did not expose the expected release SHA within 3 minutes. expected=${expected} last=${last}`,
+  `Vercel production did not expose the expected release SHA within 3 minutes. expected=${sanitizeForLog(expected)} last=${sanitizeForLog(last)}`,
 );

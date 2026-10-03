@@ -183,6 +183,8 @@ jobs:
         run: pnpm security:scan
       - name: Secret scan contract test
         run: pnpm test:security:scan
+      - name: Trusted executable resolution contract test
+        run: pnpm test:exec-trusted
 
   rust:
     name: Rust quality

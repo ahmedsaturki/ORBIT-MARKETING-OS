@@ -71,6 +71,13 @@ function createFixtureRepo(name, files) {
     join(scriptsDir, "security-scan.mjs"),
     join(repoDir, "scripts", "security-scan.mjs"),
   );
+  // The scanner resolves git through the trusted-executable helper; copy the
+  // helper module alongside the scanner so the fixture is self-contained.
+  mkdirSync(join(repoDir, "scripts", "lib"), { recursive: true });
+  copyFileSync(
+    join(scriptsDir, "lib", "exec.mjs"),
+    join(repoDir, "scripts", "lib", "exec.mjs"),
+  );
   for (const [relativePath, content] of Object.entries(files)) {
     const target = join(repoDir, relativePath);
     mkdirSync(dirname(target), { recursive: true });
@@ -112,14 +119,15 @@ try {
 
     const summary = JSON.parse(result.stdout);
     assert.equal(summary.status, "passed");
-    // The fixture is fully controlled: the scanner itself plus the two files
-    // this case declares, so these counts are exact and not environment-bound.
+    // The fixture is fully controlled: the scanner, its lib/exec.mjs helper,
+    // plus the two files this case declares, so these counts are exact and
+    // not environment-bound.
     assert.equal(
       summary.trackedFiles,
-      3,
+      4,
       "summary must count every tracked file, including the scanner itself",
     );
-    assert.equal(summary.checkedTextFiles, 3);
+    assert.equal(summary.checkedTextFiles, 4);
   }
 
   // 2. Embedded credential in a tracked text file: exit 1, named on stderr.

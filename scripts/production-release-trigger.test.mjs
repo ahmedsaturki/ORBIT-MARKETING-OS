@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import {
   commit,
   commitSha,
@@ -39,6 +39,13 @@ test("production release resolver binds the release to the marker commit", async
       releaseId: "bootstrap",
     });
     await cp(RESOLVER, join(cwd, "scripts", "resolve-production-release.mjs"));
+    // The resolver shells git through the trusted-executable helper; copy the
+    // helper module alongside so the fixture is self-contained.
+    await mkdir(join(cwd, "scripts", "lib"), { recursive: true });
+    await cp(
+      join(dirname(RESOLVER), "lib", "exec.mjs"),
+      join(cwd, "scripts", "lib", "exec.mjs"),
+    );
     await commit(cwd, "bootstrap");
 
     let current = await commitSha(cwd);
