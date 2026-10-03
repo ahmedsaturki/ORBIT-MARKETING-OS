@@ -1,6 +1,6 @@
 # Implementation Status
 
-Updated: 2026-09-29.
+Updated: 2026-10-02.
 
 ## Current state
 
@@ -62,6 +62,6 @@ No unsupported external connector capability is implied by contracts or fixtures
 
 Protected-main CI/security governance is verified. Production is explicitly controlled by the reviewed non-bootstrap `release/PRODUCTION_RELEASE.json` marker. The canonical alias is currently served by `dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV` on `9ba07318f4d580e670be9d27ec76888e66013340`, with public version/provenance checks passing. Ordinary moving-main commits are not automatically treated as the serving Production release.
 
-Automated restart/recovery/migration evidence is now consolidated and passing on current main; dedicated forced-crash/field recovery, 24-hour soak, rollback, and the remaining external/commercial gates are still separate requirements.
+Automated restart/recovery/migration evidence is consolidated and passing for CI run `36621459773` @ `70dc187d` (a pinned historical commit 56 commits behind the current release SHA; its recovery artifact `11059010547` was not re-emitted by release-SHA run `36736876944`); dedicated forced-crash/field recovery, 24-hour soak, rollback, and the remaining external/commercial gates are still separate requirements.
 
 Implementation and green CI are substantial evidence, but they do not by themselves establish commercial release readiness.
