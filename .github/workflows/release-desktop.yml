@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: orbit-release-${{ github.ref }}
@@ -27,6 +27,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
+          package-manager-cache: false
       - name: Require committed lockfiles
         run: test -f pnpm-lock.yaml
       - name: Require desktop Cargo.lock
@@ -76,6 +77,9 @@ jobs:
     name: Build ${{ matrix.os }}
     permissions:
       contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     needs: quality
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -109,6 +113,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
+          package-manager-cache: false
 
       - name: Install Linux Tauri dependencies
         if: runner.os == 'Linux'
@@ -122,7 +127,7 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
-      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # zizmor: ignore[impostor-commit] verified stable action commit
         with:
           toolchain: 1.98.1
           components: rustfmt,clippy
@@ -141,6 +146,34 @@ jobs:
 
       - name: Build desktop
         run: pnpm --dir packages/desktop tauri build
+
+      - name: Generate desktop SBOM
+        uses: anchore/sbom-action@a930d0ac434e3182448fe678398ba5713717112a # v0.21.0
+        with:
+          path: packages/desktop/src-tauri/target/release/bundle
+          format: cyclonedx-json
+          output-file: release-sbom/orbit-desktop-${{ matrix.artifact }}.cdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Upload desktop SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: orbit-desktop-sbom-${{ matrix.artifact }}
+          path: release-sbom/orbit-desktop-${{ matrix.artifact }}.cdx.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Generate desktop provenance attestation
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: packages/desktop/src-tauri/target/release/bundle/**/*
+
+      - name: Generate desktop SBOM attestation
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: packages/desktop/src-tauri/target/release/bundle/**/*
+          sbom-path: release-sbom/orbit-desktop-${{ matrix.artifact }}.cdx.json
 
       - name: Upload desktop bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -187,8 +220,9 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
         shell: bash
         run: |
           mapfile -d '' ASSETS < <(find release-assets -type f ! -name 'SHA256SUMS.txt' -print0)
           test "${#ASSETS[@]}" -gt 0
-          gh release create "${GITHUB_REF_NAME}"             --title "ORBIT Marketing OS ${{ github.ref_name }} — validation build"             --prerelease --generate-notes             release-assets/SHA256SUMS.txt             "${ASSETS[@]}"
+          gh release create "$RELEASE_TAG"             --title "ORBIT Marketing OS $RELEASE_TAG — validation build"             --prerelease --generate-notes             release-assets/SHA256SUMS.txt             "${ASSETS[@]}"
