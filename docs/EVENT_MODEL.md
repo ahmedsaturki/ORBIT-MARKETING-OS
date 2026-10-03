@@ -29,7 +29,7 @@ A blocked path is explicit: command.received -> command.blocked, while human int
 
 ## Persistence
 
-SQLite remains the source of truth. The desktop runtime now persists the exact logical contract (`workspace_id`, `sequence`, `trace_id`, `parent_event_id`, kind, outcome, actor identity, and redacted payload) in the current schema v14, with workspace/time, entity, and trace indexes. The event table contains no raw secrets by design.
+SQLite remains the source of truth. The desktop runtime now persists the exact logical contract (`workspace_id`, `sequence`, `trace_id`, `parent_event_id`, kind, outcome, actor identity, and redacted payload) in the current schema v16 (`SCHEMA_VERSION` in `packages/desktop/src-tauri/src/lib.rs`), with workspace/time, entity, and trace indexes. The event table contains no raw secrets by design.
 
 ## Verification contract
 

@@ -1,6 +1,6 @@
 # Connector Capability Matrix
 
-Updated: 2026-09-24
+Updated: 2026-10-03
 
 ## Current implementation evidence
 
@@ -12,6 +12,17 @@ Updated: 2026-09-24
 | WhatsApp  | yes       |                yes |     yes |                 no |       UNVERIFIED |
 | LinkedIn  | yes       |                yes |     yes |                yes |       UNVERIFIED |
 | TikTok    | yes       |                yes |     yes |                 no |       UNVERIFIED |
+
+## Governed execution invariants
+
+| Invariant                | Statement                                                                                                                                         | Evidence                                                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| CONN-04 Native budgets   | Native direct execution refuses work once the local daily limit or circuit-breaker threshold is reached; the check runs before the external call. | `lib.rs` execution counter guards + native unit tests; failure stays fail-closed.                                                    |
+| CONN-05 LinkedIn scoping | The LinkedIn Posts adapter is capability-scoped (publish only) and refuses execution without an authorized, confirmed context.                    | `packages/core/test/linkedin.test.ts` against controlled API fixtures; a real-account run remains an owner-controlled external gate. |
+
+Both invariants are enforced at every known call site, including
+`scripts/commercial-connector-proof.ts`, which evaluates the execution policy
+(approval, daily budget, circuit breaker) before invoking any connector.
 
 ## Connector rules
 

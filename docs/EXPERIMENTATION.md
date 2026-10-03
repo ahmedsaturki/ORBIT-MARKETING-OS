@@ -62,7 +62,7 @@ Current implemented layers:
 - strict variant/time-window validation;
 - workspace-scoped observation aggregation;
 - regression tests for unknown variants and unexposed value;
-- native SQLite persistence through schema v15;
+- native SQLite persistence through schema v16;
 - native deterministic assignment and summary commands;
 - workspace integrity triggers;
 - audit and operational-event integration;
