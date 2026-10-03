@@ -28,7 +28,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: orbit-lighthouse-\${{ github.event.pull_request.number || github.ref }}
+  group: orbit-lighthouse-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
