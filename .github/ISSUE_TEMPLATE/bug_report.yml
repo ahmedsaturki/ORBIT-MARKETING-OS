@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a reproducible defect in ORBIT
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not include passwords, API keys, session cookies, private customer data, or live connector credentials.
+
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      description: Which ORBIT surface is affected?
+      placeholder: Core / Desktop / Mobile / Web / Connector / CI / Release
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Give deterministic steps to reproduce the issue.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version, app build/commit, and relevant toolchain details.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Logs, screenshots, failing test names, or CI run links. Redact secrets.
+    validations:
+      required: true
