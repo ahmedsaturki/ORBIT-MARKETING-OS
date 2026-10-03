@@ -141,6 +141,15 @@ actually proves.
   `scripts/build-tauri.mjs`, `scripts/commit-lockfiles.mjs`, and several
   `*.test.mjs` fixtures. A new spawn site therefore fails open until someone
   converts it.
+- **Outbound fetches are allowlisted per script, not centrally enforced.**
+  `scripts/verify-public-vercel-provenance.mjs` validates `ORBIT_LIVE_URL`
+  against an explicit host allowlist, requires HTTPS, refuses redirects, and
+  sanitizes every value it echoes; `scripts/verify-public-vercel-provenance.test.mjs`
+  drives loopback, cloud-metadata, userinfo-embedded, and prefix-trick hosts
+  through the real script and asserts each is refused before any request. That
+  is one script fixed one way. There is no shared HTTP client carrying the
+  allowlist, so the next script that fetches an env-derived URL can reintroduce
+  the same sink.
 
 ## Release gate
 

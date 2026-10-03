@@ -9,16 +9,52 @@ function sanitizeForLog(value) {
     .slice(0, 512);
 }
 
-const base = (
-  process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app"
-).replace(/\/$/, "");
+/**
+ * Only HTTPS origins that pass an explicit allowlist may be fetched. The base
+ * URL arrives from the environment (SonarCloud jssecurity:S5145: tainted
+ * input reaching `fetch`), and every value interpolated into the error or the
+ * summary is sanitized on the way out (log injection).
+ */
+const ALLOWED_HOSTS = new Set([
+  "orbit-marketing-os.vercel.app",
+  "orbit-marketing-os-git-main-team.vercel.app",
+]);
+
+function resolveLiveOrigin() {
+  const raw = (
+    process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app"
+  ).trim();
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error(
+      `ORBIT_LIVE_URL is not a valid absolute URL: ${sanitizeForLog(raw)}`,
+    );
+  }
+  if (url.protocol !== "https:") {
+    throw new Error(
+      `ORBIT_LIVE_URL must use https, got ${sanitizeForLog(url.protocol)}`,
+    );
+  }
+  if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) {
+    throw new Error(
+      `ORBIT_LIVE_URL host is not an allowed deployment host: ${sanitizeForLog(url.hostname)}`,
+    );
+  }
+  return raw.replace(/\/$/, "");
+}
+
+const base = resolveLiveOrigin();
 const expected = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
 const expectedVersion = process.env.ORBIT_EXPECTED_RELEASE_VERSION ?? "1.0.0";
 
 async function get(pathname) {
-  return fetch(base + pathname, {
+  // All callers pass literal path constants.
+  return fetch(new URL(pathname, base), {
     headers: { accept: "application/json,text/html" },
     signal: AbortSignal.timeout(15_000),
+    redirect: "error",
   });
 }
 
