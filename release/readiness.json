@@ -14,13 +14,14 @@
       "evidence": [
         "CI run 37134186892 on the provenance-origin-taint change: ci and security:scan both green",
         "SonarCloud analysis run 37133543482 completed success on merged main b3327242",
-        "jssecurity:S5145 on scripts/verify-public-vercel-provenance.mjs fixed and covered by a behavioral contract",
-        "pnpm audit --audit-level=moderate green under the governed node-forge exception (2 allowlisted advisories, hash-pinned patch, review dates 2026-10-03)"
+        "pnpm audit --audit-level=moderate green under the governed node-forge exception (2 allowlisted advisories, hash-pinned patch, review dates 2026-10-03)",
+        "SonarCloud quality gate on main is OK: new_security_rating A, zero open new-code vulnerabilities (issue #112 closed)"
       ],
-      "notes": "Current main passed the full local gate battery on Windows (frozen install, verify:workspace, verify:release, verify:readiness, security:scan, typecheck, lint, test, test:surface, test:runtime, test:performance, test:exec-trusted, test:script-contracts, test:security:scan, build, test:e2e, triage:release, cargo test 105/105, cargo clippy -D warnings, cargo fmt --check) and the matching CI/security cycle on run 37134186892. Local `pnpm format:check` fails only because core.autocrlf=true rewrites 325 files to CRLF; the same command passes in CI on Ubuntu and is the authoritative signal. The previously open SonarCloud S5145 finding was resolved by making the provenance fetch target a literal constant, verified by 16 hostile-origin cases plus both allowlisted origins. SonarCloud Security Rating on New Code is re-measured on each main analysis and is not asserted here beyond the check runs cited.",
+      "notes": "Current main passed the full local gate battery on Windows (frozen install, verify:workspace, verify:release, verify:readiness, security:scan, typecheck, lint, test, test:surface, test:runtime, test:performance, test:exec-trusted, test:script-contracts, test:security:scan, build, test:e2e, triage:release, cargo test 105/105, cargo clippy -D warnings, cargo fmt --check) and the matching CI/security cycle on run 37134186892. Local `pnpm format:check` fails only because core.autocrlf=true rewrites 325 files to CRLF; the same command passes in CI on Ubuntu and is the authoritative signal. The SonarCloud prerequisite is met: the quality gate on main reports new_security_rating A with zero open new-code vulnerabilities, verified on merged main 992e1b64. The originating finding was jssecurity:S5145 (log injection, not SSRF) in the production-provenance verifier; it was fixed in PR #211 with a behavioral contract that fails on any future unsanitized log site, and #112 is closed with that evidence.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37134186892",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37133543482",
+        "https://sonarcloud.io/dashboard?id=ahmedsaturki_ORBIT-MARKETING-OS&branch=main",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/112"
       ],
       "verifiedAt": "2026-10-03T00:00:00Z"
@@ -78,13 +79,15 @@
         "pnpm test:exec-trusted green; 9 highest-risk spawn sites resolve through scripts/lib/exec.mjs allowlist",
         "scripts/lib/spawn-pnpm.test.mjs pins the cross-platform pnpm spawn contract",
         "scripts/verify-public-vercel-provenance.test.mjs pins the outbound-fetch origin contract",
-        "Governed audit exceptions asserted by scripts/node-forge-audit-exception.test.mjs in five workflows before pnpm audit"
+        "Governed audit exceptions asserted by scripts/node-forge-audit-exception.test.mjs in five workflows before pnpm audit",
+        "SonarCloud quality gate OK on main: new_security_rating A, zero open new-code vulnerabilities"
       ],
-      "notes": "Security gates are green, and the documented known gaps in docs/SECURITY_THREAT_MODEL.md were corrected against the code this session (four false or half-true claims replaced, one real residual gap added). Final L3 commercial governance still requires auditable evidence references, real-world evidence, and verification time across all remaining release-critical gates.",
+      "notes": "Security gates are green, the documented known gaps in docs/SECURITY_THREAT_MODEL.md were corrected against the code this session (four false or half-true claims replaced, two real residual gaps added), and the SonarCloud new-code security rating is A with the quality gate reporting OK. Final L3 commercial governance still requires auditable evidence references, real-world evidence, and verification time across all remaining release-critical gates.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37134186892",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37133543482",
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/24"
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/24",
+        "https://sonarcloud.io/dashboard?id=ahmedsaturki_ORBIT-MARKETING-OS&branch=main"
       ],
       "verifiedAt": "2026-10-03T00:00:00Z"
     },
@@ -189,7 +192,10 @@
       "cargoTestsPassed": 105,
       "playwrightPassed": 24,
       "playwrightSkipped": 10,
-      "acceptanceMatrix": "76 PASS / 10 PARTIAL / 1 UNVERIFIED across 87 IDs"
+      "acceptanceMatrix": "76 PASS / 10 PARTIAL / 1 UNVERIFIED across 87 IDs",
+      "sonarNewSecurityRating": "A",
+      "sonarOpenNewCodeVulnerabilities": 0,
+      "sonarQualityGate": "OK"
     },
     "note": "Point-in-time observation of the moving main branch, measured by running the gates locally on Windows and cross-checked against CI. The exact SHA is bound by the immutable GitHub Actions run context rather than hard-coded here. Local `pnpm format:check` is CRLF-noisy under core.autocrlf=true; CI on Ubuntu is authoritative and passed.",
     "ref": "main",
