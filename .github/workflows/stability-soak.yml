@@ -59,14 +59,17 @@ jobs:
         run: pnpm test:soak:evidence
 
       - name: Require exact commercial soak duration
+        env:
+          SOAK_HOURS: ${{ github.event.inputs.hours }}
         run: |
           set -euo pipefail
-          test "${{ github.event.inputs.hours }}" = "24"
+          test "$SOAK_HOURS" = "24"
 
       - name: Run stability soak
         env:
           ORBIT_EXPECTED_RELEASE_SHA: ${{ github.sha }}
-        run: pnpm exec tsx scripts/soak.ts --hours "${{ github.event.inputs.hours }}"
+          SOAK_HOURS: ${{ github.event.inputs.hours }}
+        run: pnpm exec tsx scripts/soak.ts --hours "$SOAK_HOURS"
 
       - name: Upload soak evidence
         if: always()
