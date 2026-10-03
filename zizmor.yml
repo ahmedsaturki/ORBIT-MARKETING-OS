@@ -1,0 +1,10 @@
+rules:
+  impostor-commit:
+    ignore:
+      - bootstrap-lockfile.yml:27
+      - bootstrap-lockfiles-hosted.yml:27
+      - ci.yml:198
+      - desktop-native-validation.yml:69
+      - format-rebuild.yml:33
+      - rebuild-rust.yml:43
+      - self-hosted-verify.yml:32
