@@ -50,14 +50,14 @@ Updated: 2026-09-29.
 
 ## Intelligence
 
-| Gate                                     | Status      | Evidence                                                          |
-| ---------------------------------------- | ----------- | ----------------------------------------------------------------- |
-| RESEARCH-01 Research evidence model      | VERIFIED    | Native persistence, workspace checks and source/evidence contract |
-| EXP-01 Deterministic experimentation     | VERIFIED    | Deterministic assignment and aggregation tests                    |
-| EXP-02 Descriptive uncertainty           | VERIFIED    | Wilson/Newcombe-Wilson bounded interval implementation/tests      |
-| AN-01 Descriptive anomaly detection      | VERIFIED    | Deterministic rolling median/MAD tests                            |
-| AGENT-01 Governed agent registry         | VERIFIED    | Agent authorization and workspace boundaries                      |
-| PLATFORM-01 Platform manifest foundation | IMPLEMENTED | Unit-tested registry foundation; deeper integration remains       |
+| Gate                                     | Status      | Evidence                                                                                                             |
+| ---------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| RESEARCH-01 Research evidence model      | VERIFIED    | Native persistence, workspace checks and source/evidence contract                                                    |
+| EXP-01 Deterministic experimentation     | VERIFIED    | Deterministic assignment and aggregation tests                                                                       |
+| EXP-02 Deterministic variant assignment  | VERIFIED    | Deterministic workspace-scoped assignment tests; matrix wording. Bounded uncertainty intervals are covered by EXP-07 |
+| AN-01 Campaign-scoped analytics          | VERIFIED    | Campaign analytics isolation tests; deterministic rolling median/MAD anomaly detection is covered by AN-03           |
+| AGENT-01 Governed agent registry         | VERIFIED    | Agent authorization and workspace boundaries                                                                         |
+| PLATFORM-01 Platform manifest foundation | IMPLEMENTED | Unit-tested registry foundation; deeper integration remains                                                          |
 
 ## Connectors
 
