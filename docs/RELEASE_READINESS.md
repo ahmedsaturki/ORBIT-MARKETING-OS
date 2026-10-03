@@ -1,6 +1,6 @@
 # ORBIT Marketing OS — Release Readiness
 
-Updated: 2026-09-29.
+Updated: 2026-10-02.
 
 ## Canonical state
 
