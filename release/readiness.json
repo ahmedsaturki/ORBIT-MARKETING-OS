@@ -13,9 +13,9 @@
       "level": "L2_VERIFIED",
       "evidence": [
         "CI run 37134186892 on the provenance-origin-taint change: ci and security:scan both green",
-        "SonarCloud analysis run 37133543482 completed success on merged main b3327242",
+        "CI run 37133543482 (push to main) completed success on b3327242 with jobs ci, security:scan and Rust quality all green",
         "pnpm audit --audit-level=moderate green under the governed node-forge exception (2 allowlisted advisories, hash-pinned patch, review dates 2026-10-03)",
-        "SonarCloud quality gate on main is OK: new_security_rating A, zero open new-code vulnerabilities (issue #112 closed)"
+        "SonarCloud quality gate on main is OK: new_security_rating A, zero open new-code vulnerabilities (issue #112 closed 2026-10-03T16:04:43Z). SonarCloud status is reported by an external GitHub App, not by a workflow in this repository, so it cannot be re-derived from these CI runs"
       ],
       "notes": "Current main passed the full local gate battery on Windows (frozen install, verify:workspace, verify:release, verify:readiness, security:scan, typecheck, lint, test, test:surface, test:runtime, test:performance, test:exec-trusted, test:script-contracts, test:security:scan, build, test:e2e, triage:release, cargo test 182/182, cargo clippy -D warnings, cargo fmt --check) and the matching CI/security cycle on run 37134186892. Local `pnpm format:check` fails only because core.autocrlf=true rewrites 325 files to CRLF; the same command passes in CI on Ubuntu and is the authoritative signal. The SonarCloud prerequisite is met: the quality gate on main reports new_security_rating A with zero open new-code vulnerabilities, verified on merged main 992e1b64. The originating finding was jssecurity:S5145 (log injection, not SSRF) in the production-provenance verifier; it was fixed in PR #211 with a behavioral contract that fails on any future unsanitized log site, and #112 is closed with that evidence.",
       "evidenceRefs": [
