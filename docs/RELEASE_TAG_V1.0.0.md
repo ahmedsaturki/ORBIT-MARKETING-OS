@@ -67,6 +67,16 @@ then a real release run: build the desktop artifact, emit checksums, and verify
 them against what was published. Until that execution exists, the honest status
 is UNVERIFIED.
 
+Because that gate sits in the `build` job, a mis-tagged release used to burn
+four Tauri builds across the OS matrix before failing. A pre-flight check now
+runs it in the quality gate's first step instead, failing in seconds with the
+commit list that needs merging. The quality job's checkout gained
+`fetch-depth: 0`, since `merge-base --is-ancestor` is unreliable on a shallow
+clone. The `build` job keeps its own copy of the check as defence in depth.
+
+Both directions were checked against this repository's real history: tag
+`v1.0.0` exits 1, `origin/main`'s head and a mid-history commit exit 0.
+
 ### What the tag does provide
 
 - A stable release identifier for audit trails
