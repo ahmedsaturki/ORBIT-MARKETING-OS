@@ -18,12 +18,14 @@ by running the command named beside it, not by reading a prior report.
 | **Release**     | **NOT READY** | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
 | **Owner Gates** | **5 of 13**   | `external_connectors`, `accessibility`, `stability_soak`, `commercial_billing`, `legal_commercial`. Nine owner _actions_ remain, listed in section 7  |
 
-All of the above is confirmed by a clean CI run on `cc5979a7`, not by local
-execution alone: 16 of 17 checks pass, including all four platform builds,
-Windows native E2E at 35 passed, Android debug validation, `ci`, `Rust quality`,
-`security:scan`, SonarCloud, CodeRabbit and CodeFactor. The single failure is
-`security/snyk`, which fails on plan quota; `pnpm audit` independently reports 2
-high advisories, both governed by documented exceptions.
+All of the above is confirmed by a clean CI run, not by local execution alone:
+16 of 17 checks pass, including all four platform builds, Windows native E2E at
+35 passed, Android debug validation, `ci`, `Rust quality`, `security:scan`,
+CodeRabbit and CodeFactor. The single failure is `security/snyk`, which fails on
+plan quota; `pnpm audit` independently reports 2 high advisories, both governed
+by documented exceptions. The SonarCloud status posted to pull requests comes
+from an external GitHub App rather than a workflow in this repository — see the
+correction in section 7.
 
 ### Overall
 
@@ -248,13 +250,24 @@ itself is sound.
 7. Complete legal/commercial publication review
 8. Complete the WCAG/RTL accessibility audit
 9. Verify multi-device sync with real devices
-10. ~~Resolve the SonarCloud new-code rating gap~~ — **closed**
+10. ~~Resolve the SonarCloud new-code rating gap~~ — **closed**, see the correction below
 
 Items 1–3 and 9 are tracked in `release/readiness.json`. A tenth item, the
-SonarCloud new-code security rating, was listed here and is now closed: the
-rating is A with zero open new-code vulnerabilities, and both the analysis and
-the quality-gate check pass on this branch. That leaves nine owner actions, none
+SonarCloud new-code security rating, was listed here and is now closed: issue
+#112 ("quality: resolve SonarCloud main Security Rating B on New Code") is
+closed on the remote, and the rating is recorded as A with zero open new-code
+vulnerabilities in `release/readiness.json`. That leaves nine owner actions, none
 of which an engineer can complete alone.
+
+**Correction to that item.** An earlier draft of this file claimed "both the
+analysis and the quality-gate check pass on this branch". That was wrong, and
+checking it cost one command: this repository has **no SonarCloud workflow**.
+`ls .github/workflows/` returns 17 files and none references Sonar, and
+`grep -rli sonar .github/` returns nothing. The checks seen on pull requests come
+from an external GitHub App reporting into the Checks API, not from CI defined
+here. The substantive claim — rating A, zero open new-code vulnerabilities, issue
+#112 closed — is verifiable and stands; the claim that this branch runs the check
+does not.
 
 This list of nine actions is not the same as gate ownership, and the two now
 differ because the gate model was corrected. `scripts/release-gate-model.mjs`
