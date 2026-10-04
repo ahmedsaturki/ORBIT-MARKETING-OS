@@ -15255,3 +15255,159 @@ mod interrupted_restore_recovery_tests {
         fs::remove_dir_all(&root).expect("recovery fixture directory should be removed");
     }
 }
+
+#[cfg(test)]
+mod workspace_role_authorization_tests {
+    use super::*;
+
+    fn membership_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');",
+            )
+            .expect("workspaces should be created");
+        connection
+    }
+
+    fn grant(connection: &Connection, workspace_id: &str, user_id: &str, role: &str) {
+        connection
+            .execute(
+                "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES (?1, ?2, ?3, 1, '1')",
+                params![workspace_id, user_id, role],
+            )
+            .expect("membership should be created");
+    }
+
+    fn act_as(connection: &Connection, user_id: &str) {
+        connection
+            .execute(
+                "INSERT INTO runtime_state(key, value) VALUES ('local_user_id', ?1)
+                 ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                params![user_id],
+            )
+            .expect("local user should be switchable");
+    }
+
+    // AppError cannot derive PartialEq (it wraps rusqlite::Error and
+    // io::Error), so assert the refusal by variant instead of by equality.
+    fn assert_unauthorized(result: Result<(), AppError>, context: &str) {
+        match result {
+            Err(AppError::Unauthorized) => {}
+            Err(other) => panic!("{context}: expected Unauthorized, got {other:?}"),
+            Ok(()) => panic!("{context}: expected Unauthorized, but the call succeeded"),
+        }
+    }
+
+    // The sensitive write path used by insight_upsert and friends.
+    fn require_write_role(connection: &Connection, workspace_id: &str) -> Result<(), AppError> {
+        require_workspace_role_for(
+            connection,
+            workspace_id,
+            &["owner", "admin", "editor", "operator"],
+        )
+    }
+
+    // The read path used by insight_list.
+    fn require_read_role(connection: &Connection, workspace_id: &str) -> Result<(), AppError> {
+        require_workspace_role_for(
+            connection,
+            workspace_id,
+            &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+        )
+    }
+
+    #[test]
+    fn every_write_capable_role_is_authorized_to_write() {
+        let connection = membership_connection();
+        for role in ["owner", "admin", "editor", "operator"] {
+            grant(&connection, "workspace-a", &format!("user-{role}"), role);
+        }
+        for role in ["owner", "admin", "editor", "operator"] {
+            act_as(&connection, &format!("user-{role}"));
+            assert!(
+                require_write_role(&connection, "workspace-a").is_ok(),
+                "{role} must be authorized to write",
+            );
+        }
+    }
+
+    // RBAC-01: a role without write privilege must be refused, not silently
+    // downgraded. reviewer and viewer are the two that exist.
+    #[test]
+    fn reviewer_and_viewer_are_refused_the_write_path() {
+        let connection = membership_connection();
+        grant(&connection, "workspace-a", "user-reviewer", "reviewer");
+        grant(&connection, "workspace-a", "user-viewer", "viewer");
+
+        for user in ["user-reviewer", "user-viewer"] {
+            act_as(&connection, user);
+            assert_unauthorized(
+                require_write_role(&connection, "workspace-a"),
+                &format!("{user} write"),
+            );
+            assert!(
+                require_read_role(&connection, "workspace-a").is_ok(),
+                "{user} must retain read access",
+            );
+        }
+    }
+
+    #[test]
+    fn a_user_with_no_membership_is_unauthorized() {
+        let connection = membership_connection();
+        grant(&connection, "workspace-a", "user-editor", "editor");
+        act_as(&connection, "user-outsider");
+
+        assert_unauthorized(
+            require_write_role(&connection, "workspace-a"),
+            "non-member write",
+        );
+        assert_unauthorized(
+            require_read_role(&connection, "workspace-a"),
+            "non-member read",
+        );
+    }
+
+    // Authorization must not leak across workspaces.
+    #[test]
+    fn membership_in_one_workspace_does_not_authorize_another() {
+        let connection = membership_connection();
+        grant(&connection, "workspace-a", "user-owner", "owner");
+        act_as(&connection, "user-owner");
+
+        assert!(require_write_role(&connection, "workspace-a").is_ok());
+        assert_unauthorized(
+            require_write_role(&connection, "workspace-b"),
+            "cross-workspace write",
+        );
+    }
+
+    // A deactivated membership must not keep its privileges.
+    #[test]
+    fn a_deactivated_membership_is_unauthorized() {
+        let connection = membership_connection();
+        grant(&connection, "workspace-a", "user-admin", "admin");
+        act_as(&connection, "user-admin");
+        assert!(require_write_role(&connection, "workspace-a").is_ok());
+
+        connection
+            .execute(
+                "UPDATE workspace_memberships SET active=0
+                 WHERE workspace_id='workspace-a' AND user_id='user-admin'",
+                [],
+            )
+            .expect("membership should be deactivated");
+
+        assert_unauthorized(
+            require_write_role(&connection, "workspace-a"),
+            "deactivated membership",
+        );
+    }
+}

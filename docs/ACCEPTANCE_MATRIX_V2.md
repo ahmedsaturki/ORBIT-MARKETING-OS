@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**62 PASS, 13 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+**63 PASS, 12 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
 
 Classification rules applied:
 
@@ -69,7 +69,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | QUE-02 | PASS | `test/retry.test.ts (3 tests)` | — |
 | QUE-03 | PASS | `src/security.test.ts` :: opens a circuit after consecutive failures | — |
 | QUE-04 | PASS | `src/queue/taskQueue.test.ts` :: parks user-action tasks and defers without consuming attempts | — |
-| RBAC-01 | PARTIAL | `test/access.test.ts (role permission matrix tests)` | No Tauri IPC negative test for role authorization (e.g., attempt to invoke a sensitive command without sufficient role) |
+| RBAC-01 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: workspace_role_authorization_tests (write roles authorized; reviewer/viewer/non-member/deactivated/cross-workspace refused) | `test/access.test.ts (role permission matrix tests)` |
 | CAMP-01 | PASS | `e2e/tauri-shell.spec.ts` :: bulk task enqueue is atomic (campaign_create → task_enqueue) | — |
 | CAMP-02 | PARTIAL | `test/executionPolicy.test.ts` :: blocks disconnected accounts before approval evaluation (unit test) | No E2E test that creates a campaign for a disconnected account and verifies rejection |
 | CAMP-03 | PASS | `test/executionPolicy.test.ts` :: fails closed without approval | No full-stack workflow E2E that executes a task through approval gate, waits for approval, then proceeds |
