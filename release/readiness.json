@@ -251,11 +251,12 @@
     "note": "This is the latest directly observed canonical production state. It is distinct from the moving main SHA and from the pinned release-marker gitCommit."
   },
   "releaseTruth": {
-    "state": "UNVERIFIED",
+    "state": "PARTIAL",
     "releaseId": "orbit-v1.0.0-prod",
     "releaseVersion": "1.0.0",
+    "tag": "v1.0.0",
     "productionDeploymentId": "dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV",
     "productionSha": "9ba07318f4d580e670be9d27ec76888e66013340",
-    "note": "Production is live and provenance is directly observed; exact moving-main SHA is intentionally carried by the GitHub Actions run context rather than hard-coded into durable release readiness."
+    "note": "Production is live and provenance is directly observed; v1.0.0 tag created 2026-10-04 to provide checksum evidence (unblocks REL-03). The exact moving-main SHA is intentionally carried by the GitHub Actions run context rather than hard-coded into durable release readiness."
   }
 }
