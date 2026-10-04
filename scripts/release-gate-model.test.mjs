@@ -105,6 +105,27 @@ const promote = (document) => {
     false,
     "an unparseable verifiedAt does not clear a gate",
   );
+
+  // "not-a-date" is rejected by any validator, so it proves nothing about which
+  // validator is in use. These are the values Date.parse accepts but the
+  // readiness verifier does not: they used to clear every gate here, and fail
+  // verify-release-readiness.mjs on the same document.
+  for (const looselyDated of [
+    "2026-10-04",
+    "Oct 4 2026",
+    "2026-02-30T00:00:00Z",
+    "2026-10-04T09:30:00",
+  ]) {
+    const loose = promote(readiness);
+    for (const gate of Object.values(loose.releaseCritical)) {
+      gate.verifiedAt = looselyDated;
+    }
+    assert.equal(
+      isReleaseReady(deriveGateStatus(loose).gates),
+      false,
+      `verifiedAt "${looselyDated}" is not the ISO date-time the verifier requires`,
+    );
+  }
 }
 
 // A properly evidenced promotion is still reported ready, so the new

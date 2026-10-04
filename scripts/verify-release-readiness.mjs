@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
+import { isValidVerifiedAt } from "./release-gate-model.mjs";
 
 const modeIndex = process.argv.indexOf("--mode");
 const mode =
@@ -41,39 +42,6 @@ if (
 }
 
 const entries = Object.entries(document.releaseCritical);
-
-function isValidVerifiedAt(value) {
-  if (typeof value !== "string") return false;
-  const timestamp = value.trim();
-  const match =
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.exec(
-      timestamp,
-    );
-  if (!match) return false;
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const hours = Number(match[4]);
-  const minutes = Number(match[5]);
-  const seconds = Number(match[6]);
-
-  if (
-    month < 1 ||
-    month > 12 ||
-    day < 1 ||
-    hours > 23 ||
-    minutes > 59 ||
-    seconds > 59
-  ) {
-    return false;
-  }
-
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  if (day > daysInMonth) return false;
-
-  return !Number.isNaN(Date.parse(timestamp));
-}
 
 const invalid = entries.filter(
   ([, value]) =>

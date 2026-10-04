@@ -189,6 +189,45 @@ export function isAllGatesL3(gates) {
   );
 }
 
+// Shared with scripts/verify-release-readiness.mjs, which imports it. The two
+// used to validate the same field at different strictness: this accepted
+// anything Date.parse handles, so "2026-10-04" or "Oct 4 2026" counted as valid
+// evidence here while the verifier rejected it. A gate could therefore be
+// reported cleared by the dashboard and export, and then fail the verifier on
+// the same document. One definition, imported by both.
+export function isValidVerifiedAt(value) {
+  if (typeof value !== "string") return false;
+  const timestamp = value.trim();
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.exec(
+      timestamp,
+    );
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hours = Number(match[4]);
+  const minutes = Number(match[5]);
+  const seconds = Number(match[6]);
+
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    hours > 23 ||
+    minutes > 59 ||
+    seconds > 59
+  ) {
+    return false;
+  }
+
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (day > daysInMonth) return false;
+
+  return !Number.isNaN(Date.parse(timestamp));
+}
+
 // Mirrors the L3 validation in scripts/verify-release-readiness.mjs. Without it
 // here, a document with all 13 gates forged to L3 and no evidence at all makes
 // isAllGatesL3 return true. That document is rejected by the readiness verifier,
@@ -203,8 +242,7 @@ export function isValidL3Evidence(gate) {
       (ref) => typeof ref === "string" && ref.trim() !== "",
     ) &&
     typeof gate.verifiedAt === "string" &&
-    gate.verifiedAt.trim() !== "" &&
-    !Number.isNaN(Date.parse(gate.verifiedAt))
+    isValidVerifiedAt(gate.verifiedAt)
   );
 }
 
