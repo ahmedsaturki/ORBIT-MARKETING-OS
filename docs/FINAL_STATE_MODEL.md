@@ -18,14 +18,12 @@ by running the command named beside it, not by reading a prior report.
 | **Release**     | **NOT READY** | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
 | **Owner Gates** | **5 of 13**   | `external_connectors`, `accessibility`, `stability_soak`, `commercial_billing`, `legal_commercial`. Nine owner _actions_ remain, listed in section 7  |
 
-All of the above is confirmed by CI, not by local execution alone: 15 of 16
-checks pass, including all four platform builds, Windows native E2E at 35
-passed, Android debug validation, `ci`, `Rust quality`, `security:scan`,
-CodeRabbit and CodeFactor. The one failure, `security/snyk`, is an external
-GitHub App reporting a billing limit rather than a scan result — no workflow in
-this repository runs it, for the same reason SonarCloud does not. `pnpm audit`
-independently reports 2 high advisories, both governed by documented exceptions,
-and 0 unignored.
+All of the above is confirmed by CI, not by local execution alone. PR #213
+reports 16 checks: 1 fails, 1 skips, the rest pass. The single failure,
+`security/snyk`, is an external GitHub App reporting a billing limit rather than a
+scan result — no workflow in this repository runs it, for the same reason
+SonarCloud does not. `pnpm audit` independently reports 2 high advisories, both
+governed by documented exceptions, and 0 unignored.
 
 ### Overall
 
@@ -117,7 +115,7 @@ Verified on the Windows native E2E job at `9d95c888`:
 Windows native E2E  Run native and web E2E  35 passed (25.8s)
 ```
 
-### PR #213 status: 15 of 16 checks pass
+### PR #213 status: 16 checks, 1 failing
 
 `ci`, `security:scan`, `Rust quality`, `SonarCloud Code Analysis`, `CodeFactor`,
 `CodeRabbit`, `Android debug validation`, `Windows native E2E`, the four platform
