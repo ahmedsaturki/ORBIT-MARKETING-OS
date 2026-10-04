@@ -1,8 +1,8 @@
 # ORBIT-MARKETING-OS — FINAL STATE MODEL
 
 **Date:** 2026-10-04
-**Verified commit:** `eca75a5e`
-**Branch:** `main` (working tree clean)
+**Verified commit:** `6027f026`
+**Branch:** `audit/verification-2026-10` (merged to `main` at `698ea43f`)
 
 This is the final deliverable of the re-audit. Every number below was produced
 by running the command named beside it, not by reading a prior report.
@@ -237,7 +237,7 @@ SEC-03 defect. What is unverifiable _here_ is narrower than what is unverified:
 an environment without a desktop host cannot run this suite, but the suite
 itself is sound.
 
----
+- **OMP "unknown model" warning.** Emitted when a primary model is unavailable and the runtime walks the fallback chain in `C:\Users\powertech\.omp\agent\config.yml`. This is a local harness condition, not an application defect. No repository change is warranted. Verified by reading RE_AUDIT_REPORT.md B6.
 
 ## 7. Owner Actions to Close Release
 
