@@ -15,6 +15,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, statfsSync, writeFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
+import { spawnPnpm } from "./lib/spawn-pnpm.mjs";
 
 const release = process.argv.includes("--release");
 const root = join(import.meta.dirname, "..");
@@ -79,10 +80,9 @@ function pickTargetDir() {
 const distDir = join(root, "packages", "desktop", "dist");
 if (!existsSync(distDir)) {
   console.log("packages/desktop/dist missing — building desktop frontend");
-  const frontend = spawnSync(
-    "pnpm",
+  const frontend = spawnPnpm(
     ["--filter", "@orbit/desktop...", "build"],
-    { cwd: root, stdio: "inherit", shell: true },
+    { cwd: root, stdio: "inherit" },
   );
   if (frontend.status !== 0 || !existsSync(distDir)) {
     console.error(

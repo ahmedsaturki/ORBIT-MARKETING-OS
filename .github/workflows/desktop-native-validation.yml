@@ -74,6 +74,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Workspace sanity
         run: pnpm verify:workspace
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
       - name: Generate app icons
         run: pnpm --dir packages/desktop tauri icon src-tauri/icon-source.svg
       - name: Build desktop

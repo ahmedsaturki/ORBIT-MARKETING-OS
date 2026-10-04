@@ -38,9 +38,12 @@ jobs:
 
       - name: Secret scan
         run: pnpm security:scan
-      - name: Governed audit exceptions
-        run: pnpm test:node-forge-audit-exception
-
+      - name: Governed audit exceptions
+
+        run: pnpm test:node-forge-audit-exception
+
+
+
       - name: Dependency audit
         run: pnpm audit --audit-level=moderate
 
@@ -63,6 +66,9 @@ jobs:
 
       - name: Runtime smoke
         run: pnpm test:runtime
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Performance smoke
         run: pnpm test:performance

@@ -149,11 +149,11 @@ jobs:
         timeout-minutes: 3
         run: pnpm test:performance
 
-      - name: Build
-        run: pnpm build
-
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build
+        run: pnpm build
 
       - name: Web E2E
         timeout-minutes: 5
