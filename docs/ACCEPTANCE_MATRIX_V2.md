@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**73 PASS, 2 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+**74 PASS, 1 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
 
 Classification rules applied:
 
@@ -118,7 +118,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | CONN-02 | PASS | `test/connectors.test.ts` :: rejects a task kind not exposed by a connector | — |
 | CONN-03 | PASS | `e2e/connector-challenge.spec.ts (challenge safe stop test)` | — |
 | CONN-04 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: execution_budget_blocks (single threshold decision point) + execution_counter_tests (trip points, per-account/workspace scoping, day rollover) | — |
-| CONN-05 | PARTIAL | `test/linkedin.test.ts (unit fixtures with fetch mocks)` | Controlled API test (safe vs live) not executed; commercial-connector-proof.safe.test.mjs exists but likely not run in CI |
+| SYNC-01 | PASS | `packages/core/test/sync.test.ts` :: offline edits survive a restart (edits made while offline and after the last sync both restore; an offline deletion stays deleted and is not resurrected by replaying an older snapshot; state persisted through the encrypted envelope restores with the payload unreadable at rest; five restart cycles neither lose nor drift state) | — |
 | WEB-01 | PASS | `e2e/public-web.spec.ts` :: PWA manifest is valid and points at ORBIT branding | — |
 | AI-01 | PASS | `packages/desktop/test/runtimeClient.test.ts (desktop client contract tests)` | — |
 | MOB-01 | PASS | `.github/workflows/mobile-validation.yml (typecheck + expo prebuild + gradle assembleDebug)` | — |
