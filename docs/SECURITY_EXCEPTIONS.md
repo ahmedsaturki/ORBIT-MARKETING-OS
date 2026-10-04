@@ -24,3 +24,45 @@ Removal conditions:
 3. Do not remove the regression test until the replacement dependency is independently verified against the same PoC and genuine-signature regression.
 
 This is an explicit, narrow security exception with compensating controls; it is not a silent suppression of the audit system.
+---
+
+## GHSA-vfj7-8cjw-p6xm — braces — EXCEPTION_ACTIVE — REVIEW REQUIRED
+
+Status: **EXCEPTION_ACTIVE — REVIEW REQUIRED**
+
+Reason: `braces@3.0.3` is the newest published version and the advisory
+declares `firstPatchedVersion: null`, so there is no upgrade that clears this
+finding. The vulnerability is stack exhaustion when compiling deeply nested
+glob patterns.
+
+Exposure analysis: `braces` reaches this repository only transitively, through
+Expo/Metro bundler tooling under `packages/mobile`. It is not a direct
+dependency of any shipped package and is not part of a runtime artifact. The
+exposed surface is code that compiles glob patterns, which here runs at build
+time over repository-controlled patterns rather than attacker-supplied input at
+runtime.
+
+Mitigations required by this exception:
+
+- `scripts/braces-audit-exception.test.mjs` is the governing contract and runs
+  in CI before `pnpm audit`.
+- The contract asserts the audit allowlist contains exactly the two governed
+  advisories, so this exception cannot silently widen.
+- The contract asserts `braces` is not declared in the `dependencies` or
+  `optionalDependencies` of any shipped package, so the build-time-only
+  assumption is checked rather than asserted.
+- The contract asserts the pinned version matches the latest published
+  version, so an upstream fix forces an upgrade decision.
+- Only `GHSA-86w9-cpqp-85rv` and `GHSA-vfj7-8cjw-p6xm` are ignored by pnpm's
+  audit filter; any other moderate/high/critical advisory remains a failure.
+- Mandatory review date of **2026-11-03**; the contract fails after that date.
+
+Removal conditions:
+
+1. A released upstream `braces` version fixes this advisory; upgrade and remove
+   the ignore entry.
+2. Or the Expo/Metro dependency path disappears; re-run the contract and audit.
+3. Re-assess the exposure analysis if `braces` ever becomes reachable at runtime.
+
+This is an explicit, narrow security exception with compensating controls; it
+is not a silent suppression of the audit system.

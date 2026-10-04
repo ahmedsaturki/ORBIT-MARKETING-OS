@@ -6,6 +6,9 @@ const GHSA = "GHSA-86w9-cpqp-85rv";
 const REVIEW_AFTER = "2026-11-03";
 const EXPECTED_PATCH_HASH =
   "1da5306df32cb00fb9309034ffcd35c1126ccd13ce79f5f0031825ad79bbab27";
+// The second exception is governed by its own contract; see
+// scripts/braces-audit-exception.test.mjs.
+const BRACES_GHSA = "GHSA-vfj7-8cjw-p6xm";
 
 const workspace = readFileSync("pnpm-workspace.yaml", "utf8");
 const lockfile = readFileSync("pnpm-lock.yaml", "utf8");
@@ -25,8 +28,8 @@ const ignoredGhsas = ignoreMatch[1]
   .filter(Boolean);
 assert.deepEqual(
   ignoredGhsas,
-  [GHSA],
-  "only the approved GHSA may be ignored by the package-manager audit",
+  [GHSA, BRACES_GHSA],
+  "only the approved GHSAs may be ignored by the package-manager audit",
 );
 
 assert.match(

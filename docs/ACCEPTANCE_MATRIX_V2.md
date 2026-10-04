@@ -62,8 +62,15 @@ failure.
 soak workflow and checksum verification are defined but have no completed run.
 Both are already tracked as blocked gates in `release/readiness.json`.
 
-Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
+Per the gate rules below, the 3 `UNVERIFIED` runtime requirements block any
 "production ready" claim. Per-requirement evidence and gaps follow.
+
+The `Unsupported engine: wanted {"node":">=22 <25"}` warning seen locally is
+advisory, not a defect. The repository declares that range and CI pins Node 22
+in all 24 places that use Node (`rebuild-rust.yml` is Rust-only and needs no
+pin). There is no `.npmrc` with `engine-strict`, so the warning cannot fail an
+install; every result in this matrix was produced on the out-of-range local
+runtime. Nothing to fix.
 
 | ID | Status | Primary evidence | Gap |
 | --- | --- | --- | --- |

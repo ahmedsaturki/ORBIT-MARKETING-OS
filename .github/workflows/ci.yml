@@ -102,6 +102,9 @@ jobs:
       - name: Governed node-forge audit exception
         run: pnpm test:node-forge-audit-exception
 
+      - name: Governed braces audit exception
+        run: pnpm test:braces-audit-exception
+
       - name: Dependency audit
         run: pnpm audit --audit-level=moderate
 
