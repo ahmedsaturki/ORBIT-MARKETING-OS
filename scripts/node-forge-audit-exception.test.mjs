@@ -49,11 +49,17 @@ assert(
   existsSync("patches/node-forge@1.4.0.patch"),
   "node-forge patch file is missing",
 );
-const patch = readFileSync("patches/node-forge@1.4.0.patch", "utf8");
+const patch = readFileSync("patches/node-forge@1.4.0.patch");
 assert(patch.length > 0, "node-forge patch file is empty");
-const actualPatchHash = createHash("sha256").update(patch).digest("hex");
+// pnpm hashes the LF form of the patch. On Windows, core.autocrlf=true
+// checks the file out with CRLF, so a raw byte hash diverges from the
+// lockfile even though the reviewed artifact is unchanged. Normalise before
+// hashing so this asserts patch identity, not the host's line endings.
+const patchHash = createHash("sha256")
+  .update(patch.toString("utf8").replace(/\r\n/g, "\n"), "utf8")
+  .digest("hex");
 assert.equal(
-  actualPatchHash,
+  patchHash,
   EXPECTED_PATCH_HASH,
   "committed node-forge patch does not match the lockfile hash",
 );

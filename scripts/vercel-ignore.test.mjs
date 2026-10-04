@@ -4,6 +4,7 @@ import {
   commit,
   execFileAsync,
   initGitFixture,
+  removeFixture,
   writeReleaseMarker,
 } from "./test-git-fixture.mjs";
 import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -93,7 +94,7 @@ test("only the commit that changes the release marker can trigger a build", asyn
       0,
     );
   } finally {
-    await rm(cwd, { recursive: true, force: true });
+    await removeFixture(cwd);
   }
 });
 
@@ -120,6 +121,6 @@ test("vercel ignore builds when the current commit has no parent", async () => {
     );
     assert.equal(await runIgnore(cwd), 1);
   } finally {
-    await rm(cwd, { recursive: true, force: true });
+    await removeFixture(cwd);
   }
 });

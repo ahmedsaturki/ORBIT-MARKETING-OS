@@ -1,9 +1,27 @@
 import { execFile } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { join } from "node:path";
 
 export const execFileAsync = promisify(execFile);
+
+// Windows can hold a freshly-used directory open briefly after the child
+// process that touched it exits, which surfaces as EBUSY/EPERM on cleanup.
+// Retry briefly before giving up so a timing artefact fails as a real error.
+export async function removeFixture(cwd) {
+  const attempts = 5;
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      await rm(cwd, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
 
 export async function initGitFixture(cwd, marker) {
   await execFileAsync("git", ["init", "-q"], { cwd });
