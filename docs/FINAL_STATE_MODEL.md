@@ -47,10 +47,17 @@ exists only in this branch's refactor. Upstream never extracted a
 workspace argument and the global used for auditing could not arise there. The
 fix is still correct for this branch.
 
-**Consequence:** this branch cannot be merged as-is. It needs a rebase onto
-`origin/main`, after which the duplicate-name renames and the v17 schema pin
-must be re-derived and the braces exception dropped as redundant. That
-reconciliation is owner work and is not performed here.
+**Resolved.** `origin/main` is merged in (`698ea43f`), not rebased. Eight
+conflicts were resolved against checked facts rather than by preferring a
+side. The schema pin reconciled cleanly at 17 on both sides, and the workspace
+gate passes on the merged tree. Two conflicts turned out to be upstream
+supersets and were taken wholesale; the soak and workspace conflicts were
+additive and keep both sides. The acceptance matrix kept this branch's version
+because all four disagreeing statuses were checked: `AI-01` stays PASS on a
+test that runs green here, and `INBOX-01` stays PARTIAL because
+`TelegramConnector.sync` returns `this.connect(context)` and `connect` only
+validates credentials. Six governance gates, 524 JS tests, and typecheck 5/5
+pass on the result. See `RECONCILIATION.md` for the per-conflict record.
 
 
 ---
