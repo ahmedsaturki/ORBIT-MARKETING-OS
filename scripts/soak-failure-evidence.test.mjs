@@ -32,3 +32,55 @@ try {
 } finally {
   rmSync(outputDir, { recursive: true, force: true });
 }
+
+// A soak must not attest to a duration it did not run. Requesting more
+// minutes than the loop can complete must be reported as a short run.
+const shortRunDir = mkdtempSync(join(tmpdir(), "orbit-soak-short-"));
+
+try {
+  const shortResult = runTsx(
+    [
+      "scripts/soak.ts",
+      "--hours",
+      "24",
+      "--port",
+      "0",
+      "--max-cycles",
+      "1",
+    ],
+    {
+      env: { ...process.env, ORBIT_SOAK_LOG_DIR: shortRunDir },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  assert.equal(
+    shortResult.error,
+    undefined,
+    `short soak failed to launch: ${shortResult.error?.message}`,
+  );
+  assert.equal(
+    shortResult.status,
+    1,
+    "a soak that cannot reach its deadline must not exit 0",
+  );
+
+  const shortSummary = JSON.parse(
+    readFileSync(join(shortRunDir, "soak-summary.json"), "utf8"),
+  );
+  assert.equal(shortSummary.requestedMinutes, 1440);
+  assert.ok(
+    shortSummary.elapsedMinutes < 1440,
+    `elapsed ${shortSummary.elapsedMinutes} must be under the requested 1440`,
+  );
+  // The run may also fail for an unrelated reason; the duration guarantee
+  // is only proven when the short-run guard itself is what refused it.
+  assert.ok(
+    shortSummary.failures.some((entry) =>
+      /ended after [\d.]+ min of a requested 1440 min/.test(entry),
+    ),
+    `expected a short-run failure, got: ${JSON.stringify(shortSummary.failures)}`,
+  );
+  assert.equal(shortSummary.ok, false);
+} finally {
+  rmSync(shortRunDir, { recursive: true, force: true });
+}

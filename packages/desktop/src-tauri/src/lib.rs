@@ -14391,7 +14391,7 @@ mod conversation_contact_tests {
         connection
     }
 
-    fn upsert(
+    fn upsert_conversation(
         connection: &Connection,
         workspace_id: &str,
         id: &str,
@@ -14417,7 +14417,7 @@ mod conversation_contact_tests {
     fn a_conversation_persists_its_contact_relationship() {
         let connection = conversation_connection();
 
-        let view = upsert(
+        let view = upsert_conversation(
             &connection,
             "workspace-a",
             "conversation-1",
@@ -14452,14 +14452,14 @@ mod conversation_contact_tests {
             )
             .expect("second contact");
 
-        upsert(
+        upsert_conversation(
             &connection,
             "workspace-a",
             "conversation-1",
             Some("contact-a"),
         )
         .expect("first");
-        upsert(
+        upsert_conversation(
             &connection,
             "workspace-a",
             "conversation-1",
@@ -14489,7 +14489,7 @@ mod conversation_contact_tests {
             )
             .expect("foreign contact");
 
-        let error = upsert(
+        let error = upsert_conversation(
             &connection,
             "workspace-a",
             "conversation-1",
@@ -14507,7 +14507,7 @@ mod conversation_contact_tests {
     #[test]
     fn an_unknown_contact_cannot_be_linked() {
         let connection = conversation_connection();
-        assert!(upsert(
+        assert!(upsert_conversation(
             &connection,
             "workspace-a",
             "conversation-1",
@@ -14520,7 +14520,7 @@ mod conversation_contact_tests {
     #[test]
     fn a_conversation_can_be_unlinked_from_its_contact() {
         let connection = conversation_connection();
-        upsert(
+        upsert_conversation(
             &connection,
             "workspace-a",
             "conversation-1",
@@ -14528,7 +14528,8 @@ mod conversation_contact_tests {
         )
         .expect("link");
 
-        let view = upsert(&connection, "workspace-a", "conversation-1", None).expect("unlink");
+        let view = upsert_conversation(&connection, "workspace-a", "conversation-1", None)
+            .expect("unlink");
         assert_eq!(view.contact_id, None);
 
         let stored: Option<String> = connection
@@ -14592,7 +14593,7 @@ mod conversation_contact_tests {
     #[test]
     fn the_unified_model_carries_account_contact_thread_and_message_count() {
         let connection = conversation_connection();
-        upsert(
+        upsert_conversation(
             &connection,
             "workspace-a",
             "conversation-1",
@@ -14607,7 +14608,7 @@ mod conversation_contact_tests {
             )
             .expect("messages");
 
-        let view = upsert(
+        let view = upsert_conversation(
             &connection,
             "workspace-a",
             "conversation-1",
@@ -14671,7 +14672,7 @@ mod conversation_contact_tests {
             .execute_batch("DELETE FROM workspace_memberships WHERE workspace_id='workspace-a';")
             .expect("membership removal");
 
-        let error = upsert(
+        let error = upsert_conversation(
             &connection,
             "workspace-a",
             "conversation-1",
@@ -17311,7 +17312,7 @@ mod workspace_role_authorization_tests {
         connection
     }
 
-    fn grant(connection: &Connection, workspace_id: &str, user_id: &str, role: &str) {
+    fn grant_for_user(connection: &Connection, workspace_id: &str, user_id: &str, role: &str) {
         connection
             .execute(
                 "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
@@ -17333,7 +17334,7 @@ mod workspace_role_authorization_tests {
 
     // AppError cannot derive PartialEq (it wraps rusqlite::Error and
     // io::Error), so assert the refusal by variant instead of by equality.
-    fn assert_unauthorized(result: Result<(), AppError>, context: &str) {
+    fn assert_denied(result: Result<(), AppError>, context: &str) {
         match result {
             Err(AppError::Unauthorized) => {}
             Err(other) => panic!("{context}: expected Unauthorized, got {other:?}"),
@@ -17364,7 +17365,7 @@ mod workspace_role_authorization_tests {
     fn every_role_with_campaign_manage_is_authorized_to_write() {
         let connection = membership_connection();
         for role in campaign_write_roles() {
-            grant(&connection, "workspace-a", &format!("user-{role}"), role);
+            grant_for_user(&connection, "workspace-a", &format!("user-{role}"), role);
         }
         for role in campaign_write_roles() {
             act_as(&connection, &format!("user-{role}"));
@@ -17380,14 +17381,14 @@ mod workspace_role_authorization_tests {
     #[test]
     fn an_operator_is_authorized_to_read_but_refused_campaign_manage() {
         let connection = membership_connection();
-        grant(&connection, "workspace-a", "user-operator", "operator");
+        grant_for_user(&connection, "workspace-a", "user-operator", "operator");
         act_as(&connection, "user-operator");
 
         assert!(
             require_read_role(&connection, "workspace-a").is_ok(),
             "operator must be authorized to read",
         );
-        assert_unauthorized(
+        assert_denied(
             require_write_role(&connection, "workspace-a"),
             "operator holds campaign.read but not campaign.manage",
         );
@@ -17398,12 +17399,12 @@ mod workspace_role_authorization_tests {
     #[test]
     fn reviewer_and_viewer_are_refused_the_write_path() {
         let connection = membership_connection();
-        grant(&connection, "workspace-a", "user-reviewer", "reviewer");
-        grant(&connection, "workspace-a", "user-viewer", "viewer");
+        grant_for_user(&connection, "workspace-a", "user-reviewer", "reviewer");
+        grant_for_user(&connection, "workspace-a", "user-viewer", "viewer");
 
         for user in ["user-reviewer", "user-viewer"] {
             act_as(&connection, user);
-            assert_unauthorized(
+            assert_denied(
                 require_write_role(&connection, "workspace-a"),
                 &format!("{user} write"),
             );
@@ -17417,14 +17418,14 @@ mod workspace_role_authorization_tests {
     #[test]
     fn a_user_with_no_membership_is_unauthorized() {
         let connection = membership_connection();
-        grant(&connection, "workspace-a", "user-editor", "editor");
+        grant_for_user(&connection, "workspace-a", "user-editor", "editor");
         act_as(&connection, "user-outsider");
 
-        assert_unauthorized(
+        assert_denied(
             require_write_role(&connection, "workspace-a"),
             "non-member write",
         );
-        assert_unauthorized(
+        assert_denied(
             require_read_role(&connection, "workspace-a"),
             "non-member read",
         );
@@ -17434,11 +17435,11 @@ mod workspace_role_authorization_tests {
     #[test]
     fn membership_in_one_workspace_does_not_authorize_another() {
         let connection = membership_connection();
-        grant(&connection, "workspace-a", "user-owner", "owner");
+        grant_for_user(&connection, "workspace-a", "user-owner", "owner");
         act_as(&connection, "user-owner");
 
         assert!(require_write_role(&connection, "workspace-a").is_ok());
-        assert_unauthorized(
+        assert_denied(
             require_write_role(&connection, "workspace-b"),
             "cross-workspace write",
         );
@@ -17448,7 +17449,7 @@ mod workspace_role_authorization_tests {
     #[test]
     fn a_deactivated_membership_is_unauthorized() {
         let connection = membership_connection();
-        grant(&connection, "workspace-a", "user-admin", "admin");
+        grant_for_user(&connection, "workspace-a", "user-admin", "admin");
         act_as(&connection, "user-admin");
         assert!(require_write_role(&connection, "workspace-a").is_ok());
 
@@ -17460,7 +17461,7 @@ mod workspace_role_authorization_tests {
             )
             .expect("membership should be deactivated");
 
-        assert_unauthorized(
+        assert_denied(
             require_write_role(&connection, "workspace-a"),
             "deactivated membership",
         );
