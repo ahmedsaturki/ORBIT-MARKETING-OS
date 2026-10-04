@@ -16,7 +16,7 @@ by running the command named beside it, not by reading a prior report.
 | **Engineering** | **PASS**      | 379 JS tests (core 357, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
 | **Product**     | **PARTIAL**   | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code                                                         |
 | **Release**     | **NOT READY** | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
-| **Owner Gates** | **5 of 13**   | `external_connectors`, `accessibility`, `stability_soak`, `commercial_billing`, `legal_commercial`. Nine owner _actions_ remain, listed in section 7  |
+| **Owner Gates** | **5 of 13**   | `external_connectors`, `accessibility`, `stability_soak`, `commercial_billing`, `legal_commercial`. Eight owner _actions_ remain, listed in section 7 |
 
 All of the above is confirmed by CI, not by local execution alone. PR #213
 reports 16 checks: 1 fails, 1 skips, the rest pass. The single failure,
@@ -262,7 +262,8 @@ itself is sound.
 1. Run the 24-hour soak on the release SHA (`OPS-02`)
 2. Provide desktop signing certificates (`REL-02`)
 3. Cut a tagged release to produce checksums (`REL-03`)
-4. Supply Telegram and LinkedIn credentials
+4. Build the connector ingestion path (`INBOX-01`) — **reclassified from an owner
+   action to engineering work.** Credentials are not the blocker; see below.
 5. Open mobile store accounts
 6. Activate a payment provider
 7. Complete legal/commercial publication review
@@ -270,11 +271,11 @@ itself is sound.
 9. Verify multi-device sync with real devices
 10. ~~Resolve the SonarCloud new-code rating gap~~ — **closed**, see the correction below
 
-Items 1–3 and 9 are tracked in `release/readiness.json`. A tenth item, the
-SonarCloud new-code security rating, was listed here and is now closed: issue
-#112 ("quality: resolve SonarCloud main Security Rating B on New Code") is
-closed on the remote, and the rating is recorded as A with zero open new-code
-vulnerabilities in `release/readiness.json`. That leaves nine owner actions, none
+Items 1–3 and 9 are tracked in `release/readiness.json`. Two further items have
+since been removed from this list: the SonarCloud new-code rating (issue #112 is
+closed on the remote and `release/readiness.json` records rating A with zero open
+new-code vulnerabilities), and item 4, which is engineering work rather than an
+owner action — see the correction below. That leaves **eight owner actions**, none
 of which an engineer can complete alone.
 
 **Correction to that item.** An earlier draft of this file claimed "both the
@@ -287,7 +288,31 @@ here. The substantive claim — rating A, zero open new-code vulnerabilities, is
 #112 closed — is verifiable and stands; the claim that this branch runs the check
 does not.
 
-This list of nine actions is not the same as gate ownership, and the two now
+**Correction to item 4 — credentials are not the blocker.** This item was listed
+as "supply Telegram and LinkedIn credentials", which implies the connectors work
+once keys exist. They do not, and supplying keys would not change that.
+
+Checked directly:
+
+- `TelegramConnector` and `LinkedInConnector` are exported from `@orbit/core`
+  (`packages/core/src/connectors/index.ts` re-exports `./telegram.js` and
+  `./linkedin.js`).
+- Every construction site for either class is inside a `.test.ts` file.
+  `grep -rn "new TelegramConnector\|new LinkedInConnector" packages/` excluding
+  tests returns nothing.
+- No file in `packages/desktop/src`, `packages/mobile`, or `packages/web`
+  references either class.
+- No credential environment variable exists anywhere in `packages/`. Both
+  connectors take an injected `tokenResolver`, so a key would have to be plumbed
+  through code that does not exist yet.
+
+So `INBOX-01` is blocked on **building the ingestion path**, not on obtaining a
+bot token. The token is a second-order dependency: there is nowhere to put it.
+This does not change the release verdict — `external_connectors` is already an
+owner gate — but it changes what the owner is being asked to do, and a
+credentials-only action would not have moved it.
+
+This list of eight owner actions is not the same as gate ownership, and the two
 differ because the gate model was corrected. `scripts/release-gate-model.mjs`
 filed `accessibility` and `stability_soak` under the Engineering Team, but both
 close only on action this repository cannot perform: the manual WCAG/RTL audit

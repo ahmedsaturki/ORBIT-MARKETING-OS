@@ -322,7 +322,7 @@ and the matrix in `docs/FINAL_STATE_MODEL.md` keeps them separate for that reaso
 | **Engineering** | **PASS**      | 379 JS tests, 182 Rust tests, typecheck 5/5, clippy clean, fmt clean, all governance gates green                 |
 | **Product**     | **PARTIAL**   | 77 of 83 requirements PASS; 3 PARTIAL (capability never built), 3 UNVERIFIED (no executing evidence)             |
 | **Release**     | **NOT READY** | 0 of 13 gates at L3_PRODUCTION_PROVEN; 5 owner-gated                                                             |
-| **Owner Gates** | **5 of 13**   | accessibility, stability_soak, commercial_billing, legal_commercial, external_connectors; 9 owner actions remain |
+| **Owner Gates** | **5 of 13**   | accessibility, stability_soak, commercial_billing, legal_commercial, external_connectors; 8 owner actions remain |
 
 ### Stop Decision
 
@@ -335,17 +335,27 @@ and the matrix in `docs/FINAL_STATE_MODEL.md` keeps them separate for that reaso
 3. Release is blocked — 0 of 13 gates at L3_PRODUCTION_PROVEN; 5 owner-gated.
 4. No premature completion signals — docs explicitly deny "ALL CONDITIONS SATISFIED" and "RELEASE READY".
 
-### Remaining Owner Actions (9)
+### Remaining Owner Actions (8)
 
 1. Run the 24-hour soak on the release SHA (`OPS-02`)
 2. Provide desktop signing certificates (`REL-02`)
 3. Execute a release run so `REL-03` checksums exist and can be verified against published artifacts (the `v1.0.0` tag exists; the checksum step has still never run)
-4. Supply Telegram and LinkedIn credentials
-5. Open mobile store accounts
-6. Activate a payment provider
-7. Complete legal/commercial publication review
-8. Complete the WCAG/RTL accessibility audit
-9. Verify multi-device sync with real devices
+4. Open mobile store accounts
+5. Activate a payment provider
+6. Complete legal/commercial publication review
+7. Complete the WCAG/RTL accessibility audit
+8. Verify multi-device sync with real devices
+
+**"Supply Telegram and LinkedIn credentials" is withdrawn from this list.** It
+implied the connectors function once keys exist. They are exported from
+`@orbit/core`, but every construction site for `TelegramConnector` and
+`LinkedInConnector` is inside a `.test.ts`, nothing in `packages/desktop/src`,
+`packages/mobile` or `packages/web` references either class, and no credential
+environment variable exists anywhere in `packages/` — both connectors take an
+injected `tokenResolver`. Building the ingestion path is engineering work, not
+an owner action, and there is currently nowhere to put a token. `INBOX-01`
+remains PARTIAL and `external_connectors` remains an owner gate; only the
+description of the work changed.
 
 ### Board Tracking
 
@@ -355,7 +365,7 @@ Issue **#187**, "release: L3 production readiness closure board", carries **17 o
 - Real-world product validation (Telegram, LinkedIn, mobile store accounts, payment provider)
 - Operational practices (24-hour soak, multi-device sync)
 
-The nine owner actions above and the eight remaining checkboxes are tracked together; the two should be read together.
+The eight owner actions above and the remaining checkboxes are tracked together; the two should be read together.
 
 ---
 
