@@ -1323,12 +1323,34 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     )) as Array<{ id: string }>;
     expect(restoredApprovals.map((entry) => entry.id)).toContain(approval.id);
 
-    // Nothing the Mission Control surface reads may carry session secrets.
-    // The account carries a secretToken in its session payload; the views the
+    // Nothing the Mission Control surface reads may carry session secrets. The
+    // account carries a secretToken in its session payload; the views the
     // operational surface consumes must not expose it.
+    //
+    // This must serialize the surface as the *mission* workspace sees it.
+    // Another workspace's campaign list was serialized here before, which made
+    // the assertion vacuous: a different workspace's rows cannot possibly carry
+    // this session's token, so the check passed whether or not the redaction
+    // worked. otherCampaigns stays as the isolation assertion above, which is
+    // what it actually proves.
+    const missionWorkspace = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current", {}),
+    )) as { id: string };
+    const missionApprovals = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("approval_list", {}),
+    )) as Array<{ id: string }>;
+    const missionCampaigns = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("campaign_list", {}),
+    )) as Array<{ id: string }>;
+    const accountList = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("account_list", {}),
+    )) as unknown;
+
     const surface = JSON.stringify({
-      approvals: restoredApprovals,
-      campaigns: otherCampaigns,
+      accountList,
+      missionWorkspace,
+      approvals: missionApprovals,
+      campaigns: missionCampaigns,
     });
     expect(surface.toLowerCase()).not.toContain("must-not-surface");
     expect(surface.toLowerCase()).not.toContain("sessionpayload");

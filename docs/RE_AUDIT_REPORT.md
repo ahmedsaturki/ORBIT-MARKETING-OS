@@ -239,8 +239,13 @@ Governed exceptions in `docs/SECURITY_EXCEPTIONS.md` remain valid:
 - `node-forge@1.4.0` — patched via `patches/`, review date 2026-11-03
 - `braces@≤3.0.3` — build toolchain only, not shipped; patched, review 2026-11-03
 
-No hardcoded credentials were found. No new risk was introduced by this
-audit; the only new dependency-free code added is test code.
+No hardcoded credentials were found. This audit introduced no new runtime risk,
+but it did add production code, not only test code: the desktop build
+precondition (`scripts/build-tauri.mjs`), the health endpoint's model
+availability check (`server.ts`), and four CI workflow files. The desktop
+precondition was later rewritten after review, because it trusted a stale
+`dist/` and would have let a Tauri build embed an outdated renderer while
+reporting success.
 
 ---
 
