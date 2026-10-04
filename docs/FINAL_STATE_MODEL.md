@@ -300,7 +300,8 @@ itself is sound.
 ## 7. Owner Actions to Close Release
 
 1. Run the 24-hour soak on the release SHA (`OPS-02`)
-2. Provide desktop signing certificates (`REL-02`)
+2. Provide desktop signing certificates (`REL-02`) — **confirmed blocked, not
+   fixable by code.** Verified below.
 3. Cut a tagged release to produce checksums (`REL-03`)
 4. Build the connector ingestion path (`INBOX-01`) — **reclassified from an owner
    action to engineering work.** Credentials are not the blocker; see below.
@@ -429,6 +430,23 @@ owner gates, so `export-gate-status` reports **5 owner gates of 13**
 (`external_connectors`, `accessibility`, `stability_soak`,
 `commercial_billing`, `legal_commercial`) against 8 engineering gates, where it
 previously reported 3 and 10.
+
+**Item 2 (signing certificates) — verified as genuinely blocked.** Checked rather
+than assumed:
+
+- `git ls-files` returns **no** `.p12`, `.pfx`, `.pem`, `.key`, `.cer`, `.der`,
+  `.jks`, `.keystore`, `id_rsa` or `.env` file. No key material is tracked, which
+  is the correct state.
+- `.github/workflows/release-desktop.yml` contains exactly one signing reference:
+  the provenance line `signing=unsigned`. No certificate, keystore, Apple ID or
+  ASC-key secret is referenced, because the pipeline is unsigned by design.
+- `docs/DISTRIBUTION.md` states the policy explicitly: signing is a separate
+  release gate that **must never use private signing keys committed to the
+  repository**.
+
+There is no code change that could close this. Generating or storing a signing
+certificate inside this repository would violate the stated policy, so the item
+is correctly owner-gated and stays UNVERIFIED in the matrix.
 
 ---
 
