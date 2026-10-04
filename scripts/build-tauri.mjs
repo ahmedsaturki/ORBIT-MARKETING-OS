@@ -80,10 +80,10 @@ function pickTargetDir() {
 const distDir = join(root, "packages", "desktop", "dist");
 if (!existsSync(distDir)) {
   console.log("packages/desktop/dist missing — building desktop frontend");
-  const frontend = spawnPnpm(
-    ["--filter", "@orbit/desktop...", "build"],
-    { cwd: root, stdio: "inherit" },
-  );
+  const frontend = spawnPnpm(["--filter", "@orbit/desktop...", "build"], {
+    cwd: root,
+    stdio: "inherit",
+  });
   if (frontend.status !== 0 || !existsSync(distDir)) {
     console.error(
       "desktop frontend build failed; cannot proceed to cargo build.",

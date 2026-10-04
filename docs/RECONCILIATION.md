@@ -132,14 +132,14 @@ self-hosted runner), and the manual WCAG/RTL audit.
 Published as PR #213. Five PRs were already open against `main`; this branch
 shares 8 files with two of them.
 
-| File | PR #195 | PR #196 |
-|---|---|---|
-| `scripts/soak-failure-evidence.test.mjs` | yes | — |
-| `scripts/orbit-surface-smoke.mjs` | yes | — |
-| `scripts/commercial-connector-proof.safe.test.mjs` | yes | — |
-| `docs/SECURITY_EXCEPTIONS.md` | — | yes |
-| `pnpm-workspace.yaml` | — | yes |
-| `package.json`, `.github/workflows/ci.yml` | yes | yes |
+| File                                               | PR #195 | PR #196 |
+| -------------------------------------------------- | ------- | ------- |
+| `scripts/soak-failure-evidence.test.mjs`           | yes     | —       |
+| `scripts/orbit-surface-smoke.mjs`                  | yes     | —       |
+| `scripts/commercial-connector-proof.safe.test.mjs` | yes     | —       |
+| `docs/SECURITY_EXCEPTIONS.md`                      | —       | yes     |
+| `pnpm-workspace.yaml`                              | —       | yes     |
+| `package.json`, `.github/workflows/ci.yml`         | yes     | yes     |
 
 ### The `braces` exception needs a single owner
 
