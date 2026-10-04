@@ -158,6 +158,29 @@ runtime. Nothing to fix.
 | RESEARCH-02 | PASS | `e2e/tauri-shell.spec.ts` :: research intelligence stays workspace-scoped and evidence-backed (native integrity E2E) | — |
 | RESEARCH-03 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: research_publish_audit_tests (audit written under the publishing workspace, chain still verifies, republish idempotent, cross-workspace and foreign-source refusals persist nothing) | — |
 | SEARCH-01 | PASS | `src/search/index.test.ts (core contract tests: normalization, rejection of oversized/control-character queries, deterministic ranking)` | No explicit test asserting exclusion of secret/session records from search results; search spec does not enumerate allowed kinds beyond campaign/account/message/knowledge_source |
+
+**Security re-validation (2026-10-04).** Cross-tenant write safety was
+re-audited across all 23 `*_upsert` commands rather than assumed. An initial
+scan reported eight as unguarded; every one was a false positive from a
+truncated read window, and each is in fact protected — either by
+`WHERE <table>.workspace_id=excluded.workspace_id` combined with a
+`changed != 1` refusal (18 commands, including `account_upsert`), by a
+composite primary key that includes `workspace_id` (`work_dependency_upsert`,
+`operational_link_upsert`), or by verifying parent-row ownership before
+writing (`content_variant_upsert`). No cross-tenant overwrite remains.
+
+Audit writes: 39 `write_audit` call sites resolve the process-global workspace
+and 15 use `write_audit_for_workspace`. Two commands took an explicit
+workspace yet still audited under the global; both were corrected earlier in
+this audit. The remaining sites agree by construction, because the function
+they live in resolves the same global it writes under.
+
+No hardcoded credentials were found in non-test tracked source, and no `.env`,
+key, or certificate file is tracked. `pnpm audit`, red since 2026-09-25
+because of an unfixable `braces` advisory, is now green under a governed
+exception with its own expiring contract.
+
+### Source Requirements (as originally specified)
 | ID       | Requirement                                                                                                                              | Evidence required                                              |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | SEC-01   | Secrets encrypted at rest                                                                                                                | cryptographic tests + restore test                             |
