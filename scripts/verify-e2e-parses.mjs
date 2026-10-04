@@ -120,6 +120,33 @@ const result = spawnSync(
 );
 
 const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+
+// A gate that could not run must not report success. tsc is spawned as an
+// argument to this process, so a missing or broken compiler does not surface as
+// spawnSync.error or a signal: node starts fine, fails to load the module, and
+// exits 1 with a stack trace on stderr. Neither error nor signal is set, so the
+// only reliable signal is a non-zero status with no diagnostics of its own.
+// tsc exits 2 when it reports errors and 0 when it ran cleanly, so any other
+// non-zero status means it never got going.
+if (result.error) {
+  console.error(
+    `verify-e2e-parses: could not run tsc: ${result.error.message}`,
+  );
+  process.exit(1);
+}
+if (result.signal) {
+  console.error(`verify-e2e-parses: tsc was killed by signal ${result.signal}`);
+  process.exit(1);
+}
+if (result.status !== 0 && result.status !== 2) {
+  const firstLine = output.split(/\r?\n/).find((line) => line.trim());
+  console.error(
+    `verify-e2e-parses: tsc exited ${result.status} without reporting any ` +
+      `diagnostics, so it did not run. First stderr line: ${firstLine ?? ""}`,
+  );
+  process.exit(1);
+}
+
 const real = [];
 for (const line of output.split(/\r?\n/)) {
   const match = /error (TS\d+):/.exec(line);
