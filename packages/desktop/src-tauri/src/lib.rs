@@ -6611,10 +6611,19 @@ fn research_publish_to_knowledge(
     finding_id: String,
 ) -> Result<KnowledgeItemView, String> {
     let workspace_id = active_workspace_id();
-    let finding_id = validate_label(&finding_id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
+
+    publish_finding_to_knowledge(&connection, &workspace_id, &finding_id)
+}
+
+fn publish_finding_to_knowledge(
+    connection: &Connection,
+    workspace_id: &str,
+    finding_id: &str,
+) -> Result<KnowledgeItemView, String> {
+    let finding_id = validate_label(finding_id).map_err(|error| error.to_string())?;
 
     let finding: Option<(String, String, String, f64, Option<String>)> = connection
         .query_row(
@@ -6638,7 +6647,7 @@ fn research_publish_to_knowledge(
         return Err("research finding not found in active workspace".to_string());
     };
 
-    validate_workspace_source_ids(&connection, &workspace_id, &source_ids_json)?;
+    validate_workspace_source_ids(connection, workspace_id, &source_ids_json)?;
 
     let tags_json = serde_json::to_string(&["research"]).map_err(|error| error.to_string())?;
     let knowledge_id = format!("research:{id}");
@@ -6681,8 +6690,12 @@ fn research_publish_to_knowledge(
         return Err("knowledge item id already belongs to another workspace".to_string());
     }
 
-    write_audit(
-        &connection,
+    // Audit against the workspace this write actually touched. write_audit
+    // resolves the process-global active workspace, which would file the
+    // event under a different tenant than the one that received the item.
+    write_audit_for_workspace(
+        connection,
+        workspace_id,
         "research",
         "publish_to_knowledge",
         "success",
@@ -14672,6 +14685,246 @@ mod execution_counter_tests {
             execution_budget_blocks(completed_today, consecutive_failures),
             None,
             "a new day must clear both budgets",
+        );
+    }
+}
+
+#[cfg(test)]
+mod research_publish_audit_tests {
+    use super::*;
+
+    fn research_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1');
+
+                INSERT INTO knowledge_sources(id, workspace_id, type, title, locator, collected_at)
+                VALUES ('source-a', 'workspace-a', 'url', 'Source', 'https://example.com', '1');
+
+                INSERT INTO research_briefs(id, workspace_id, name, kind, question, objectives_json, status, created_at, updated_at)
+                VALUES ('brief-a', 'workspace-a', 'Brief', 'market', 'Question?', '[]', 'active', '1', '1');
+
+                INSERT INTO research_findings(id, workspace_id, brief_id, title, statement, source_ids_json, confidence, observed_at, expires_at, tags_json, created_at, updated_at)
+                VALUES ('finding-a', 'workspace-a', 'brief-a', 'Finding', 'Grounded statement', '["source-a"]', 0.95, '2026-09-26T00:00:00Z', NULL, '[]', '1', '1');
+                "#,
+            )
+            .expect("research fixture should be created");
+        connection
+    }
+
+    // A variant without the integrity triggers, for tests that must construct
+    // a row the triggers would correctly refuse. Never used to assert that the
+    // triggers allow something.
+    fn research_connection_without_triggers() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        connection
+    }
+
+    fn audit_events(
+        connection: &Connection,
+        category: &str,
+        action: &str,
+    ) -> Vec<(String, String, String, Option<String>)> {
+        let mut statement = connection
+            .prepare(
+                "SELECT outcome, actor, workspace_id, entity_id
+                 FROM audit_events WHERE category=?1 AND action=?2
+                 ORDER BY timestamp",
+            )
+            .expect("audit query should prepare");
+        statement
+            .query_map(params![category, action], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            })
+            .expect("audit query should run")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("audit rows should decode")
+    }
+
+    // RESEARCH-03: publishing to Knowledge must be audited.
+    #[test]
+    fn publishing_a_finding_to_knowledge_writes_an_audit_event() {
+        let connection = research_connection();
+        assert!(
+            audit_events(&connection, "research", "publish_to_knowledge").is_empty(),
+            "no audit event should exist before publishing",
+        );
+
+        publish_finding_to_knowledge(&connection, "workspace-a", "finding-a")
+            .expect("publishing a grounded finding should succeed");
+
+        let events = audit_events(&connection, "research", "publish_to_knowledge");
+        assert_eq!(
+            events.len(),
+            1,
+            "publishing must record exactly one audit event",
+        );
+        assert_eq!(events[0].0, "success");
+        assert_eq!(events[0].1, "user");
+        assert_eq!(events[0].2, "workspace-a");
+        assert_eq!(events[0].3.as_deref(), Some("finding-a"));
+    }
+
+    // The audit chain must remain verifiable after a publish.
+    #[test]
+    fn the_audit_chain_still_verifies_after_publishing() {
+        let connection = research_connection();
+        publish_finding_to_knowledge(&connection, "workspace-a", "finding-a")
+            .expect("publishing should succeed");
+
+        assert!(
+            verify_audit_chain(&connection, "workspace-a").expect("chain check should run"),
+            "the audit chain must verify after a publish",
+        );
+    }
+
+    #[test]
+    fn publishing_promotes_confidence_to_a_trust_level_and_tags_the_item() {
+        let connection = research_connection();
+        let view = publish_finding_to_knowledge(&connection, "workspace-a", "finding-a")
+            .expect("publishing should succeed");
+
+        assert_eq!(view.trust, "verified", "0.95 confidence is verified");
+        assert!(
+            view.tags_json.contains("research"),
+            "published knowledge must be tagged as research: {}",
+            view.tags_json,
+        );
+        assert_eq!(view.statement, "Grounded statement");
+
+        let stored: (String, String) = connection
+            .query_row(
+                "SELECT trust, source_ids_json FROM knowledge_items WHERE id=?1",
+                params![&view.id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("published item should be persisted");
+        assert_eq!(stored.0, "verified");
+        assert_eq!(stored.1, r#"["source-a"]"#);
+    }
+
+    // Republishing updates in place rather than duplicating the item.
+    #[test]
+    fn republishing_updates_the_same_knowledge_item() {
+        let connection = research_connection();
+        let first = publish_finding_to_knowledge(&connection, "workspace-a", "finding-a")
+            .expect("first publish");
+        let second = publish_finding_to_knowledge(&connection, "workspace-a", "finding-a")
+            .expect("second publish");
+
+        assert_eq!(first.id, second.id, "republishing must reuse the same item");
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_items WHERE id=?1",
+                params![&first.id],
+                |row| row.get(0),
+            )
+            .expect("count should be readable");
+        assert_eq!(count, 1, "republishing must not duplicate the item");
+
+        let events = audit_events(&connection, "research", "publish_to_knowledge");
+        assert_eq!(events.len(), 2, "each publish attempt must be audited",);
+    }
+
+    // A finding that is not in the active workspace must not publish.
+    #[test]
+    fn publishing_a_finding_from_another_workspace_is_refused() {
+        let connection = research_connection();
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-b', 'B', '1');
+                INSERT INTO knowledge_sources(id, workspace_id, type, title, locator, collected_at)
+                VALUES ('source-b', 'workspace-b', 'url', 'Source', 'https://other.example', '1');
+                INSERT INTO research_briefs(id, workspace_id, name, kind, question, objectives_json, status, created_at, updated_at)
+                VALUES ('brief-b', 'workspace-b', 'Brief', 'market', 'Question?', '[]', 'active', '1', '1');
+                INSERT INTO research_findings(id, workspace_id, brief_id, title, statement, source_ids_json, confidence, observed_at, expires_at, tags_json, created_at, updated_at)
+                VALUES ('finding-b', 'workspace-b', 'brief-b', 'Finding', 'Foreign statement', '["source-b"]', 0.95, '2026-09-26T00:00:00Z', NULL, '[]', '1', '1');
+                "#,
+            )
+            .expect("second workspace fixture should be created");
+
+        let error = publish_finding_to_knowledge(&connection, "workspace-a", "finding-b")
+            .expect_err("a finding from another workspace must not publish");
+        assert!(
+            error.contains("not found in active workspace"),
+            "unexpected error: {error}",
+        );
+
+        assert!(
+            audit_events(&connection, "research", "publish_to_knowledge").is_empty(),
+            "a refused publish must not record a success audit event",
+        );
+    }
+
+    // A finding whose sources are not in the workspace must be refused before
+    // anything is written.
+    #[test]
+    fn publishing_a_finding_with_foreign_sources_is_refused() {
+        // research_connection() enables the integrity triggers, which correctly
+        // refuse to create a finding citing another workspace's source. Build
+        // this row on a connection without triggers so the test can exercise
+        // what publish_finding_to_knowledge does when handed such a finding.
+        let connection = research_connection_without_triggers();
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                INSERT INTO knowledge_sources(id, workspace_id, type, title, locator, collected_at)
+                VALUES ('source-b', 'workspace-b', 'url', 'Foreign', 'https://other.example', '1');
+                INSERT INTO research_briefs(id, workspace_id, name, kind, question, objectives_json, status, created_at, updated_at)
+                VALUES ('brief-local', 'workspace-a', 'Local brief', 'market', 'Question?', '[]', 'active', '1', '1');
+                "#,
+            )
+            .expect("local fixture should be created");
+
+        // source_ids_json carries a real foreign key, so the mismatched row can
+        // only exist with enforcement off -- which is precisely the corrupted
+        // state this test needs to hand to publish_finding_to_knowledge.
+        connection
+            .execute_batch("PRAGMA foreign_keys = OFF;")
+            .expect("FKs should relax");
+        connection
+            .execute(
+                r#"INSERT INTO research_findings(
+                   id, workspace_id, brief_id, title, statement, source_ids_json,
+                   confidence, observed_at, expires_at, tags_json, created_at, updated_at
+                 ) VALUES (
+                   'finding-bad', 'workspace-a', 'brief-local', 'Bad', 'Cites a foreign source',
+                   '["source-b"]', 0.9, '2026-09-26T00:00:00Z', NULL, '[]', '1', '1'
+                 )"#,
+                [],
+            )
+            .expect("finding citing a foreign source should be seedable");
+        connection
+            .execute_batch("PRAGMA foreign_keys = ON;")
+            .expect("FKs should be restored");
+
+        let error = publish_finding_to_knowledge(&connection, "workspace-a", "finding-bad")
+            .expect_err("a finding citing foreign sources must not publish");
+        assert!(!error.is_empty(), "publishing must fail with a reason");
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM knowledge_items", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "nothing may be persisted for a refused publish");
+        assert!(
+            audit_events(&connection, "research", "publish_to_knowledge").is_empty(),
+            "a refused publish must not record a success audit event",
         );
     }
 }

@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**63 PASS, 12 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+**65 PASS, 10 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
 
 Classification rules applied:
 
@@ -117,7 +117,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | CONN-01 | PASS | `test/connectors.test.ts (capability handshake tests)` | — |
 | CONN-02 | PASS | `test/connectors.test.ts` :: rejects a task kind not exposed by a connector | — |
 | CONN-03 | PASS | `e2e/connector-challenge.spec.ts (challenge safe stop test)` | — |
-| CONN-04 | PARTIAL | `packages/desktop/src-tauri/src/lib.rs` :: execution_counter_records_success_and_failure | No source gate artifact found (e.g., scripts/source-gate.mjs or similar) |
+| CONN-04 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: execution_budget_blocks (single threshold decision point) + execution_counter_tests (trip points, per-account/workspace scoping, day rollover) | — |
 | CONN-05 | PARTIAL | `test/linkedin.test.ts (unit fixtures with fetch mocks)` | Controlled API test (safe vs live) not executed; commercial-connector-proof.safe.test.mjs exists but likely not run in CI |
 | WEB-01 | PASS | `e2e/public-web.spec.ts` :: PWA manifest is valid and points at ORBIT branding | — |
 | AI-01 | PASS | `packages/desktop/test/runtimeClient.test.ts (desktop client contract tests)` | — |
@@ -136,7 +136,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | DOC-02 | UNVERIFIED | `docs/SECURITY_THREAT_MODEL.md exists` | No executed security review evidence (no review artifact or test); only documentation exists |
 | RESEARCH-01 | PASS | `test/research.test.ts (research brief validation tests)` | — |
 | RESEARCH-02 | PASS | `e2e/tauri-shell.spec.ts` :: research intelligence stays workspace-scoped and evidence-backed (native integrity E2E) | — |
-| RESEARCH-03 | PARTIAL | `e2e/tauri-shell.spec.ts` :: research publish integration test (invokes research_publish_to_knowledge) | Audit verification: no test that asserts audit events are created when publishing to Knowledge |
+| RESEARCH-03 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: research_publish_audit_tests (audit written under the publishing workspace, chain still verifies, republish idempotent, cross-workspace and foreign-source refusals persist nothing) | — |
 | SEARCH-01 | PASS | `src/search/index.test.ts (core contract tests: normalization, rejection of oversized/control-character queries, deterministic ranking)` | No explicit test asserting exclusion of secret/session records from search results; search spec does not enumerate allowed kinds beyond campaign/account/message/knowledge_source |
 | ID       | Requirement                                                                                                                              | Evidence required                                              |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
