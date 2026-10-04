@@ -3742,8 +3742,6 @@ fn campaign_create(
 ) -> Result<CampaignView, String> {
     let workspace_id = active_workspace_id();
     let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
-        .map_err(|error| error.to_string())?;
 
     create_campaign(&connection, &workspace_id, &name, &account_ids)
 }
@@ -3754,6 +3752,11 @@ fn create_campaign(
     name: &str,
     account_ids: &[String],
 ) -> Result<CampaignView, String> {
+    // The membership gate lives here rather than only in the command wrapper so
+    // it is part of the path under test.
+    require_workspace_role_for(connection, workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
     let name = validate_label(name).map_err(|error| error.to_string())?;
     if account_ids.is_empty() {
         return Err("at least one account is required".to_string());
@@ -7163,6 +7166,15 @@ fn upsert_opportunity(
     source: Option<&str>,
     owner_id: Option<&str>,
 ) -> Result<OpportunityView, String> {
+    // The membership gate lives here rather than only in the command wrapper so
+    // it is part of the path under test.
+    require_workspace_role_for(
+        connection,
+        workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+
     let id = validate_label(id).map_err(|error| error.to_string())?;
     let contact_id = validate_label(contact_id).map_err(|error| error.to_string())?;
     let campaign_id = campaign_id
@@ -14675,6 +14687,13 @@ mod campaign_account_scope_tests {
             .expect("fresh schema should be creatable");
         migrate_schema(&connection).expect("current schema migrations should be applied");
         create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        // create_campaign enforces the membership gate, so the fixture models a
+        // local user who actually holds an editor role in workspace-a.
+        connection
+            .execute_batch(
+                "INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user')",
+            )
+            .expect("local user should be identified");
         connection
             .execute_batch(
                 r#"
@@ -14687,6 +14706,12 @@ mod campaign_account_scope_tests {
                 "#,
             )
             .expect("account fixture should be created");
+        connection
+            .execute_batch(
+                "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES ('workspace-a', 'local-user', 'editor', 1, '1')",
+            )
+            .expect("workspace-a membership should be granted");
         connection
     }
 
@@ -14877,6 +14902,14 @@ mod opportunity_scope_tests {
                 "#,
             )
             .expect("crm fixture should be created");
+        connection
+            .execute_batch(
+                "INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user');
+                 INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES ('workspace-a', 'local-user', 'editor', 1, '1'),
+                        ('workspace-b', 'local-user', 'editor', 1, '1');",
+            )
+            .expect("local membership should be granted");
         connection
     }
 
@@ -15078,6 +15111,213 @@ mod opportunity_scope_tests {
             .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
             .expect("count should be readable");
         assert_eq!(count, 0, "both refusals must persist nothing");
+    }
+}
+
+#[cfg(test)]
+mod workspace_membership_gate_tests {
+    use super::*;
+
+    fn gated_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+
+                INSERT INTO contacts(id, workspace_id, display_name, status, created_at, updated_at)
+                VALUES ('contact-a', 'workspace-a', 'Contact A', 'new', '1', '1'),
+                       ('contact-b', 'workspace-b', 'Contact B', 'new', '1', '1');
+
+                INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+                VALUES ('account-a', 'workspace-a', 'telegram', 'Account A', 'connected', '1', '1');
+
+                INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user');
+                "#,
+            )
+            .expect("gated fixture should be created");
+        connection
+    }
+
+    fn grant(connection: &Connection, workspace_id: &str, role: &str) {
+        connection
+            .execute(
+                "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES (?1, 'local-user', ?2, 1, '1')",
+                params![workspace_id, role],
+            )
+            .expect("membership should be granted");
+    }
+
+    // WS-01: access to a workspace requires membership in it. A user who is a
+    // member elsewhere gets nothing.
+    #[test]
+    fn a_user_with_no_membership_is_refused_everywhere() {
+        let connection = gated_connection();
+
+        assert_unauthorized(
+            require_workspace_role_for(&connection, "workspace-a", &["owner", "admin", "editor"]),
+            "a non-member must not be authorized in workspace-a",
+        );
+        assert_unauthorized(
+            require_workspace_role_for(&connection, "workspace-b", &["owner", "admin", "editor"]),
+            "a non-member must not be authorized in workspace-b",
+        );
+    }
+
+    // Membership in one workspace does not carry into another.
+    #[test]
+    fn membership_in_one_workspace_does_not_grant_another() {
+        let connection = gated_connection();
+        grant(&connection, "workspace-a", "editor");
+
+        require_workspace_role_for(&connection, "workspace-a", &["editor"])
+            .expect("the member should be authorized in their own workspace");
+        assert_unauthorized(
+            require_workspace_role_for(&connection, "workspace-b", &["owner", "admin", "editor"]),
+            "membership must not leak across workspaces",
+        );
+    }
+
+    // A deactivated membership is not membership.
+    #[test]
+    fn a_deactivated_membership_is_refused() {
+        let connection = gated_connection();
+        grant(&connection, "workspace-a", "editor");
+        connection
+            .execute(
+                "UPDATE workspace_memberships SET active=0 WHERE workspace_id='workspace-a'",
+                [],
+            )
+            .expect("membership should be deactivated");
+
+        assert_unauthorized(
+            require_workspace_role_for(&connection, "workspace-a", &["owner", "admin", "editor"]),
+            "a deactivated member must not be authorized",
+        );
+    }
+
+    // WS-03: the command path itself refuses a non-member before any write.
+    #[test]
+    fn campaign_create_refuses_a_non_member_before_writing() {
+        let connection = gated_connection();
+        let error = create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect_err("a non-member must not create a campaign");
+
+        assert!(
+            error.to_lowercase().contains("unauthorized")
+                || error.to_lowercase().contains("not authorized"),
+            "the refusal must name the authorization failure: {error}",
+        );
+
+        let campaigns: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaigns", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(campaigns, 0, "no campaign may be written for a non-member");
+        let links: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaign_accounts", [], |row| {
+                row.get(0)
+            })
+            .expect("count should be readable");
+        assert_eq!(links, 0, "no account link may be written for a non-member");
+        let audited: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM audit_events WHERE category='campaign' AND action='create'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("count should be readable");
+        assert_eq!(
+            audited, 0,
+            "a refused create must not be audited as success"
+        );
+    }
+
+    // WS-03: a member with a read-only role is refused the write path.
+    #[test]
+    fn a_viewer_is_refused_the_campaign_write_path() {
+        let connection = gated_connection();
+        grant(&connection, "workspace-a", "viewer");
+
+        create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect_err("a viewer must not create a campaign");
+
+        let campaigns: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaigns", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(campaigns, 0, "a viewer must not write a campaign");
+    }
+
+    // An authorized member of the same role succeeds, proving the refusals
+    // above are about membership rather than a broken command.
+    #[test]
+    fn an_editor_member_is_allowed_through_the_same_path() {
+        let connection = gated_connection();
+        grant(&connection, "workspace-a", "editor");
+
+        let view = create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect("an editor must be allowed to create a campaign");
+
+        assert!(!view.id.is_empty(), "the campaign must be created");
+    }
+
+    // The same gate protects the CRM write path.
+    #[test]
+    fn opportunity_upsert_refuses_a_non_member_before_writing() {
+        let connection = gated_connection();
+        let error = upsert_opportunity(
+            &connection,
+            "workspace-a",
+            "opp-1",
+            "contact-a",
+            None,
+            "Deal",
+            "new",
+            1000.0,
+            "USD",
+            50.0,
+            None,
+            None,
+        )
+        .expect_err("a non-member must not upsert an opportunity");
+        assert!(
+            error.to_lowercase().contains("unauthorized"),
+            "the refusal must name the authorization failure: {error}",
+        );
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "no opportunity may be written for a non-member");
+    }
+
+    fn assert_unauthorized(result: Result<(), AppError>, context: &str) {
+        match result {
+            Err(AppError::Unauthorized) => {}
+            Ok(()) => panic!("{context}: expected Unauthorized, was allowed"),
+            Err(other) => panic!("{context}: expected Unauthorized, got {other:?}"),
+        }
     }
 }
 
