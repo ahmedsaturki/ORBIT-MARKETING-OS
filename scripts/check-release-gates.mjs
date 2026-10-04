@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import {
   deriveGateStatus,
   calculateStats,
-  isAllGatesL3,
+  isReleaseReady,
   L3,
 } from "./release-gate-model.mjs";
 
@@ -51,7 +51,7 @@ try {
 }
 
 const stats = calculateStats(gates);
-const allL3 = isAllGatesL3(gates);
+const allL3 = isReleaseReady(gates);
 const blocked = Object.values(gates).filter((gate) => gate.blocked);
 
 if (asJson) {

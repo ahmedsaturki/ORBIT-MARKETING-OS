@@ -127,6 +127,25 @@ export function deriveGateStatus(readiness) {
     };
   }
 
+  // A gate added to releaseCritical but absent from GATE_KEYS is dropped by the
+  // loop above, leaving stats.total and isAllGatesL3 reporting on a truncated
+  // set. That direction has no other defence, so refuse the verdict here.
+  //
+  // The opposite direction, a modelled gate absent from the document, is
+  // already handled without throwing: it is collected into `missing` and
+  // isAllGatesL3 compares against GATE_KEYS.length, so a partial document can
+  // never be reported ready. Keep it non-fatal so callers can still render the
+  // gates that are present.
+  const untracked = Object.keys(critical)
+    .filter((key) => !GATE_KEYS.includes(key))
+    .sort();
+
+  if (untracked.length > 0) {
+    throw new Error(
+      `readiness.releaseCritical contains gate(s) not modelled in GATES: ${untracked.join(", ")}. ` +
+        "Add each to GATES with its owner and priority before trusting a release verdict.",
+    );
+  }
   return { gates, missing };
 }
 
@@ -167,5 +186,34 @@ export function isAllGatesL3(gates) {
   return (
     values.length === GATE_KEYS.length &&
     values.every((gate) => gate.level === L3)
+  );
+}
+
+// Mirrors the L3 validation in scripts/verify-release-readiness.mjs. Without it
+// here, a document with all 13 gates forged to L3 and no evidence at all makes
+// isAllGatesL3 return true. That document is rejected by the readiness verifier,
+// but this is the function the dashboard and the export call, so a gate must
+// not be reported cleared on the strength of a level string alone.
+export function isValidL3Evidence(gate) {
+  if (gate.level !== L3) return true;
+  return (
+    Array.isArray(gate.evidenceRefs) &&
+    gate.evidenceRefs.length > 0 &&
+    gate.evidenceRefs.every(
+      (ref) => typeof ref === "string" && ref.trim() !== "",
+    ) &&
+    typeof gate.verifiedAt === "string" &&
+    gate.verifiedAt.trim() !== "" &&
+    !Number.isNaN(Date.parse(gate.verifiedAt))
+  );
+}
+
+// Enforced here as well as in the readiness verifier, because the dashboard and
+// the export render these gates without running the verifier first.
+const originalIsAllGatesL3 = isAllGatesL3;
+export function isReleaseReady(gates) {
+  return (
+    originalIsAllGatesL3(gates) &&
+    Object.values(gates).every((gate) => isValidL3Evidence(gate))
   );
 }

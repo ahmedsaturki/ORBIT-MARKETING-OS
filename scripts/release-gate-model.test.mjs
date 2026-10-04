@@ -17,6 +17,7 @@ import {
   calculateStats,
   deriveGateStatus,
   isAllGatesL3,
+  isReleaseReady,
   levelClass,
   levelLabel,
 } from "./release-gate-model.mjs";
@@ -42,6 +43,79 @@ const promote = (document) => {
   }
   return copy;
 };
+
+// A gate present in the readiness document but absent from GATES would be
+// dropped by the derivation loop, leaving the verdict computed over a
+// truncated set that still looks complete.
+{
+  const withUntrackedGate = JSON.parse(JSON.stringify(readiness));
+  withUntrackedGate.releaseCritical.untracked_new_gate = {
+    level: "L1_IMPLEMENTED",
+    notes: "added to the document but never modelled",
+  };
+  assert.throws(
+    () => deriveGateStatus(withUntrackedGate),
+    /not modelled in GATES/,
+    "an unmodelled release-critical gate is refused, not silently dropped",
+  );
+}
+
+// A level string alone must not clear the release. All 13 gates forged to L3
+// with no evidenceRefs and no verifiedAt is a document the readiness verifier
+// already rejects; the dashboard and the export must reach the same verdict
+// without running the verifier first.
+{
+  const forged = JSON.parse(JSON.stringify(readiness));
+  for (const gate of Object.values(forged.releaseCritical)) {
+    gate.level = L3;
+    delete gate.evidenceRefs;
+    delete gate.verifiedAt;
+  }
+  const forgedGates = deriveGateStatus(forged).gates;
+  assert.equal(
+    isAllGatesL3(forgedGates),
+    true,
+    "isAllGatesL3 reads levels only, which is why it is not the verdict",
+  );
+  assert.equal(
+    isReleaseReady(forgedGates),
+    false,
+    "L3 without evidenceRefs and verifiedAt is never production ready",
+  );
+}
+
+// Empty or blank evidence is not evidence.
+{
+  const blank = promote(readiness);
+  for (const gate of Object.values(blank.releaseCritical)) {
+    gate.evidenceRefs = ["   "];
+  }
+  assert.equal(
+    isReleaseReady(deriveGateStatus(blank).gates),
+    false,
+    "whitespace evidenceRefs do not clear a gate",
+  );
+
+  const badDate = promote(readiness);
+  for (const gate of Object.values(badDate.releaseCritical)) {
+    gate.verifiedAt = "not-a-date";
+  }
+  assert.equal(
+    isReleaseReady(deriveGateStatus(badDate).gates),
+    false,
+    "an unparseable verifiedAt does not clear a gate",
+  );
+}
+
+// A properly evidenced promotion is still reported ready, so the new
+// validation cannot silently pin the release to blocked forever.
+{
+  assert.equal(
+    isReleaseReady(deriveGateStatus(promote(readiness)).gates),
+    true,
+    "a fully evidenced promotion reports ready",
+  );
+}
 
 // Gate metadata must stay aligned with the real readiness document.
 const current = deriveGateStatus(readiness);

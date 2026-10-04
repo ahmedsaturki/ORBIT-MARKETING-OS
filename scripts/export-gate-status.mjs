@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import {
   deriveGateStatus,
   calculateStats,
-  isAllGatesL3,
+  isReleaseReady,
   L3,
 } from "./release-gate-model.mjs";
 
@@ -35,7 +35,7 @@ const outputFile = flag("--output", flag("-o", ""));
 const readiness = JSON.parse(readFileSync(readinessPath, "utf8"));
 const { gates, missing } = deriveGateStatus(readiness);
 const stats = calculateStats(gates);
-const allL3 = isAllGatesL3(gates);
+const allL3 = isReleaseReady(gates);
 
 const blockedGates = Object.values(gates).filter((gate) => gate.blocked);
 
