@@ -173,7 +173,9 @@ self-hosted runner), and the manual WCAG/RTL audit.
 ## Open PRs that overlap this branch
 
 Published as PR #213. Five PRs were already open against `main`; this branch
-shares 8 files with two of them.
+shares **7 distinct files** with two of them. An earlier version of this
+document said 8, which double-counted `ci.yml` and `package.json` because both
+PRs touch them.
 
 | File                                               | PR #195 | PR #196 |
 | -------------------------------------------------- | ------- | ------- |
@@ -182,7 +184,8 @@ shares 8 files with two of them.
 | `scripts/commercial-connector-proof.safe.test.mjs` | yes     | —       |
 | `docs/SECURITY_EXCEPTIONS.md`                      | —       | yes     |
 | `pnpm-workspace.yaml`                              | —       | yes     |
-| `package.json`, `.github/workflows/ci.yml`         | yes     | yes     |
+| `package.json`                                     | yes     | yes     |
+| `.github/workflows/ci.yml`                         | yes     | yes     |
 
 ### The `braces` exception needs a single owner
 
