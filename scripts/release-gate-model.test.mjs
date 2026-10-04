@@ -130,12 +130,48 @@ assert.equal(levelLabel(L3), "L3 PRODUCTION PROVEN");
 assert.equal(levelClass(L3), "l3-production-proven");
 assert.equal(levelClass("L1_IMPLEMENTED"), "l1-implemented");
 
+// The live document's own level distribution stays asserted, because that is a
+// fact about readiness.json rather than an expectation about future progress.
+const currentStats = calculateStats(current.gates);
+
 // "Blocked" means "not production proven", never "has notes". Every gate in the
 // real document carries notes, so a notes-based rule marks all 13 blocked
 // forever and can never report production ready.
-const currentStats = calculateStats(current.gates);
-assert.equal(current.gates.web_production.blocked, true);
-assert.ok(current.gates.web_production.blockingReason.length > 0);
+//
+// Asserted against a controlled fixture rather than the live document. Reading
+// it off the real readiness.json makes this test fail the day web_production
+// legitimately reaches L3, which is the outcome the gate exists to enable.
+{
+  const blockedFixture = JSON.parse(JSON.stringify(readiness));
+  for (const gate of Object.values(blockedFixture.releaseCritical)) {
+    gate.level = "L2_VERIFIED";
+    gate.notes = "owner action outstanding";
+  }
+  const blockedGates = deriveGateStatus(blockedFixture).gates;
+  assert.equal(blockedGates.web_production.blocked, true);
+  assert.equal(
+    blockedGates.web_production.blockingReason,
+    "owner action outstanding",
+    "a blocker is reported from the notes",
+  );
+
+  // Notes must not be what decides it: the same fixture with notes cleared is
+  // still blocked, because the level did not change.
+  for (const gate of Object.values(blockedFixture.releaseCritical)) {
+    gate.notes = "";
+  }
+  const clearedNotes = deriveGateStatus(blockedFixture).gates;
+  assert.equal(
+    clearedNotes.web_production.blocked,
+    true,
+    "clearing notes does not clear a gate that is not production proven",
+  );
+  assert.equal(
+    clearedNotes.web_production.blockingReason,
+    "",
+    "no blocker text is reported once notes are cleared",
+  );
+}
 
 const promoted = promote(readiness);
 const allL3 = deriveGateStatus(promoted);
