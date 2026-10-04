@@ -26,8 +26,23 @@ Two claims from earlier reporting are corrected by this reconciliation:
   repository contains **348** executing tests and this matrix defines **83** IDs.
   Three additional IDs (`SEARCH-02`..`SEARCH-04`) named in an earlier audit do not
   exist here and were not counted.
+
 - The only `FAIL` is **REL-02**: `release-desktop.yml` builds with
   `signing=unsigned`, so no signed desktop artifact can be produced.
+
+**Evidence caveat (2026-10-04 re-audit).** Seven rows below (`SEC-03`,
+`DATA-01`, `WS-02`, `QUE-01`, `CAMP-01`, `OPS-01`, `RESEARCH-02`) cite
+`e2e/tauri-shell.spec.ts` as their primary evidence. Those tests exist and are
+executed by CI, but they could not be observed passing on the audit machine:
+the Tauri binary builds and launches, yet WebView2 154.0.4258.53 never opens
+the CDP port the spec attaches through, so the suite reports 25 passed, 1
+failed, 8 not run. Treat these rows as **CI-attested, not machine-confirmed**
+until a passing run is observed.
+
+The desktop build itself was fixed during this audit:
+`scripts/build-tauri.mjs` invoked cargo without producing
+`packages/desktop/dist`, which `tauri::generate_context!()` embeds, so the
+release build failed from a clean checkout. That blocker is closed.
 
 
 `OPS-02` (24h stability) and `REL-03` (checksums) are `UNVERIFIED` because the
