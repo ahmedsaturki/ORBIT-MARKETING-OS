@@ -257,6 +257,47 @@ try {
     "default model contract mismatch",
   );
 
+  const generationBody = await generation.json();
+  assert(
+    typeof generationBody?.content === "string" &&
+      generationBody.content.length > 0,
+    "generation returned no content",
+  );
+  assert(
+    generationBody.content === "fake ollama response",
+    "the provider's completion was not surfaced to the caller",
+  );
+  assert(
+    generationBody?.provider === "ollama-local",
+    "generation did not report the local provider",
+  );
+  assert(
+    generationBody?.modelUsed === FIXTURE_MODEL,
+    "generation did not report the model it actually used",
+  );
+
+  // The prompt must carry each requested dimension, otherwise the endpoint
+  // silently ignores tone/dialect/audience and returns undifferentiated copy.
+  const generationPrompt = capturedOllamaBody?.messages?.[0]?.content ?? "";
+  for (const [label, value] of [
+    ["topic", "اختبار ORBIT"],
+    ["dialect", "فصحى مبسطة"],
+    ["tone", "احترافي"],
+    ["audience", "اختبار"],
+  ]) {
+    assert(
+      generationPrompt.includes(value),
+      "generation prompt dropped the requested " + label,
+    );
+  }
+  assert(
+    generationPrompt.includes("Facebook") &&
+      generationPrompt.includes("Instagram") &&
+      generationPrompt.includes("WhatsApp") &&
+      generationPrompt.includes("Telegram"),
+    "generation prompt must ask for every required platform section",
+  );
+
   const chat = await fetch("http://127.0.0.1:" + RUNTIME_PORT + "/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json" },
