@@ -7094,27 +7094,6 @@ fn opportunity_upsert(
     owner_id: Option<String>,
 ) -> Result<OpportunityView, String> {
     let workspace_id = active_workspace_id();
-    let id = validate_label(&id).map_err(|error| error.to_string())?;
-    let contact_id = validate_label(&contact_id).map_err(|error| error.to_string())?;
-    let campaign_id = campaign_id
-        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
-        .transpose()?;
-    let name = validate_label(&name).map_err(|error| error.to_string())?;
-    let stage = validate_opportunity_stage(&stage)?;
-    let currency = validate_currency(&currency)?;
-    if !value.is_finite() || value < 0.0 {
-        return Err("opportunity value must be finite and non-negative".to_string());
-    }
-    if !probability.is_finite() || !(0.0..=100.0).contains(&probability) {
-        return Err("opportunity probability must be between 0 and 100".to_string());
-    }
-    let source = source
-        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
-        .transpose()?;
-    let owner_id = owner_id
-        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
-        .transpose()?;
-
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(
         &connection,
@@ -7122,6 +7101,58 @@ fn opportunity_upsert(
         &["owner", "admin", "editor", "operator"],
     )
     .map_err(|error| error.to_string())?;
+
+    upsert_opportunity(
+        &connection,
+        &workspace_id,
+        &id,
+        &contact_id,
+        campaign_id.as_deref(),
+        &name,
+        &stage,
+        value,
+        &currency,
+        probability,
+        source.as_deref(),
+        owner_id.as_deref(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn upsert_opportunity(
+    connection: &Connection,
+    workspace_id: &str,
+    id: &str,
+    contact_id: &str,
+    campaign_id: Option<&str>,
+    name: &str,
+    stage: &str,
+    value: f64,
+    currency: &str,
+    probability: f64,
+    source: Option<&str>,
+    owner_id: Option<&str>,
+) -> Result<OpportunityView, String> {
+    let id = validate_label(id).map_err(|error| error.to_string())?;
+    let contact_id = validate_label(contact_id).map_err(|error| error.to_string())?;
+    let campaign_id = campaign_id
+        .map(|value| validate_label(value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let name = validate_label(name).map_err(|error| error.to_string())?;
+    let stage = validate_opportunity_stage(stage)?;
+    let currency = validate_currency(currency)?;
+    if !value.is_finite() || value < 0.0 {
+        return Err("opportunity value must be finite and non-negative".to_string());
+    }
+    if !probability.is_finite() || !(0.0..=100.0).contains(&probability) {
+        return Err("opportunity probability must be between 0 and 100".to_string());
+    }
+    let source = source
+        .map(|value| validate_label(value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let owner_id = owner_id
+        .map(|value| validate_label(value).map_err(|error| error.to_string()))
+        .transpose()?;
 
     let contact_exists: bool = connection
         .query_row(
@@ -7207,8 +7238,11 @@ fn opportunity_upsert(
         return Err("opportunity id already belongs to another workspace".to_string());
     }
 
-    write_audit(
-        &connection,
+    // write_audit resolves the process-global active workspace; this row was
+    // written to the workspace passed in, so audit that one.
+    write_audit_for_workspace(
+        connection,
+        workspace_id,
         "crm",
         "opportunity_upsert",
         "success",
@@ -14597,6 +14631,237 @@ mod media_asset_import_tests {
             "the owner's file must be untouched: {}",
             owner.1,
         );
+    }
+}
+
+#[cfg(test)]
+mod opportunity_scope_tests {
+    use super::*;
+
+    fn crm_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+
+                INSERT INTO contacts(id, workspace_id, display_name, status, created_at, updated_at)
+                VALUES ('contact-a', 'workspace-a', 'Contact A', 'new', '1', '1'),
+                       ('contact-b', 'workspace-b', 'Contact B', 'new', '1', '1');
+
+                INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                VALUES ('campaign-a', 'workspace-a', 'Campaign A', 'draft', '1'),
+                       ('campaign-b', 'workspace-b', 'Campaign B', 'draft', '1');
+                "#,
+            )
+            .expect("crm fixture should be created");
+        connection
+    }
+
+    fn upsert(
+        connection: &Connection,
+        workspace_id: &str,
+        id: &str,
+        contact_id: &str,
+        campaign_id: Option<&str>,
+    ) -> Result<OpportunityView, String> {
+        upsert_opportunity(
+            connection,
+            workspace_id,
+            id,
+            contact_id,
+            campaign_id,
+            "Deal",
+            "new",
+            1000.0,
+            "USD",
+            50.0,
+            None,
+            None,
+        )
+    }
+
+    // OUT-01: outcomes must stay inside the workspace that owns them.
+    #[test]
+    fn an_opportunity_is_created_scoped_and_linked_to_its_workspace() {
+        let connection = crm_connection();
+        let view = upsert(
+            &connection,
+            "workspace-a",
+            "opp-1",
+            "contact-a",
+            Some("campaign-a"),
+        )
+        .expect("a workspace-owned contact should link");
+
+        assert_eq!(view.id, "opp-1");
+        assert_eq!(view.stage, "new");
+
+        let stored: (String, String, String) = connection
+            .query_row(
+                "SELECT workspace_id, contact_id, campaign_id FROM opportunities WHERE id='opp-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("the opportunity must be persisted");
+        assert_eq!(stored.0, "workspace-a");
+        assert_eq!(stored.1, "contact-a");
+        assert_eq!(stored.2, "campaign-a");
+    }
+
+    // Linking a contact from another workspace must be refused.
+    #[test]
+    fn linking_another_workspaces_contact_is_refused() {
+        let connection = crm_connection();
+        let error = upsert(&connection, "workspace-a", "opp-1", "contact-b", None)
+            .expect_err("a foreign contact must not link");
+        assert!(
+            error.contains("contact does not belong"),
+            "unexpected error: {error}",
+        );
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused link must persist nothing");
+    }
+
+    // Linking a campaign from another workspace must be refused.
+    #[test]
+    fn linking_another_workspaces_campaign_is_refused() {
+        let connection = crm_connection();
+        let error = upsert(
+            &connection,
+            "workspace-a",
+            "opp-1",
+            "contact-a",
+            Some("campaign-b"),
+        )
+        .expect_err("a foreign campaign must not link");
+        assert!(
+            error.contains("campaign does not belong"),
+            "unexpected error: {error}",
+        );
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused link must persist nothing");
+    }
+
+    // An id already owned by another workspace must not be silently ignored.
+    #[test]
+    fn an_opportunity_id_owned_by_another_workspace_is_refused() {
+        let connection = crm_connection();
+        upsert(&connection, "workspace-a", "shared", "contact-a", None)
+            .expect("workspace-a should own the id");
+
+        let error = upsert(&connection, "workspace-b", "shared", "contact-b", None)
+            .expect_err("a foreign workspace must not overwrite the opportunity");
+        assert!(
+            error.contains("already belongs to another workspace"),
+            "unexpected error: {error}",
+        );
+
+        let owner: String = connection
+            .query_row(
+                "SELECT workspace_id FROM opportunities WHERE id='shared'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("the original opportunity must still exist");
+        assert_eq!(owner, "workspace-a", "ownership must not change");
+    }
+
+    // The audit must name the workspace that owns the row.
+    #[test]
+    fn the_upsert_is_audited_under_the_writing_workspace() {
+        let connection = crm_connection();
+        upsert(&connection, "workspace-a", "opp-1", "contact-a", None)
+            .expect("upsert should succeed");
+
+        let audited: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM audit_events
+                 WHERE category='crm' AND action='opportunity_upsert' AND workspace_id='workspace-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("audit count should be readable");
+        assert_eq!(audited, 1, "the audit must name the owning workspace");
+    }
+
+    #[test]
+    fn an_invalid_stage_is_refused_before_writing() {
+        let connection = crm_connection();
+        let error = upsert_opportunity(
+            &connection,
+            "workspace-a",
+            "opp-1",
+            "contact-a",
+            None,
+            "Deal",
+            "not-a-stage",
+            1000.0,
+            "USD",
+            50.0,
+            None,
+            None,
+        )
+        .expect_err("an unknown stage must be refused");
+        assert!(!error.is_empty(), "the refusal must give a reason");
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused upsert must persist nothing");
+    }
+
+    #[test]
+    fn a_negative_value_and_an_out_of_range_probability_are_refused() {
+        let connection = crm_connection();
+        upsert_opportunity(
+            &connection,
+            "workspace-a",
+            "opp-negative",
+            "contact-a",
+            None,
+            "Deal",
+            "new",
+            -5.0,
+            "USD",
+            50.0,
+            None,
+            None,
+        )
+        .expect_err("a negative value must be refused");
+
+        upsert_opportunity(
+            &connection,
+            "workspace-a",
+            "opp-probability",
+            "contact-a",
+            None,
+            "Deal",
+            "new",
+            10.0,
+            "USD",
+            140.0,
+            None,
+            None,
+        )
+        .expect_err("a probability above 100 must be refused");
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "both refusals must persist nothing");
     }
 }
 
