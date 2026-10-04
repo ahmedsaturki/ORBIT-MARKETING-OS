@@ -100,8 +100,8 @@ jobs:
         run: node scripts/vercel-ignore.test.mjs
       - name: Production release trigger contract
         run: node scripts/production-release-trigger.test.mjs
-      - name: Release workflow step ordering contract
-        run: node scripts/release-workflow-ordering.test.mjs
+      - name: Release workflow contract
+        run: node scripts/release-workflow-contract.test.mjs
       - name: Stability soak runner resilience contract
         run: pnpm test:soak-runner-resilience
       - name: Workspace sanity

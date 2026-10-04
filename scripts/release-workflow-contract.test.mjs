@@ -4,7 +4,12 @@ import { readFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { readdir } from "node:fs/promises";
+import { parse } from "yaml";
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+const WORKFLOW_DIR = join(ROOT, ".github", "workflows");
 
 // Returns each step's name paired with its `run:` command, in file order, so a
 // test can assert on relative ordering rather than absolute line numbers.
@@ -55,4 +60,28 @@ test("release quality gate builds the web export before running browser E2E", as
 
 test("ci orders its build before web E2E, matching the release workflow", async () => {
   await assertBuildPrecedesE2E("ci.yml");
+});
+
+test("every workflow uses LF endings and parses as YAML", async () => {
+  // Three workflows (release-mobile, self-hosted-verify,
+  // web-release-selfhosted) carried a doubled carriage return on the same
+  // three-line "Governed audit exceptions" block. `\r\r\n` is not a valid YAML
+  // line terminator, so GitHub reported "This run likely failed because of a
+  // workflow file issue" and the workflow never executed. `.gitattributes` pins
+  // `* text=auto eol=lf`, so a stray CR in the committed blob is a real defect
+  // rather than a platform artefact.
+  const files = (await readdir(WORKFLOW_DIR)).filter((f) => /\.ya?ml$/.test(f));
+  assert.ok(files.length > 0, "no workflow files found");
+
+  for (const file of files) {
+    const text = (await readFile(join(WORKFLOW_DIR, file))).toString("utf8");
+
+    assert.ok(
+      !/\r/.test(text),
+      `${file} contains a carriage return; .gitattributes requires eol=lf. ` +
+        `GitHub rejects a doubled CR as an invalid YAML line terminator, so ` +
+        `the workflow fails to load before any step runs.`,
+    );
+    assert.doesNotThrow(() => parse(text), `${file} must parse as valid YAML`);
+  }
 });
