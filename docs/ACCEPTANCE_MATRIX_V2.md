@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**74 PASS, 1 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+**75 PASS, 0 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements. Every requirement is now either machine-confirmed or carries a stated reason it is not.
 
 Classification rules applied:
 
@@ -109,7 +109,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | EVENT-01 | PASS | `src/events/index.test.ts (event-spine tests)` | — |
 | INBOX-01 | UNVERIFIED | — | No unified conversation integration test that exercises the conversation model through a connector fixture; native conversation tests exist but do not involve a connector |
 | CRM-01 | UNVERIFIED | — | No test that creates a conversation linked to a contact and verifies the relationship; native conversation_upsert takes contact_id but no integration test exercises this path |
-| SYNC-01 | PARTIAL | `test/sync.test.ts` :: survives encrypted transport disconnect/reconnect and converges across two devices | No test that simulates a device disconnect, restart, and reconnection with persisted edits; tests only cover disconnect/reconnect convergence |
+| SYNC-01 | PASS | `packages/core/test/sync.test.ts` :: offline edits survive a restart (edits made while offline and after the last sync both restore; an offline deletion stays deleted and is not resurrected by replaying an older snapshot; state persisted through the encrypted envelope restores with the payload unreadable at rest; five restart cycles neither lose nor drift state) | — |
 | SYNC-02 | PASS | `test/sync-network.test.ts (Yjs convergence tests)` | — |
 | BACK-01 | PASS | `test/backup.test.ts` :: round-trips opaque data (createEncryptedBackup → restoreEncryptedBackup) | — |
 | BACK-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: restore_rejects_corrupt_database_before_replacing_the_live_target | — |
@@ -118,7 +118,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | CONN-02 | PASS | `test/connectors.test.ts` :: rejects a task kind not exposed by a connector | — |
 | CONN-03 | PASS | `e2e/connector-challenge.spec.ts (challenge safe stop test)` | — |
 | CONN-04 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: execution_budget_blocks (single threshold decision point) + execution_counter_tests (trip points, per-account/workspace scoping, day rollover) | — |
-| SYNC-01 | PASS | `packages/core/test/sync.test.ts` :: offline edits survive a restart (edits made while offline and after the last sync both restore; an offline deletion stays deleted and is not resurrected by replaying an older snapshot; state persisted through the encrypted envelope restores with the payload unreadable at rest; five restart cycles neither lose nor drift state) | — |
+| CONN-05 | PASS | `packages/core/test/linkedin.test.ts` :: capability authorization scoping (connect refuses without confirmation and without a token, and never resolves the token before authorization; execute refuses without author urn, without content and without confirmation, never reaching the API) + `scripts/commercial-connector-proof.safe.test.mjs` (live proof fails closed, exit 2, naming all four missing inputs; runs in ci.yml) | A call against the real LinkedIn Posts API needs ORBIT_LINKEDIN_TEST_TOKEN and ORBIT_LINKEDIN_TEST_AUTHOR_URN and cannot run here |
 | WEB-01 | PASS | `e2e/public-web.spec.ts` :: PWA manifest is valid and points at ORBIT branding | — |
 | AI-01 | PASS | `packages/desktop/test/runtimeClient.test.ts (desktop client contract tests)` | — |
 | MOB-01 | PASS | `.github/workflows/mobile-validation.yml (typecheck + expo prebuild + gradle assembleDebug)` | — |
