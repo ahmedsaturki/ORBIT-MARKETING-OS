@@ -25,6 +25,7 @@ import { createRequire } from "node:module";
 const GHSA = "GHSA-vfj7-8cjw-p6xm";
 const REVIEW_AFTER = "2026-11-03";
 const MAX_INSTALLED_VERSION = "3.0.3";
+const PACKAGE = "braces";
 const require = createRequire(import.meta.url);
 
 const workspace = readFileSync("pnpm-workspace.yaml", "utf8");
@@ -55,14 +56,24 @@ assert.match(
 const lockfile = readFileSync("pnpm-lock.yaml", "utf8");
 assert.match(lockfile, /braces@3\.0\.3/, "braces is expected in the lockfile");
 
-// (2) The pinned version is the newest published. Checked without a network
-// call so this contract is deterministic; the registry is consulted during
-// the scheduled dependency review instead.
-const latest = MAX_INSTALLED_VERSION;
-assert.match(
-  lockfile,
-  new RegExp(`braces@${latest}\\b`),
-  `braces must stay pinned at the latest published version (${latest})`,
+// (2) The pinned version really is the newest published.
+//
+// This used to read `const latest = MAX_INSTALLED_VERSION` and then assert the
+// lockfile contained that same constant, which compares a value with itself
+// and can never fail: a newer braces release, or a second braces version in the
+// lockfile, both passed. The advisory's upgrade trigger is therefore unenforced.
+// The registry is consulted directly, and the check fails closed if it cannot
+// be reached rather than passing silently.
+const registryResponse = await fetch(`https://registry.npmjs.org/${PACKAGE}`);
+assert.ok(
+  registryResponse.ok,
+  `npm registry must be reachable to verify ${PACKAGE} (got ${registryResponse.status})`,
+);
+const { ["dist-tags"]: distTags } = await registryResponse.json();
+assert.equal(
+  distTags.latest,
+  MAX_INSTALLED_VERSION,
+  `${PACKAGE} is pinned at ${MAX_INSTALLED_VERSION} but the registry reports ${distTags.latest} as latest; review whether to upgrade`,
 );
 
 // (3) Reachability is build-time only: braces is reached through Metro
@@ -95,18 +106,22 @@ assert.equal(
   "pnpm@10.17.1",
   "exception contract is tied to the repository's pinned package manager",
 );
+// The exception is valid *through* the review date and fails after it, which is
+// what docs/SECURITY_EXCEPTIONS.md states in both places. Comparing against
+// REVIEW_AFTER at 00:00 UTC expired the exception a full day early, on the
+// morning the review was still due. Compare against the start of the next day.
 const reviewDate = new Date(REVIEW_AFTER + "T00:00:00Z");
+const expiryDate = new Date(reviewDate.valueOf() + 24 * 60 * 60 * 1000);
 if (Number.isNaN(reviewDate.valueOf())) {
   throw new Error("invalid review date");
 }
-if (Date.now() >= reviewDate.valueOf()) {
+if (Date.now() >= expiryDate.valueOf()) {
   throw new Error(
-    `${GHSA} exception expired on ${REVIEW_AFTER}: re-review and either ` +
+    `${GHSA} exception expired after ${REVIEW_AFTER}: re-review and either ` +
       "upgrade braces or record a new justification",
   );
 }
-
 console.log(
-  `braces-audit-exception=PASS ghsa=${GHSA} version=${latest} ` +
+  `braces-audit-exception=PASS ghsa=${GHSA} version=${MAX_INSTALLED_VERSION} ` +
     `review_after=${REVIEW_AFTER}`,
 );

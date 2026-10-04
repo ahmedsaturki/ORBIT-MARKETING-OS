@@ -57,6 +57,20 @@ Mitigations required by this exception:
   audit filter; any other moderate/high/critical advisory remains a failure.
 - Mandatory review date of **2026-11-03**; the contract fails after that date.
 
+### Contract runtime notes
+
+- The "pinned version matches the latest published version" check queries the
+  npm registry, so `pnpm test:braces-audit-exception` needs network access and
+  fails closed if the registry is unreachable. It previously read
+  `const latest = MAX_INSTALLED_VERSION` and compared that constant against the
+  lockfile, which could never fail: neither a newer `braces` release nor a
+  second `braces` version in the lockfile was detected. The advisory's upgrade
+  trigger was documented but unenforced until this check was made real.
+- The review date is inclusive. `2026-11-03` is a valid day to perform the
+  review; the contract fails from `2026-11-04T00:00:00Z`. The previous
+  comparison against `2026-11-03T00:00:00Z` expired the exception on the morning
+  the review was still due, which contradicted the wording used here.
+
 Removal conditions:
 
 1. A released upstream `braces` version fixes this advisory; upgrade and remove
