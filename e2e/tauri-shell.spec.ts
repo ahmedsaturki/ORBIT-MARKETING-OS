@@ -1222,24 +1222,33 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     try {
       // Create real operational state inside this workspace: an account, a
       // campaign, content and a pending approval.
+      // account_upsert takes `session` and `password`, not a prebuilt payload:
+      // the Rust side seals the pair together and derives the stored blob itself.
+      // Passing `sessionPayloadJson`/`workspaceId` instead did not throw, because
+      // Tauri ignores arguments the command does not declare, so the account was
+      // stored with no session at all and the positive control below correctly
+      // reported has_encrypted_session=false. The workspace is not a parameter
+      // either: account_upsert always writes to the active workspace, which is
+      // missionWorkspace here.
       const account = (await page!.evaluate(
-        async ({ id, workspaceId }) =>
+        async (id) =>
           window.__TAURI_INTERNALS__.invoke("account_upsert", {
             id,
-            workspaceId,
             platform: "linkedin",
             displayName: "Mission Control Account",
             username: "mission-control-e2e",
-            status: "connected",
-            sessionPayloadJson: JSON.stringify({
-              secretToken: "must-not-surface",
-            }),
+            session: "mission-control-session-fixture",
+            password: "must-not-surface",
           }),
-        {
-          id: `e2e-mission-account-${suffix}`,
-          workspaceId: missionWorkspace.id,
-        },
-      )) as { id: string };
+        `e2e-mission-account-${suffix}`,
+      )) as { id: string; status: string; has_encrypted_session: boolean };
+
+      // The command derives status from whether it sealed a payload, so assert it
+      // here too: it is what tells a silent no-session upsert apart from a broken
+      // one at the source rather than three assertions later.
+      expect(account.status, "the seeded account must be connected").toBe(
+        "connected",
+      );
 
       const campaign = (await page!.evaluate(
         async ({ id, accountId }) =>
@@ -1383,7 +1392,16 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
       });
       expect(surface.toLowerCase()).not.toContain("must-not-surface");
       expect(surface.toLowerCase()).not.toContain("sessionpayload");
-      expect(surface.toLowerCase()).not.toContain("secrettoken");
+      // The sealed payload holds both the session and the password. Check each,
+      // not just the one flagged by name in the seed: a redaction that covered
+      // one and leaked the other would still satisfy a single check.
+      expect(surface.toLowerCase()).not.toContain(
+        "mission-control-session-fixture",
+      );
+      // seal() builds {version, algorithm, salt, nonce, ciphertext}; none of that
+      // may reach the operational surface. Checking "secrettoken" here, as this
+      // test did before, asserted against a field that the payload never had.
+      expect(surface.toLowerCase()).not.toContain("ciphertext");
     } finally {
       // Restore the original workspace so later tests do not inherit state,
       // even when an assertion above threw.
