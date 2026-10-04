@@ -210,11 +210,47 @@ additive on this side**: #198 lacks `build:icons`, `test:exec-trusted`,
 after it was opened. Those are the same lines #198 would contribute, at an
 earlier state of the same effort.
 
-So #198 is best read as a superseded snapshot of this branch rather than a
-competing change. Merging it as-is would revert work, not reconcile with it.
-Whether it should be closed, or rebased and reduced to whatever it uniquely
-contains, is a call for the owner; the file table above is the evidence either
-way.
+So #198 is best read as a **superseded snapshot plus a distinct security
+track**, not a competing change. Merging it wholesale would revert work, not
+reconcile with it.
+
+### What only #198 has, and it is not nothing
+
+Correcting the framing above: #198 also contributes 13 files this branch does
+not have, and they are supply-chain security controls, not cosmetics. "Superseded
+snapshot" is true of the overlap, not of the PR.
+
+| File                                                              | What it adds                                                |
+| ----------------------------------------------------------------- | ----------------------------------------------------------- |
+| `deny.toml`                                                       | cargo-deny policy: advisory and license allowlists, sources |
+| `.github/workflows/cargo-quality.yml`                             | Runs cargo-deny against that policy                         |
+| `.github/workflows/codeql.yml`                                    | CodeQL, weekly                                              |
+| `.github/workflows/dependency-review.yml`                         | PR dependency review                                        |
+| `.github/workflows/scorecard.yml`                                 | OpenSSF Scorecard, weekly                                   |
+| `.github/workflows/actions-quality.yml`                           | zizmor workflow-security scan                               |
+| `.zizmor.yml`                                                     | zizmor config, exempting `ci.yml` as a dangerous trigger    |
+| `.github/workflows/links.yml`                                     | lychee documentation link check                             |
+| `.github/workflows/lighthouse.yml`                                | Lighthouse web quality gate                                 |
+| `.lighthouserc.json`, `.lycheeignore`                             | Configuration for the two above                             |
+| `docs/QUALITY_AND_RELEASE_ACTIONS.md`, `docs/SECURITY_ACTIONS.md` | Documentation for the above                                 |
+| `scripts/audit-exceptions-contract.test.mjs`                      | Predecessor of this branch's exception contracts            |
+
+Two of these interact with work on this branch rather than sitting beside it.
+
+- **zizmor** analyses the workflow-security posture of `.github/workflows`, and
+  this branch edits five workflows, including a SonarCloud `spawnSync` fix.
+  `.zizmor.yml` exempts `ci.yml` from `dangerous-triggers`; that exemption is
+  worth reviewing on its merits rather than inherited blind.
+- **cargo-deny** asserts a license allowlist over the Rust dependency graph.
+  The 505-crate `Cargo.lock` records no license fields, so this cannot be
+  validated from the lockfile alone; it needs cargo-deny to fetch crate
+  metadata from the registry. **I was not able to run it** on this host, so I
+  am not claiming the policy passes as written. Adopting it should include
+  running `cargo deny check` once against this tree first.
+
+The owner decision is therefore narrower than "merge or close #198": it is
+which of these controls to adopt, and whether cargo-deny passes before it
+lands.
 
 ### The `braces` exception needs a single owner
 
