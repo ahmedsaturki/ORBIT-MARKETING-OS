@@ -11,12 +11,12 @@ by running the command named beside it, not by reading a prior report.
 
 ## 1. Four-Part Status
 
-| Dimension       | Status           | Basis                                                                                                                                                 |
-| --------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Engineering** | **PASS**         | 379 JS tests (core 357, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
-| **Product**     | **PARTIAL**      | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code                                                         |
-| **Release**     | **NOT READY**    | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
-| **Owner Gates** | **10 remaining** | Certificates, credentials, store accounts, human review, wall-clock time                                                                              |
+| Dimension       | Status          | Basis                                                                                                                                                 |
+| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Engineering** | **PASS**        | 379 JS tests (core 357, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
+| **Product**     | **PARTIAL**     | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code                                                         |
+| **Release**     | **NOT READY**   | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
+| **Owner Gates** | **9 remaining** | Certificates, credentials, store accounts, human review, wall-clock time. A tenth (SonarCloud new-code rating) is now closed                          |
 
 ### Overall
 
@@ -203,15 +203,20 @@ matches the latest published version, and that the exception expires after
 
 ## 6. What Could Not Be Verified Here
 
-- **Desktop E2E.** WebView2 does not open its CDP port on this host, so the
-  boot test cannot attach. Confirmed environmental: the pre-existing boot test
-  fails identically with `ECONNREFUSED 127.0.0.1:9340`. Seven matrix rows cite
-  these tests and are recorded as **CI-attested, not machine-confirmed**.
 - **The 24-hour soak.** Actor-gated, self-hosted runner.
 - **Node engine warning.** `Unsupported engine: wanted {"node":">=22 <25"}` on
   a local v26 runtime. Advisory only: no `.npmrc` sets `engine-strict`, CI pins
   Node 22 in all 24 places that use Node, and `rebuild-rust.yml` is Rust-only.
   Every result above was produced on the out-of-range runtime.
+
+Desktop E2E was previously listed here as unverifiable on this host, because
+WebView2 never opened the CDP port the spec attaches through. That caveat is
+withdrawn: the Windows native E2E job ran the suite on a real Windows host and
+reported 35 passed. The seven rows that cite `e2e/tauri-shell.spec.ts` are now
+machine-confirmed rather than CI-attested, and that run is what caught the
+SEC-03 defect. What is unverifiable _here_ is narrower than what is unverified:
+an environment without a desktop host cannot run this suite, but the suite
+itself is sound.
 
 ---
 
@@ -226,10 +231,13 @@ matches the latest published version, and that the exception expires after
 7. Complete legal/commercial publication review
 8. Complete the WCAG/RTL accessibility audit
 9. Verify multi-device sync with real devices
-10. Resolve the SonarCloud new-code rating gap
+10. ~~Resolve the SonarCloud new-code rating gap~~ — **closed**
 
-Items 1–3 and 9–10 are tracked in `release/readiness.json`. SonarCloud is the
-only remaining item an engineer can act on without an external resource.
+Items 1–3 and 9 are tracked in `release/readiness.json`. A tenth item, the
+SonarCloud new-code security rating, was listed here and is now closed: the
+rating is A with zero open new-code vulnerabilities, and both the analysis and
+the quality-gate check pass on this branch. That leaves nine owner actions, none
+of which an engineer can complete alone.
 
 ---
 

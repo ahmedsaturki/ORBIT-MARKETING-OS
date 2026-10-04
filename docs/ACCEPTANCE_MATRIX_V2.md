@@ -52,14 +52,19 @@ which works. The matrix row cites the filtered form.
   owner-controlled certificates, not a code defect. Every remaining non-PASS row
   is blocked on external action or an unexecuted long-running check.
 
-**Evidence caveat (2026-10-04 re-audit).** Seven rows below (`SEC-03`,
-`DATA-01`, `WS-02`, `QUE-01`, `CAMP-01`, `OPS-01`, `RESEARCH-02`) cite
-`e2e/tauri-shell.spec.ts` as their primary evidence. Those tests exist and are
-executed by CI, but they could not be observed passing on the audit machine:
-the Tauri binary builds and launches, yet WebView2 154.0.4258.53 never opens
-the CDP port the spec attaches through, so the suite reports 25 passed, 1
-failed, 8 not run. Treat these rows as **CI-attested, not machine-confirmed**
-until a passing run is observed.
+**Evidence caveat, now withdrawn (2026-10-04 re-audit).** Seven rows below
+(`SEC-03`, `DATA-01`, `WS-02`, `QUE-01`, `CAMP-01`, `OPS-01`, `RESEARCH-02`)
+cite `e2e/tauri-shell.spec.ts` as their primary evidence, and were recorded here
+as **CI-attested, not machine-confirmed**: the Tauri binary built and launched on
+the audit machine, but WebView2 154.0.4258.53 never opened the CDP port the spec
+attaches through, so the suite reported 25 passed, 1 failed, 8 not run.
+
+The Windows native E2E job has since run the suite on a real Windows host and
+reported **35 passed, 0 failed**. Those seven rows are machine-confirmed, not
+merely attested. The run also earned its keep by failing SEC-03 first: the
+positive control for that test was sending `account_upsert` arguments the
+command does not accept, so the sealed session was never stored and the control
+correctly reported the test could not prove its own claim.
 
 The desktop build itself was fixed during this audit:
 `scripts/build-tauri.mjs` invoked cargo without producing
