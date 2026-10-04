@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**68 PASS, 7 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+**69 PASS, 6 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
 
 Classification rules applied:
 
@@ -73,7 +73,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | CAMP-01 | PASS | `e2e/tauri-shell.spec.ts` :: bulk task enqueue is atomic (campaign_create → task_enqueue) | — |
 | CAMP-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: campaign_account_scope_tests (workspace-owned accounts link; foreign and unknown ids refused with the campaign rolled back; a batch with one foreign account links none; empty list refused; audit names the creating workspace; trigger refuses a post-hoc rebind) | — |
 | CAMP-03 | PASS | `test/executionPolicy.test.ts` :: fails closed without approval | No full-stack workflow E2E that executes a task through approval gate, waits for approval, then proceeds |
-| CONT-01 | PARTIAL | `scripts/runtime-smoke.mjs` :: fake Ollama provider fixture test (executes in CI pnpm test:runtime) | No AI-fixture test that exercises variant generation; variant selection is tested by deterministic contract tests (CONT-03) |
+| CONT-01 | PASS | `scripts/runtime-smoke.mjs` :: AI fixture drives /api/generate-content against a fake Ollama provider and asserts the returned content, provider and modelUsed, plus that the outgoing prompt carries the requested topic/dialect/tone/audience and every required platform section (runs in ci.yml) | — |
 | CONT-02 | PASS | `test/media.test.ts` :: searches by text, kind, and all requested tags (in-memory search) | — |
 | CONT-03 | PASS | `test/content.test.ts (3 tests: selects platform variant, falls back to base body, rejects malformed content)` | — |
 | MEDIA-01 | PASS | `test/media.test.ts` :: validates a local media asset, rejects kind/mime mismatch, searches by text/kind/tags | — |
