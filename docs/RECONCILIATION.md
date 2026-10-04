@@ -172,24 +172,53 @@ self-hosted runner), and the manual WCAG/RTL audit.
 
 ## Open PRs that overlap this branch
 
-Published as PR #213. Five PRs were already open against `main`; this branch
-shares **7 distinct files** with two of them. An earlier version of this
-document said 8, which double-counted `ci.yml` and `package.json` because both
-PRs touch them.
+Published as PR #213. Five PRs were already open against `main`, and three of
+them share files with this branch: **9 distinct paths across 15 file-instances**.
 
-| File                                               | PR #195 | PR #196 |
-| -------------------------------------------------- | ------- | ------- |
-| `scripts/soak-failure-evidence.test.mjs`           | yes     | —       |
-| `scripts/orbit-surface-smoke.mjs`                  | yes     | —       |
-| `scripts/commercial-connector-proof.safe.test.mjs` | yes     | —       |
-| `docs/SECURITY_EXCEPTIONS.md`                      | —       | yes     |
-| `pnpm-workspace.yaml`                              | —       | yes     |
-| `package.json`                                     | yes     | yes     |
-| `.github/workflows/ci.yml`                         | yes     | yes     |
+This section previously reported 7 files against two PRs. That was wrong in both
+directions: PR #198 was never checked, and the count of 7 double-counted
+`ci.yml` and `package.json` because two PRs each touch them. Recomputed against
+the current heads rather than carried forward.
+
+| File                                               | #195 | #196 | #198 |
+| -------------------------------------------------- | ---- | ---- | ---- |
+| `.github/workflows/ci.yml`                         | yes  | yes  | yes  |
+| `package.json`                                     | yes  | yes  | yes  |
+| `docs/SECURITY_EXCEPTIONS.md`                      | —    | yes  | yes  |
+| `pnpm-workspace.yaml`                              | —    | yes  | yes  |
+| `scripts/soak-failure-evidence.test.mjs`           | yes  | —    | —    |
+| `scripts/orbit-surface-smoke.mjs`                  | yes  | —    | —    |
+| `scripts/commercial-connector-proof.safe.test.mjs` | yes  | —    | —    |
+| `.github/workflows/release-desktop.yml`            | —    | —    | yes  |
+| `packages/desktop/src-tauri/Cargo.toml`            | —    | —    | yes  |
+
+### These three are not independent, and merge order matters more than it looks
+
+All three branch from the same base, `01cd0622`. None of them contains
+`origin/main` (`ddf73d99`), which arrived later:
+
+| PR   | Commits ahead of `origin/main` | Commits behind |
+| ---- | ------------------------------ | -------------- |
+| #195 | 13                             | 7              |
+| #196 | 13                             | 19             |
+| #198 | 13                             | 27             |
+
+The apparent conflicts are not three independent sets of edits. Diffing #198's
+`package.json` against this branch's shows the difference is **entirely
+additive on this side**: #198 lacks `build:icons`, `test:exec-trusted`,
+`test:script-contracts`, `verify:e2e-parses` and every gate-model script added
+after it was opened. Those are the same lines #198 would contribute, at an
+earlier state of the same effort.
+
+So #198 is best read as a superseded snapshot of this branch rather than a
+competing change. Merging it as-is would revert work, not reconcile with it.
+Whether it should be closed, or rebased and reduced to whatever it uniquely
+contains, is a call for the owner; the file table above is the evidence either
+way.
 
 ### The `braces` exception needs a single owner
 
-Two PRs now write the same lines in `pnpm-workspace.yaml`, so only one can land.
+Three PRs now write the same lines in `pnpm-workspace.yaml`, so only one can land.
 
 - This branch suppresses the advisory with an `ignoreGhsas` entry plus a
   rationale comment and a time-boxed contract test.
@@ -198,11 +227,19 @@ Two PRs now write the same lines in `pnpm-workspace.yaml`, so only one can land.
 
 Both are defensible on the facts: `braces@3.0.3` genuinely is still the latest
 published version, so there is no upgrade to take and the advisory's "no patched
-version" claim is accurate rather than assumed.
+version" claim is accurate rather than assumed. That is no longer taken on
+trust: `scripts/braces-audit-exception.test.mjs` now queries the npm registry and
+fails if the pin stops being the latest published version.
 
 **Recommendation: keep #196's patch and drop this branch's rationale comment at
 merge time.** A patch remediates the defect; an ignore documents that we chose
 not to. The ignore earns its place only while the patch is absent.
+
+The two are not in conflict on the test file itself. #196 adds
+`patches/braces@3.0.3.patch` and touches neither
+`scripts/braces-audit-exception.test.mjs` nor `docs/SECURITY_EXCEPTIONS.md`, so
+the contract can land either side of that decision. An earlier note in this
+document treated the two as competing edits to the contract; they are not.
 
 `node-forge@1.4.0.patch` is unaffected — this branch owns that one, and it
 resolves `GHSA-86w9-cpqp-85rv` rather than suppressing it.
