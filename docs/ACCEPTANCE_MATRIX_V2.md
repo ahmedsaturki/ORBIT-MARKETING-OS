@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**61 PASS, 14 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+**62 PASS, 13 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
 
 Classification rules applied:
 
@@ -87,7 +87,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | UI-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: strategy_reference_validation_blocks_cross_workspace_references | No E2E test that invokes Strategy Studio commands and verifies workspace isolation |
 | OUT-01 | PARTIAL | `packages/desktop/src-tauri/src/lib.rs` :: schema_v12_outcomes_are_workspace_scoped_and_linkable (workspace scoping test) | No negative IPC test that attempts to create a cross-workspace opportunity/reference via IPC and verifies rejection |
 | OUT-02 | PASS | `src/outcomes/index.test.ts` :: validatesOpportunity (rejects unsafe values) | — |
-| INS-01 | PARTIAL | `src/outcomes/index.test.ts` :: rejects an insight with no grounding sources; requires grounded evidence for insights | Workspace scoping and source-grounding are validated; persistence and cross-workspace enforcement are not yet covered |
+| INS-01 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: insight_workspace_scope_tests (persist, update-in-place, cross-workspace rebind rejected, list scoping, grounding CHECK) | `packages/core/test/schema.test.ts` :: rejects an insight with no grounding source |
 | INS-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: schema_v12_outcomes_are_workspace_scoped_and_linkable (tests CHECK(confidence between 0 and 1)) | — |
 | SIM-01 | PASS | `src/simulation/index.test.ts` :: does not dispatch and reports the governed result | — |
 | REP-01 | PASS | `src/replay/index.test.ts (reconstruction and validation tests)` | — |

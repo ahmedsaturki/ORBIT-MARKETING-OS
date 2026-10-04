@@ -25,7 +25,7 @@ const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
 const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
 const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
-const SCHEMA_VERSION: i64 = 16;
+const SCHEMA_VERSION: i64 = 17;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 static TELEGRAM_EXECUTION_IDS: OnceLock<Mutex<std::collections::HashSet<String>>> = OnceLock::new();
@@ -1612,7 +1612,8 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
               metric TEXT,
               value REAL,
               confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
-              source_ids_json TEXT NOT NULL DEFAULT '[]',
+              source_ids_json TEXT NOT NULL DEFAULT '[]'
+                CHECK(json_valid(source_ids_json) AND json_array_length(source_ids_json) > 0),
               observed_at TEXT NOT NULL,
               created_at TEXT NOT NULL,
               updated_at TEXT NOT NULL
@@ -1798,6 +1799,70 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
             PRAGMA user_version = 16;
             ",
         )?;
+    }
+
+    // v16 created insights without a grounding constraint, so an ungrounded
+    // row could exist on disk even though every application path rejects it.
+    // SQLite cannot add a CHECK to an existing table, so rebuild it.
+    if version < 17 {
+        // insights is part of the base SCHEMA, not of any incremental
+        // migration, so a database that arrived here from an older version
+        // may not have it, nor the workspaces table it references, yet.
+        // Rebuild only when both are present; otherwise the base SCHEMA
+        // creates them with the constraint already in place.
+        let rebuild_possible: bool = connection.query_row(
+            "SELECT (
+               EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='insights')
+               AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='workspaces')
+             )",
+            [],
+            |row| row.get(0),
+        )?;
+        if rebuild_possible {
+            connection.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS insights_v17 (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              kind TEXT NOT NULL CHECK(kind IN ('performance', 'anomaly', 'learning', 'trend', 'recommendation')),
+              title TEXT NOT NULL,
+              summary TEXT NOT NULL,
+              metric TEXT,
+              value REAL,
+              confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+              source_ids_json TEXT NOT NULL DEFAULT '[]'
+                CHECK(json_valid(source_ids_json) AND json_array_length(source_ids_json) > 0),
+              observed_at TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            INSERT INTO insights_v17(
+              id, workspace_id, kind, title, summary, metric, value, confidence,
+              source_ids_json, observed_at, created_at, updated_at
+            )
+            SELECT id, workspace_id, kind, title, summary, metric, value, confidence,
+                   source_ids_json, observed_at, created_at, updated_at
+            FROM insights
+            WHERE json_valid(source_ids_json)
+              AND json_array_length(source_ids_json) > 0;
+
+            DROP TABLE insights;
+
+            ALTER TABLE insights_v17 RENAME TO insights;
+
+            CREATE INDEX IF NOT EXISTS idx_insights_workspace_kind
+              ON insights(workspace_id, kind, observed_at);
+
+            CREATE INDEX IF NOT EXISTS idx_insights_workspace_updated
+              ON insights(workspace_id, updated_at);
+
+
+            ",
+        )?;
+        }
+
+        connection.execute_batch("PRAGMA user_version = 17;")?;
     }
 
     Ok(())
@@ -13549,7 +13614,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 16);
+        assert_eq!(version, SCHEMA_VERSION);
     }
 
     #[test]
@@ -13591,7 +13656,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 16);
+        assert_eq!(version, SCHEMA_VERSION);
     }
 
     #[test]
@@ -13850,7 +13915,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 16);
+        assert_eq!(version, SCHEMA_VERSION);
     }
 
     #[test]
@@ -13911,6 +13976,194 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
             .expect("migrated task should exist");
         assert_eq!(values.0, DEFAULT_WORKSPACE_ID);
         assert_eq!(values.1, "legacy-task");
+    }
+}
+
+#[cfg(test)]
+mod insight_workspace_scope_tests {
+    use super::*;
+
+    fn scoped_connection() -> Connection {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                "#,
+            )
+            .expect("workspaces should be creatable");
+        connection
+    }
+
+    // Mirrors the upsert issued by insight_upsert.
+    fn upsert_insight(
+        connection: &Connection,
+        id: &str,
+        workspace_id: &str,
+        title: &str,
+    ) -> rusqlite::Result<usize> {
+        connection.execute(
+            "INSERT INTO insights(
+               id, workspace_id, kind, title, summary, confidence,
+               source_ids_json, observed_at, created_at, updated_at
+             )
+             VALUES (?1, ?2, 'learning', ?3, 'Grounded summary', 0.8,
+                     '[\"analytics-a\"]', '2026-09-25T00:00:00Z', '1', '1')
+             ON CONFLICT(id) DO UPDATE SET
+               kind=excluded.kind,
+               title=excluded.title,
+               summary=excluded.summary,
+               confidence=excluded.confidence,
+               source_ids_json=excluded.source_ids_json,
+               observed_at=excluded.observed_at,
+               updated_at=excluded.updated_at
+             WHERE insights.workspace_id=excluded.workspace_id",
+            params![id, workspace_id, title],
+        )
+    }
+
+    #[test]
+    fn insight_upsert_persists_and_reads_back_within_its_workspace() {
+        let connection = scoped_connection();
+
+        assert_eq!(
+            upsert_insight(&connection, "insight-a", "workspace-a", "First title"),
+            Ok(1),
+            "an insight should persist in its workspace",
+        );
+
+        let row: (String, String, String, f64, String) = connection
+            .query_row(
+                "SELECT workspace_id, title, summary, confidence, source_ids_json
+                 FROM insights WHERE id='insight-a' AND workspace_id='workspace-a'",
+                [],
+                |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                    ))
+                },
+            )
+            .expect("a stored insight should read back");
+        assert_eq!(row.0, "workspace-a");
+        assert_eq!(row.1, "First title");
+        assert_eq!(row.2, "Grounded summary");
+        assert!((row.3 - 0.8).abs() < f64::EPSILON);
+        assert_eq!(row.4, r#"["analytics-a"]"#);
+    }
+
+    #[test]
+    fn insight_upsert_updates_in_place_without_changing_its_workspace() {
+        let connection = scoped_connection();
+        upsert_insight(&connection, "insight-a", "workspace-a", "First title")
+            .expect("initial insert");
+
+        assert_eq!(
+            upsert_insight(&connection, "insight-a", "workspace-a", "Revised title"),
+            Ok(1),
+            "re-upserting inside the same workspace should update the row",
+        );
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM insights", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 1, "an update must not duplicate the row");
+
+        let title: String = connection
+            .query_row(
+                "SELECT title FROM insights WHERE id='insight-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("updated insight should be readable");
+        assert_eq!(title, "Revised title");
+    }
+
+    // insight_upsert turns a zero-row write into
+    // "insight id already belongs to another workspace".
+    #[test]
+    fn insight_upsert_rejects_a_rebind_into_another_workspace() {
+        let connection = scoped_connection();
+        upsert_insight(&connection, "insight-a", "workspace-a", "First title")
+            .expect("initial insert in workspace-a");
+
+        let changed = upsert_insight(&connection, "insight-a", "workspace-b", "Hijacked")
+            .expect("the guarded write should execute without a database error");
+        assert_eq!(
+            changed, 0,
+            "the ON CONFLICT workspace guard must make a cross-workspace rebind a no-op",
+        );
+
+        let (workspace_id, title): (String, String) = connection
+            .query_row(
+                "SELECT workspace_id, title FROM insights WHERE id='insight-a'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("the original insight should still exist");
+        assert_eq!(workspace_id, "workspace-a", "ownership must not transfer");
+        assert_eq!(
+            title, "First title",
+            "a rejected rebind must not mutate the row"
+        );
+    }
+
+    // insight_list filters on workspace_id, so insights never leak sideways.
+    #[test]
+    fn insight_list_query_returns_only_the_active_workspace() {
+        let connection = scoped_connection();
+        upsert_insight(&connection, "insight-a", "workspace-a", "Visible")
+            .expect("insert into workspace-a");
+        upsert_insight(&connection, "insight-b", "workspace-b", "Hidden")
+            .expect("insert into workspace-b");
+
+        let mut statement = connection
+            .prepare(
+                "SELECT id FROM insights WHERE workspace_id=?1 ORDER BY observed_at DESC, updated_at DESC",
+            )
+            .expect("insight_list query should prepare");
+        let visible: Vec<String> = statement
+            .query_map(params!["workspace-a"], |row| row.get(0))
+            .expect("insight_list query should run")
+            .collect::<Result<Vec<String>, _>>()
+            .expect("rows should decode");
+
+        assert_eq!(
+            visible,
+            vec!["insight-a".to_string()],
+            "insights from another workspace must not be listed",
+        );
+    }
+
+    #[test]
+    fn insight_requires_at_least_one_grounding_source() {
+        let connection = scoped_connection();
+
+        // The database CHECK mirrors the insight_upsert precondition.
+        let rejected = connection.execute(
+            "INSERT INTO insights(
+               id, workspace_id, kind, title, summary, confidence,
+               source_ids_json, observed_at, created_at, updated_at
+             ) VALUES (
+               'insight-empty', 'workspace-a', 'learning', 'Ungrounded', 'No sources', 0.5,
+               '[]', '2026-09-25T00:00:00Z', '1', '1'
+             )",
+            [],
+        );
+        assert!(
+            rejected.is_err(),
+            "an insight with no grounding source must be rejected at rest",
+        );
     }
 }
 
@@ -14434,7 +14687,7 @@ mod experimentation_runtime_tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("version");
-        assert_eq!(version, 16);
+        assert_eq!(version, SCHEMA_VERSION);
 
         for table in [
             "research_briefs",
@@ -14450,6 +14703,113 @@ mod experimentation_runtime_tests {
                 )
                 .expect("research table query should work");
             assert_eq!(exists, 1, "expected migrated research table {table}");
+        }
+    }
+
+    #[test]
+    fn schema_migrates_to_v17_and_drops_ungrounded_insights() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+
+        // Recreate the v16 insights table, which had no grounding constraint,
+        // and seed it with one grounded and one ungrounded row.
+        connection
+            .execute_batch(
+                "
+                DROP TABLE IF EXISTS insights;
+                CREATE TABLE insights (
+                  id TEXT PRIMARY KEY,
+                  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+                  kind TEXT NOT NULL CHECK(kind IN ('performance', 'anomaly', 'learning', 'trend', 'recommendation')),
+                  title TEXT NOT NULL,
+                  summary TEXT NOT NULL,
+                  metric TEXT,
+                  value REAL,
+                  confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+                  source_ids_json TEXT NOT NULL DEFAULT '[]',
+                  observed_at TEXT NOT NULL,
+                  created_at TEXT NOT NULL,
+                  updated_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_insights_workspace_kind
+                  ON insights(workspace_id, kind, observed_at);
+                CREATE INDEX IF NOT EXISTS idx_insights_workspace_updated
+                  ON insights(workspace_id, updated_at);
+
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1');
+
+                INSERT INTO insights(
+                  id, workspace_id, kind, title, summary, confidence,
+                  source_ids_json, observed_at, created_at, updated_at
+                ) VALUES (
+                  'grounded', 'workspace-a', 'learning', 'Kept', 'Has a source', 0.7,
+                  '[\"analytics-a\"]', '2026-09-25T00:00:00Z', '1', '1'
+                );
+
+                INSERT INTO insights(
+                  id, workspace_id, kind, title, summary, confidence,
+                  source_ids_json, observed_at, created_at, updated_at
+                ) VALUES (
+                  'ungrounded', 'workspace-a', 'learning', 'Dropped', 'No source', 0.7,
+                  '[]', '2026-09-25T00:00:00Z', '1', '1'
+                );
+
+                PRAGMA user_version = 16;",
+            )
+            .expect("v16 insights fixture should be prepared");
+
+        migrate_schema(&connection).expect("v16 to v17 migration should succeed");
+
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("version should be readable");
+        assert_eq!(version, SCHEMA_VERSION);
+
+        let survivors: Vec<String> = connection
+            .prepare("SELECT id FROM insights ORDER BY id")
+            .expect("insights should be queryable")
+            .query_map([], |row| row.get(0))
+            .expect("insights should be readable")
+            .collect::<Result<Vec<String>, _>>()
+            .expect("ids should decode");
+        assert_eq!(
+            survivors,
+            vec!["grounded".to_string()],
+            "the grounded insight must survive and the ungrounded one must be dropped",
+        );
+
+        // The rebuilt table must carry the constraint.
+        assert!(
+            connection
+                .execute(
+                    "INSERT INTO insights(
+                       id, workspace_id, kind, title, summary, confidence,
+                       source_ids_json, observed_at, created_at, updated_at
+                     ) VALUES (
+                       'later', 'workspace-a', 'learning', 'Later', 'No source', 0.5,
+                       '[]', '2026-09-25T00:00:00Z', '1', '1'
+                     )",
+                    [],
+                )
+                .is_err(),
+            "the rebuilt table must reject an ungrounded insight",
+        );
+
+        for index in [
+            "idx_insights_workspace_kind",
+            "idx_insights_workspace_updated",
+        ] {
+            let exists: i64 = connection
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name=?1",
+                    params![index],
+                    |row| row.get(0),
+                )
+                .expect("index query should work");
+            assert_eq!(exists, 1, "the migration must recreate index {index}");
         }
     }
 
@@ -14697,7 +15057,7 @@ mod interrupted_restore_recovery_tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 16);
+        assert_eq!(version, SCHEMA_VERSION);
 
         let experiment_tables: Vec<String> = {
             let mut statement = connection
