@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**69 PASS, 6 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+**71 PASS, 4 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
 
 Classification rules applied:
 
@@ -62,9 +62,9 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | DATA-01 | PASS | `e2e/tauri-shell.spec.ts` :: native runtime restart preserves selected workspace state (persists SQLite state) | — |
 | DATA-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: schema_migration_reaches_current_version_and_is_idempotent_afterwards | — |
 | DATA-03 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: contact_search_1000_scale_benchmark | — |
-| WS-01 | PARTIAL | `packages/desktop/src-tauri/src/lib.rs` :: workspace_context_does_not_auto_grant_membership_to_unassigned_workspaces | IPC negative test for membership gating (attempting to access a workspace without membership via IPC is not tested in tauri-shell.spec.ts) |
+| WS-01 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: workspace_membership_gate_tests (no membership refused everywhere; membership in one workspace does not carry into another; deactivated membership refused) | — |
 | WS-02 | PASS | `e2e/tauri-shell.spec.ts` :: native runtime restart preserves selected workspace state | — |
-| WS-03 | PARTIAL | `e2e/tauri-shell.spec.ts` :: capability files are deny-by-default and least-privilege (negative IPC for capabilities) | No test that attempts a sensitive operation without workspace membership and verifies rejection via IPC |
+| WS-03 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: workspace_membership_gate_tests (real create_campaign and upsert_opportunity paths refuse a non-member and a viewer before any row, link or success audit is written; an editor member is allowed through) | `workspace_role_authorization_tests` asserts against campaign_write_roles(); operator holds campaign.read, not campaign.manage |
 | QUE-01 | PASS | `e2e/tauri-shell.spec.ts` :: native queue recovery returns interrupted sync work to pending (simulates forced termination) | — |
 | QUE-02 | PASS | `test/retry.test.ts (3 tests)` | — |
 | QUE-03 | PASS | `src/security.test.ts` :: opens a circuit after consecutive failures | — |
