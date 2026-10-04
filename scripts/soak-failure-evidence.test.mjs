@@ -1,32 +1,26 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { runTsx } from "./run-tsx.mjs";
+
 const outputDir = mkdtempSync(join(tmpdir(), "orbit-soak-evidence-"));
 
 try {
-  try {
-    execFileSync(
-      process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-      ["exec", "tsx", "scripts/soak.ts", "--minutes", "1"],
-      {
-        cwd: process.cwd(),
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          GITHUB_SHA: "actual-sha",
-          ORBIT_EXPECTED_RELEASE_SHA: "different-sha",
-          ORBIT_SOAK_LOG_DIR: outputDir,
-        },
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    );
-    throw new Error("soak mismatch test unexpectedly succeeded");
-  } catch (error) {
-    assert.equal(error?.status, 1);
-  }
+  // spawnSync reports a non-zero exit through `status` rather than throwing.
+  const result = runTsx(["scripts/soak.ts", "--minutes", "1"], {
+    env: {
+      ...process.env,
+      GITHUB_SHA: "actual-sha",
+      ORBIT_EXPECTED_RELEASE_SHA: "different-sha",
+      ORBIT_SOAK_LOG_DIR: outputDir,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  assert.equal(result.error, undefined, `soak failed to launch: ${result.error?.message}`);
+  assert.equal(result.status, 1, "source SHA mismatch must exit 1");
 
   const summaryPath = join(outputDir, "soak-summary.json");
   const summary = JSON.parse(readFileSync(summaryPath, "utf8"));

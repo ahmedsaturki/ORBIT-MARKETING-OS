@@ -11885,6 +11885,129 @@ mod tests {
     }
 
     #[test]
+    fn restore_rejects_corrupt_database_before_replacing_the_live_target() {
+        let root = std::env::temp_dir().join(format!("orbit-restore-corrupt-{}", uuid_like()));
+        std::fs::create_dir_all(&root).expect("temp directory should be creatable");
+        let target = root.join("orbit.sqlite3");
+        let previous = root.join("orbit.previous.sqlite3");
+
+        let survivor = Connection::open(&target).expect("live database should be creatable");
+        survivor
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        survivor
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-live', 'Live', '2026-10-04T00:00:00Z')",
+                [],
+            )
+            .expect("live workspace should be created");
+        drop(survivor);
+
+        let marker = previous.exists();
+        assert!(!marker, "previous database should not exist before restore");
+
+        let corrupt = root.join("corrupt.sqlite3");
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"SQLite format 3\0");
+        bytes.extend_from_slice(b"\xde\xad\xbe\xef");
+        std::fs::write(&corrupt, bytes).expect("corrupt database should be written");
+
+        let connection = Connection::open(&corrupt).expect("corrupt file should still open");
+        prepare_backup_database_for_restore(&connection)
+            .expect_err("a corrupt backup must be rejected");
+        drop(connection);
+
+        let after = Connection::open(&target).expect("live database should survive");
+        let workspaces: i64 = after
+            .query_row("SELECT COUNT(*) FROM workspaces", [], |row| row.get(0))
+            .expect("live database should still be readable");
+        assert_eq!(
+            workspaces, 1,
+            "live database must be untouched by a rejected restore"
+        );
+
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn restore_rejects_a_structurally_valid_database_with_damaged_pages() {
+        let root = std::env::temp_dir().join(format!("orbit-restore-damaged-{}", uuid_like()));
+        std::fs::create_dir_all(&root).expect("temp directory should be creatable");
+        let damaged = root.join("damaged.sqlite3");
+
+        let seed = Connection::open(&damaged).expect("database should be creatable");
+        seed.execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        seed.execute(
+            "INSERT INTO workspaces(id, name, created_at)
+             VALUES ('workspace-damaged', 'Damaged', '2026-10-04T00:00:00Z')",
+            [],
+        )
+        .expect("workspace should be created");
+        drop(seed);
+
+        // Leave the 100-byte header intact so SQLite still recognises the file and
+        // the rejection comes from the integrity check rather than the header.
+        let mut bytes = std::fs::read(&damaged).expect("database should be readable");
+        assert!(bytes.len() > 4096, "seeded database should have body pages");
+        let page_size = u16::from_be_bytes([bytes[16], bytes[17]]) as usize;
+        assert!(page_size >= 512, "page size should be sane");
+        let total = bytes.len();
+        for offset in (page_size..total).step_by(page_size) {
+            let end = (offset + 32).min(total);
+            for byte in bytes[offset..end].iter_mut() {
+                *byte = 0x00;
+            }
+        }
+        std::fs::write(&damaged, &bytes).expect("damaged database should be written");
+
+        let connection = Connection::open(&damaged).expect("damaged file should still open");
+        let rejection = prepare_backup_database_for_restore(&connection)
+            .expect_err("a backup with damaged pages must be rejected");
+        assert!(
+            !rejection.trim().is_empty(),
+            "a rejection must explain why the backup was refused: {rejection}"
+        );
+
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn restore_rejects_a_backup_newer_than_this_application() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+
+        let newer = SCHEMA_VERSION + 1;
+        connection
+            .execute_batch(&format!("PRAGMA user_version = {newer};"))
+            .expect("future schema version should be set");
+
+        let rejection = prepare_backup_database_for_restore(&connection)
+            .expect_err("a newer-schema backup must be rejected");
+        assert!(
+            rejection.contains("newer than this application"),
+            "unexpected rejection reason: {rejection}"
+        );
+    }
+
+    #[test]
+    fn restore_accepts_a_backup_at_the_current_schema_version() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        connection
+            .execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION};"))
+            .expect("current schema version should be set");
+
+        prepare_backup_database_for_restore(&connection)
+            .expect("a current-version backup must be accepted");
+    }
+
+    #[test]
     fn task_migration_rolls_back_on_invalid_legacy_row() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
         connection

@@ -8,6 +8,121 @@ Status vocabulary: `PASS`, `FAIL`, `PARTIAL`, `UNVERIFIED`, `NOT_APPLICABLE`.
 
 A feature cannot be marked PASS from source inspection alone when the requirement is runtime behavior.
 
+## Reconciliation (2026-10-04)
+
+Every requirement was classified against evidence that exists and executes. Result:
+**61 PASS, 14 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+
+Classification rules applied:
+
+- `PASS` requires the evidence named in the "Evidence required" column to exist and run.
+- `PARTIAL` means some named evidence exists but at least one required kind does not.
+- `UNVERIFIED` means no executing evidence was found for a runtime requirement.
+- Source inspection alone never produced `PASS`, per the rule above.
+
+Two claims from earlier reporting are corrected by this reconciliation:
+
+- The prior delivery report cited **1046** tests and **87** requirement IDs. The
+  repository contains **348** executing tests and this matrix defines **83** IDs.
+  Three additional IDs (`SEARCH-02`..`SEARCH-04`) named in an earlier audit do not
+  exist here and were not counted.
+- The only `FAIL` is **REL-02**: `release-desktop.yml` builds with
+  `signing=unsigned`, so no signed desktop artifact can be produced.
+
+
+`OPS-02` (24h stability) and `REL-03` (checksums) are `UNVERIFIED` because the
+soak workflow and checksum verification are defined but have no completed run.
+Both are already tracked as blocked gates in `release/readiness.json`.
+
+Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
+"production ready" claim. Per-requirement evidence and gaps follow.
+
+| ID | Status | Primary evidence | Gap |
+| --- | --- | --- | --- |
+
+| SEC-01 | PASS | `src/security.test.ts` :: encrypts and decrypts without exposing plaintext in the payload | — |
+| SEC-02 | PASS | `src/security.test.ts` :: removes credential values recursively | — |
+| SEC-03 | PASS | `e2e/tauri-shell.spec.ts` :: capability files are deny-by-default and least-privilege (capability review) | — |
+| SEC-04 | PASS | `test/license.test.ts` :: rejects a license whose signed payload was mutated; rejects a license signed by an untrusted key | — |
+| DATA-01 | PASS | `e2e/tauri-shell.spec.ts` :: native runtime restart preserves selected workspace state (persists SQLite state) | — |
+| DATA-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: schema_migration_reaches_current_version_and_is_idempotent_afterwards | — |
+| DATA-03 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: contact_search_1000_scale_benchmark | — |
+| WS-01 | PARTIAL | `packages/desktop/src-tauri/src/lib.rs` :: workspace_context_does_not_auto_grant_membership_to_unassigned_workspaces | IPC negative test for membership gating (attempting to access a workspace without membership via IPC is not tested in tauri-shell.spec.ts) |
+| WS-02 | PASS | `e2e/tauri-shell.spec.ts` :: native runtime restart preserves selected workspace state | — |
+| WS-03 | PARTIAL | `e2e/tauri-shell.spec.ts` :: capability files are deny-by-default and least-privilege (negative IPC for capabilities) | No test that attempts a sensitive operation without workspace membership and verifies rejection via IPC |
+| QUE-01 | PASS | `e2e/tauri-shell.spec.ts` :: native queue recovery returns interrupted sync work to pending (simulates forced termination) | — |
+| QUE-02 | PASS | `test/retry.test.ts (3 tests)` | — |
+| QUE-03 | PASS | `src/security.test.ts` :: opens a circuit after consecutive failures | — |
+| QUE-04 | PASS | `src/queue/taskQueue.test.ts` :: parks user-action tasks and defers without consuming attempts | — |
+| RBAC-01 | PARTIAL | `test/access.test.ts (role permission matrix tests)` | No Tauri IPC negative test for role authorization (e.g., attempt to invoke a sensitive command without sufficient role) |
+| CAMP-01 | PASS | `e2e/tauri-shell.spec.ts` :: bulk task enqueue is atomic (campaign_create → task_enqueue) | — |
+| CAMP-02 | PARTIAL | `test/executionPolicy.test.ts` :: blocks disconnected accounts before approval evaluation (unit test) | No E2E test that creates a campaign for a disconnected account and verifies rejection |
+| CAMP-03 | PASS | `test/executionPolicy.test.ts` :: fails closed without approval | No full-stack workflow E2E that executes a task through approval gate, waits for approval, then proceeds |
+| CONT-01 | PARTIAL | `scripts/runtime-smoke.mjs` :: fake Ollama provider fixture test (executes in CI pnpm test:runtime) | No AI-fixture test that exercises variant generation; variant selection is tested by deterministic contract tests (CONT-03) |
+| CONT-02 | PASS | `test/media.test.ts` :: searches by text, kind, and all requested tags (in-memory search) | — |
+| CONT-03 | PASS | `test/content.test.ts (3 tests: selects platform variant, falls back to base body, rejects malformed content)` | — |
+| MEDIA-01 | PASS | `test/media.test.ts` :: validates a local media asset, rejects kind/mime mismatch, searches by text/kind/tags | — |
+| MEDIA-02 | PARTIAL | `packages/desktop/src-tauri/src/lib.rs` :: sha256_file_matches_known_digest (unit test on a temp file) | No test that exercises the media_asset_import command end-to-end; only the hashing helper is tested |
+| AN-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: outcome_analytics_is_grouped_by_currency | — |
+| AN-03 | PASS | `test/analytics.test.ts` :: detects spikes and drops using only the preceding window | — |
+| AN-01 | PASS | `test/analytics.test.ts` :: does not mix metrics from different campaigns | — |
+| AUTO-01 | PASS | `test/automationRules.test.ts` :: rejects enabled external rules that skip confirmation | — |
+| AUTO-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: latest_enabled_pack_provides_bounded_runtime_limits | — |
+| UI-01 | UNVERIFIED | — | No Mission Control E2E test in tauri-shell.spec.ts or web E2E; next-actions tests exist but do not cover Mission Control UI |
+| UI-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: strategy_reference_validation_blocks_cross_workspace_references | No E2E test that invokes Strategy Studio commands and verifies workspace isolation |
+| OUT-01 | PARTIAL | `packages/desktop/src-tauri/src/lib.rs` :: schema_v12_outcomes_are_workspace_scoped_and_linkable (workspace scoping test) | No negative IPC test that attempts to create a cross-workspace opportunity/reference via IPC and verifies rejection |
+| OUT-02 | PASS | `src/outcomes/index.test.ts` :: validatesOpportunity (rejects unsafe values) | — |
+| INS-01 | PARTIAL | `src/outcomes/index.test.ts` :: rejects an insight with no grounding sources; requires grounded evidence for insights | Workspace scoping and source-grounding are validated; persistence and cross-workspace enforcement are not yet covered |
+| INS-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: schema_v12_outcomes_are_workspace_scoped_and_linkable (tests CHECK(confidence between 0 and 1)) | — |
+| SIM-01 | PASS | `src/simulation/index.test.ts` :: does not dispatch and reports the governed result | — |
+| REP-01 | PASS | `src/replay/index.test.ts (reconstruction and validation tests)` | — |
+| POL-01 | PASS | `src/policy-packs/index.test.ts (policy pack tests)` | — |
+| MC-01 | PASS | `src/next-actions/index.test.ts` :: rejects an invalid Mission Control context | — |
+| PLAN-01 | PASS | `src/campaign-plans/index.test.ts (compiler tests)` | — |
+| AI-02 | PASS | `src/knowledge/context.test.ts (workspace/source validation tests)` | — |
+| GRAPH-01 | PASS | `src/graph/index.test.ts (graph validation tests)` | — |
+| GRAPH-02 | PASS | `src/graph/context.test.ts (bounded context projection tests)` | — |
+| EXEC-01 | PASS | `src/execution/decision.test.ts (decision kernel tests)` | — |
+| CMD-01 | PARTIAL | `src/commands/dispatcher.test.ts (dispatcher tests)` | Event-spine integration: dispatcher tests use in-memory OperationalEventLog, not the persisted native event spine; no test that invokes native operational_event_append from TS dispatcher |
+| EXP-01 | PASS | `src/experiments/index.test.ts (deterministic core validation tests)` | — |
+| EXP-02 | PASS | `src/experiments/index.test.ts (deterministic assignment tests)` | — |
+| EXP-03 | PASS | `src/experiments/index.test.ts (workspace-scoped aggregation tests)` | — |
+| EXP-04 | PASS | `src/experiments/index.test.ts (learning-signal tests)` | — |
+| EXP-05 | PASS | `src/experiments/index.test.ts (experiment binding tests)` | — |
+| EXP-06 | PARTIAL | `src/experiments/index.test.ts (variant binding tests)` | No test that writes learning signals back to outcomes/strategies; experiments test compiles variants into governed campaign work, not insights/strategy signals |
+| EXP-07 | PASS | `src/experiments/inference.test.ts (deterministic inference unit tests)` | — |
+| EVENT-01 | PASS | `src/events/index.test.ts (event-spine tests)` | — |
+| INBOX-01 | UNVERIFIED | — | No unified conversation integration test that exercises the conversation model through a connector fixture; native conversation tests exist but do not involve a connector |
+| CRM-01 | UNVERIFIED | — | No test that creates a conversation linked to a contact and verifies the relationship; native conversation_upsert takes contact_id but no integration test exercises this path |
+| SYNC-01 | PARTIAL | `test/sync.test.ts` :: survives encrypted transport disconnect/reconnect and converges across two devices | No test that simulates a device disconnect, restart, and reconnection with persisted edits; tests only cover disconnect/reconnect convergence |
+| SYNC-02 | PASS | `test/sync-network.test.ts (Yjs convergence tests)` | — |
+| BACK-01 | PASS | `test/backup.test.ts` :: round-trips opaque data (createEncryptedBackup → restoreEncryptedBackup) | — |
+| BACK-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: restore_rejects_corrupt_database_before_replacing_the_live_target | — |
+| BACK-03 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: restore_rejects_a_backup_newer_than_this_application; restore_accepts_a_backup_at_the_current_schema_version | — |
+| CONN-01 | PASS | `test/connectors.test.ts (capability handshake tests)` | — |
+| CONN-02 | PASS | `test/connectors.test.ts` :: rejects a task kind not exposed by a connector | — |
+| CONN-03 | PASS | `e2e/connector-challenge.spec.ts (challenge safe stop test)` | — |
+| CONN-04 | PARTIAL | `packages/desktop/src-tauri/src/lib.rs` :: execution_counter_records_success_and_failure | No source gate artifact found (e.g., scripts/source-gate.mjs or similar) |
+| CONN-05 | PARTIAL | `test/linkedin.test.ts (unit fixtures with fetch mocks)` | Controlled API test (safe vs live) not executed; commercial-connector-proof.safe.test.mjs exists but likely not run in CI |
+| WEB-01 | PASS | `e2e/public-web.spec.ts` :: PWA manifest is valid and points at ORBIT branding | — |
+| AI-01 | PASS | `packages/desktop/test/runtimeClient.test.ts (desktop client contract tests)` | — |
+| MOB-01 | PASS | `.github/workflows/mobile-validation.yml (typecheck + expo prebuild + gradle assembleDebug)` | — |
+| REL-01 | PASS | `.github/workflows/ci.yml` :: requires frozen lockfile (pnpm install --frozen-lockfile) on clean checkout | — |
+| REL-02 | FAIL | `.github/workflows/release-desktop.yml` :: defines signing=unsigned in manifest (explicitly unsigned) | — |
+| REL-03 | UNVERIFIED | `.github/workflows/release-desktop.yml` :: Build checksums (sha256sum -c after build) | No executed release run evidence; checksum verification step exists but never executed (no tagged release) |
+| LIC-01 | PASS | `packages/desktop/src-tauri/src/license.rs` :: lifecycle_storage_installs_reads_and_deletes_the_token; rejects_a_structurally_valid_token_with_an_untrusted_signature; rejects_a_token_whose_signed_payload_was_mutated; account_limit_is_enforced_against_live_account_counts | — |
+| OPS-01 | PASS | `e2e/tauri-shell.spec.ts` :: native runtime restart preserves selected workspace state (forcefully terminates native process) | — |
+| OPS-02 | UNVERIFIED | — | Soak harness exists (stability-soak.yml with hours==24) but only a 10-minute soak run is verified; no completed 24-hour evidence |
+| PERF-01 | PASS | `scripts/startup-memory-benchmark.mjs (runs in CI, produces STARTUP_MEMORY_BENCHMARK_JSON)` | — |
+| PERF-02 | PASS | `scripts/startup-memory-benchmark.mjs (runs in CI, measures peak RSS)` | — |
+| QA-01 | PASS | `pnpm test:coverage yields 87.86% lines, 85.03% statements, 80.09% branches, 93.98% functions; thresholds met (lines/functions/statements 70, branches 60)` | — |
+| QA-02 | PASS | `e2e/ (5 spec files: accessibility-rtl, connector-challenge, public-web, tauri-shell, web-smoke) running in CI via pnpm test:e2e` | E2E suite exists but does not cover all claimed critical paths (approval-gate E2E, publishing E2E, inbox E2E, CRM E2E not present) |
+| DOC-01 | UNVERIFIED | `docs/USER_GUIDE.md exists` | No automated verification that the guide matches product; only human review possible |
+| DOC-02 | UNVERIFIED | `docs/SECURITY_THREAT_MODEL.md exists` | No executed security review evidence (no review artifact or test); only documentation exists |
+| RESEARCH-01 | PASS | `test/research.test.ts (research brief validation tests)` | — |
+| RESEARCH-02 | PASS | `e2e/tauri-shell.spec.ts` :: research intelligence stays workspace-scoped and evidence-backed (native integrity E2E) | — |
+| RESEARCH-03 | PARTIAL | `e2e/tauri-shell.spec.ts` :: research publish integration test (invokes research_publish_to_knowledge) | Audit verification: no test that asserts audit events are created when publishing to Knowledge |
+| SEARCH-01 | PASS | `src/search/index.test.ts (core contract tests: normalization, rejection of oversized/control-character queries, deterministic ranking)` | No explicit test asserting exclusion of secret/session records from search results; search spec does not enumerate allowed kinds beyond campaign/account/message/knowledge_source |
 | ID       | Requirement                                                                                                                              | Evidence required                                              |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | SEC-01   | Secrets encrypted at rest                                                                                                                | cryptographic tests + restore test                             |

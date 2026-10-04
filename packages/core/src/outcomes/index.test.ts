@@ -54,4 +54,20 @@ describe("outcome contracts", () => {
     });
     expect(errors).toEqual([]);
   });
+
+  it("rejects an insight with no grounding sources", () => {
+    const errors = validateInsight({
+      id: "insight-1",
+      workspaceId: "ws-1",
+      kind: "learning",
+      title: "Ungrounded",
+      summary: "An assertion with no evidence behind it",
+      confidence: 0.9,
+      sourceIds: [],
+      observedAt: "2026-09-25T00:00:00Z",
+      createdAt: "2026-09-25T00:00:00Z",
+      updatedAt: "2026-09-25T00:00:00Z",
+    });
+    expect(errors).toEqual(["source_required"]);
+  });
 });

@@ -31,6 +31,7 @@
     "mobile:typecheck": "pnpm --dir packages/mobile typecheck",
     "mobile:build": "pnpm --dir packages/mobile build",
     "tauri:build": "pnpm --dir packages/desktop tauri build",
+    "build:icons": "node scripts/build-icon.mjs",
     "verify:readiness": "node scripts/verify-release-readiness.mjs",
     "release:evidence": "node scripts/collect-release-evidence.mjs",
     "test:commercial-proof": "node scripts/commercial-connector-proof.safe.test.mjs",
@@ -44,7 +45,12 @@
     "test:security:scan": "node scripts/security-scan.test.mjs",
     "verify:release-docs": "node scripts/verify-release-docs.mjs",
     "verify:production-observation": "node scripts/verify-live-production-observation.mjs",
-    "test:node-forge-audit-exception": "node scripts/node-forge-audit-exception.test.mjs"
+    "test:node-forge-audit-exception": "node scripts/node-forge-audit-exception.test.mjs",
+    "test:release-gate-model": "node scripts/release-gate-model.test.mjs",
+    "test:release-gate-tooling": "node scripts/release-gate-tooling.test.mjs",
+    "gate:check": "node scripts/check-release-gates.mjs",
+    "gate:export": "node scripts/export-gate-status.mjs",
+    "gate:dashboard": "node scripts/gate-dashboard.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

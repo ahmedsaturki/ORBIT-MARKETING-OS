@@ -1,13 +1,8 @@
-import { spawnSync } from "node:child_process";
-
-const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+import { runTsx } from "./run-tsx.mjs";
 const env = { ...process.env, CI: "1" };
 
-const list = spawnSync(
-  command,
+const list = runTsx(
   [
-    "exec",
-    "tsx",
     "scripts/orbit-cli.ts",
     "commands",
     "list",
@@ -30,11 +25,8 @@ if (
   throw new Error("orbit_mcp_surface_smoke_failed");
 }
 
-const preview = spawnSync(
-  command,
+const preview = runTsx(
   [
-    "exec",
-    "tsx",
     "scripts/orbit-cli.ts",
     "command",
     "preview",
@@ -62,7 +54,7 @@ if (
 }
 
 function runMcp(input) {
-  const result = spawnSync(command, ["exec", "tsx", "scripts/orbit-mcp.ts"], {
+  const result = runTsx(["scripts/orbit-mcp.ts"], {
     encoding: "utf8",
     env,
     input: input.trim() + "\n",
