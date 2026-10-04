@@ -1,26 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { readdir } from "node:fs/promises";
-import { parse } from "yaml";
-
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-
 const WORKFLOW_DIR = join(ROOT, ".github", "workflows");
+
+async function workflowFiles() {
+  const files = (await readdir(WORKFLOW_DIR)).filter((f) => /\.ya?ml$/.test(f));
+  assert.ok(files.length > 0, "no workflow files found");
+  return files;
+}
+
+async function text(file) {
+  return (await readFile(join(WORKFLOW_DIR, file))).toString("utf8");
+}
 
 // Returns each step's name paired with its `run:` command, in file order, so a
 // test can assert on relative ordering rather than absolute line numbers.
-async function steps(workflow) {
-  const text = await readFile(
-    join(ROOT, ".github", "workflows", workflow),
-    "utf8",
-  );
+async function stepList(workflow) {
+  const lines = (await text(workflow)).split(/\r?\n/);
   const out = [];
   let current = null;
-  text.split(/\r?\n/).forEach((line, index) => {
+  lines.forEach((line, index) => {
     const named = line.match(/^\s*-\s*name:\s*(.+?)\s*$/);
     if (named) {
       current = { name: named[1], line: index + 1, run: null };
@@ -34,7 +37,7 @@ async function steps(workflow) {
 }
 
 async function assertBuildPrecedesE2E(workflow) {
-  const found = await steps(workflow);
+  const found = await stepList(workflow);
   const build = found.find((s) => s.run === "pnpm build");
   const e2e = found.find((s) => s.run === "pnpm test:e2e");
 
@@ -62,7 +65,7 @@ test("ci orders its build before web E2E, matching the release workflow", async 
   await assertBuildPrecedesE2E("ci.yml");
 });
 
-test("every workflow uses LF endings and parses as YAML", async () => {
+test("no workflow file contains a carriage return", async () => {
   // Three workflows (release-mobile, self-hosted-verify,
   // web-release-selfhosted) carried a doubled carriage return on the same
   // three-line "Governed audit exceptions" block. `\r\r\n` is not a valid YAML
@@ -70,18 +73,46 @@ test("every workflow uses LF endings and parses as YAML", async () => {
   // workflow file issue" and the workflow never executed. `.gitattributes` pins
   // `* text=auto eol=lf`, so a stray CR in the committed blob is a real defect
   // rather than a platform artefact.
-  const files = (await readdir(WORKFLOW_DIR)).filter((f) => /\.ya?ml$/.test(f));
-  assert.ok(files.length > 0, "no workflow files found");
-
-  for (const file of files) {
-    const text = (await readFile(join(WORKFLOW_DIR, file))).toString("utf8");
-
+  for (const file of await workflowFiles()) {
     assert.ok(
-      !/\r/.test(text),
+      !/\r/.test(await text(file)),
       `${file} contains a carriage return; .gitattributes requires eol=lf. ` +
         `GitHub rejects a doubled CR as an invalid YAML line terminator, so ` +
         `the workflow fails to load before any step runs.`,
     );
-    assert.doesNotThrow(() => parse(text), `${file} must parse as valid YAML`);
+  }
+});
+
+test("every named workflow step is followed by a valid step key", async () => {
+  // A `- name:` entry must introduce a mapping. When the next line is a blank
+  // line, the entry parses as a bare scalar instead of a step and GitHub
+  // rejects the entire file, so no step runs at all. Checked textually rather
+  // than with a YAML parser so the test depends on nothing outside the Node
+  // standard library: the `yaml` package resolves from this repo only by
+  // accident of pnpm hoisting and is not a declared dependency, so it is
+  // absent under CI's frozen install.
+  const STEP_KEY =
+    /^(run|uses|with|env|shell|if|id|continue-on-error|timeout-minutes|working-directory)\s*:/;
+
+  for (const file of await workflowFiles()) {
+    const lines = (await text(file)).split(/\r?\n/);
+
+    lines.forEach((line, index) => {
+      if (!/^\s*-\s*name:\s*\S/.test(line)) return;
+
+      // A blank line between `- name:` and its keys is legal YAML and is used
+      // throughout this repository, so skip over whitespace before deciding
+      // what actually follows the step.
+      let ahead = index + 1;
+      while (ahead < lines.length && lines[ahead].trim() === "") ahead++;
+      const next = (lines[ahead] ?? "").trim();
+
+      assert.ok(
+        STEP_KEY.test(next),
+        `${file} line ${index + 1}: step ${JSON.stringify(line.trim())} is ` +
+          `followed by ${JSON.stringify(next)}, which is not a valid step key. ` +
+          `GitHub rejects the whole workflow file if any step is malformed.`,
+      );
+    });
   }
 });
