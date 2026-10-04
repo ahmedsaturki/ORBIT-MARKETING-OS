@@ -19,6 +19,15 @@ Classification rules applied:
 - `PARTIAL` means some named evidence exists but at least one required kind does not.
 - Source inspection alone never produced `PASS`, per the rule above.
 
+The tally is machine-checked rather than asserted. Selecting every row whose
+second column is a status keyword yields exactly 83 rows with 83 distinct IDs —
+no ID listed twice, none missing — and 77 `PASS`, 3 `PARTIAL`, 3 `UNVERIFIED`, 0
+`FAIL`. The non-PASS rows are `INBOX-01`, `DOC-01`, `DOC-02` (PARTIAL) and
+`REL-02`, `REL-03`, `OPS-02` (UNVERIFIED), each blocked on external action or an
+unexecuted long-running check rather than on code. Note that the source-
+requirements table below repeats all 83 IDs by design, so a naive row count over
+the whole file returns 166.
+
 Two claims from earlier reporting are corrected by this reconciliation:
 
 - The prior delivery report cited **1046** tests. Its own breakdown does not

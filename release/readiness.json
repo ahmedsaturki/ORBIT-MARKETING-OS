@@ -200,7 +200,12 @@
       "sonarOpenNewCodeVulnerabilities": 0,
       "sonarQualityGate": "OK",
       "javascriptTests": 379,
-      "coreCoverageLinesPct": 88.28
+      "coreCoverageLinesPct": 88.28,
+      "playwrightNativePassed": 35,
+      "playwrightNativeSkipped": 0,
+      "playwrightNativeJob": "Windows native E2E",
+      "matrixStatusRows": 83,
+      "matrixFail": 0
     },
     "note": "Point-in-time observation of the moving main branch, measured by running the gates locally on Windows and cross-checked against CI. The exact SHA is bound by the immutable GitHub Actions run context rather than hard-coded here. Local `pnpm format:check` is CRLF-noisy under core.autocrlf=true; CI on Ubuntu is authoritative and passed.",
     "ref": "main",
