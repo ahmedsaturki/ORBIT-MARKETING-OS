@@ -22,10 +22,26 @@ the requirement is unmet because "checksum verification step exists but never
 executed (no tagged release)".
 
 The parenthetical names _one_ of two obstacles. Supplying the tag removes that
-one. It does not execute the checksum step, and no distributed artifact exists
-for checksums to match against — there is no `release-evidence` run, no published
-desktop artifact, and no `sha256sum -c` output anywhere in this repository. A tag
-is a git object; it is not a checksum of a shipped binary.
+one, and the tag did in fact fire a release run: `37205123765`, push event on
+branch `v1.0.0`, created 2026-10-04T13:18:00Z, conclusion **failure**. Earlier
+reporting that no release run had ever executed was wrong.
+
+The run passed every gate step — committed-lockfile and Cargo.lock checks,
+install, workspace sanity, secret scan, governed audit exceptions, dependency
+audit, typecheck, IPC contract, lint, tests (357 + 9 + 5), release sanity,
+readiness contract, core coverage, runtime smoke, Chromium install, and
+performance smoke — then failed at `Browser E2E` with
+`Error: Timed out waiting 30000ms from config.webServer`. `Build` and
+`Publish GitHub Release` were skipped, so `Build checksums` never executed and no
+distributed artifact exists for checksums to match against.
+
+The cause was a step-ordering defect, now fixed. `Browser E2E` ran at line 77
+and `pnpm build` at line 80, but the E2E suite serves `packages/web/out` through
+`scripts/static-server.mjs`; with no export on disk, Playwright's `webServer`
+wait expired. `ci.yml` orders `Build` (163) before `Web E2E` (174) and passes.
+The release workflow now matches. The failure was reproduced locally — removing
+`packages/web/out` reproduces the identical timeout — and the fix reordered the
+two steps.
 
 Closing REL-03 requires a real release run: build the desktop artifact, emit
 checksums, then verify them against what was published. Until that execution

@@ -339,7 +339,11 @@ and the matrix in `docs/FINAL_STATE_MODEL.md` keeps them separate for that reaso
 
 1. Run the 24-hour soak on the release SHA (`OPS-02`)
 2. Provide desktop signing certificates (`REL-02`)
-3. Execute a release run so `REL-03` checksums exist and can be verified against published artifacts (the `v1.0.0` tag exists; the checksum step has still never run)
+3. Re-run the release workflow now that its step ordering is fixed, so `REL-03`
+   checksums are produced and can be verified against published artifacts. The
+   `v1.0.0` tag already fired a run (`37205123765`), and it **failed** at
+   `Browser E2E` because E2E ran before `pnpm build`; that defect is fixed on this
+   branch but the run has not been repeated
 4. Open mobile store accounts
 5. Activate a payment provider
 6. Complete legal/commercial publication review

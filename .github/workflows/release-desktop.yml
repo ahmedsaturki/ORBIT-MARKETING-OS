@@ -73,11 +73,16 @@ jobs:
       - name: Performance smoke
         run: pnpm test:performance
 
-      - name: Browser E2E
-        run: pnpm test:e2e
-
+      # The E2E suite serves packages/web/out through scripts/static-server.mjs,
+      # so the web export must exist before Playwright starts. Running this
+      # before the build made the quality gate fail with
+      # "Timed out waiting 30000ms from config.webServer" on run 37205123765.
+      # ci.yml orders Build (163) before Web E2E (174); match that.
       - name: Build
         run: pnpm build
+
+      - name: Browser E2E
+        run: pnpm test:e2e
       - name: Format check
         run: pnpm format:check
 
