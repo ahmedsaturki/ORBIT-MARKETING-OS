@@ -43,13 +43,6 @@ jobs:
       - name: Require desktop Cargo.lock
         run: test -f packages/desktop/src-tauri/Cargo.lock
 
-      # Before the build, not after: a spec that does not parse otherwise
-      # surfaces only when Playwright loads it, after install, build and
-      # browser install. e2e/ is not a workspace package, so `turbo run
-      # typecheck` never sees it.
-      - name: E2E spec parse gate
-        run: pnpm verify:e2e-parses
-
       - name: Release sanity
         run: pnpm verify:release
       - name: Release evidence collector contract
@@ -114,6 +107,14 @@ jobs:
 
       - name: Reproducible install
         run: pnpm install --frozen-lockfile
+
+      # Immediately after install, because resolving the TypeScript compiler
+      # requires packages/core/node_modules to exist. Before the build, because a
+      # spec that does not parse otherwise surfaces only when Playwright loads
+      # it, after build and browser install. e2e/ is not a workspace package, so
+      # `turbo run typecheck` never sees it.
+      - name: E2E spec parse gate
+        run: pnpm verify:e2e-parses
 
       - name: Commercial connector proof safety
         run: pnpm test:commercial-proof

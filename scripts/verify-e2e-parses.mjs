@@ -27,7 +27,6 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, statSync } from "node:fs";
-import { createRequire } from "node:module";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -44,26 +43,40 @@ function collectSpecs(dir) {
       found.push(full);
     }
   }
-  return found.sort();
+  // Explicit comparator: the default sort is lexicographic, which orders
+  // uppercase before lowercase and would report specs in an order that does
+  // not match the filesystem listing.
+  return found.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
-// Under pnpm the compiler is only linked into workspace packages, so resolve it
-// from one of them rather than expecting it at the repository root.
-let tscBin = null;
-for (const candidate of [
-  "packages/core/node_modules/typescript/bin/tsc",
-  "packages/desktop/node_modules/typescript/bin/tsc",
-  "node_modules/typescript/bin/tsc",
-]) {
-  const full = join(repoRoot, candidate);
-  if (existsSync(full)) {
-    tscBin = full;
-    break;
+// Under pnpm the compiler is only linked into workspace packages, never at the
+// repository root, so resolve it through a package rather than guessing a path.
+// Resolution must not depend on which packages happen to be installed, so this
+// walks every workspace package instead of probing a fixed list.
+function findTsc() {
+  const direct = join(repoRoot, "node_modules", "typescript", "bin", "tsc");
+  if (existsSync(direct)) return direct;
+  const packagesDir = join(repoRoot, "packages");
+  if (!existsSync(packagesDir)) return null;
+  for (const pkg of readdirSync(packagesDir)) {
+    const candidate = join(
+      packagesDir,
+      pkg,
+      "node_modules",
+      "typescript",
+      "bin",
+      "tsc",
+    );
+    if (existsSync(candidate)) return candidate;
   }
+  return null;
 }
+
+const tscBin = findTsc();
 if (!tscBin) {
   console.error(
-    "verify-e2e-parses: could not locate the TypeScript compiler. Run pnpm install.",
+    "verify-e2e-parses: could not locate the TypeScript compiler under any " +
+      "workspace package. This gate needs `pnpm install` to have run.",
   );
   process.exit(1);
 }
