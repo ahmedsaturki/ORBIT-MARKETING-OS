@@ -72,7 +72,14 @@ for (const packagePath of shippedPackages) {
   const manifest = JSON.parse(
     readFileSync(`${packagePath}/package.json`, "utf8"),
   );
-  for (const field of ["dependencies", "optionalDependencies"]) {
+  // peerDependencies counts too: a peer dependency is installed into a shipped
+  // package's tree rather than staying confined to the tool that wanted it, so
+  // it would invalidate the "build-time only" premise this exception rests on.
+  for (const field of [
+    "dependencies",
+    "optionalDependencies",
+    "peerDependencies",
+  ]) {
     const declared = Object.keys(manifest[field] ?? {});
     assert.ok(
       !declared.includes("braces"),

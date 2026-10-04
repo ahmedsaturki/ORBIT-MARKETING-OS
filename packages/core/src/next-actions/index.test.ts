@@ -95,23 +95,35 @@ describe("Mission Control operational state", () => {
     }
   });
 
-  // Two workspaces must never see each other's operational state.
-  it("derives disjoint actions for two workspaces from the same work", () => {
-    const shared = { id: "t1", title: "Approve publish" };
+  // Two workspaces must never see each other's operational state. Stamping a
+  // single workspace is already covered above; what this adds is the contrast,
+  // and critically the non-emptiness of both results.
+  //
+  // An earlier version asserted that the second workspace derived an empty
+  // queue. That proved nothing: deriveNextActions only ranks supplied work and
+  // does not filter, so an empty result is a property of passing no
+  // interventions rather than of workspace isolation.
+  it("derives the same work for two workspaces, each stamped with its own", () => {
+    const interventions = [{ id: "t1", title: "Approve publish" }];
     const first = deriveNextActions({
       workspaceId: "workspace-1",
       now: "2026-09-26T00:00:00.000Z",
-      interventions: [shared],
+      interventions,
     });
     const second = deriveNextActions({
       workspaceId: "workspace-2",
       now: "2026-09-26T00:00:00.000Z",
+      interventions,
     });
 
-    expect(first.every((action) => action.workspaceId === "workspace-1")).toBe(
+    expect(first.length).toBeGreaterThan(0);
+    expect(second.length).toBeGreaterThan(0);
+    expect(first.map((action) => action.id)).toEqual(
+      second.map((action) => action.id),
+    );
+    expect(second.every((action) => action.workspaceId === "workspace-2")).toBe(
       true,
     );
-    expect(second).toEqual([]);
   });
 
   it("refuses a blank workspace rather than emitting unattributed actions", () => {
