@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function PrivacyPage(): ReactElement {
   return (
-    <main className="container page prose">
+    <main id="main-content" tabIndex={-1} className="container page prose">
       <Link href="/">← الرئيسية</Link>
       <h1>سياسة الخصوصية</h1>
       <p>

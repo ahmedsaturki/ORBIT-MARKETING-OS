@@ -35,7 +35,7 @@ function checkoutUrl(planName: string): string {
 
 export default function PricingPage(): ReactElement {
   return (
-    <main className="container page">
+    <main id="main-content" tabIndex={-1} className="container page">
       <Link href="/">← الرئيسية</Link>
       <p>
         <Link href="/legal/refunds/">سياسة الاسترداد</Link> •{" "}

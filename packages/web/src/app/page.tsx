@@ -21,7 +21,12 @@ const releaseShaSource = declaredReleaseSha
 
 export default function HomePage(): ReactElement {
   return (
-    <main data-release="1.0.0" data-release-sha={releaseSha}>
+    <main
+      id="main-content"
+      tabIndex={-1}
+      data-release="1.0.0"
+      data-release-sha={releaseSha}
+    >
       <header className="topbar">
         <div className="container nav">
           <strong>ORBIT</strong>
