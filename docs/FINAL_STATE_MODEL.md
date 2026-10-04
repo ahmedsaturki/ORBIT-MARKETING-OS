@@ -13,7 +13,7 @@ by running the command named beside it, not by reading a prior report.
 
 | Dimension | Status | Basis |
 |---|---|---|
-| **Engineering** | **PASS** | 533 JS tests, 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all 10 governance gates green |
+| **Engineering** | **PASS** | 537 JS tests (core 515, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
 | **Product** | **PARTIAL** | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code |
 | **Release** | **NOT READY** | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13 |
 | **Owner Gates** | **10 remaining** | Certificates, credentials, store accounts, human review, wall-clock time |
