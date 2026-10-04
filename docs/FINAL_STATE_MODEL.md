@@ -308,7 +308,9 @@ itself is sound.
 6. Activate a payment provider
 7. Complete legal/commercial publication review
 8. Complete the WCAG/RTL accessibility audit
-9. Verify multi-device sync with real devices
+9. Verify multi-device sync with real devices — **narrowed.** The convergence and
+   persistence logic is already covered by 16 executing tests over real loopback
+   sockets; what remains is a physical-device check. See below.
 10. ~~Resolve the SonarCloud new-code rating gap~~ — **closed**, see the correction below
 
 Items 1–3 and 9 are tracked in `release/readiness.json`. Two further items have
@@ -327,6 +329,33 @@ from an external GitHub App reporting into the Checks API, not from CI defined
 here. The substantive claim — rating A, zero open new-code vulnerabilities, issue
 #112 closed — is verifiable and stands; the claim that this branch runs the check
 does not.
+
+**Correction to item 9 — the sync logic is already verified; only hardware is
+not.** This was filed as "verify multi-device sync with real devices", which
+implies nothing about sync has been tested. It has.
+
+`packages/core/test/sync.test.ts` and `packages/core/test/sync-network.test.ts`
+contain **16 tests**, all passing (`vitest run` → 16 passed):
+
+- bidirectional convergence across two independent documents over a **real
+  `http.createServer` relay on `127.0.0.1`**, not a mocked transport — each side
+  holds separate CRDT state and both end up identical
+- three replicas converging to identical state
+- convergence under reversed update-delivery order
+- a delete racing a concurrent write
+- idempotence when an update is redelivered
+- replay with the wrong key and tampered ciphertext both refused before any state
+  is applied
+- offline edits after the last sync restored, not just synced ones
+- an offline deletion surviving restart and not being resurrected by an older
+  snapshot
+- five restart cycles with neither loss nor drift
+
+What that does **not** cover: real network conditions (packet loss, reordering
+across a WAN, high latency), actual mobile backgrounding and process death,
+key provisioning across physical devices, and clock skew. Those need hardware,
+so the item stays — but it is now correctly scoped to a physical-device check
+rather than an unverified subsystem.
 
 **Correction to item 4 — credentials are not the blocker.** This item was listed
 as "supply Telegram and LinkedIn credentials", which implies the connectors work
