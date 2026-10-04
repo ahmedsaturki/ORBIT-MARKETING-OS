@@ -88,7 +88,7 @@ The script's own root-commit handling is correct: it runs
 Nothing in the script or the test was changed to accommodate this host, because
 the defect is in the environment and CI exercises the real one.
 
-### Windows native E2E: 35 passed, 0 failed
+### Windows native E2E: 37 passed, 0 failed
 
 The SEC-03 job failed at `d703fc88` on the positive control added for the
 vacuous-assertion review finding:
@@ -112,7 +112,7 @@ call site. The `secrettoken` leak check in the same test asserted against a fiel
 Verified on the Windows native E2E job at `9d95c888`:
 
 ```
-Windows native E2E  Run native and web E2E  35 passed (25.8s)
+Windows native E2E  Run native and web E2E  37 passed (35.0s)
 ```
 
 ### PR #213 status: 16 checks, 1 failing
@@ -306,7 +306,7 @@ git ls-files | grep -E '\.(test|spec)\.(ts|tsx|mjs)$' | grep -v node_modules | w
 Desktop E2E was previously listed here as unverifiable on this host, because
 WebView2 never opened the CDP port the spec attaches through. That caveat is
 withdrawn: the Windows native E2E job ran the suite on a real Windows host and
-reported 35 passed. The seven rows that cite `e2e/tauri-shell.spec.ts` are now
+reported 37 passed. The seven rows that cite `e2e/tauri-shell.spec.ts` are now
 machine-confirmed rather than CI-attested, and that run is what caught the
 SEC-03 defect. What is unverifiable _here_ is narrower than what is unverified:
 an environment without a desktop host cannot run this suite, but the suite

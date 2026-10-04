@@ -60,7 +60,7 @@ which works. The matrix row cites the filtered form.
 and it is conditional rather than disabled: `e2e/tauri-shell.spec.ts:189` skips
 the Tauri capability suite when `scripts/build-tauri.mjs --release` has not
 produced a binary. That is why the browser-only run reports 24 passed / 10
-skipped while the Windows native E2E job reports 35 passed — the same tests,
+skipped while the Windows native E2E job reports 37 passed — the same tests,
 with the binary present. No other skip, `todo`, `xit` or `xdescribe` exists in
 `packages/*/src`, `packages/*/test` or `e2e`.
 
@@ -80,7 +80,7 @@ the audit machine, but WebView2 154.0.4258.53 never opened the CDP port the spec
 attaches through, so the suite reported 25 passed, 1 failed, 8 not run.
 
 The Windows native E2E job has since run the suite on a real Windows host and
-reported **35 passed, 0 failed**. Those seven rows are machine-confirmed, not
+reported **37 passed, 0 failed**. Those seven rows are machine-confirmed, not
 merely attested. The run also earned its keep by failing SEC-03 first: the
 positive control for that test was sending `account_upsert` arguments the
 command does not accept, so the sealed session was never stored and the control

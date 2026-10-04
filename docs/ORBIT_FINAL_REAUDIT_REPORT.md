@@ -147,7 +147,7 @@ Both are retracted. The counts above were read directly from `gh pr checks` and
 the three pending checks must be re-read once they settle — this table is a
 point-in-time observation, not a stable property.
 
-- Windows native E2E: 35 passed, 0 failed (SEC-03 defect fixed)
+- Windows native E2E: 37 passed, 0 failed (SEC-03 defect fixed)
 - Rust quality job: 106 passed (filtered from 182 source attributes)
 
 ### Environment Gaps
@@ -233,7 +233,7 @@ No premature stopping signals. The repository's own documentation acknowledges t
 ### Caveats
 
 - Windows host quirks prevented full desktop E2E run locally (requires WebView2 CDP port)
-- CI Windows native E2E job ran the suite successfully: 35 passed, 0 failed
+- CI Windows native E2E job ran the suite successfully: 37 passed, 0 failed
 
 ---
 
