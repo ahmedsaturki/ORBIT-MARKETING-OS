@@ -3746,6 +3746,12 @@ fn campaign_create(
     create_campaign(&connection, &workspace_id, &name, &account_ids)
 }
 
+/// Roles permitted to create a campaign. Shared so the authorization tests
+/// assert against the same list the command enforces.
+fn campaign_write_roles() -> &'static [&'static str] {
+    &["owner", "admin", "editor"]
+}
+
 fn create_campaign(
     connection: &Connection,
     workspace_id: &str,
@@ -3754,7 +3760,7 @@ fn create_campaign(
 ) -> Result<CampaignView, String> {
     // The membership gate lives here rather than only in the command wrapper so
     // it is part of the path under test.
-    require_workspace_role_for(connection, workspace_id, &["owner", "admin", "editor"])
+    require_workspace_role_for(connection, workspace_id, campaign_write_roles())
         .map_err(|error| error.to_string())?;
 
     let name = validate_label(name).map_err(|error| error.to_string())?;
@@ -16728,16 +16734,13 @@ mod workspace_role_authorization_tests {
         }
     }
 
-    // The sensitive write path used by insight_upsert and friends.
+    // The write and read gates as the real command paths apply them. These
+    // previously restated the production role lists locally, which meant the
+    // tests passed even if a command's actual required roles changed.
     fn require_write_role(connection: &Connection, workspace_id: &str) -> Result<(), AppError> {
-        require_workspace_role_for(
-            connection,
-            workspace_id,
-            &["owner", "admin", "editor", "operator"],
-        )
+        require_workspace_role_for(connection, workspace_id, campaign_write_roles())
     }
 
-    // The read path used by insight_list.
     fn require_read_role(connection: &Connection, workspace_id: &str) -> Result<(), AppError> {
         require_workspace_role_for(
             connection,
@@ -16746,19 +16749,41 @@ mod workspace_role_authorization_tests {
         )
     }
 
+    // Campaign creation requires campaign.manage, which packages/core's
+    // access matrix grants to owner, admin and editor only. operator holds
+    // campaign.read and queue.execute but not campaign.manage, so it is
+    // deliberately absent here.
     #[test]
-    fn every_write_capable_role_is_authorized_to_write() {
+    fn every_role_with_campaign_manage_is_authorized_to_write() {
         let connection = membership_connection();
-        for role in ["owner", "admin", "editor", "operator"] {
+        for role in campaign_write_roles() {
             grant(&connection, "workspace-a", &format!("user-{role}"), role);
         }
-        for role in ["owner", "admin", "editor", "operator"] {
+        for role in campaign_write_roles() {
             act_as(&connection, &format!("user-{role}"));
             assert!(
                 require_write_role(&connection, "workspace-a").is_ok(),
                 "{role} must be authorized to write",
             );
         }
+    }
+
+    // The other half of the policy: operator may read campaigns but must not
+    // manage them, so the write gate refuses it.
+    #[test]
+    fn an_operator_is_authorized_to_read_but_refused_campaign_manage() {
+        let connection = membership_connection();
+        grant(&connection, "workspace-a", "user-operator", "operator");
+        act_as(&connection, "user-operator");
+
+        assert!(
+            require_read_role(&connection, "workspace-a").is_ok(),
+            "operator must be authorized to read",
+        );
+        assert_unauthorized(
+            require_write_role(&connection, "workspace-a"),
+            "operator holds campaign.read but not campaign.manage",
+        );
     }
 
     // RBAC-01: a role without write privilege must be refused, not silently
