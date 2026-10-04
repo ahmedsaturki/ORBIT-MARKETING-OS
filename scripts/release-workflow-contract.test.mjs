@@ -116,3 +116,37 @@ test("every named workflow step is followed by a valid step key", async () => {
     });
   }
 });
+
+// A workflow that produces release evidence must not be cancelled part-way
+// through, and must not derive its concurrency group from its own filename.
+const RELEASE_WORKFLOWS = [
+  "release-desktop.yml",
+  "release-mobile.yml",
+  "release-evidence.yml",
+  "stability-soak.yml",
+];
+
+test("release workflows must not cancel in-progress runs", async () => {
+  for (const file of RELEASE_WORKFLOWS) {
+    const body = await text(file);
+    const group = body.match(/^\s*group:\s*(.+?)\s*$/m);
+    const cancel = body.match(/^\s*cancel-in-progress:\s*(true|false)\s*$/m);
+
+    assert.ok(group, `${file} must declare a concurrency group`);
+    assert.ok(cancel, `${file} must declare cancel-in-progress`);
+
+    assert.equal(
+      cancel[1],
+      "false",
+      `${file} sets cancel-in-progress: ${cancel[1]}. Cancelling a release ` +
+        `mid-flight discards the artifact uploads that the checksum step ` +
+        `verifies, which is how REL-03 lost its evidence.`,
+    );
+    assert.ok(
+      !/\.ya?ml/.test(group[1]),
+      `${file} concurrency group ${JSON.stringify(group[1])} embeds its own ` +
+        `filename, which is a generator artefact rather than an intent to ` +
+        `serialise releases.`,
+    );
+  }
+});
