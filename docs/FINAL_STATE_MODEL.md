@@ -190,6 +190,7 @@ Each was proven load-bearing by reverting it and observing the failure.
 | 9   | Public web pages exposed no `banner`/`navigation`/`contentinfo` landmarks: every sub-page nested its `<header>` inside `<main>`, which does not map to a banner role (WCAG 1.3.1). **Fixed**                                                                                                                                                             | Accessibility                                  |
 | 10  | Release workflow ran `Browser E2E` (line 77) **before** `pnpm build` (line 80), but the suite serves `packages/web/out`; release run `37205123765` failed with `Timed out waiting 30000ms from config.webServer`, skipping the build and checksum steps and leaving `REL-03` without evidence. **Fixed**                                                 | Release pipeline never reaches publish         |
 | 11  | `release-mobile.yml`, `self-hosted-verify.yml` and `web-release-selfhosted.yml` each carried a **doubled carriage return** on the same three-line "Governed audit exceptions" block, so the committed blob contained `\r\r\n` — not a valid YAML line terminator. GitHub rejected all three as "a workflow file issue" and none could execute. **Fixed** | Three workflows unloadable                     |
+| 12  | `release-mobile.yml` set `cancel-in-progress: true` — the only release workflow that would cancel a run mid-flight, discarding the artifact uploads the checksum step verifies. Its `concurrency:` block also sat before `on:`, and the group embedded the workflow's own filename. **Fixed**                                                            | Mobile release discards its own evidence       |
 
 Two more were corrected in reporting rather than code: the workflow count was
 understated as five (it is eleven), and a prior audit's counts now conflict with
@@ -270,7 +271,7 @@ order, or cognitive accessibility.
 | "1046 tests passing"                | Its own parts sum to **1151**; no run produces 1046                                                |
 | "87 requirement IDs"                | The matrix defines **83**                                                                          |
 | "609 test files"                    | Actual: **89** tracked test files: 61 in `packages/`, 23 contract tests in `scripts/`, 5 E2E specs |
-| "No engineering changes are needed" | **False** — eleven defects were found in code                                                      |
+| "No engineering changes are needed" | **False** — twelve defects were found in code                                                      |
 
 The prior figure of 59 came from
 `find packages -name "*.test.ts" -not -path "*/node_modules/*" | wc -l`, which

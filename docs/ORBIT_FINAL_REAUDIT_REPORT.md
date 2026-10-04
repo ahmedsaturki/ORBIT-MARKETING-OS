@@ -393,6 +393,7 @@ The eight owner actions above and the remaining checkboxes are tracked together;
 | 9   | Public web pages exposed no `banner`/`navigation`/`contentinfo` landmarks (WCAG 1.3.1)                  | Accessibility                                  | Fixed  |
 | 10  | Release workflow ran `Browser E2E` before `pnpm build`; run `37205123765` failed on tag `v1.0.0`        | Release pipeline never reaches publish         | Fixed  |
 | 11  | `release-mobile.yml`, `self-hosted-verify.yml` and `web-release-selfhosted.yml` each contained `\r\r\n` | Three workflows unloadable                     | Fixed  |
+| 12  | `release-mobile.yml` set `cancel-in-progress: true`; group embedded the workflow's own filename         | Mobile release discards its own evidence       | Fixed  |
 
 Three further items that appeared in an earlier revision of this appendix —
 "`pnpm audit` red in five workflows", "`verify:workspace` red in eleven
@@ -406,10 +407,11 @@ also narrowed: it exists only in this branch's refactor, because upstream never
 extracted a `conversation_upsert_record` helper for the mismatch to arise in.
 
 The count is therefore **four** fixed defects carried into this audit
-(1, 2, 3, 4) plus three found by CI (5, 6, 7), plus four found later in this
-audit (8–11: two WCAG defects, the release workflow step-ordering failure on
-tag `v1.0.0`, and the `\r\r\n` corruption that made three workflows unloadable)
-— **eleven in total**, not "seven defects found in code", which an earlier
+(1, 2, 3, 4) plus three found by CI (5, 6, 7), plus five found later in this
+audit (8–12: two WCAG defects, the release workflow step-ordering failure on
+tag `v1.0.0`, the `\r\r\n` corruption that made three workflows unloadable, and
+`release-mobile.yml` cancelling its own release runs mid-flight) —
+**twelve in total**, not "seven defects found in code", which an earlier
 revision of this document asserted.
 
 ### Appendix B: Claims From Prior Reporting That Do Not Survive
@@ -421,7 +423,7 @@ revision of this document asserted.
 | "1046 tests passing"                | Its own parts sum to **1151**; no run produces 1046                                          |
 | "87 requirement IDs"                | The matrix defines **83**                                                                    |
 | "609 test files"                    | Actual: **89** tracked test files                                                            |
-| "No engineering changes are needed" | **False** — eleven defects listed in Appendix A were found in code, three of them only by CI |
+| "No engineering changes are needed" | **False** — twelve defects listed in Appendix A were found in code, three of them only by CI |
 
 ### Appendix C: Files Modified in This Audit
 
