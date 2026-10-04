@@ -4388,12 +4388,22 @@ fn media_asset_import(
     tags_json: Option<String>,
 ) -> Result<MediaAssetView, String> {
     let workspace_id = active_workspace_id();
-    let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
 
-    let path_string = validate_label(&path).map_err(|error| error.to_string())?;
+    import_media_asset(&connection, &workspace_id, &id, &path, tags_json)
+}
+
+fn import_media_asset(
+    connection: &Connection,
+    workspace_id: &str,
+    id: &str,
+    path: &str,
+    tags_json: Option<String>,
+) -> Result<MediaAssetView, String> {
+    let id = validate_label(id).map_err(|error| error.to_string())?;
+    let path_string = validate_label(path).map_err(|error| error.to_string())?;
     let path = std::path::PathBuf::from(&path_string);
     if !path.is_file() {
         return Err("media path must point to a regular file".to_string());
@@ -4427,7 +4437,7 @@ fn media_asset_import(
     }
 
     let timestamp = chrono_like_timestamp();
-    connection
+    let changed = connection
         .execute(
             "INSERT INTO media_assets(
                id, workspace_id, kind, filename, mime_type, size_bytes,
@@ -4459,9 +4469,16 @@ fn media_asset_import(
         )
         .map_err(|error| error.to_string())?;
 
+    // The upsert's conflict target is guarded by workspace_id, so an id
+    // already owned by another workspace updates zero rows. Reporting success
+    // there would hand the caller a view of a file that was never recorded.
+    if changed != 1 {
+        return Err("media asset id is already used by another workspace".to_string());
+    }
+
     write_audit_for_workspace(
-        &connection,
-        &workspace_id,
+        connection,
+        workspace_id,
         "media",
         "asset_import",
         "success",
@@ -14333,6 +14350,253 @@ mod media_import_tests {
         assert_eq!(infer_media_mime(png), Some("image/png"));
         assert_eq!(infer_media_mime(mp4), Some("video/mp4"));
         assert_eq!(infer_media_mime(pdf), Some("application/pdf"));
+    }
+}
+
+#[cfg(test)]
+mod media_asset_import_tests {
+    use super::*;
+
+    fn media_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');",
+            )
+            .expect("workspace fixture should be created");
+        connection
+    }
+
+    // The unique suffix goes before the extension: media import infers type
+    // from the extension, so a name like "basic.png-123" would not import.
+    fn write_temp(stem: &str, extension: &str, bytes: &[u8]) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "orbit-media-{}-{}.{}",
+            stem,
+            uuid_like(),
+            extension
+        ));
+        fs::write(&path, bytes).expect("fixture file should be written");
+        path
+    }
+
+    // MEDIA-02: the import command end to end, not just the hashing helper.
+    #[test]
+    fn importing_an_asset_persists_it_with_its_real_digest_and_audit() {
+        let connection = media_connection();
+        let bytes = b"PNG fixture bytes";
+        let path = write_temp("basic", "png", bytes);
+        let path_string = path.to_string_lossy().to_string();
+
+        let view = import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-1",
+            &path_string,
+            Some(r#"["launch"]"#.to_string()),
+        )
+        .expect("a regular png should import");
+        let expected_digest = sha256_file(&path).expect("hash");
+        let _ = fs::remove_file(&path);
+
+        assert_eq!(view.id, "asset-1");
+        assert_eq!(view.mime_type, "image/png");
+        assert_eq!(view.kind, "image");
+        assert_eq!(view.size_bytes, 17, "the real file size must be stored");
+        assert_eq!(view.sha256.as_deref(), Some(expected_digest.as_str()));
+        assert_eq!(view.tags_json, r#"["launch"]"#);
+
+        let stored: (String, String, i64) = connection
+            .query_row(
+                "SELECT workspace_id, filename, size_bytes FROM media_assets WHERE id='asset-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("the asset must be persisted");
+        assert_eq!(stored.0, "workspace-a");
+        assert!(
+            stored.1.starts_with("orbit-media-basic-") && stored.1.ends_with(".png"),
+            "the stored filename must be the real on-disk name: {}",
+            stored.1,
+        );
+        assert_eq!(stored.2, 17);
+
+        let audited: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM audit_events
+                 WHERE category='media' AND action='asset_import' AND workspace_id='workspace-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("audit count should be readable");
+        assert_eq!(audited, 1, "an import must be audited under its workspace");
+    }
+
+    #[test]
+    fn importing_rejects_a_path_that_is_not_a_regular_file() {
+        let connection = media_connection();
+        let error = import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-missing",
+            r"D:\definitely\not\here.png",
+            None,
+        )
+        .expect_err("a missing file must not import");
+        assert!(error.contains("regular file"), "unexpected error: {error}",);
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM media_assets", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused import must persist nothing");
+    }
+
+    #[test]
+    fn importing_rejects_an_unsupported_file_type() {
+        let connection = media_connection();
+        let path = write_temp("notes", "exe", b"MZ fixture");
+        let path_string = path.to_string_lossy().to_string();
+        let error = import_media_asset(&connection, "workspace-a", "asset-exe", &path_string, None)
+            .expect_err("an unsupported type must not import");
+        let _ = fs::remove_file(&path);
+        assert!(
+            error.contains("unsupported media file type"),
+            "unexpected error: {error}",
+        );
+    }
+
+    #[test]
+    fn importing_rejects_an_empty_file() {
+        let connection = media_connection();
+        let path = write_temp("empty", "mp4", b"");
+        let path_string = path.to_string_lossy().to_string();
+        let error = import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-empty",
+            &path_string,
+            None,
+        )
+        .expect_err("a zero-byte file must not import");
+        let _ = fs::remove_file(&path);
+        assert!(
+            error.contains("between 1 byte and 2 GB"),
+            "unexpected error: {error}",
+        );
+    }
+
+    #[test]
+    fn importing_rejects_malformed_tags() {
+        let connection = media_connection();
+        let path = write_temp("tags", "png", b"PNG");
+        let path_string = path.to_string_lossy().to_string();
+        let error = import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-tags",
+            &path_string,
+            Some("not json".to_string()),
+        )
+        .expect_err("malformed tags must be refused");
+        let _ = fs::remove_file(&path);
+        assert!(
+            error.contains("tags_json must be a JSON array"),
+            "unexpected error: {error}",
+        );
+    }
+
+    #[test]
+    fn reimporting_the_same_id_updates_the_existing_asset() {
+        let connection = media_connection();
+        let first = write_temp("v1", "png", b"first");
+        let second = write_temp("v2", "png", b"second");
+
+        import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-1",
+            &first.to_string_lossy(),
+            None,
+        )
+        .expect("first import");
+        let updated = import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-1",
+            &second.to_string_lossy(),
+            Some(r#"["v2"]"#.to_string()),
+        )
+        .expect("second import");
+        let _ = fs::remove_file(&first);
+        let _ = fs::remove_file(&second);
+
+        assert!(
+            updated.filename.starts_with("orbit-media-v2-") && updated.filename.ends_with(".png"),
+            "the update must carry the new file's name: {}",
+            updated.filename,
+        );
+        assert_eq!(updated.tags_json, r#"["v2"]"#);
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM media_assets WHERE id='asset-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("count should be readable");
+        assert_eq!(count, 1, "re-importing must not duplicate the asset");
+    }
+
+    // The upsert carries a workspace guard on its conflict target, so a
+    // colliding id from another workspace updates zero rows. That must be an
+    // error, not a success that silently discarded the file.
+    #[test]
+    fn importing_an_id_owned_by_another_workspace_is_refused() {
+        let connection = media_connection();
+        let first = write_temp("owner", "png", b"owner bytes");
+        let second = write_temp("intruder", "png", b"intruder bytes");
+
+        import_media_asset(
+            &connection,
+            "workspace-a",
+            "shared-id",
+            &first.to_string_lossy(),
+            None,
+        )
+        .expect("workspace-a should own the id");
+        let error = import_media_asset(
+            &connection,
+            "workspace-b",
+            "shared-id",
+            &second.to_string_lossy(),
+            None,
+        )
+        .expect_err("a foreign workspace must not silently discard the import");
+        assert!(
+            error.contains("already used by another workspace"),
+            "the refusal must name the collision: {error}",
+        );
+        let _ = fs::remove_file(&first);
+        let _ = fs::remove_file(&second);
+
+        let owner: (String, String) = connection
+            .query_row(
+                "SELECT workspace_id, filename FROM media_assets WHERE id='shared-id'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("the original asset must still exist");
+        assert_eq!(owner.0, "workspace-a", "ownership must not change");
+        assert!(
+            owner.1.starts_with("orbit-media-owner-") && owner.1.ends_with(".png"),
+            "the owner's file must be untouched: {}",
+            owner.1,
+        );
     }
 }
 
