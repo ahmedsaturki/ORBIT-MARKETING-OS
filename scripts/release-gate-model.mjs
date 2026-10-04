@@ -53,12 +53,16 @@ export const GATES = {
   },
   accessibility: {
     name: "Accessibility",
-    owner: "Engineering Team",
+    // Automated coverage passes, but the gate closes only on the manual WCAG and
+    // RTL audit. No engineer action closes that on its own, so it is an owner gate.
+    owner: "Owner Action",
     priority: "medium",
   },
   stability_soak: {
     name: "Stability Soak",
-    owner: "Engineering Team",
+    // The 24-hour run is workflow_dispatch gated on github.actor == the repo
+    // owner and needs a self-hosted runner this repository cannot provision.
+    owner: "Owner Action",
     priority: "high",
   },
   commercial_billing: {

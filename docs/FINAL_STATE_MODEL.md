@@ -11,12 +11,12 @@ by running the command named beside it, not by reading a prior report.
 
 ## 1. Four-Part Status
 
-| Dimension       | Status          | Basis                                                                                                                                                 |
-| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Engineering** | **PASS**        | 379 JS tests (core 357, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
-| **Product**     | **PARTIAL**     | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code                                                         |
-| **Release**     | **NOT READY**   | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
-| **Owner Gates** | **9 remaining** | Certificates, credentials, store accounts, human review, wall-clock time. A tenth (SonarCloud new-code rating) is now closed                          |
+| Dimension       | Status        | Basis                                                                                                                                                 |
+| --------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Engineering** | **PASS**      | 379 JS tests (core 357, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
+| **Product**     | **PARTIAL**   | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code                                                         |
+| **Release**     | **NOT READY** | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
+| **Owner Gates** | **5 of 13**   | `external_connectors`, `accessibility`, `stability_soak`, `commercial_billing`, `legal_commercial`. Nine owner _actions_ remain, listed in section 7  |
 
 All of the above is confirmed by a clean CI run on `cc5979a7`, not by local
 execution alone: 16 of 17 checks pass, including all four platform builds,
@@ -245,6 +245,17 @@ SonarCloud new-code security rating, was listed here and is now closed: the
 rating is A with zero open new-code vulnerabilities, and both the analysis and
 the quality-gate check pass on this branch. That leaves nine owner actions, none
 of which an engineer can complete alone.
+
+This list of nine actions is not the same as gate ownership, and the two now
+differ because the gate model was corrected. `scripts/release-gate-model.mjs`
+filed `accessibility` and `stability_soak` under the Engineering Team, but both
+close only on action this repository cannot perform: the manual WCAG/RTL audit
+needs a human reviewer, and the 24-hour soak is `workflow_dispatch` gated on
+`github.actor == 'ahmedsaturki'` and needs a self-hosted runner. Both are now
+owner gates, so `export-gate-status` reports **5 owner gates of 13**
+(`external_connectors`, `accessibility`, `stability_soak`,
+`commercial_billing`, `legal_commercial`) against 8 engineering gates, where it
+previously reported 3 and 10.
 
 ---
 
