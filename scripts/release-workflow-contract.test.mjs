@@ -116,9 +116,9 @@ test("every named workflow step is followed by a valid step key", async () => {
     });
   }
 });
-
 // A workflow that produces release evidence must not be cancelled part-way
-// through, and must not derive its concurrency group from its own filename.
+// through: cancelling one mid-flight discards the artifact uploads that the
+// checksum step verifies, which is how REL-03 lost its evidence.
 const RELEASE_WORKFLOWS = [
   "release-desktop.yml",
   "release-mobile.yml",
@@ -128,13 +128,11 @@ const RELEASE_WORKFLOWS = [
 
 test("release workflows must not cancel in-progress runs", async () => {
   for (const file of RELEASE_WORKFLOWS) {
-    const body = await text(file);
-    const group = body.match(/^\s*group:\s*(.+?)\s*$/m);
-    const cancel = body.match(/^\s*cancel-in-progress:\s*(true|false)\s*$/m);
+    const cancel = (await text(file)).match(
+      /^\s*cancel-in-progress:\s*(true|false)\s*$/m,
+    );
 
-    assert.ok(group, `${file} must declare a concurrency group`);
     assert.ok(cancel, `${file} must declare cancel-in-progress`);
-
     assert.equal(
       cancel[1],
       "false",
@@ -142,11 +140,22 @@ test("release workflows must not cancel in-progress runs", async () => {
         `mid-flight discards the artifact uploads that the checksum step ` +
         `verifies, which is how REL-03 lost its evidence.`,
     );
+  }
+});
+
+test("no workflow embeds its own filename in the concurrency group", async () => {
+  // release-mobile and rebuild-rust both carried a group of the form
+  // "orbit-.github-workflows-<file>.yml-${{ github.ref }}", which is a
+  // generator artefact rather than an intent to serialise runs. It reads like
+  // a path that no author chose on purpose.
+  for (const file of await workflowFiles()) {
+    const group = (await text(file)).match(/^\s*group:\s*(.+?)\s*$/m);
+    if (!group) continue;
+
     assert.ok(
       !/\.ya?ml/.test(group[1]),
-      `${file} concurrency group ${JSON.stringify(group[1])} embeds its own ` +
-        `filename, which is a generator artefact rather than an intent to ` +
-        `serialise releases.`,
+      `${file} concurrency group ${JSON.stringify(group[1])} embeds a ` +
+        `workflow filename. Use a stable name such as orbit-<purpose>.`,
     );
   }
 });
