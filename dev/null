@@ -1,0 +1,1127 @@
+"use strict";
+import { expect, test } from "@playwright/test";
+import {
+  execFileSync,
+  execSync,
+  spawn
+} from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+const root = process.cwd();
+const EXE_CANDIDATES = [
+  process.env.TAURI_EXE,
+  "D:/orbit-cargo-target/x86_64-pc-windows-msvc/release/orbit-marketing-os.exe",
+  "packages/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/orbit-marketing-os.exe",
+  "packages/desktop/src-tauri/target/release/orbit-marketing-os.exe"
+].filter(Boolean);
+const exe = EXE_CANDIDATES.find((p) => existsSync(p));
+const CDP_PORT = 9340 + Number(process.env.PLAYWRIGHT_WORKER_INDEX ?? "0");
+let proc = null;
+let browser = null;
+let page = null;
+let processOutput = "";
+const webview2UserDataFolders = /* @__PURE__ */ new Set();
+const WEBVIEW2_POLICY_KEY = "HKCU\\Software\\Policies\\Microsoft\\Edge\\WebView2\\AdditionalBrowserArguments";
+function configureWebView2DebugPolicy() {
+  if (!exe) return;
+  const executableName = exe.split(/[\\/]/).pop();
+  if (!executableName) {
+    throw new Error("Unable to determine Tauri executable name");
+  }
+  execFileSync(
+    "reg",
+    [
+      "add",
+      WEBVIEW2_POLICY_KEY,
+      "/v",
+      executableName,
+      "/t",
+      "REG_SZ",
+      "/d",
+      "--remote-debugging-port=" + CDP_PORT,
+      "/f"
+    ],
+    { stdio: "ignore" }
+  );
+}
+function cleanupWebView2DebugPolicy() {
+  if (!exe) return;
+  const executableName = exe.split(/[\\/]/).pop();
+  if (!executableName) return;
+  try {
+    execFileSync(
+      "reg",
+      ["delete", WEBVIEW2_POLICY_KEY, "/v", executableName, "/f"],
+      { stdio: "ignore" }
+    );
+  } catch {
+  }
+}
+function createWebView2UserDataFolder() {
+  const folder = mkdtempSync(join(tmpdir(), "orbit-webview2-e2e-"));
+  webview2UserDataFolders.add(folder);
+  return folder;
+}
+function cleanupWebView2UserDataFolders() {
+  for (const folder of webview2UserDataFolders) {
+    try {
+      rmSync(folder, { recursive: true, force: true });
+    } catch {
+    }
+  }
+  webview2UserDataFolders.clear();
+}
+async function killApp() {
+  if (browser) await browser.close().catch(() => {
+  });
+  browser = null;
+  page = null;
+  if (proc?.pid) {
+    try {
+      execSync(`taskkill /pid ${proc.pid} /T /F`, { stdio: "ignore" });
+    } catch {
+    }
+  }
+  proc = null;
+  processOutput = "";
+}
+async function launchAndConnectTauri() {
+  if (!exe) throw new Error("Tauri executable is missing");
+  try {
+    execSync("taskkill /im orbit-marketing-os.exe /F", { stdio: "ignore" });
+  } catch {
+  }
+  processOutput = "";
+  configureWebView2DebugPolicy();
+  const webview2UserDataFolder = createWebView2UserDataFolder();
+  const child = spawn(exe, [], {
+    env: {
+      ...process.env,
+      ORBIT_E2E_CDP_PORT: String(CDP_PORT),
+      WEBVIEW2_USER_DATA_FOLDER: webview2UserDataFolder,
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true
+  });
+  proc = child;
+  const capture = (chunk) => {
+    processOutput = (processOutput + String(chunk)).slice(-12e3);
+  };
+  child.stdout?.on("data", capture);
+  child.stderr?.on("data", capture);
+  const { chromium } = await import("@playwright/test");
+  const deadline = Date.now() + 45e3;
+  let lastError = "CDP endpoint did not become available";
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) {
+      throw new Error(
+        `Tauri process exited with code ${child.exitCode} before WebView2 CDP became ready. Output:
+${processOutput}`
+      );
+    }
+    try {
+      browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+      return;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  throw new Error(
+    `Timed out waiting for WebView2 CDP on 127.0.0.1:${CDP_PORT}. Last error: ${lastError}. Process output:
+${processOutput}`
+  );
+}
+async function connectToCurrentTauri() {
+  const { chromium } = await import("@playwright/test");
+  if (proc?.exitCode !== null) {
+    throw new Error(
+      `Tauri process is not running (exit ${proc.exitCode}). Output:
+${processOutput}`
+    );
+  }
+  const deadline = Date.now() + 15e3;
+  let lastError = "CDP endpoint unavailable";
+  while (Date.now() < deadline) {
+    try {
+      browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+      return;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  throw new Error(
+    `Timed out reconnecting to WebView2 CDP on 127.0.0.1:${CDP_PORT}. Last error: ${lastError}. Output:
+${processOutput}`
+  );
+}
+test.describe("Tauri renderer capability isolation (SEC-03)", () => {
+  test.describe.configure({ mode: "serial" });
+  test.setTimeout(6e4);
+  test.skip(
+    !exe,
+    "Tauri binary not built \u2014 run node scripts/build-tauri.mjs --release first"
+  );
+  test.afterAll(async () => {
+    await killApp();
+    cleanupWebView2UserDataFolders();
+    cleanupWebView2DebugPolicy();
+  });
+  test("capability files are deny-by-default and least-privilege (capability review)", () => {
+    const capability = JSON.parse(
+      readFileSync(
+        join(root, "packages/desktop/src-tauri/capabilities/default.json"),
+        "utf8"
+      )
+    );
+    expect(capability.permissions).toEqual(["core:default"]);
+    expect(capability.windows).toEqual(["main"]);
+    for (const perm of capability.permissions) {
+      expect(perm).not.toMatch(/\*/);
+      expect(perm).not.toMatch(
+        /^(fs|shell|http|clipboard|dialog|updater|process|path:allow-write)/
+      );
+    }
+    const capabilitiesSchema = process.env.ORBIT_CAPABILITIES_SCHEMA?.trim() ?? join(root, "packages/desktop/src-tauri/gen/schemas/capabilities.json");
+    const resolved = JSON.parse(readFileSync(capabilitiesSchema, "utf8"));
+    expect(resolved.default.windows).toEqual(["main"]);
+    expect(resolved.default.permissions).toEqual(["core:default"]);
+    const conf = JSON.parse(
+      readFileSync(
+        join(root, "packages/desktop/src-tauri/tauri.conf.json"),
+        "utf8"
+      )
+    );
+    const security = conf.app.security;
+    expect(security.csp).toMatch(/default-src 'self'/);
+    expect(security.csp).toMatch(/script-src 'self'/);
+    expect(security.csp).not.toMatch(/script-src[^;]*unsafe-eval/);
+    expect(security.csp).not.toMatch(/script-src[^;]*https?:/);
+    expect(security.csp).toMatch(/object-src 'none'/);
+    expect(security.csp).toMatch(/frame-ancestors 'none'/);
+    expect(security.freezePrototype).toBe(true);
+    expect(security.dangerousDisableAssetCspModification).toBe(false);
+  });
+  test("renderer boots in the isolated shell and IPC positive control works", async () => {
+    try {
+      execSync("taskkill /im orbit-marketing-os.exe /F", { stdio: "ignore" });
+    } catch {
+    }
+    await launchAndConnectTauri();
+    const ctx = browser.contexts()[0];
+    page = ctx.pages()[0] ?? await ctx.waitForEvent("page");
+    await page.waitForURL(/tauri\.localhost/, { timeout: 1e4 });
+    await expect(page).toHaveTitle(/ORBIT Marketing OS/);
+    await expect(
+      page.getByRole("heading", { name: "\u062A\u0642\u0648\u064A\u0645 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0648\u0627\u0644\u0646\u0634\u0631" })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "\u0642\u0627\u0626\u0645\u0629 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0645\u0646\u0627\u0641\u0633\u064A\u0646" })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "\u0645\u062E\u0637\u0637 \u0627\u0644\u0646\u0634\u0631 \u0627\u0644\u062C\u0645\u0627\u0639\u064A" })
+    ).toBeVisible();
+    await expect(page.getByText("FT Controls", { exact: true })).toBeVisible();
+    await expect(page.getByText("Sender Pro", { exact: true })).toBeVisible();
+    await expect(page.getByText("Kingmaster", { exact: true })).toBeVisible();
+    await expect(page.getByText("AD Share", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Controls Tools", { exact: true })
+    ).toBeVisible();
+    expect(await page.evaluate(() => typeof window.__TAURI_INTERNALS__)).toBe(
+      "object"
+    );
+    const granted = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("plugin:window|scale_factor", {})
+    );
+    expect(typeof granted).toBe("number");
+    expect(granted).toBeGreaterThan(0);
+  });
+  test("denied capabilities reject at the ACL and the window survives", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+    const denied = await page.evaluate(async () => {
+      const out = {};
+      for (const cmd of ["plugin:window|destroy", "plugin:fs|read_text_file"]) {
+        try {
+          await window.__TAURI_INTERNALS__.invoke(
+            cmd,
+            cmd.includes("fs") ? { path: "C:/Windows/win.ini" } : {}
+          );
+          out[cmd] = { ok: true, error: "" };
+        } catch (e) {
+          out[cmd] = { ok: false, error: String(e) };
+        }
+      }
+      return out;
+    });
+    for (const cmd of ["plugin:window|destroy", "plugin:fs|read_text_file"]) {
+      expect(denied[cmd].ok, `${cmd} must be denied by the ACL`).toBe(false);
+      expect(denied[cmd].error).toContain("not allowed by ACL");
+    }
+    expect(await page.evaluate(() => document.title.length)).toBeGreaterThan(
+      0
+    );
+    expect(proc.killed).toBe(false);
+  });
+  test("research intelligence stays workspace-scoped and evidence-backed", async () => {
+    const suffix = Date.now();
+    const workspaceA = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Research Workspace A"
+      }),
+      "e2e-research-a-" + suffix
+    );
+    await page.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      workspaceA.id
+    );
+    await page.evaluate(
+      (payload) => window.__TAURI_INTERNALS__.invoke("knowledge_source_upsert", payload),
+      {
+        id: "e2e-research-source-" + suffix,
+        sourceType: "research",
+        title: "E2E research source",
+        locator: "https://example.com/research"
+      }
+    );
+    const brief = await page.evaluate(
+      (payload) => window.__TAURI_INTERNALS__.invoke("research_brief_upsert", payload),
+      {
+        id: "e2e-research-brief-" + suffix,
+        name: "E2E Research Brief",
+        kind: "competitor",
+        question: "What is changing?",
+        objectivesJson: JSON.stringify(["surface evidence"]),
+        status: "active"
+      }
+    );
+    const finding = await page.evaluate(
+      (payload) => window.__TAURI_INTERNALS__.invoke("research_finding_upsert", payload),
+      {
+        id: "e2e-research-finding-" + suffix,
+        briefId: brief.id,
+        title: "Observed signal",
+        statement: "The source supports this bounded statement.",
+        sourceIdsJson: JSON.stringify(["e2e-research-source-" + suffix]),
+        confidence: 0.8,
+        observedAt: "2026-09-26T09:00:00Z",
+        expiresAt: "2026-10-26T09:00:00Z",
+        tagsJson: JSON.stringify(["e2e"])
+      }
+    );
+    expect(finding.id).toBe("e2e-research-finding-" + suffix);
+    const promoted = await page.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("research_publish_to_knowledge", {
+        findingId: id
+      }),
+      finding.id
+    );
+    expect(promoted.id).toBe("research:" + finding.id);
+    expect(promoted.trust).toBe("approved");
+    const workspaceB = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Research Workspace B"
+      }),
+      "e2e-research-b-" + suffix
+    );
+    await page.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      workspaceB.id
+    );
+    const isolated = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("research_finding_list", {})
+    );
+    expect(isolated).toEqual([]);
+    let crossWorkspaceError = "";
+    try {
+      await page.evaluate(
+        (payload) => window.__TAURI_INTERNALS__.invoke("research_finding_upsert", payload),
+        {
+          id: "e2e-research-cross-" + suffix,
+          briefId: brief.id,
+          title: "Cross workspace",
+          statement: "Must be rejected.",
+          sourceIdsJson: JSON.stringify(["e2e-research-source-" + suffix]),
+          confidence: 0.8,
+          observedAt: "2026-09-26T09:00:00Z",
+          expiresAt: null,
+          tagsJson: JSON.stringify([])
+        }
+      );
+    } catch (caught) {
+      crossWorkspaceError = caught instanceof Error ? caught.message : String(caught);
+    }
+    expect(crossWorkspaceError).toContain(
+      "research brief is not in active workspace"
+    );
+  });
+  test("local link registry persists evidence and isolates workspaces", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+    const suffix = Date.now();
+    const beforeWorkspace = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("workspace_current")
+    );
+    const workspaceA = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Link Workspace A"
+      }),
+      "e2e-link-a-" + suffix
+    );
+    await page.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      workspaceA.id
+    );
+    const account = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("account_upsert", {
+        id,
+        platform: "telegram",
+        displayName: "E2E Link Account",
+        username: null,
+        session: null,
+        password: null
+      }),
+      "e2e-link-account-" + suffix
+    );
+    const campaign = await page.evaluate(
+      ({ name, accountId }) => window.__TAURI_INTERNALS__.invoke("campaign_create", {
+        name,
+        accountIds: [accountId]
+      }),
+      {
+        name: "E2E Link Campaign " + suffix,
+        accountId: account.id
+      }
+    );
+    const content = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("content_upsert", {
+        id,
+        title: "E2E Link Content",
+        body: "Link intelligence evidence content",
+        approvalStatus: "draft",
+        tagsJson: JSON.stringify(["links"])
+      }),
+      "e2e-link-content-" + suffix
+    );
+    const link = await page.evaluate(
+      ({ campaignId, contentId }) => window.__TAURI_INTERNALS__.invoke("marketing_link_upsert", {
+        linkKey: "lnk_abcdef12",
+        destinationUrl: "https://example.com/offer",
+        trackedUrl: "https://example.com/offer?utm_campaign=e2e&utm_source=telegram",
+        trackingJson: JSON.stringify({
+          utm_campaign: "e2e",
+          utm_source: "telegram"
+        }),
+        campaignId,
+        contentId
+      }),
+      { campaignId: campaign.id, contentId: content.id }
+    );
+    expect(link.link_key).toBe("lnk_abcdef12");
+    expect(link.provenance).toBe("local");
+    const firstEvidence = await page.evaluate(
+      (linkId) => window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
+        input: {
+          link_id: linkId,
+          source_type: "manual",
+          metric_name: "clicks",
+          metric_value: 12,
+          observed_at: "2026-09-26T18:00:00Z",
+          source_locator: null,
+          provenance: "manual_observation",
+          metadata_json: JSON.stringify({ test: true })
+        }
+      }),
+      link.id
+    );
+    const secondEvidence = await page.evaluate(
+      (linkId) => window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
+        input: {
+          link_id: linkId,
+          source_type: "manual",
+          metric_name: "clicks",
+          metric_value: 14,
+          observed_at: "2026-09-26T20:00:00+02:00",
+          source_locator: null,
+          provenance: "manual_observation",
+          metadata_json: JSON.stringify({ test: true })
+        }
+      }),
+      link.id
+    );
+    expect(secondEvidence.id).toBe(firstEvidence.id);
+    expect(secondEvidence.metric_value).toBe(14);
+    const savedLinks = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("marketing_link_list", {})
+    );
+    expect(savedLinks.some((item) => item.id === link.id)).toBe(true);
+    const savedEvidence = await page.evaluate(
+      (linkId) => window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_list", {
+        linkId
+      })
+    );
+    expect(savedEvidence).toHaveLength(1);
+    expect(savedEvidence[0].link_id).toBe(link.id);
+    expect(savedEvidence[0].metric_value).toBe(14);
+    const workspaceB = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Link Workspace B"
+      }),
+      "e2e-link-b-" + suffix
+    );
+    await page.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      workspaceB.id
+    );
+    const isolatedLinks = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("marketing_link_list", {})
+    );
+    expect(isolatedLinks).toEqual([]);
+    let crossWorkspaceError = "";
+    try {
+      await page.evaluate(
+        (linkId) => window.__TAURI_INTERNALS__.invoke("marketing_link_evidence_add", {
+          input: {
+            link_id: linkId,
+            source_type: "manual",
+            metric_name: "clicks",
+            metric_value: 1,
+            observed_at: "2026-09-26T18:00:00Z",
+            source_locator: null,
+            provenance: "manual_observation",
+            metadata_json: JSON.stringify({ test: true })
+          }
+        }),
+        link.id
+      );
+    } catch (caught) {
+      crossWorkspaceError = caught instanceof Error ? caught.message : String(caught);
+    }
+    expect(crossWorkspaceError).toContain(
+      "marketing link does not exist in active workspace"
+    );
+    await page.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      beforeWorkspace.id
+    );
+    const restored = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("workspace_current")
+    );
+    expect(restored.id).toBe(beforeWorkspace.id);
+  });
+  test("global search is workspace-scoped and bounded", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+    const suffix = Date.now();
+    const workspaceA = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Search Workspace A"
+      }),
+      "e2e-search-a-" + suffix
+    );
+    await page.evaluate(
+      (workspaceId) => window.__TAURI_INTERNALS__.invoke("workspace_select", {
+        id: workspaceId
+      }),
+      workspaceA.id
+    );
+    const account = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("account_upsert", {
+        id,
+        platform: "telegram",
+        displayName: "E2E Search Account",
+        username: null,
+        session: null,
+        password: null
+      }),
+      "e2e-search-account-" + suffix
+    );
+    await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("vault_put", {
+        label: "e2e-search-secret-label",
+        plaintext: "E2E Search Secret",
+        password: "e2e-search-password"
+      })
+    );
+    const conversation = await page.evaluate(
+      async ({ id, accountId }) => window.__TAURI_INTERNALS__.invoke("conversation_upsert", {
+        id,
+        accountId,
+        contactId: null,
+        platform: "telegram",
+        externalThreadId: "e2e-search-thread",
+        status: "new"
+      }),
+      {
+        id: "e2e-search-conversation-" + suffix,
+        accountId: account.id
+      }
+    );
+    await page.evaluate(
+      ({ id, conversationId }) => window.__TAURI_INTERNALS__.invoke("message_add", {
+        id,
+        conversationId,
+        direction: "inbound",
+        body: "E2E Search Message 100%_!"
+      }),
+      {
+        id: "e2e-search-message-" + suffix,
+        conversationId: conversation.id
+      }
+    );
+    await page.evaluate(
+      ({ name, accountId }) => window.__TAURI_INTERNALS__.invoke("campaign_create", {
+        name,
+        accountIds: [accountId]
+      }),
+      {
+        name: "E2E Search Campaign " + suffix,
+        accountId: account.id
+      }
+    );
+    const researchSourceId = "e2e-search-source-" + suffix;
+    await page.evaluate(
+      (payload) => window.__TAURI_INTERNALS__.invoke("knowledge_source_upsert", payload),
+      {
+        id: researchSourceId,
+        sourceType: "research",
+        title: "E2E search research source",
+        locator: "https://example.com/search-research"
+      }
+    );
+    const brief = await page.evaluate(
+      (payload) => window.__TAURI_INTERNALS__.invoke("research_brief_upsert", payload),
+      {
+        id: "e2e-search-brief-" + suffix,
+        name: "E2E Search Research",
+        kind: "competitor",
+        question: "Which search signal matters?",
+        objectivesJson: JSON.stringify(["verify unified search"]),
+        status: "active"
+      }
+    );
+    await page.evaluate(
+      (payload) => window.__TAURI_INTERNALS__.invoke("research_finding_upsert", payload),
+      {
+        id: "e2e-search-finding-" + suffix,
+        briefId: brief.id,
+        title: "E2E Search Finding",
+        statement: "The research signal is searchable.",
+        sourceIdsJson: JSON.stringify([researchSourceId]),
+        confidence: 0.8,
+        observedAt: "2026-09-26T09:00:00Z",
+        expiresAt: "2026-10-26T09:00:00Z",
+        tagsJson: JSON.stringify(["search"])
+      }
+    );
+    await page.evaluate(
+      (payload) => window.__TAURI_INTERNALS__.invoke("media_asset_upsert", payload),
+      {
+        id: "e2e-search-media-" + suffix,
+        kind: "image",
+        filename: "E2E Search Media.png",
+        mimeType: "image/png",
+        sizeBytes: 1,
+        sha256: null,
+        localPath: "C:/orbit-e2e-search-media.png",
+        tagsJson: JSON.stringify(["search"])
+      }
+    );
+    const sameWorkspace = await page.evaluate(
+      (query) => window.__TAURI_INTERNALS__.invoke("global_search", {
+        query,
+        limit: 500
+      }),
+      "E2E Search"
+    );
+    expect(sameWorkspace.length).toBeLessThanOrEqual(50);
+    expect(sameWorkspace.some((item) => item.kind === "campaign")).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "account")).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "message")).toBe(true);
+    expect(sameWorkspace.some((item) => item.kind === "knowledge_source")).toBe(
+      true
+    );
+    expect(sameWorkspace.some((item) => item.kind === "media_asset")).toBe(
+      true
+    );
+    const secretSearch = await page.evaluate(
+      (query) => window.__TAURI_INTERNALS__.invoke("global_search", {
+        query,
+        limit: 50
+      }),
+      "E2E Search Secret"
+    );
+    expect(secretSearch).toEqual([]);
+    const wildcardSearch = await page.evaluate(
+      (query) => window.__TAURI_INTERNALS__.invoke("global_search", {
+        query,
+        limit: 50
+      }),
+      "100%_!"
+    );
+    expect(wildcardSearch.some((item) => item.kind === "message")).toBe(true);
+    await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("vault_delete", {
+        label: "e2e-search-secret-label"
+      })
+    );
+    expect(sameWorkspace.some((item) => item.kind === "research_brief")).toBe(
+      true
+    );
+    expect(sameWorkspace.some((item) => item.kind === "research_finding")).toBe(
+      true
+    );
+    const workspaceB = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Search Workspace B"
+      }),
+      "e2e-search-b-" + suffix
+    );
+    await page.evaluate(
+      (workspaceId) => window.__TAURI_INTERNALS__.invoke("workspace_select", {
+        id: workspaceId
+      }),
+      workspaceB.id
+    );
+    const isolated = await page.evaluate(
+      (query) => window.__TAURI_INTERNALS__.invoke("global_search", {
+        query,
+        limit: 50
+      }),
+      "E2E Search"
+    );
+    expect(isolated).toEqual([]);
+  });
+  test("native runtime restart preserves selected workspace state", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+    const before = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("workspace_current")
+    );
+    const created = await page.evaluate(async () => {
+      const id = "e2e-restart-" + Date.now();
+      return window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Restart Workspace"
+      });
+    });
+    await page.evaluate(
+      (workspaceId) => window.__TAURI_INTERNALS__.invoke("workspace_select", {
+        id: workspaceId
+      }),
+      created.id
+    );
+    const selected = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("workspace_current")
+    );
+    expect(selected.id).toBe(created.id);
+    expect(selected.name).toBe(created.name);
+    await killApp();
+    await launchAndConnectTauri();
+    const ctx = browser.contexts()[0];
+    page = ctx.pages()[0] ?? await ctx.waitForEvent("page");
+    await page.waitForURL(/tauri\.localhost/, { timeout: 1e4 });
+    const after = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("workspace_current")
+    );
+    expect(after.id).toBe(created.id);
+    expect(after.name).toBe(created.name);
+    await page.evaluate(
+      (workspaceId) => window.__TAURI_INTERNALS__.invoke("workspace_select", {
+        id: workspaceId
+      }),
+      before.id
+    );
+    const restored = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("workspace_current")
+    );
+    expect(restored.id).toBe(before.id);
+    expect(restored.name).toBe(before.name);
+    await expect(page).toHaveTitle(/ORBIT Marketing OS/);
+  });
+  test("bulk task enqueue is atomic", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+    const suffix = Date.now();
+    const workspace = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Bulk Atomicity"
+      }),
+      "e2e-bulk-atomic-" + suffix
+    );
+    await page.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      workspace.id
+    );
+    const account = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("account_upsert", {
+        id,
+        platform: "telegram",
+        displayName: "E2E Bulk Account",
+        username: null,
+        session: null,
+        password: null
+      }),
+      "e2e-bulk-account-" + suffix
+    );
+    const campaign = await page.evaluate(
+      ({ name, accountId }) => window.__TAURI_INTERNALS__.invoke("campaign_create", {
+        name,
+        accountIds: [accountId]
+      }),
+      {
+        name: "E2E Bulk Campaign " + suffix,
+        accountId: account.id
+      }
+    );
+    const content = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("content_upsert", {
+        id,
+        title: "E2E Bulk Content",
+        body: "Atomic bulk task content",
+        approvalStatus: "draft",
+        tagsJson: JSON.stringify(["bulk"])
+      }),
+      "e2e-bulk-content-" + suffix
+    );
+    const attached = await page.evaluate(
+      async ({ campaignId, contentId }) => window.__TAURI_INTERNALS__.invoke("campaign_attach_content", {
+        campaignId,
+        contentId
+      }),
+      { campaignId: campaign.id, contentId: content.id }
+    );
+    expect(attached).toBe(true);
+    const approval = await page.evaluate(
+      async ({ contentId, approvalId }) => window.__TAURI_INTERNALS__.invoke("approval_request", {
+        id: approvalId,
+        contentId,
+        reviewerIdsJson: JSON.stringify(["local-user"]),
+        note: "Approve content for atomic bulk enqueue E2E"
+      }),
+      {
+        contentId: content.id,
+        approvalId: "e2e-bulk-approval-" + suffix
+      }
+    );
+    expect(approval.status).toBe("pending");
+    const decision = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("approval_decide", {
+        id,
+        status: "approved",
+        note: "Approved by the local E2E reviewer"
+      }),
+      approval.id
+    );
+    expect(decision.status).toBe("approved");
+    const before = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("task_list", {})
+    );
+    const auditBefore = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("audit_list", { limit: 200 })
+    );
+    let error = "";
+    try {
+      await page.evaluate(
+        (payload) => window.__TAURI_INTERNALS__.invoke("task_enqueue_bulk", {
+          inputs: payload
+        }),
+        [
+          {
+            id: "e2e-bulk-good-" + suffix,
+            campaignId: campaign.id,
+            accountId: account.id,
+            platform: "telegram",
+            kind: "publish",
+            priority: 10,
+            availableAt: "2026-09-27T00:00:00Z",
+            maxAttempts: 3,
+            idempotencyKey: "e2e-bulk-good-" + suffix,
+            contentId: content.id,
+            destinationId: "@e2e-bulk"
+          },
+          {
+            id: "e2e-bulk-bad-" + suffix,
+            campaignId: campaign.id,
+            accountId: account.id,
+            platform: "telegram",
+            kind: "publish",
+            priority: 10,
+            availableAt: "2026-09-27T00:01:00Z",
+            maxAttempts: 3,
+            idempotencyKey: "e2e-bulk-bad-" + suffix,
+            contentId: content.id,
+            destinationId: ""
+          }
+        ]
+      );
+    } catch (caught) {
+      error = caught instanceof Error ? caught.message : String(caught);
+    }
+    expect(error).toContain("destination_id is required for external tasks");
+    const after = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("task_list", {})
+    );
+    expect(after).toEqual(before);
+    const auditAfter = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("audit_list", { limit: 200 })
+    );
+    expect(auditAfter.length).toBe(auditBefore.length);
+    expect(
+      auditAfter.some(
+        (entry) => entry.action === "enqueue_bulk" && String(entry.entityId ?? "").includes("e2e-bulk-good-" + suffix)
+      )
+    ).toBe(false);
+    await page.evaluate(
+      (id) => window.__TAURI_INTERNALS__.invoke("workspace_select", { id }),
+      "default"
+    );
+    await expect(page).toHaveTitle(/ORBIT Marketing OS/);
+  });
+  test("native queue recovery returns interrupted sync work to pending", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+    const suffix = Date.now();
+    const beforeWorkspace = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("workspace_current")
+    );
+    const recoveryWorkspace = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Recovery Isolation"
+      }),
+      `e2e-recovery-workspace-${suffix}`
+    );
+    await page.evaluate(
+      (workspaceId) => window.__TAURI_INTERNALS__.invoke("workspace_select", {
+        id: workspaceId
+      }),
+      recoveryWorkspace.id
+    );
+    const account = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("account_upsert", {
+        id,
+        platform: "telegram",
+        displayName: "E2E Recovery Account",
+        username: "orbit-recovery",
+        session: "recovery-session-fixture",
+        password: "e2e-recovery-password"
+      }),
+      `e2e-recovery-account-${suffix}`
+    );
+    expect(account.status).toBe("connected");
+    expect(account.has_encrypted_session).toBe(true);
+    const campaign = await page.evaluate(
+      async (accountId) => window.__TAURI_INTERNALS__.invoke("campaign_create", {
+        name: "E2E Recovery Campaign",
+        accountIds: [accountId]
+      }),
+      account.id
+    );
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const task = await page.evaluate(
+      async ({ campaignId, accountId, timestamp, taskId }) => window.__TAURI_INTERNALS__.invoke("task_enqueue", {
+        id: taskId,
+        campaignId,
+        accountId,
+        platform: "telegram",
+        kind: "sync",
+        priority: 1,
+        availableAt: timestamp,
+        maxAttempts: 3,
+        idempotencyKey: taskId
+      }),
+      {
+        campaignId: campaign.id,
+        accountId: account.id,
+        timestamp: now,
+        taskId: `e2e-recovery-task-${suffix}`
+      }
+    );
+    expect(task.status).toBe("pending");
+    const claimed = await page.evaluate(
+      async (timestamp) => window.__TAURI_INTERNALS__.invoke("task_claim_next", {
+        now: timestamp
+      }),
+      now
+    );
+    expect(claimed.id).toBe(task.id);
+    expect(claimed.status).toBe("running");
+    await killApp();
+    await launchAndConnectTauri();
+    const ctx = browser.contexts()[0];
+    page = ctx.pages()[0] ?? await ctx.waitForEvent("page");
+    await page.waitForURL(/tauri\.localhost/, { timeout: 1e4 });
+    const recovered = await page.evaluate(
+      async (campaignId) => window.__TAURI_INTERNALS__.invoke("task_list", {
+        campaignId
+      }),
+      campaign.id
+    );
+    const recoveredTask = recovered.find(
+      (candidate) => candidate.id === task.id
+    );
+    expect(recoveredTask?.id).toBe(task.id);
+    expect(recoveredTask?.status).toBe("pending");
+    await page.evaluate(
+      (workspaceId) => window.__TAURI_INTERNALS__.invoke("workspace_select", {
+        id: workspaceId
+      }),
+      beforeWorkspace.id
+    );
+  });
+  test("CSP blocks remote script injection", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+    const violations = await page.evaluate(async () => {
+      const seen = [];
+      document.addEventListener(
+        "securitypolicyviolation",
+        (e) => seen.push(`${e.violatedDirective}|${e.blockedURI}`)
+      );
+      const s = document.createElement("script");
+      s.src = "https://example.com/probe.js";
+      document.head.appendChild(s);
+      await new Promise((r) => setTimeout(r, 2e3));
+      return seen;
+    });
+    expect(violations.some((v) => v.startsWith("script-src"))).toBe(true);
+    expect(violations.join(",")).toContain("https://example.com/probe.js");
+  });
+  test("Mission Control reflects current workspace state and carries no secrets", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+    const suffix = Date.now();
+    const before = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("workspace_current")
+    );
+    const missionWorkspace = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Mission Control"
+      }),
+      `e2e-mission-workspace-${suffix}`
+    );
+    await page.evaluate(
+      (workspaceId) => window.__TAURI_INTERNALS__.invoke("workspace_select", {
+        id: workspaceId
+      }),
+      missionWorkspace.id
+    );
+    const account = await page.evaluate(
+      async ({ id, workspaceId }) => window.__TAURI_INTERNALS__.invoke("account_upsert", {
+        id,
+        workspaceId,
+        platform: "linkedin",
+        displayName: "Mission Control Account",
+        username: "mission-control-e2e",
+        status: "connected",
+        sessionPayloadJson: JSON.stringify({
+          secretToken: "must-not-surface"
+        })
+      }),
+      { id: `e2e-mission-account-${suffix}`, workspaceId: missionWorkspace.id }
+    );
+    const campaign = await page.evaluate(
+      async ({ id, accountId }) => window.__TAURI_INTERNALS__.invoke("campaign_create", {
+        id,
+        name: "Mission Control Campaign " + id,
+        accountIds: [accountId]
+      }),
+      { id: `e2e-mission-campaign-${suffix}`, accountId: account.id }
+    );
+    const content = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("content_upsert", {
+        id,
+        title: "Mission Control Content",
+        body: "Content awaiting approval in Mission Control",
+        approvalStatus: "draft",
+        tagsJson: JSON.stringify(["mission-control"])
+      }),
+      `e2e-mission-content-${suffix}`
+    );
+    const approval = await page.evaluate(
+      async ({ contentId, approvalId }) => window.__TAURI_INTERNALS__.invoke("approval_request", {
+        id: approvalId,
+        contentId,
+        reviewerIdsJson: JSON.stringify(["local-user"]),
+        note: "Mission Control pending approval"
+      }),
+      {
+        contentId: content.id,
+        approvalId: `e2e-mission-approval-${suffix}`
+      }
+    );
+    expect(approval.status).toBe("pending");
+    const approvals = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("approval_list", {})
+    );
+    expect(approvals.map((entry) => entry.id)).toContain(approval.id);
+    const campaigns = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("campaign_list", {})
+    );
+    expect(campaigns.map((entry) => entry.id)).toContain(campaign.id);
+    const otherWorkspace = await page.evaluate(
+      async (id) => window.__TAURI_INTERNALS__.invoke("workspace_create", {
+        id,
+        name: "E2E Mission Control Other"
+      }),
+      `e2e-mission-other-${suffix}`
+    );
+    await page.evaluate(
+      (workspaceId) => window.__TAURI_INTERNALS__.invoke("workspace_select", {
+        id: workspaceId
+      }),
+      otherWorkspace.id
+    );
+    const otherApprovals = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("approval_list", {})
+    );
+    expect(otherApprovals.map((entry) => entry.id)).not.toContain(approval.id);
+    const otherCampaigns = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("campaign_list", {})
+    );
+    expect(otherCampaigns.map((entry) => entry.id)).not.toContain(campaign.id);
+    await page.evaluate(
+      (workspaceId) => window.__TAURI_INTERNALS__.invoke("workspace_select", {
+        id: workspaceId
+      }),
+      missionWorkspace.id
+    );
+    const restoredApprovals = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("approval_list", {})
+    );
+    expect(restoredApprovals.map((entry) => entry.id)).toContain(approval.id);
+    const missionApprovals = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("approval_list", {})
+    );
+    const missionCampaigns = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("campaign_list", {})
+    );
+    const accountList = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("account_list", {})
+    );
+    const surface = JSON.stringify({
+      accountList,
+      missionWorkspace,
+      approvals: missionApprovals,
+      campaigns: missionCampaigns
+    });
+    expect(surface.toLowerCase()).not.toContain("must-not-surface");
+    expect(surface.toLowerCase()).not.toContain("sessionpayload");
+    expect(surface.toLowerCase()).not.toContain("secrettoken");
+    await page.evaluate(
+      (workspaceId) => window.__TAURI_INTERNALS__.invoke("workspace_select", {
+        id: workspaceId
+      }),
+      before.id
+    );
+    const restored = await page.evaluate(
+      () => window.__TAURI_INTERNALS__.invoke("workspace_current")
+    );
+    expect(restored.id).toBe(before.id);
+  });
+});

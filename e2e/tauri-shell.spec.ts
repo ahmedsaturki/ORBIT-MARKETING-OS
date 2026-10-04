@@ -1333,9 +1333,9 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     // this session's token, so the check passed whether or not the redaction
     // worked. otherCampaigns stays as the isolation assertion above, which is
     // what it actually proves.
-    const missionWorkspace = (await page!.evaluate(() =>
-      window.__TAURI_INTERNALS__.invoke("workspace_current", {}),
-    )) as { id: string };
+    // missionWorkspace is already bound above by the test's own setup, and the
+    // mission workspace is re-selected before this point, so it is reused
+    // rather than re-read.
     const missionApprovals = (await page!.evaluate(() =>
       window.__TAURI_INTERNALS__.invoke("approval_list", {}),
     )) as Array<{ id: string }>;
