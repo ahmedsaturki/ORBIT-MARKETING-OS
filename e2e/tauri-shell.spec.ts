@@ -1189,4 +1189,157 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(violations.some((v) => v.startsWith("script-src"))).toBe(true);
     expect(violations.join(",")).toContain("https://example.com/probe.js");
   });
+
+  test("Mission Control reflects current workspace state and carries no secrets", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+
+    const suffix = Date.now();
+    const before = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+
+    const missionWorkspace = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Mission Control",
+        }),
+      `e2e-mission-workspace-${suffix}`,
+    )) as { id: string };
+
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
+      missionWorkspace.id,
+    );
+
+    // Create real operational state inside this workspace: an account, a
+    // campaign, content and a pending approval.
+    const account = (await page!.evaluate(
+      async ({ id, workspaceId }) =>
+        window.__TAURI_INTERNALS__.invoke("account_upsert", {
+          id,
+          workspaceId,
+          platform: "linkedin",
+          displayName: "Mission Control Account",
+          username: "mission-control-e2e",
+          status: "connected",
+          sessionPayloadJson: JSON.stringify({ secretToken: "must-not-surface" }),
+        }),
+      { id: `e2e-mission-account-${suffix}`, workspaceId: missionWorkspace.id },
+    )) as { id: string };
+
+    const campaign = (await page!.evaluate(
+      async ({ id, accountId }) =>
+        window.__TAURI_INTERNALS__.invoke("campaign_create", {
+          id,
+          name: "Mission Control Campaign " + id,
+          accountIds: [accountId],
+        }),
+      { id: `e2e-mission-campaign-${suffix}`, accountId: account.id },
+    )) as { id: string };
+
+    const content = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("content_upsert", {
+          id,
+          title: "Mission Control Content",
+          body: "Content awaiting approval in Mission Control",
+          approvalStatus: "draft",
+          tagsJson: JSON.stringify(["mission-control"]),
+        }),
+      `e2e-mission-content-${suffix}`,
+    )) as { id: string };
+
+    const approval = (await page!.evaluate(
+      async ({ contentId, approvalId }) =>
+        window.__TAURI_INTERNALS__.invoke("approval_request", {
+          id: approvalId,
+          contentId,
+          reviewerIdsJson: JSON.stringify(["local-user"]),
+          note: "Mission Control pending approval",
+        }),
+      {
+        contentId: content.id,
+        approvalId: `e2e-mission-approval-${suffix}`,
+      },
+    )) as { id: string; status: string };
+    expect(approval.status).toBe("pending");
+
+    // The state Mission Control reads must be present in this workspace.
+    const approvals = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("approval_list", {}),
+    )) as Array<{ id: string; status: string }>;
+    expect(approvals.map((entry) => entry.id)).toContain(approval.id);
+
+    const campaigns = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("campaign_list", {}),
+    )) as Array<{ id: string }>;
+    expect(campaigns.map((entry) => entry.id)).toContain(campaign.id);
+
+    // Switch to a second workspace: this workspace's state must disappear.
+    const otherWorkspace = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Mission Control Other",
+        }),
+      `e2e-mission-other-${suffix}`,
+    )) as { id: string };
+
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
+      otherWorkspace.id,
+    );
+
+    const otherApprovals = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("approval_list", {}),
+    )) as Array<{ id: string }>;
+    expect(otherApprovals.map((entry) => entry.id)).not.toContain(approval.id);
+
+    const otherCampaigns = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("campaign_list", {}),
+    )) as Array<{ id: string }>;
+    expect(otherCampaigns.map((entry) => entry.id)).not.toContain(campaign.id);
+
+    // Restore the mission workspace and assert the state is still there.
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
+      missionWorkspace.id,
+    );
+
+    const restoredApprovals = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("approval_list", {}),
+    )) as Array<{ id: string }>;
+    expect(restoredApprovals.map((entry) => entry.id)).toContain(approval.id);
+
+    // Nothing the Mission Control surface reads may carry session secrets.
+    // The account carries a secretToken in its session payload; the views the
+    // operational surface consumes must not expose it.
+    const surface = JSON.stringify({ approvals: restoredApprovals, campaigns: otherCampaigns });
+    expect(surface.toLowerCase()).not.toContain("must-not-surface");
+    expect(surface.toLowerCase()).not.toContain("sessionpayload");
+    expect(surface.toLowerCase()).not.toContain("secrettoken");
+
+    // Restore the original workspace so later tests do not inherit state.
+    await page.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
+      before.id,
+    );
+    const restored = (await page.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+    expect(restored.id).toBe(before.id);
+  });
 });
