@@ -126,3 +126,37 @@ These are owner-gated and no code closes them: release signing credentials,
 Apple/Google store accounts, TLS certificates for the production host, a
 24-hour soak on the exact release SHA (the workflow is actor-gated and needs a
 self-hosted runner), and the manual WCAG/RTL audit.
+
+## Open PRs that overlap this branch
+
+Published as PR #213. Five PRs were already open against `main`; this branch
+shares 8 files with two of them.
+
+| File | PR #195 | PR #196 |
+|---|---|---|
+| `scripts/soak-failure-evidence.test.mjs` | yes | — |
+| `scripts/orbit-surface-smoke.mjs` | yes | — |
+| `scripts/commercial-connector-proof.safe.test.mjs` | yes | — |
+| `docs/SECURITY_EXCEPTIONS.md` | — | yes |
+| `pnpm-workspace.yaml` | — | yes |
+| `package.json`, `.github/workflows/ci.yml` | yes | yes |
+
+### The `braces` exception needs a single owner
+
+Two PRs now write the same lines in `pnpm-workspace.yaml`, so only one can land.
+
+- This branch suppresses the advisory with an `ignoreGhsas` entry plus a
+  rationale comment and a time-boxed contract test.
+- PR #196 fixes the underlying code with a 190-line patch derived from upstream
+  (`patches/braces@3.0.3.patch`) **and** keeps the ignore.
+
+Both are defensible on the facts: `braces@3.0.3` genuinely is still the latest
+published version, so there is no upgrade to take and the advisory's "no patched
+version" claim is accurate rather than assumed.
+
+**Recommendation: keep #196's patch and drop this branch's rationale comment at
+merge time.** A patch remediates the defect; an ignore documents that we chose
+not to. The ignore earns its place only while the patch is absent.
+
+`node-forge@1.4.0.patch` is unaffected — this branch owns that one, and it
+resolves `GHSA-86w9-cpqp-85rv` rather than suppressing it.
