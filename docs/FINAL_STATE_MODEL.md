@@ -81,6 +81,43 @@ The script's own root-commit handling is correct: it runs
 Nothing in the script or the test was changed to accommodate this host, because
 the defect is in the environment and CI exercises the real one.
 
+### Windows native E2E: 35 passed, 0 failed
+
+The SEC-03 job failed at `d703fc88` on the positive control added for the
+vacuous-assertion review finding:
+
+```
+the seeded session payload must actually be stored, or this test proves nothing
+Expected: true
+Received: false
+34 passed (35.8s)
+```
+
+The cause was the call shape. `account_upsert` takes `session` and `password`,
+seals them together and derives the stored blob; the test sent
+`sessionPayloadJson`, `workspaceId` and `status`. Tauri ignores arguments a
+command does not declare, so nothing threw — the account was written with a null
+session and the control correctly reported the test could not prove its claim.
+The sibling upserts already used the right shape, so this was the only affected
+call site. The `secrettoken` leak check in the same test asserted against a field
+`seal()` never produces; it now checks `ciphertext` and both seeded secrets.
+
+Verified on the Windows native E2E job at `9d95c888`:
+
+```
+Windows native E2E  Run native and web E2E  35 passed (25.8s)
+```
+
+### PR #213 status: 14 of 15 checks pass
+
+`ci`, `security:scan`, `Rust quality`, `SonarCloud Code Analysis`, `CodeFactor`,
+`CodeRabbit`, `Android debug validation`, `Windows native E2E`, and all four
+platform builds (`linux-x64`, `macos-arm64`, `macos-x64`, `windows-x64`) pass.
+
+`security/snyk` fails on plan quota, not on findings. Verified independently:
+`pnpm audit` reports 2 high advisories, both governed by documented exceptions,
+and 0 unignored advisories.
+
 ---
 
 ## 2. Requirement Reconciliation
