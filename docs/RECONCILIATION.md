@@ -243,14 +243,30 @@ Two of these interact with work on this branch rather than sitting beside it.
   worth reviewing on its merits rather than inherited blind.
 - **cargo-deny** asserts a license allowlist over the Rust dependency graph.
   The 505-crate `Cargo.lock` records no license fields, so this cannot be
-  validated from the lockfile alone; it needs cargo-deny to fetch crate
-  metadata from the registry. **I was not able to run it** on this host, so I
-  am not claiming the policy passes as written. Adopting it should include
-  running `cargo deny check` once against this tree first.
+  checked from the lockfile; it needs cargo-deny to fetch crate metadata from
+  the registry. **Run against this tree, and it does not pass as written.**
 
-The owner decision is therefore narrower than "merge or close #198": it is
-which of these controls to adopt, and whether cargo-deny passes before it
-lands.
+  ```
+  error[unlicensed]: orbit-marketing-os = 1.0.0 is unlicensed
+  advisories ok, bans ok, licenses FAILED, sources ok
+  ```
+
+  One cause, and it is this project rather than any dependency: every one of the
+  504 third-party crates satisfies the allowlist, but
+  `packages/desktop/src-tauri/Cargo.toml` declares no `license` field, so the
+  workspace's own crate is unlicensed. There is no copyleft or unknown-license
+  problem in the graph.
+
+  Adopting the policy therefore needs a decision this repository has not made:
+  what licence `orbit-marketing-os` is under. Declaring one is a legal call, not
+  a mechanical one, which is why it is recorded here rather than fixed. The
+  `webpki-roots` exception and the `CDLA-Permissive-2.0` entry are also reported
+  as `license-not-encountered`, so the allowlist carries entries this tree does
+  not currently exercise.
+
+The owner decision is therefore narrower than "merge or close #198": it is which
+of these controls to adopt, plus the licence question above, which has to be
+answered before the cargo-deny gate could pass on this tree.
 
 ### The `braces` exception needs a single owner
 
