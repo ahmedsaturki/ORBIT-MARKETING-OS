@@ -306,7 +306,8 @@ itself is sound.
    action to engineering work.** Credentials are not the blocker; see below.
 5. Open mobile store accounts — **narrowed.** The app is already configured for
    both stores; only the accounts and signing credentials are missing. See below.
-6. Activate a payment provider
+6. Activate a payment provider — **narrowed.** The pricing page is already
+   provider-agnostic and fails closed with no fake checkout links. See below.
 7. Complete legal/commercial publication review
 8. Complete the WCAG/RTL accessibility audit
 9. Verify multi-device sync with real devices — **narrowed.** The convergence and
@@ -398,6 +399,25 @@ bot token. The token is a second-order dependency: there is nowhere to put it.
 This does not change the release verdict — `external_connectors` is already an
 owner gate — but it changes what the owner is being asked to do, and a
 credentials-only action would not have moved it.
+
+**Correction to item 6 — checkout integration is already built and fails closed.**
+This was listed as "activate a payment provider", implying the integration had to
+be written. It exists and is deliberately provider-agnostic.
+
+- `checkoutUrl(plan)` in `packages/web/src/app/pricing/page.tsx` resolves
+  `NEXT_PUBLIC_CHECKOUT_<PLAN>` from the environment and returns `"#"` when unset.
+- Each plan renders a real purchase anchor only when a URL is configured;
+  otherwise it renders a non-interactive element. There is no dead "buy" button
+  and no fake link.
+- `e2e/web-smoke.spec.ts` asserts this directly — "pricing page renders all
+  license plans without fake checkout links" — and passes.
+- No payment SDK (Stripe, PayPal, Paddle, Lemon Squeezy) is vendored, and no
+  payment secret exists in the repository.
+
+So choosing a provider is genuinely an owner decision, but a configuration one,
+not an integration one: set the three environment variables and checkout goes
+live. What cannot be short-circuited is that a provider requires a commercial
+account, and selling at all requires the legal review in item 7.
 
 This list of eight owner actions is not the same as gate ownership, and the two
 differ because the gate model was corrected. `scripts/release-gate-model.mjs`
