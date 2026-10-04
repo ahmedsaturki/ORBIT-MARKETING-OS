@@ -250,6 +250,10 @@ and class names are unchanged, so this is a structure fix, not a restyle.
 removing the markup and observing them fail. Spec is 8/8; `public-web` and
 `web-smoke` remain 15/15; web unit tests 5/5.
 
+Confirmed independently in CI, not only locally: run `37234351368` on head
+`a27c3789` reports `Accessibility and RTL audit — 8 passed (3.8s)` and
+`Web E2E — 26 passed (8.2s)`, with the `ci` job concluding `success`.
+
 **Still owner-gated.** The accessibility gate still needs human review: automated
 coverage cannot judge contrast on rendered Arabic text, screen-reader announcement
 order, or cognitive accessibility.
