@@ -43,9 +43,29 @@ The release workflow now matches. The failure was reproduced locally — removin
 `packages/web/out` reproduces the identical timeout — and the fix reordered the
 two steps.
 
-Closing REL-03 requires a real release run: build the desktop artifact, emit
-checksums, then verify them against what was published. Until that execution
-exists, the honest status is UNVERIFIED.
+### A second failure waits behind the first
+
+The quality gate is only the first job. The `build` job opens with
+`git merge-base --is-ancestor "$GITHUB_SHA" origin/main`
+(`release-desktop.yml:117`), which is a deliberate control: it refuses to ship a
+commit that is not on the main release line.
+
+Tag `v1.0.0` points at `6e6787b6`, which is **89 commits ahead of
+`origin/main`** (`ddf73d99`) and reachable from **only**
+`origin/audit/verification-2026-10`. `git rev-list --count v1.0.0..origin/main`
+returns `0`, and `git merge-base --is-ancestor v1.0.0 origin/main` exits
+non-zero. The gate therefore fails, `Build` never produces an artifact, and
+`Publish GitHub Release` is skipped — even with the E2E ordering fixed.
+
+So the release is blocked twice over, by two independent defects: the step
+ordering (fixed here) and a tag that points into an unmerged audit branch
+(not fixable in this branch). Re-running the workflow as-is will pass the
+quality gate and still fail to publish.
+
+Closing REL-03 requires the tag to point at a commit on the merged main line,
+then a real release run: build the desktop artifact, emit checksums, and verify
+them against what was published. Until that execution exists, the honest status
+is UNVERIFIED.
 
 ### What the tag does provide
 
