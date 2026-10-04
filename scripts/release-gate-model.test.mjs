@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -113,4 +113,25 @@ try {
   rmSync(tempDirectory, { recursive: true, force: true });
 }
 
+// The readiness document is a truth claim about this repository, so any file
+// it names as evidence must actually exist. Without this, a gate can cite a
+// script or artifact that was deleted or renamed and still read as verified.
+for (const gate of Object.values(readiness.releaseCritical)) {
+  for (const claim of gate.evidence ?? []) {
+    // Only paths with a real repository prefix are repo claims. A bare
+    // "/api/health.json" is an endpoint probe, not a file reference.
+    const named = claim.match(/(?:^|[\s(])((?:scripts|docs|logs|release|e2e|packages|src|test)\/[\w./-]+\.[a-z]+)\b/);
+    if (!named) {
+      continue;
+    }
+    const relative = named[1];
+    if (!existsSync(join(repoRoot, relative))) {
+      throw new Error(
+        `readiness gate cites missing evidence file: ${relative}`,
+      );
+    }
+  }
+}
+
 console.log("release-gate-model=PASS");
+

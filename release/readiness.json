@@ -122,7 +122,9 @@
     },
     "external_connectors": {
       "level": "L1_IMPLEMENTED",
-      "evidence": ["connector contracts/fixtures/challenge handling"],
+      "evidence": [
+        "connector contracts/fixtures/challenge handling"
+      ],
       "notes": "Real Telegram and LinkedIn authorization/delivery evidence is still required; connector contracts, negative-path handling, and challenge stop behavior are verified."
     },
     "sync_network": {
@@ -136,22 +138,32 @@
     },
     "accessibility": {
       "level": "L2_VERIFIED",
-      "evidence": ["automated RTL/accessibility tests"],
+      "evidence": [
+        "automated RTL/accessibility tests"
+      ],
       "notes": "Automated accessibility/RTL tests passed on current CI. Manual WCAG/RTL audit remains open."
     },
     "stability_soak": {
       "level": "L2_VERIFIED",
-      "evidence": ["verified 10-minute soak harness/run"],
-      "notes": "The release line has a verified 10-minute soak harness/run. A complete 24-hour stability soak on the exact release SHA remains open."
+      "evidence": [
+        "logs/soak-summary.json :: runId 2026-09-24T21-29-51-046Z, 10-minute run, 295 cycles, ok=true, zero failures; startedAt/finishedAt in the artifact bracket a genuine 10-minute span",
+        "scripts/soak.ts :: the harness now records the duration it actually ran (requestedMinutes vs elapsedMinutes) and fails any run that ends before its deadline; proved load-bearing by removing the guard",
+        "2-minute run on this audit machine: 48 cycles, zero invariant failures (the harness previously aborted at ~68 cycles on a claim-timestamp race)"
+      ],
+      "notes": "The committed 10-minute run is real and its timestamps bracket the claimed duration, but the artifact records no gitSha, so it is not bound to a specific commit. The harness now emits gitSha and elapsed time, so future runs will be. A complete 24-hour stability soak on the exact release SHA remains open and cannot be produced on an audit machine: the workflow is actor-gated and requires a self-hosted runner."
     },
     "commercial_billing": {
       "level": "L1_IMPLEMENTED",
-      "evidence": ["pricing surface and commercial contract docs"],
+      "evidence": [
+        "pricing surface and commercial contract docs"
+      ],
       "notes": "Pricing/commercial surfaces exist, but payment/billing provider activation is not configured."
     },
     "legal_commercial": {
       "level": "L1_IMPLEMENTED",
-      "evidence": ["privacy/terms/refunds/EULA surfaces"],
+      "evidence": [
+        "privacy/terms/refunds/EULA surfaces"
+      ],
       "notes": "Privacy, terms, refund and EULA surfaces exist. Final legal/commercial publication review remains open."
     }
   },
