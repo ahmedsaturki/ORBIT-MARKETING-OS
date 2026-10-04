@@ -76,17 +76,25 @@ The evidence block in `orbit-final-delivery-report.md:109-128` lists
 `package.json`. A gate list that includes commands which cannot be run is not a
 verified gate list.
 
-### B3. Test-file count inflated ~10x
+### B3. Test-file count inflated ~7x
 
-| Claim      | Claimed | Measured                            | Method                                                                   |
-| ---------- | ------- | ----------------------------------- | ------------------------------------------------------------------------ |
-| Test files | 609     | **59**                              | `find packages -name "*.test.ts" -not -path "*/node_modules/*" \| wc -l` |
-| Test cases | 1046    | **509**                             | `pnpm test` (core 487, desktop 9, web 5, mobile 8)                       |
-| Rust tests | 105     | **114**                             | `cargo test --lib`                                                       |
-| E2E tests  | 34      | **34** (24 pass, 1 fail, 9 not run) | `pnpm test:e2e`                                                          |
+| Claim      | Claimed | Measured                            | Method                                                                                       |
+| ---------- | ------- | ----------------------------------- | -------------------------------------------------------------------------------------------- |
+| Test files | 609     | **88**                              | `git ls-files \| grep -E '\.(test\|spec)\.(ts\|tsx\|mjs)$' \| grep -v node_modules \| wc -l` |
+| Test cases | 1046    | **509**                             | `pnpm test` (core 487, desktop 9, web 5, mobile 8) — superseded, see the correction below    |
+| Rust tests | 105     | **114**                             | `cargo test --lib` — superseded, see the correction below                                    |
+| E2E tests  | 34      | **34** (24 pass, 1 fail, 9 not run) | `pnpm test:e2e`                                                                              |
 
-The 609 figure has no plausible source in this tree. Note the Rust count is
-_higher_ than claimed, because this audit added 9 tests.
+The test-file count recorded in this section as 59 was wrong, and the command
+printed beside it could not have produced it: it counted neither the 22
+`scripts/*.test.mjs` contract tests nor the 5 E2E specs, and missed
+`packages/mobile/test/config.test.mjs` because that file is `.mjs`. The corrected
+figure is 88 (61 in `packages/`, 22 in `scripts/`, 5 E2E specs), identical on
+`origin/main` and on this branch, so nothing here moved it.
+
+The 609 figure has no plausible source in this tree. The Rust count of 114 in
+this table is also superseded: after `origin/main` was merged the suite stands at
+182, and the JavaScript total at 379 rather than 509.
 
 ### B4. Matrix shape contradicts the file
 

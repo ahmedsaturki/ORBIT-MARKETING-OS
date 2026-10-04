@@ -197,14 +197,24 @@ matches the latest published version, and that the exception expires after
 
 ## 5. Claims From Prior Reporting That Do Not Survive
 
-| Claim                               | Reality                                             |
-| ----------------------------------- | --------------------------------------------------- |
-| "ALL CONDITIONS SATISFIED"          | Unsupported. 0 of 13 gates at L3                    |
-| "RELEASE READY"                     | Contradicts the repository's own release rule       |
-| "1046 tests passing"                | Its own parts sum to **1151**; no run produces 1046 |
-| "87 requirement IDs"                | The matrix defines **83**                           |
-| "609 test files"                    | Actual: **59**                                      |
-| "No engineering changes are needed" | **False** — seven defects were found in code        |
+| Claim                               | Reality                                                                                            |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| "ALL CONDITIONS SATISFIED"          | Unsupported. 0 of 13 gates at L3                                                                   |
+| "RELEASE READY"                     | Contradicts the repository's own release rule                                                      |
+| "1046 tests passing"                | Its own parts sum to **1151**; no run produces 1046                                                |
+| "87 requirement IDs"                | The matrix defines **83**                                                                          |
+| "609 test files"                    | Actual: **88** tracked test files: 61 in `packages/`, 22 contract tests in `scripts/`, 5 E2E specs |
+| "No engineering changes are needed" | **False** — seven defects were found in code                                                       |
+
+The prior figure of 59 came from
+`find packages -name "*.test.ts" -not -path "*/node_modules/*" | wc -l`, which
+counts neither the 22 `scripts/*.test.mjs` contract tests nor the 5 E2E specs,
+and misses `packages/mobile/test/config.test.mjs` because that file is `.mjs`.
+Reproduce the full count with:
+
+```
+git ls-files | grep -E '\.(test|spec)\.(ts|tsx|mjs)$' | grep -v node_modules | wc -l
+```
 
 ---
 
