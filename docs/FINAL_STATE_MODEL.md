@@ -307,10 +307,14 @@ itself is sound.
    action to engineering work.** Credentials are not the blocker; see below.
 5. Open mobile store accounts — **narrowed.** The app is already configured for
    both stores; only the accounts and signing credentials are missing. See below.
-6. Activate a payment provider — **narrowed.** The pricing page is already
-   provider-agnostic and fails closed with no fake checkout links. See below.
-7. Complete legal/commercial publication review
-8. Complete the WCAG/RTL accessibility audit
+6. Activate a payment provider — **narrowed.** Checkout integration already exists
+   and fails closed; only a provider account and three env vars are missing. See
+   below.
+7. Complete legal/commercial publication review — **confirmed owner-gated.** The
+   pages themselves already state the requirement; see below.
+8. Complete the WCAG/RTL accessibility audit — **automated portion done** (skip
+   link and landmarks fixed, 8/8 with load-bearing proof). Human review of
+   contrast and screen-reader behaviour remains. See below.
 9. Verify multi-device sync with real devices — **narrowed.** The convergence and
    persistence logic is already covered by 16 executing tests over real loopback
    sockets; what remains is a physical-device check. See below.
@@ -447,6 +451,20 @@ than assumed:
 There is no code change that could close this. Generating or storing a signing
 certificate inside this repository would violate the stated policy, so the item
 is correctly owner-gated and stays UNVERIFIED in the matrix.
+
+**Item 7 (legal/commercial review) — verified as genuinely owner-gated.** The
+published pages do not pretend to be finished legal text; they say so on their
+face, in the customer-facing copy:
+
+- refunds and EULA: the text requires legal review before commercial sale or
+  commercial launch
+- refunds: policy must be published clearly before payment is collected
+- refunds: a commercial support channel and official contact address are
+  required before paid launch
+
+That is the correct engineering posture: the surfaces exist and are reachable,
+and they are explicitly not represented as legally approved. Only a qualified
+reviewer can close this, so it stays owner-gated.
 
 ---
 
