@@ -16,11 +16,16 @@ claims were checked against the repository.
 > is the authoritative source. Findings below remain valid as history; where a
 > count here differs, the matrix governs.
 >
-> Defects closed after this report was written: `verify:workspace` had been red
-> across eleven workflows since schema v17 (fixed); the soak summary reported
-> requested minutes as elapsed (fixed); the soak harness aborted on a
-> claim-timestamp race (fixed); `REL-02` was reclassified from FAIL because
-> signing is owner-controlled policy, not a code defect.
+> Defects closed after this report was written, on this branch: `verify:workspace`
+> was red here (schema pin and three duplicate test helpers); the soak summary
+> reported requested minutes as elapsed; the soak harness aborted on a
+> claim-timestamp race; `REL-02` was reclassified from FAIL because signing is
+> owner-controlled policy, not a code defect.
+>
+> **Scope caveat.** This work ran against a local `main` that had diverged from
+> the remote. Some of those defects are branch-local: `origin/main` is at
+> schema 16, has no duplicate helpers, and already carries the `braces` audit
+> exception. See `FINAL_STATE_MODEL.md`.
 
 ---
 

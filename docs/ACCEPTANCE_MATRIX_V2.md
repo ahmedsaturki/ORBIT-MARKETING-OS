@@ -48,14 +48,16 @@ The desktop build itself was fixed during this audit:
 `packages/desktop/dist`, which `tauri::generate_context!()` embeds, so the
 release build failed from a clean checkout. That blocker is closed.
 
-`pnpm verify:workspace` was also red across the repository since `370586a4`
-landed schema v17: three pairs of Rust test helpers shared a name across
-separate modules, and the schema pins still expected 16. That gate runs in
-**eleven** workflows, including `ci.yml`, `desktop-native-validation.yml`,
-`mobile-validation.yml` and `release-desktop.yml`. All three
-helper pairs are renamed and the pins now expect 17; the gate passes. The
-pins were proved still load-bearing by setting one to 18 and observing the
-failure.
+**Scope correction.** This audit ran against a local `main` that had diverged
+from the remote (40 ahead, 13 behind). On this branch `pnpm verify:workspace`
+was red because three pairs of Rust test helpers shared a name across separate
+modules and the schema pins expected 16 while the branch is at 17. Those were
+fixed here, and the pins were proved load-bearing by setting one to 18.
+
+That describes **this branch, not the remote**. `origin/main` is at schema 16,
+has none of those duplicate helpers, and its gate passes. The upstream braces
+audit exception likewise already exists (`3978c0fc`), so the one added here is
+redundant against the remote. Read `FINAL_STATE_MODEL.md` before merging.
 
 
 `OPS-02` (24h stability) and `REL-03` (checksums) are `UNVERIFIED` because the
@@ -176,9 +178,10 @@ this audit. The remaining sites agree by construction, because the function
 they live in resolves the same global it writes under.
 
 No hardcoded credentials were found in non-test tracked source, and no `.env`,
-key, or certificate file is tracked. `pnpm audit`, red since 2026-09-25
-because of an unfixable `braces` advisory, is now green under a governed
-exception with its own expiring contract.
+key, or certificate file is tracked. `pnpm audit` is green under a governed
+`braces` exception with its own expiring contract. Note that the upstream
+remote already carries that exception (`3978c0fc`); the local gate was red
+only because this branch had not received that commit.
 
 ### Source Requirements (as originally specified)
 | ID       | Requirement                                                                                                                              | Evidence required                                              |

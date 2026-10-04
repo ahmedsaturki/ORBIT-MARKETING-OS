@@ -16,14 +16,35 @@ by running the command named beside it, not by reading a prior report.
 | **Engineering** | **PASS** | 533 JS tests, 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all 10 governance gates green |
 | **Product** | **PARTIAL** | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code |
 | **Release** | **NOT READY** | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13 |
-| **Owner Gates** | **9 remaining** | Certificates, credentials, store accounts, human review, wall-clock time |
+| **Owner Gates** | **10 remaining** | Certificates, credentials, store accounts, human review, wall-clock time |
 
 ### Overall
 
 > **NOT READY — READY WITH OWNER GATES**
 
-The gap between "engineering-complete" and "released" is entirely external.
-No further engineering work can close it.
+**Read this section before acting on the rest of the document.** This audit ran
+against a local `main` that had diverged from the remote: 40 commits ahead,
+**13 behind**. Comparing against `origin/main` falsifies three claims made
+earlier in this document.
+
+| Earlier claim | Reality against `origin/main` |
+|---|---|
+| `pnpm audit` was red in five workflows since 2026-09-25 | **False.** `3978c0fc` (PR #200, 2026-10-03) already added the `GHSA-vfj7-8cjw-p6xm` ignore upstream. The gate was green; the governed exception added here duplicates existing work |
+| `verify:workspace` was red repo-wide in eleven workflows since schema v17 | **False as stated.** The remote is at schema **v16** and its script correctly pins 16. Schema v17 exists only on this branch. The gate passes at `origin/main` |
+| Three duplicate Rust test helpers broke the name-uniqueness gate | **Not applicable upstream.** `origin/main` has none of those duplicates. The renames remain correct for this branch, which does have them |
+
+What survives, and is why this work still has value: the soak harness defects
+are real and unfixed upstream. `origin/main:scripts/soak.ts` still takes
+`taskForCycle(cycle: number)` with its own clock read, still records requested
+minutes as elapsed, and has no bounded-run flag. Both soak defects, the
+readiness evidence-existence check, the user-guide contract, and the
+audit-workspace scoping fix are absent upstream.
+
+**Consequence:** this branch cannot be merged as-is. It needs a rebase onto
+`origin/main`, after which the duplicate-name renames and the v17 schema pin
+must be re-derived and the braces exception dropped as redundant. That
+reconciliation is owner work and is not performed here.
+
 
 ---
 
