@@ -7,20 +7,35 @@
 
 ---
 
-## What This Tag Unblocks
+## What This Tag Does and Does Not Unblock
 
-### REL-03: Tagged release with checksums
+### REL-03: Checksums match distributed artifacts
 
-**Status:** **PARTIAL** (unblocked, tag created)  
-**Change:** `state: UNVERIFIED → PARTIAL`  
-**Evidence:** Git tag `v1.0.0` pushed to remote, referenced in `release/readiness.json`
+**Status: UNVERIFIED (unchanged).** An earlier revision of this document claimed
+the tag unblocked REL-03 and moved `releaseTruth.state` to `PARTIAL`. That was
+wrong and is retracted.
 
-### Requirements Met by This Tag
+`REL-03` reads "Checksums match distributed artifacts", with verification
+method `release verification` and evidence
+`.github/workflows/release-desktop.yml :: Build checksums`. Its matrix row says
+the requirement is unmet because "checksum verification step exists but never
+executed (no tagged release)".
 
-- ✅ Stable release identifier for audit trails
-- ✅ Git hash for reproducibility verification
-- ✅ Foundation for checksum verification workflows
-- ✅ Source of truth for release metadata
+The parenthetical names _one_ of two obstacles. Supplying the tag removes that
+one. It does not execute the checksum step, and no distributed artifact exists
+for checksums to match against — there is no `release-evidence` run, no published
+desktop artifact, and no `sha256sum -c` output anywhere in this repository. A tag
+is a git object; it is not a checksum of a shipped binary.
+
+Closing REL-03 requires a real release run: build the desktop artifact, emit
+checksums, then verify them against what was published. Until that execution
+exists, the honest status is UNVERIFIED.
+
+### What the tag does provide
+
+- A stable release identifier for audit trails
+- A pinned commit (`6e6787b6`) for provenance and reproducibility
+- The precondition for the release workflow, which can now be dispatched
 
 ### What Still Blocks Production Release
 

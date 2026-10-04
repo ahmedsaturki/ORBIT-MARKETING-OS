@@ -130,10 +130,25 @@ All 13 gates documented with keys, levels, class, block impact, verification met
 
 ### CI Test Results
 
-- **PR #213:** 14 of 15 checks pass
-  - 16 of 17 checks pass on the merged branch (single failure: `security/snyk` quota, not findings)
-  - Windows native E2E: 35 passed, 0 failed (SEC-03 defect fixed)
-  - Rust quality job: 106 passed (filtered from 182 source attributes)
+Observed on PR #213 at head `524f20e3` via `gh pr checks 213`:
+
+| Status    | Count | Checks                                                                                                                                                                     |
+| --------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pass`    | 11    | ci, Rust quality, security:scan, Build linux-x64, Build macos-arm64, SonarCloud Code Analysis, CodeFactor, CodeRabbit, Vercel, Vercel Preview Comments, Vercel Deployments |
+| `fail`    | 1     | `security/snyk` — "You have used your limit of private tests". Billing quota, not findings                                                                                 |
+| `pending` | 3     | Android debug validation, Build macos-x64, Build windows-x64                                                                                                               |
+| `skip`    | 1     | Vulnerability analysis (Debricked app not installed)                                                                                                                       |
+
+**16 checks total: 11 pass, 1 fail, 3 pending, 1 skipped.**
+
+An earlier revision of this section claimed "14 of 15 checks pass" and "16 of 17
+pass". Neither total matches the observed 16, and they contradict each other.
+Both are retracted. The counts above were read directly from `gh pr checks` and
+the three pending checks must be re-read once they settle — this table is a
+point-in-time observation, not a stable property.
+
+- Windows native E2E: 35 passed, 0 failed (SEC-03 defect fixed)
+- Rust quality job: 106 passed (filtered from 182 source attributes)
 
 ### Environment Gaps
 
@@ -251,22 +266,44 @@ No premature stopping signals. The repository's own documentation acknowledges t
 
 ### Total Gates
 
-- **15 total gates** documented in `release/readiness.json`
-- **13 gates** defined in the gate model (2 release-critical gates moved to owner-gated)
+- **13 release-critical gates**, matching `Object.keys(readiness.json.releaseCritical).length` and `GATES.length` in `scripts/release-gate-model.mjs`. Both return 13 and the key sets are identical.
+- An earlier revision of this report said "15 total gates". That number appears nowhere in the repository and is retracted.
 
 ### Gate Classification
 
-| Class        | Count | Gates                                                                                                                       |
-| ------------ | ----- | --------------------------------------------------------------------------------------------------------------------------- |
-| Engineering  | 8     | verify_workspace, verify_release, verify_readiness, verify_release_docs, verify_ipc, verify_omp, code_coverage, test_counts |
-| Owner Action | 5     | accessibility, stability_soak, commercial_billing, legal_commercial, external_connectors                                    |
-| Governance   | 1     | test_governance                                                                                                             |
+The class split below mixes two different taxonomies and must not be summed:
+
+- **By class** (the `class` field in the gate model): 13 gates, of which 5 are `OWNER_ACTION` and 8 are `ENGINEERING_OR_VERIFICATION`.
+- **Engineering-only checks reported separately** — the six `pnpm verify:*` governance gates plus `code_coverage`, `test_counts` and `test_governance` — are _not_ members of the 13. They are the mechanisms by which the 8 engineering gates are verified.
+
+| Class                         | Count | Gates                                                                                                                |
+| ----------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------- |
+| `OWNER_ACTION`                | 5     | accessibility, stability_soak, commercial_billing, legal_commercial, external_connectors                             |
+| `ENGINEERING_OR_VERIFICATION` | 8     | source_integrity, build, runtime, product_workflows, security_governance, distribution, web_production, sync_network |
+
+The nine engineering _checks_ named in an earlier revision of this table
+(`verify_workspace`, `verify_release`, `verify_readiness`, `verify_release_docs`,
+`verify_ipc`, `verify_omp`, `code_coverage`, `test_counts`, `test_governance`)
+are not gates in the model and do not belong in this table. Retracted.
 
 ### Gate Levels
 
-- **L0:** 6 gates (workspace, release, readiness, release_docs, ipc, omp, governance)
-- **L2:** 3 gates (code_coverage, test_counts)
-- **L3:** 4 gates (accessibility, stability_soak, commercial_billing, legal_commercial)
+Read from `level` in `release/readiness.json` (`L0_DESIGNED`, `L1_IMPLEMENTED`,
+`L2_VERIFIED`, `L3_PRODUCTION_PROVEN`):
+
+| Level                  | Count | Gates                                                                                                                                               |
+| ---------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `L2_VERIFIED`          | 10    | source_integrity, build, runtime, product_workflows, security_governance, distribution, web_production, sync_network, accessibility, stability_soak |
+| `L1_IMPLEMENTED`       | 3     | external_connectors, commercial_billing, legal_commercial                                                                                           |
+| `L3_PRODUCTION_PROVEN` | 0     | —                                                                                                                                                   |
+
+An earlier revision of this section claimed "L0: 6, L2: 3, L3: 4". Every part
+was wrong, and the counts do not reach 13. No gate sits at L0. Retracted.
+
+Note that `accessibility` and `stability_soak` are classified `OWNER_ACTION` yet
+carry an `L2_VERIFIED` level — the level records how far the _evidence_ is
+implemented, the class records who must act next. The two fields are orthogonal
+and the matrix in `docs/FINAL_STATE_MODEL.md` keeps them separate for that reason.
 
 ### 0 Gates at L3_PRODUCTION_PROVEN
 
@@ -302,7 +339,7 @@ No premature stopping signals. The repository's own documentation acknowledges t
 
 1. Run the 24-hour soak on the release SHA (`OPS-02`)
 2. Provide desktop signing certificates (`REL-02`)
-3. Cut a tagged release to produce checksums (`REL-03`)
+3. Execute a release run so `REL-03` checksums exist and can be verified against published artifacts (the `v1.0.0` tag exists; the checksum step has still never run)
 4. Supply Telegram and LinkedIn credentials
 5. Open mobile store accounts
 6. Activate a payment provider
@@ -326,26 +363,41 @@ The nine owner actions above and the eight remaining checkboxes are tracked toge
 
 ### Appendix A: Defects Found and Fixed During This Audit
 
-| #   | Defect                                                                            | Class                                          |
-| --- | --------------------------------------------------------------------------------- | ---------------------------------------------- |
-| 1   | `soak.ts` recorded **requested** minutes as elapsed                               | Verification asserting what it hadn't measured |
-| 2   | Soak harness aborted at ~68 cycles on a claim-timestamp race                      | Test-harness bug                               |
-| 3   | `pnpm verify:workspace` failed repo-wide in **eleven** workflows since schema v17 | Gate red since 2026-10-04                      |
-| 4   | Readiness evidence could cite files that no longer exist                          | Unenforced truth claim                         |
-| 5   | `pnpm audit` exited 1 in **five** workflows since 2026-09-25                      | Security gate red                              |
-| 6   | `conversation_upsert` audited under the global workspace, not its argument        | Cross-tenant audit write                       |
-| 7   | Duplicate Rust test helpers broke a name-uniqueness gate                          | Naming collision                               |
+| #   | Defect                                                                     | Class                                          | Status |
+| --- | -------------------------------------------------------------------------- | ---------------------------------------------- | ------ |
+| 1   | `soak.ts` recorded **requested** minutes as elapsed                        | Verification asserting what it hadn't measured | Fixed  |
+| 2   | Soak harness aborted on a claim-timestamp race                             | Test-harness bug                               | Fixed  |
+| 3   | Readiness evidence could cite files that no longer exist                   | Unenforced truth claim                         | Fixed  |
+| 4   | `conversation_upsert` audited under the global workspace, not its argument | Cross-tenant audit write                       | Fixed  |
+| 5   | `vitest.config.ts` missing `include` made the core suite double-count      | Test-scope defect                              | Fixed  |
+| 6   | Build ran before `playwright install` in four workflows                    | Ordering bug — build could not succeed         | Fixed  |
+| 7   | `spawnSync` with `shell: true` at `scripts/build-tauri.mjs:83`             | PATH injection vector (Sonar S4036)            | Fixed  |
+
+Three further items that appeared in an earlier revision of this appendix —
+"`pnpm audit` red in five workflows", "`verify:workspace` red in eleven
+workflows", and "duplicate Rust test helpers broke a name-uniqueness gate" —
+were **retracted upstream**. `docs/RECONCILIATION.md` ("Three findings
+retracted") shows all three compared against `origin/main` and did not hold:
+`3978c0fc` had already added the advisory ignore, `origin/main` is at schema 16
+and correctly pins 16, and upstream has no duplicate helpers at all. They are
+excluded here rather than restated. The conversation audit-workspace defect was
+also narrowed: it exists only in this branch's refactor, because upstream never
+extracted a `conversation_upsert_record` helper for the mismatch to arise in.
+
+The count is therefore **four** fixed defects carried into this audit
+(1, 2, 3, 4) plus three found by CI (5, 6, 7) — not "seven defects found in
+code", which an earlier revision of this document asserted.
 
 ### Appendix B: Claims From Prior Reporting That Do Not Survive
 
-| Claim                               | Reality                                             |
-| ----------------------------------- | --------------------------------------------------- |
-| "ALL CONDITIONS SATISFIED"          | Unsupported. 0 of 13 gates at L3                    |
-| "RELEASE READY"                     | Contradicts the repository's own release rule       |
-| "1046 tests passing"                | Its own parts sum to **1151**; no run produces 1046 |
-| "87 requirement IDs"                | The matrix defines **83**                           |
-| "609 test files"                    | Actual: **88** tracked test files                   |
-| "No engineering changes are needed" | **False** — seven defects were found in code        |
+| Claim                               | Reality                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| "ALL CONDITIONS SATISFIED"          | Unsupported. 0 of 13 gates at L3                                                            |
+| "RELEASE READY"                     | Contradicts the repository's own release rule                                               |
+| "1046 tests passing"                | Its own parts sum to **1151**; no run produces 1046                                         |
+| "87 requirement IDs"                | The matrix defines **83**                                                                   |
+| "609 test files"                    | Actual: **88** tracked test files                                                           |
+| "No engineering changes are needed" | **False** — seven defects listed in Appendix A were found in code, three of them only by CI |
 
 ### Appendix C: Files Modified in This Audit
 
@@ -365,6 +417,25 @@ This re-audit completed all 10 planned phases. Every claim is grounded in comman
 **FINAL DELIVERY: NOT READY — READY WITH OWNER GATES**
 
 Engineering is sound and, for the first time in this audit's history, every gate that can run locally is green. The verification machinery now fails when it should and passes when it should, which is what makes any future readiness claim worth reading.
+
+### Claims retracted after this report was first written
+
+This document was re-checked against command output after its first revision and
+five of its own claims did not survive. They are corrected in place above and
+listed here so the corrections are findable:
+
+| Retracted claim                          | Correction                                                                                                                  |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| The `v1.0.0` tag unblocked `REL-03`      | A tag is not a checksum. `REL-03` stays UNVERIFIED                                                                          |
+| "15 total gates"                         | 13 — matches `releaseCritical` keys and `GATES.length`                                                                      |
+| "Engineering 8 / Owner 5 / Governance 1" | Two taxonomies conflated. Correct class split is 5 owner / 8 engineering; the nine `verify:*`/coverage checks are not gates |
+| "L0: 6, L2: 3, L3: 4"                    | Actual is 10 at `L2_VERIFIED`, 3 at `L1_IMPLEMENTED`, 0 at L3; no gate is at L0                                             |
+| "14 of 15" and "16 of 17" checks pass    | 16 checks total: 11 pass, 1 fail (Snyk quota), 3 pending, 1 skipped                                                         |
+
+The recurring failure is the one this audit exists to catch: a number asserted
+beside a real artefact and never checked against it. Five instances were found in
+this report _after_ it was written as the audit's final word, which is the honest
+measure of how much a self-written summary can be trusted without re-verification.
 
 Three rows remain UNVERIFIED and three PARTIAL. None is closable by writing more code.
 

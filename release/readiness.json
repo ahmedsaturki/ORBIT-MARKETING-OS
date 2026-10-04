@@ -251,12 +251,13 @@
     "note": "This is the latest directly observed canonical production state. It is distinct from the moving main SHA and from the pinned release-marker gitCommit."
   },
   "releaseTruth": {
-    "state": "PARTIAL",
+    "state": "UNVERIFIED",
     "releaseId": "orbit-v1.0.0-prod",
     "releaseVersion": "1.0.0",
     "tag": "v1.0.0",
+    "tagSha": "6e6787b6e5fa5590785777f335bfd0dc3a23362e",
     "productionDeploymentId": "dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV",
     "productionSha": "9ba07318f4d580e670be9d27ec76888e66013340",
-    "note": "Production is live and provenance is directly observed; v1.0.0 tag created 2026-10-04 to provide checksum evidence (unblocks REL-03). The exact moving-main SHA is intentionally carried by the GitHub Actions run context rather than hard-coded into durable release readiness."
+    "note": "Production is live and provenance is directly observed. Tag v1.0.0 exists as of 2026-10-04 and removes the 'no tagged release' obstacle named in the REL-03 matrix row, but REL-03 requires checksums to match distributed artifacts and no release run has produced any, so the state stays UNVERIFIED. An earlier revision raised this to PARTIAL on the tag alone; that was retracted as unsupported. The exact moving-main SHA is intentionally carried by the GitHub Actions run context rather than hard-coded into durable release readiness."
   }
 }
