@@ -194,6 +194,13 @@ The `braces` advisory has no upstream patch. Its exception is governed by
 exactly two entries, that `braces` is not a shipped dependency, that the pin
 matches the latest published version, and that the exception expires after
 2026-11-03. The expiry and dependency guards were both proved by forcing them.
+See `docs/BRACES_PATCH_VERIFICATION.md` for the full verification of PR #196's
+braces patch: it applies cleanly to braces 3.0.3, its SHA256 matches the hash
+pinned in `scripts/dependency-audit-exceptions.test.mjs`, it blocks inputs nested
+deeper than 100 (`Input depth (101), exceeds max depth (100)`) while leaving
+`expand` and `compile` behavior unchanged, and `braces` reaches this repository
+only transitively through `micromatch@4.0.8`. Adopting it is safe.
+
 
 ---
 
