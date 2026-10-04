@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**71 PASS, 4 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+**72 PASS, 3 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
 
 Classification rules applied:
 
@@ -104,7 +104,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | EXP-03 | PASS | `src/experiments/index.test.ts (workspace-scoped aggregation tests)` | — |
 | EXP-04 | PASS | `src/experiments/index.test.ts (learning-signal tests)` | — |
 | EXP-05 | PASS | `src/experiments/index.test.ts (experiment binding tests)` | — |
-| EXP-06 | PARTIAL | `src/experiments/index.test.ts (variant binding tests)` | No test that writes learning signals back to outcomes/strategies; experiments test compiles variants into governed campaign work, not insights/strategy signals |
+| EXP-06 | PASS | `packages/core/src/experiments/index.test.ts` :: learning write-back is workspace scoped (foreign workspace/experiment/undeclared-variant evidence cannot manufacture a signal; a mismatched summary is refused; every signal and insight carries the experiment's workspace and only its own grounding ids) | — |
 | EXP-07 | PASS | `src/experiments/inference.test.ts (deterministic inference unit tests)` | — |
 | EVENT-01 | PASS | `src/events/index.test.ts (event-spine tests)` | — |
 | INBOX-01 | UNVERIFIED | — | No unified conversation integration test that exercises the conversation model through a connector fixture; native conversation tests exist but do not involve a connector |
