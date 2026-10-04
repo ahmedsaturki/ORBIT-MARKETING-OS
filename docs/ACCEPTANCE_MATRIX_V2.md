@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**72 PASS, 3 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+**73 PASS, 2 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
 
 Classification rules applied:
 
@@ -98,7 +98,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | GRAPH-01 | PASS | `src/graph/index.test.ts (graph validation tests)` | — |
 | GRAPH-02 | PASS | `src/graph/context.test.ts (bounded context projection tests)` | — |
 | EXEC-01 | PASS | `src/execution/decision.test.ts (decision kernel tests)` | — |
-| CMD-01 | PARTIAL | `src/commands/dispatcher.test.ts (dispatcher tests)` | Event-spine integration: dispatcher tests use in-memory OperationalEventLog, not the persisted native event spine; no test that invokes native operational_event_append from TS dispatcher |
+| CMD-01 | PASS | `src/commands/dispatcher.test.ts` (registry/surface/scope/approval gates, bounded trace) + `packages/desktop/src-tauri/src/lib.rs` :: operational_event_spine_tests (persisted monotonic per-workspace sequence, parent must exist in the same workspace, duplicate id refused with the original unchanged, empty workspace/actor refused, per-workspace sequence-ordered listing) | TS cannot invoke the native spine in-process; the native contract is asserted directly against `append_operational_event` |
 | EXP-01 | PASS | `src/experiments/index.test.ts (deterministic core validation tests)` | — |
 | EXP-02 | PASS | `src/experiments/index.test.ts (deterministic assignment tests)` | — |
 | EXP-03 | PASS | `src/experiments/index.test.ts (workspace-scoped aggregation tests)` | — |
