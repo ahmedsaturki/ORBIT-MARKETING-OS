@@ -229,3 +229,104 @@ describe("Yjs sync", () => {
     expect(afterFirst).toEqual({ key: "value1" });
   });
 });
+
+describe("offline edits survive a restart", () => {
+  // A restart is modelled by discarding the document and rebuilding it only
+  // from what was persisted, which is what a real relaunch does.
+  it("restores edits made while offline after the document is recreated", () => {
+    const first = createSyncDocument();
+    first.getMap("contacts").set("contact-1", "Alice");
+    first.getMap("contacts").set("contact-2", "Bob");
+
+    // Persist, then throw the whole document away as a restart would.
+    const persisted = encodeSyncUpdate(first);
+    const restarted = createSyncDocument();
+    expect(restarted.getMap("contacts").toJSON()).toEqual({});
+
+    applySyncUpdate(restarted, persisted);
+    expect(restarted.getMap("contacts").toJSON()).toEqual({
+      "contact-1": "Alice",
+      "contact-2": "Bob",
+    });
+  });
+
+  it("keeps offline edits made after the last sync, not only synced ones", () => {
+    const online = createSyncDocument();
+    online.getMap("contacts").set("synced", "Synced");
+    const snapshotAtLastSync = encodeSyncUpdate(online);
+
+    // Device goes offline and keeps working.
+    const offline = createSyncDocument();
+    applySyncUpdate(offline, snapshotAtLastSync);
+    offline.getMap("contacts").set("offline-1", "Edited offline");
+    offline.getMap("contacts").set("contact-1", "Edited while offline");
+
+    const persistedAtRestart = encodeSyncUpdate(offline);
+    const restarted = createSyncDocument();
+    applySyncUpdate(restarted, persistedAtRestart);
+
+    expect(restarted.getMap("contacts").toJSON()).toEqual({
+      synced: "Synced",
+      "offline-1": "Edited offline",
+      "contact-1": "Edited while offline",
+    });
+  });
+
+  // An update that only took effect after the last snapshot must survive a
+  // restart on its own, not merely because an earlier snapshot was replayed.
+  it("persists a deletion made offline across a restart", () => {
+    const first = createSyncDocument();
+    first.getMap("contacts").set("keep", "Keep");
+    first.getMap("contacts").set("remove", "Remove");
+    applySyncUpdate(first, encodeSyncUpdate(createSyncDocument()));
+
+    // A full-fidelity update carries deletions; a naive merge would not.
+    const stateBeforeRestart = encodeSyncUpdate(first);
+    first.getMap("contacts").delete("remove");
+    const afterDelete = encodeSyncUpdate(first);
+
+    const restarted = createSyncDocument();
+    applySyncUpdate(restarted, afterDelete);
+    expect(restarted.getMap("contacts").toJSON()).toEqual({
+      keep: "Keep",
+    });
+
+    // Replaying the older snapshot afterwards must not resurrect the row.
+    applySyncUpdate(restarted, stateBeforeRestart);
+    expect(restarted.getMap("contacts").has("remove")).toBe(false);
+  });
+
+  it("restores state persisted through the encrypted transport", async () => {
+    const key = await generateAes256Key();
+    const first = createSyncDocument();
+    first.getMap("contacts").set("secret", "Confidential");
+
+    const envelope = await encryptSyncUpdate(encodeSyncUpdate(first), key);
+    // Nothing about the payload may be readable at rest.
+    expect(envelope.update).not.toContain("Confidential");
+
+    const restarted = createSyncDocument();
+    applySyncUpdate(restarted, await decryptSyncUpdate(envelope, key));
+    expect(restarted.getMap("contacts").toJSON()).toEqual({
+      secret: "Confidential",
+    });
+  });
+
+  it("survives repeated restarts without drifting", () => {
+    let document = createSyncDocument();
+    for (let index = 0; index < 5; index += 1) {
+      document.getMap("contacts").set(`contact-${index}`, `Value ${index}`);
+      const persisted = encodeSyncUpdate(document);
+      document = createSyncDocument();
+      applySyncUpdate(document, persisted);
+    }
+
+    expect(document.getMap("contacts").toJSON()).toEqual({
+      "contact-0": "Value 0",
+      "contact-1": "Value 1",
+      "contact-2": "Value 2",
+      "contact-3": "Value 3",
+      "contact-4": "Value 4",
+    });
+  });
+});

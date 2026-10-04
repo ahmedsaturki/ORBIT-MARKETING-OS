@@ -25,7 +25,7 @@ const DEFAULT_WORKSPACE_ID: &str = "default";
 const DEFAULT_LOCAL_USER_ID: &str = "local-user";
 const DEFAULT_DAILY_EXECUTION_LIMIT: i64 = 10;
 const DEFAULT_CIRCUIT_BREAKER_THRESHOLD: i64 = 3;
-const SCHEMA_VERSION: i64 = 16;
+const SCHEMA_VERSION: i64 = 17;
 
 static ACTIVE_WORKSPACE_ID: OnceLock<RwLock<String>> = OnceLock::new();
 static TELEGRAM_EXECUTION_IDS: OnceLock<Mutex<std::collections::HashSet<String>>> = OnceLock::new();
@@ -810,6 +810,22 @@ fn execution_day_key() -> i64 {
     OffsetDateTime::now_utc()
         .unix_timestamp()
         .div_euclid(86_400)
+}
+
+/// The single decision point for local direct-execution safety budgets.
+/// Extracted so the thresholds are enforced in exactly one place and can be
+/// asserted directly; `execute_telegram_task` must call this and honour it.
+fn execution_budget_blocks(
+    completed_today: i64,
+    consecutive_failures: i64,
+) -> Option<&'static str> {
+    if consecutive_failures >= DEFAULT_CIRCUIT_BREAKER_THRESHOLD {
+        Some("circuit_breaker_open")
+    } else if completed_today >= DEFAULT_DAILY_EXECUTION_LIMIT {
+        Some("daily_limit_reached")
+    } else {
+        None
+    }
 }
 
 fn next_utc_midnight_timestamp() -> String {
@@ -1612,7 +1628,8 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
               metric TEXT,
               value REAL,
               confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
-              source_ids_json TEXT NOT NULL DEFAULT '[]',
+              source_ids_json TEXT NOT NULL DEFAULT '[]'
+                CHECK(json_valid(source_ids_json) AND json_array_length(source_ids_json) > 0),
               observed_at TEXT NOT NULL,
               created_at TEXT NOT NULL,
               updated_at TEXT NOT NULL
@@ -1798,6 +1815,70 @@ fn migrate_schema(connection: &Connection) -> Result<(), AppError> {
             PRAGMA user_version = 16;
             ",
         )?;
+    }
+
+    // v16 created insights without a grounding constraint, so an ungrounded
+    // row could exist on disk even though every application path rejects it.
+    // SQLite cannot add a CHECK to an existing table, so rebuild it.
+    if version < 17 {
+        // insights is part of the base SCHEMA, not of any incremental
+        // migration, so a database that arrived here from an older version
+        // may not have it, nor the workspaces table it references, yet.
+        // Rebuild only when both are present; otherwise the base SCHEMA
+        // creates them with the constraint already in place.
+        let rebuild_possible: bool = connection.query_row(
+            "SELECT (
+               EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='insights')
+               AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='workspaces')
+             )",
+            [],
+            |row| row.get(0),
+        )?;
+        if rebuild_possible {
+            connection.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS insights_v17 (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+              kind TEXT NOT NULL CHECK(kind IN ('performance', 'anomaly', 'learning', 'trend', 'recommendation')),
+              title TEXT NOT NULL,
+              summary TEXT NOT NULL,
+              metric TEXT,
+              value REAL,
+              confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+              source_ids_json TEXT NOT NULL DEFAULT '[]'
+                CHECK(json_valid(source_ids_json) AND json_array_length(source_ids_json) > 0),
+              observed_at TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            INSERT INTO insights_v17(
+              id, workspace_id, kind, title, summary, metric, value, confidence,
+              source_ids_json, observed_at, created_at, updated_at
+            )
+            SELECT id, workspace_id, kind, title, summary, metric, value, confidence,
+                   source_ids_json, observed_at, created_at, updated_at
+            FROM insights
+            WHERE json_valid(source_ids_json)
+              AND json_array_length(source_ids_json) > 0;
+
+            DROP TABLE insights;
+
+            ALTER TABLE insights_v17 RENAME TO insights;
+
+            CREATE INDEX IF NOT EXISTS idx_insights_workspace_kind
+              ON insights(workspace_id, kind, observed_at);
+
+            CREATE INDEX IF NOT EXISTS idx_insights_workspace_updated
+              ON insights(workspace_id, updated_at);
+
+
+            ",
+        )?;
+        }
+
+        connection.execute_batch("PRAGMA user_version = 17;")?;
     }
 
     Ok(())
@@ -2689,57 +2770,60 @@ async fn telegram_execute_task(
     let (completed_today, consecutive_failures) =
         load_execution_counters(&connection, &workspace_id, &account_id)
             .map_err(|error| error.to_string())?;
-    if consecutive_failures >= DEFAULT_CIRCUIT_BREAKER_THRESHOLD {
-        connection
-            .execute(
-                "UPDATE tasks
-                 SET status='awaiting_user_action'
-                 WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, &workspace_id],
-            )
-            .map_err(|error| error.to_string())?;
-        telegram_task_audit(
-            &connection,
-            &workspace_id,
-            &task_id,
-            "circuit_breaker_open",
-            "blocked",
-        )?;
-        return Ok(TelegramExecutionView {
-            task_id,
-            status: "awaiting_user_action".to_string(),
-            external_message_id: None,
-            message: "Local execution circuit breaker is open after repeated failures.".to_string(),
-            retry_at: None,
-        });
-    }
-
-    if completed_today >= DEFAULT_DAILY_EXECUTION_LIMIT {
-        let retry_at = next_utc_midnight_timestamp();
-        connection
-            .execute(
-                "UPDATE tasks
-                 SET status='pending', available_at=?1
-                 WHERE id=?2 AND workspace_id=?3 AND status='running'",
-                params![&retry_at, &task_id, &workspace_id],
-            )
-            .map_err(|error| error.to_string())?;
-        telegram_task_audit(
-            &connection,
-            &workspace_id,
-            &task_id,
-            "daily_limit_reached",
-            "blocked",
-        )?;
-        return Ok(TelegramExecutionView {
-            task_id,
-            status: "pending".to_string(),
-            external_message_id: None,
-            message:
-                "Local daily execution budget is exhausted; task deferred until the next UTC day."
+    match execution_budget_blocks(completed_today, consecutive_failures) {
+        Some("circuit_breaker_open") => {
+            connection
+                .execute(
+                    "UPDATE tasks
+                     SET status='awaiting_user_action'
+                     WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                    params![&task_id, &workspace_id],
+                )
+                .map_err(|error| error.to_string())?;
+            telegram_task_audit(
+                &connection,
+                &workspace_id,
+                &task_id,
+                "circuit_breaker_open",
+                "blocked",
+            )?;
+            return Ok(TelegramExecutionView {
+                task_id,
+                status: "awaiting_user_action".to_string(),
+                external_message_id: None,
+                message: "Local execution circuit breaker is open after repeated failures."
                     .to_string(),
-            retry_at: Some(retry_at),
-        });
+                retry_at: None,
+            });
+        }
+        Some(_) => {
+            let retry_at = next_utc_midnight_timestamp();
+            connection
+                .execute(
+                    "UPDATE tasks
+                     SET status='pending', available_at=?1
+                     WHERE id=?2 AND workspace_id=?3 AND status='running'",
+                    params![&retry_at, &task_id, &workspace_id],
+                )
+                .map_err(|error| error.to_string())?;
+            telegram_task_audit(
+                &connection,
+                &workspace_id,
+                &task_id,
+                "daily_limit_reached",
+                "blocked",
+            )?;
+            return Ok(TelegramExecutionView {
+                task_id,
+                status: "pending".to_string(),
+                external_message_id: None,
+                message:
+                    "Local daily execution budget is exhausted; task deferred until the next UTC day."
+                        .to_string(),
+                retry_at: Some(retry_at),
+            });
+        }
+        None => {}
     }
 
     let (session_payload_json, account_status) = connection
@@ -2752,7 +2836,7 @@ async fn telegram_execute_task(
 
     if account_status != "connected" {
         connection
-            .execute(
+        .execute(
                 "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
                 params![&task_id, workspace_id],
             )
@@ -3657,14 +3741,33 @@ fn campaign_create(
     account_ids: Vec<String>,
 ) -> Result<CampaignView, String> {
     let workspace_id = active_workspace_id();
-    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+
+    create_campaign(&connection, &workspace_id, &name, &account_ids)
+}
+
+/// Roles permitted to create a campaign. Shared so the authorization tests
+/// assert against the same list the command enforces.
+fn campaign_write_roles() -> &'static [&'static str] {
+    &["owner", "admin", "editor"]
+}
+
+fn create_campaign(
+    connection: &Connection,
+    workspace_id: &str,
+    name: &str,
+    account_ids: &[String],
+) -> Result<CampaignView, String> {
+    // The membership gate lives here rather than only in the command wrapper so
+    // it is part of the path under test.
+    require_workspace_role_for(connection, workspace_id, campaign_write_roles())
+        .map_err(|error| error.to_string())?;
+
+    let name = validate_label(name).map_err(|error| error.to_string())?;
     if account_ids.is_empty() {
         return Err("at least one account is required".to_string());
     }
 
-    let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
-        .map_err(|error| error.to_string())?;
     let campaign_id = format!("camp-{}", uuid_like());
     let timestamp = chrono_like_timestamp();
     let transaction = connection
@@ -3678,19 +3781,39 @@ fn campaign_create(
         )
         .map_err(|error| error.to_string())?;
 
-    for account_id in &account_ids {
+    for account_id in account_ids {
+        let account_id = validate_label(account_id).map_err(|error| error.to_string())?;
+
+        // Check ownership in the application rather than relying solely on
+        // orbit_campaign_accounts_insert_workspace: a trigger that is renamed
+        // or dropped in a future migration would otherwise let a campaign
+        // attach another workspace's account.
+        let owned: i64 = transaction
+            .query_row(
+                "SELECT COUNT(*) FROM accounts WHERE id=?1 AND workspace_id=?2",
+                params![&account_id, workspace_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if owned != 1 {
+            return Err(format!(
+                "account does not belong to the active workspace: {account_id}"
+            ));
+        }
+
         transaction
             .execute(
                 "INSERT INTO campaign_accounts(workspace_id, campaign_id, account_id) VALUES (?1, ?2, ?3)",
-                params![workspace_id, campaign_id, validate_label(account_id).map_err(|error| error.to_string())?],
+                params![workspace_id, campaign_id, &account_id],
             )
             .map_err(|error| error.to_string())?;
     }
 
     transaction.commit().map_err(|error| error.to_string())?;
 
-    write_audit(
-        &connection,
+    write_audit_for_workspace(
+        connection,
+        workspace_id,
         "campaign",
         "create",
         "success",
@@ -4304,12 +4427,22 @@ fn media_asset_import(
     tags_json: Option<String>,
 ) -> Result<MediaAssetView, String> {
     let workspace_id = active_workspace_id();
-    let id = validate_label(&id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
 
-    let path_string = validate_label(&path).map_err(|error| error.to_string())?;
+    import_media_asset(&connection, &workspace_id, &id, &path, tags_json)
+}
+
+fn import_media_asset(
+    connection: &Connection,
+    workspace_id: &str,
+    id: &str,
+    path: &str,
+    tags_json: Option<String>,
+) -> Result<MediaAssetView, String> {
+    let id = validate_label(id).map_err(|error| error.to_string())?;
+    let path_string = validate_label(path).map_err(|error| error.to_string())?;
     let path = std::path::PathBuf::from(&path_string);
     if !path.is_file() {
         return Err("media path must point to a regular file".to_string());
@@ -4343,7 +4476,7 @@ fn media_asset_import(
     }
 
     let timestamp = chrono_like_timestamp();
-    connection
+    let changed = connection
         .execute(
             "INSERT INTO media_assets(
                id, workspace_id, kind, filename, mime_type, size_bytes,
@@ -4375,9 +4508,16 @@ fn media_asset_import(
         )
         .map_err(|error| error.to_string())?;
 
+    // The upsert's conflict target is guarded by workspace_id, so an id
+    // already owned by another workspace updates zero rows. Reporting success
+    // there would hand the caller a view of a file that was never recorded.
+    if changed != 1 {
+        return Err("media asset id is already used by another workspace".to_string());
+    }
+
     write_audit_for_workspace(
-        &connection,
-        &workspace_id,
+        connection,
+        workspace_id,
         "media",
         "asset_import",
         "success",
@@ -6527,10 +6667,19 @@ fn research_publish_to_knowledge(
     finding_id: String,
 ) -> Result<KnowledgeItemView, String> {
     let workspace_id = active_workspace_id();
-    let finding_id = validate_label(&finding_id).map_err(|error| error.to_string())?;
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
         .map_err(|error| error.to_string())?;
+
+    publish_finding_to_knowledge(&connection, &workspace_id, &finding_id)
+}
+
+fn publish_finding_to_knowledge(
+    connection: &Connection,
+    workspace_id: &str,
+    finding_id: &str,
+) -> Result<KnowledgeItemView, String> {
+    let finding_id = validate_label(finding_id).map_err(|error| error.to_string())?;
 
     let finding: Option<(String, String, String, f64, Option<String>)> = connection
         .query_row(
@@ -6554,7 +6703,7 @@ fn research_publish_to_knowledge(
         return Err("research finding not found in active workspace".to_string());
     };
 
-    validate_workspace_source_ids(&connection, &workspace_id, &source_ids_json)?;
+    validate_workspace_source_ids(connection, workspace_id, &source_ids_json)?;
 
     let tags_json = serde_json::to_string(&["research"]).map_err(|error| error.to_string())?;
     let knowledge_id = format!("research:{id}");
@@ -6597,8 +6746,12 @@ fn research_publish_to_knowledge(
         return Err("knowledge item id already belongs to another workspace".to_string());
     }
 
-    write_audit(
-        &connection,
+    // Audit against the workspace this write actually touched. write_audit
+    // resolves the process-global active workspace, which would file the
+    // event under a different tenant than the one that received the item.
+    write_audit_for_workspace(
+        connection,
+        workspace_id,
         "research",
         "publish_to_knowledge",
         "success",
@@ -6980,27 +7133,6 @@ fn opportunity_upsert(
     owner_id: Option<String>,
 ) -> Result<OpportunityView, String> {
     let workspace_id = active_workspace_id();
-    let id = validate_label(&id).map_err(|error| error.to_string())?;
-    let contact_id = validate_label(&contact_id).map_err(|error| error.to_string())?;
-    let campaign_id = campaign_id
-        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
-        .transpose()?;
-    let name = validate_label(&name).map_err(|error| error.to_string())?;
-    let stage = validate_opportunity_stage(&stage)?;
-    let currency = validate_currency(&currency)?;
-    if !value.is_finite() || value < 0.0 {
-        return Err("opportunity value must be finite and non-negative".to_string());
-    }
-    if !probability.is_finite() || !(0.0..=100.0).contains(&probability) {
-        return Err("opportunity probability must be between 0 and 100".to_string());
-    }
-    let source = source
-        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
-        .transpose()?;
-    let owner_id = owner_id
-        .map(|value| validate_label(&value).map_err(|error| error.to_string()))
-        .transpose()?;
-
     let connection = open_db(&app).map_err(|error| error.to_string())?;
     require_workspace_role_for(
         &connection,
@@ -7008,6 +7140,67 @@ fn opportunity_upsert(
         &["owner", "admin", "editor", "operator"],
     )
     .map_err(|error| error.to_string())?;
+
+    upsert_opportunity(
+        &connection,
+        &workspace_id,
+        &id,
+        &contact_id,
+        campaign_id.as_deref(),
+        &name,
+        &stage,
+        value,
+        &currency,
+        probability,
+        source.as_deref(),
+        owner_id.as_deref(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn upsert_opportunity(
+    connection: &Connection,
+    workspace_id: &str,
+    id: &str,
+    contact_id: &str,
+    campaign_id: Option<&str>,
+    name: &str,
+    stage: &str,
+    value: f64,
+    currency: &str,
+    probability: f64,
+    source: Option<&str>,
+    owner_id: Option<&str>,
+) -> Result<OpportunityView, String> {
+    // The membership gate lives here rather than only in the command wrapper so
+    // it is part of the path under test.
+    require_workspace_role_for(
+        connection,
+        workspace_id,
+        &["owner", "admin", "editor", "operator"],
+    )
+    .map_err(|error| error.to_string())?;
+
+    let id = validate_label(id).map_err(|error| error.to_string())?;
+    let contact_id = validate_label(contact_id).map_err(|error| error.to_string())?;
+    let campaign_id = campaign_id
+        .map(|value| validate_label(value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let name = validate_label(name).map_err(|error| error.to_string())?;
+    let stage = validate_opportunity_stage(stage)?;
+    let currency = validate_currency(currency)?;
+    if !value.is_finite() || value < 0.0 {
+        return Err("opportunity value must be finite and non-negative".to_string());
+    }
+    if !probability.is_finite() || !(0.0..=100.0).contains(&probability) {
+        return Err("opportunity probability must be between 0 and 100".to_string());
+    }
+    let source = source
+        .map(|value| validate_label(value).map_err(|error| error.to_string()))
+        .transpose()?;
+    let owner_id = owner_id
+        .map(|value| validate_label(value).map_err(|error| error.to_string()))
+        .transpose()?;
 
     let contact_exists: bool = connection
         .query_row(
@@ -7093,8 +7286,11 @@ fn opportunity_upsert(
         return Err("opportunity id already belongs to another workspace".to_string());
     }
 
-    write_audit(
-        &connection,
+    // write_audit resolves the process-global active workspace; this row was
+    // written to the workspace passed in, so audit that one.
+    write_audit_for_workspace(
+        connection,
+        workspace_id,
         "crm",
         "opportunity_upsert",
         "success",
@@ -9949,17 +10145,36 @@ fn count_conversation_messages(
     )
 }
 
-#[tauri::command]
-fn conversation_upsert(
-    app: tauri::AppHandle,
+fn conversation_write_roles() -> &'static [&'static str] {
+    &["owner", "admin", "editor", "operator"]
+}
+
+struct ConversationUpsertInput {
     id: String,
     account_id: String,
     contact_id: Option<String>,
     platform: String,
     external_thread_id: Option<String>,
     status: String,
+}
+
+fn conversation_upsert_record(
+    connection: &Connection,
+    workspace_id: &str,
+    input: ConversationUpsertInput,
 ) -> Result<ConversationView, String> {
-    let workspace_id = active_workspace_id();
+    let ConversationUpsertInput {
+        id,
+        account_id,
+        contact_id,
+        platform,
+        external_thread_id,
+        status,
+    } = input;
+    // The membership gate lives here rather than only in the command wrapper so
+    // it is part of the path under test.
+    require_workspace_role_for(connection, workspace_id, conversation_write_roles())
+        .map_err(|error| error.to_string())?;
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
@@ -9974,13 +10189,6 @@ fn conversation_upsert(
         return Err("unsupported conversation status".to_string());
     }
 
-    let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(
-        &connection,
-        &workspace_id,
-        &["owner", "admin", "editor", "operator"],
-    )
-    .map_err(|error| error.to_string())?;
     let account_platform: Option<String> = connection
         .query_row(
             "SELECT platform FROM accounts WHERE id=?1 AND workspace_id=?2",
@@ -10043,10 +10251,11 @@ fn conversation_upsert(
     }
 
     let message_count =
-        count_conversation_messages(&connection, &id).map_err(|error| error.to_string())?;
+        count_conversation_messages(connection, &id).map_err(|error| error.to_string())?;
 
-    write_audit(
-        &connection,
+    write_audit_for_workspace(
+        connection,
+        workspace_id,
         "conversation",
         "upsert",
         "success",
@@ -10065,6 +10274,32 @@ fn conversation_upsert(
         message_count,
         updated_at: timestamp,
     })
+}
+
+#[tauri::command]
+fn conversation_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    account_id: String,
+    contact_id: Option<String>,
+    platform: String,
+    external_thread_id: Option<String>,
+    status: String,
+) -> Result<ConversationView, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    conversation_upsert_record(
+        &connection,
+        &workspace_id,
+        ConversationUpsertInput {
+            id,
+            account_id,
+            contact_id,
+            platform,
+            external_thread_id,
+            status,
+        },
+    )
 }
 
 #[tauri::command]
@@ -11885,6 +12120,129 @@ mod tests {
     }
 
     #[test]
+    fn restore_rejects_corrupt_database_before_replacing_the_live_target() {
+        let root = std::env::temp_dir().join(format!("orbit-restore-corrupt-{}", uuid_like()));
+        std::fs::create_dir_all(&root).expect("temp directory should be creatable");
+        let target = root.join("orbit.sqlite3");
+        let previous = root.join("orbit.previous.sqlite3");
+
+        let survivor = Connection::open(&target).expect("live database should be creatable");
+        survivor
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        survivor
+            .execute(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-live', 'Live', '2026-10-04T00:00:00Z')",
+                [],
+            )
+            .expect("live workspace should be created");
+        drop(survivor);
+
+        let marker = previous.exists();
+        assert!(!marker, "previous database should not exist before restore");
+
+        let corrupt = root.join("corrupt.sqlite3");
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"SQLite format 3\0");
+        bytes.extend_from_slice(b"\xde\xad\xbe\xef");
+        std::fs::write(&corrupt, bytes).expect("corrupt database should be written");
+
+        let connection = Connection::open(&corrupt).expect("corrupt file should still open");
+        prepare_backup_database_for_restore(&connection)
+            .expect_err("a corrupt backup must be rejected");
+        drop(connection);
+
+        let after = Connection::open(&target).expect("live database should survive");
+        let workspaces: i64 = after
+            .query_row("SELECT COUNT(*) FROM workspaces", [], |row| row.get(0))
+            .expect("live database should still be readable");
+        assert_eq!(
+            workspaces, 1,
+            "live database must be untouched by a rejected restore"
+        );
+
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn restore_rejects_a_structurally_valid_database_with_damaged_pages() {
+        let root = std::env::temp_dir().join(format!("orbit-restore-damaged-{}", uuid_like()));
+        std::fs::create_dir_all(&root).expect("temp directory should be creatable");
+        let damaged = root.join("damaged.sqlite3");
+
+        let seed = Connection::open(&damaged).expect("database should be creatable");
+        seed.execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        seed.execute(
+            "INSERT INTO workspaces(id, name, created_at)
+             VALUES ('workspace-damaged', 'Damaged', '2026-10-04T00:00:00Z')",
+            [],
+        )
+        .expect("workspace should be created");
+        drop(seed);
+
+        // Leave the 100-byte header intact so SQLite still recognises the file and
+        // the rejection comes from the integrity check rather than the header.
+        let mut bytes = std::fs::read(&damaged).expect("database should be readable");
+        assert!(bytes.len() > 4096, "seeded database should have body pages");
+        let page_size = u16::from_be_bytes([bytes[16], bytes[17]]) as usize;
+        assert!(page_size >= 512, "page size should be sane");
+        let total = bytes.len();
+        for offset in (page_size..total).step_by(page_size) {
+            let end = (offset + 32).min(total);
+            for byte in bytes[offset..end].iter_mut() {
+                *byte = 0x00;
+            }
+        }
+        std::fs::write(&damaged, &bytes).expect("damaged database should be written");
+
+        let connection = Connection::open(&damaged).expect("damaged file should still open");
+        let rejection = prepare_backup_database_for_restore(&connection)
+            .expect_err("a backup with damaged pages must be rejected");
+        assert!(
+            !rejection.trim().is_empty(),
+            "a rejection must explain why the backup was refused: {rejection}"
+        );
+
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn restore_rejects_a_backup_newer_than_this_application() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+
+        let newer = SCHEMA_VERSION + 1;
+        connection
+            .execute_batch(&format!("PRAGMA user_version = {newer};"))
+            .expect("future schema version should be set");
+
+        let rejection = prepare_backup_database_for_restore(&connection)
+            .expect_err("a newer-schema backup must be rejected");
+        assert!(
+            rejection.contains("newer than this application"),
+            "unexpected rejection reason: {rejection}"
+        );
+    }
+
+    #[test]
+    fn restore_accepts_a_backup_at_the_current_schema_version() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        connection
+            .execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION};"))
+            .expect("current schema version should be set");
+
+        prepare_backup_database_for_restore(&connection)
+            .expect("a current-version backup must be accepted");
+    }
+
+    #[test]
     fn task_migration_rolls_back_on_invalid_legacy_row() {
         let connection = Connection::open_in_memory().expect("sqlite should be available");
         connection
@@ -13426,7 +13784,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 16);
+        assert_eq!(version, SCHEMA_VERSION);
     }
 
     #[test]
@@ -13468,7 +13826,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 16);
+        assert_eq!(version, SCHEMA_VERSION);
     }
 
     #[test]
@@ -13727,7 +14085,7 @@ mod tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 16);
+        assert_eq!(version, SCHEMA_VERSION);
     }
 
     #[test]
@@ -13792,6 +14150,194 @@ VALUES ('legacy-task', 'legacy-campaign', 'legacy-account', 'facebook', 'publish
 }
 
 #[cfg(test)]
+mod insight_workspace_scope_tests {
+    use super::*;
+
+    fn scoped_connection() -> Connection {
+        let connection =
+            Connection::open_in_memory().expect("in-memory SQLite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+        migrate_schema(&connection).expect("schema migration should succeed");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                "#,
+            )
+            .expect("workspaces should be creatable");
+        connection
+    }
+
+    // Mirrors the upsert issued by insight_upsert.
+    fn upsert_insight(
+        connection: &Connection,
+        id: &str,
+        workspace_id: &str,
+        title: &str,
+    ) -> rusqlite::Result<usize> {
+        connection.execute(
+            "INSERT INTO insights(
+               id, workspace_id, kind, title, summary, confidence,
+               source_ids_json, observed_at, created_at, updated_at
+             )
+             VALUES (?1, ?2, 'learning', ?3, 'Grounded summary', 0.8,
+                     '[\"analytics-a\"]', '2026-09-25T00:00:00Z', '1', '1')
+             ON CONFLICT(id) DO UPDATE SET
+               kind=excluded.kind,
+               title=excluded.title,
+               summary=excluded.summary,
+               confidence=excluded.confidence,
+               source_ids_json=excluded.source_ids_json,
+               observed_at=excluded.observed_at,
+               updated_at=excluded.updated_at
+             WHERE insights.workspace_id=excluded.workspace_id",
+            params![id, workspace_id, title],
+        )
+    }
+
+    #[test]
+    fn insight_upsert_persists_and_reads_back_within_its_workspace() {
+        let connection = scoped_connection();
+
+        assert_eq!(
+            upsert_insight(&connection, "insight-a", "workspace-a", "First title"),
+            Ok(1),
+            "an insight should persist in its workspace",
+        );
+
+        let row: (String, String, String, f64, String) = connection
+            .query_row(
+                "SELECT workspace_id, title, summary, confidence, source_ids_json
+                 FROM insights WHERE id='insight-a' AND workspace_id='workspace-a'",
+                [],
+                |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                    ))
+                },
+            )
+            .expect("a stored insight should read back");
+        assert_eq!(row.0, "workspace-a");
+        assert_eq!(row.1, "First title");
+        assert_eq!(row.2, "Grounded summary");
+        assert!((row.3 - 0.8).abs() < f64::EPSILON);
+        assert_eq!(row.4, r#"["analytics-a"]"#);
+    }
+
+    #[test]
+    fn insight_upsert_updates_in_place_without_changing_its_workspace() {
+        let connection = scoped_connection();
+        upsert_insight(&connection, "insight-a", "workspace-a", "First title")
+            .expect("initial insert");
+
+        assert_eq!(
+            upsert_insight(&connection, "insight-a", "workspace-a", "Revised title"),
+            Ok(1),
+            "re-upserting inside the same workspace should update the row",
+        );
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM insights", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 1, "an update must not duplicate the row");
+
+        let title: String = connection
+            .query_row(
+                "SELECT title FROM insights WHERE id='insight-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("updated insight should be readable");
+        assert_eq!(title, "Revised title");
+    }
+
+    // insight_upsert turns a zero-row write into
+    // "insight id already belongs to another workspace".
+    #[test]
+    fn insight_upsert_rejects_a_rebind_into_another_workspace() {
+        let connection = scoped_connection();
+        upsert_insight(&connection, "insight-a", "workspace-a", "First title")
+            .expect("initial insert in workspace-a");
+
+        let changed = upsert_insight(&connection, "insight-a", "workspace-b", "Hijacked")
+            .expect("the guarded write should execute without a database error");
+        assert_eq!(
+            changed, 0,
+            "the ON CONFLICT workspace guard must make a cross-workspace rebind a no-op",
+        );
+
+        let (workspace_id, title): (String, String) = connection
+            .query_row(
+                "SELECT workspace_id, title FROM insights WHERE id='insight-a'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("the original insight should still exist");
+        assert_eq!(workspace_id, "workspace-a", "ownership must not transfer");
+        assert_eq!(
+            title, "First title",
+            "a rejected rebind must not mutate the row"
+        );
+    }
+
+    // insight_list filters on workspace_id, so insights never leak sideways.
+    #[test]
+    fn insight_list_query_returns_only_the_active_workspace() {
+        let connection = scoped_connection();
+        upsert_insight(&connection, "insight-a", "workspace-a", "Visible")
+            .expect("insert into workspace-a");
+        upsert_insight(&connection, "insight-b", "workspace-b", "Hidden")
+            .expect("insert into workspace-b");
+
+        let mut statement = connection
+            .prepare(
+                "SELECT id FROM insights WHERE workspace_id=?1 ORDER BY observed_at DESC, updated_at DESC",
+            )
+            .expect("insight_list query should prepare");
+        let visible: Vec<String> = statement
+            .query_map(params!["workspace-a"], |row| row.get(0))
+            .expect("insight_list query should run")
+            .collect::<Result<Vec<String>, _>>()
+            .expect("rows should decode");
+
+        assert_eq!(
+            visible,
+            vec!["insight-a".to_string()],
+            "insights from another workspace must not be listed",
+        );
+    }
+
+    #[test]
+    fn insight_requires_at_least_one_grounding_source() {
+        let connection = scoped_connection();
+
+        // The database CHECK mirrors the insight_upsert precondition.
+        let rejected = connection.execute(
+            "INSERT INTO insights(
+               id, workspace_id, kind, title, summary, confidence,
+               source_ids_json, observed_at, created_at, updated_at
+             ) VALUES (
+               'insight-empty', 'workspace-a', 'learning', 'Ungrounded', 'No sources', 0.5,
+               '[]', '2026-09-25T00:00:00Z', '1', '1'
+             )",
+            [],
+        );
+        assert!(
+            rejected.is_err(),
+            "an insight with no grounding source must be rejected at rest",
+        );
+    }
+}
+
+#[cfg(test)]
 mod conversation_count_tests {
     use super::*;
 
@@ -13812,6 +14358,357 @@ mod conversation_count_tests {
         assert_eq!(
             count_conversation_messages(&connection, "conversation-1").expect("message count"),
             2
+        );
+    }
+}
+
+#[cfg(test)]
+mod conversation_contact_tests {
+    use super::*;
+
+    fn conversation_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user');
+                 INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES ('workspace-a', 'local-user', 'owner', 1, '1'),
+                        ('workspace-b', 'local-user', 'owner', 1, '1');
+                 INSERT INTO accounts(id, workspace_id, platform, display_name, username, status,
+                                      session_payload_json, created_at, updated_at)
+                 VALUES ('account-a', 'workspace-a', 'linkedin', 'Acme', 'acme', 'connected', '{}', '1', '1');
+                 INSERT INTO contacts(id, workspace_id, display_name, source_platform, status,
+                                      created_at, updated_at)
+                 VALUES ('contact-a', 'workspace-a', 'Alice', 'linkedin', 'active', '1', '1');",
+            )
+            .expect("conversation fixture should be created");
+        connection
+    }
+
+    fn upsert_conversation(
+        connection: &Connection,
+        workspace_id: &str,
+        id: &str,
+        contact_id: Option<&str>,
+    ) -> Result<ConversationView, String> {
+        conversation_upsert_record(
+            connection,
+            workspace_id,
+            ConversationUpsertInput {
+                id: id.to_string(),
+                account_id: "account-a".to_string(),
+                contact_id: contact_id.map(str::to_string),
+                platform: "linkedin".to_string(),
+                external_thread_id: Some(format!("thread-{id}")),
+                status: "new".to_string(),
+            },
+        )
+    }
+
+    // CRM-01: the conversation/contact relationship must persist, not just
+    // echo back on the returned view.
+    #[test]
+    fn a_conversation_persists_its_contact_relationship() {
+        let connection = conversation_connection();
+
+        let view = upsert_conversation(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect("a linked conversation should be accepted");
+        assert_eq!(view.contact_id.as_deref(), Some("contact-a"));
+
+        let stored: Option<String> = connection
+            .query_row(
+                "SELECT contact_id FROM conversations WHERE id='conversation-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("conversation should be readable");
+        assert_eq!(
+            stored.as_deref(),
+            Some("contact-a"),
+            "the contact relationship must be persisted",
+        );
+    }
+
+    // Re-linking an existing conversation must update the stored relationship.
+    #[test]
+    fn relinking_a_conversation_updates_the_stored_contact() {
+        let connection = conversation_connection();
+        connection
+            .execute_batch(
+                "INSERT INTO contacts(id, workspace_id, display_name, source_platform, status,
+                                      created_at, updated_at)
+                 VALUES ('contact-b', 'workspace-a', 'Bob', 'linkedin', 'active', '1', '1');",
+            )
+            .expect("second contact");
+
+        upsert_conversation(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect("first");
+        upsert_conversation(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-b"),
+        )
+        .expect("relink");
+
+        let stored: Option<String> = connection
+            .query_row(
+                "SELECT contact_id FROM conversations WHERE id='conversation-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("conversation should be readable");
+        assert_eq!(stored.as_deref(), Some("contact-b"));
+    }
+
+    // A contact from another workspace must not be linkable.
+    #[test]
+    fn a_contact_from_another_workspace_cannot_be_linked() {
+        let connection = conversation_connection();
+        connection
+            .execute_batch(
+                "INSERT INTO contacts(id, workspace_id, display_name, source_platform, status,
+                                      created_at, updated_at)
+                 VALUES ('contact-foreign', 'workspace-b', 'Mallory', 'linkedin', 'active', '1', '1');",
+            )
+            .expect("foreign contact");
+
+        let error = upsert_conversation(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-foreign"),
+        )
+        .expect_err("a foreign contact must be refused");
+        assert!(error.contains("not found"), "unexpected error: {error}");
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM conversations", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused link must persist nothing");
+    }
+
+    #[test]
+    fn an_unknown_contact_cannot_be_linked() {
+        let connection = conversation_connection();
+        assert!(upsert_conversation(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("no-such-contact")
+        )
+        .is_err());
+    }
+
+    // Unlinking must clear the relationship rather than orphan it.
+    #[test]
+    fn a_conversation_can_be_unlinked_from_its_contact() {
+        let connection = conversation_connection();
+        upsert_conversation(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect("link");
+
+        let view = upsert_conversation(&connection, "workspace-a", "conversation-1", None)
+            .expect("unlink");
+        assert_eq!(view.contact_id, None);
+
+        let stored: Option<String> = connection
+            .query_row(
+                "SELECT contact_id FROM conversations WHERE id='conversation-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("conversation should be readable");
+        assert_eq!(stored, None);
+    }
+
+    // The account must belong to the workspace and match the platform.
+    #[test]
+    fn the_account_must_belong_to_the_same_workspace_and_platform() {
+        let connection = conversation_connection();
+        connection
+            .execute_batch(
+                "INSERT INTO accounts(id, workspace_id, platform, display_name, username, status,
+                                      session_payload_json, created_at, updated_at)
+                 VALUES ('account-telegram', 'workspace-a', 'telegram', 'Chan', 'chan', 'connected', '{}', '1', '1');",
+            )
+            .expect("telegram account");
+
+        let mismatched = conversation_upsert_record(
+            &connection,
+            "workspace-a",
+            ConversationUpsertInput {
+                id: "conversation-1".to_string(),
+                account_id: "account-telegram".to_string(),
+                contact_id: Some("contact-a".to_string()),
+                platform: "linkedin".to_string(),
+                external_thread_id: Some("thread-1".to_string()),
+                status: "new".to_string(),
+            },
+        )
+        .expect_err("a platform mismatch must be refused");
+        assert!(
+            mismatched.contains("platform does not match"),
+            "unexpected error: {mismatched}",
+        );
+
+        let foreign = conversation_upsert_record(
+            &connection,
+            "workspace-a",
+            ConversationUpsertInput {
+                id: "conversation-1".to_string(),
+                account_id: "account-foreign".to_string(),
+                contact_id: Some("contact-a".to_string()),
+                platform: "linkedin".to_string(),
+                external_thread_id: Some("thread-1".to_string()),
+                status: "new".to_string(),
+            },
+        )
+        .expect_err("an unknown account must be refused");
+        assert!(foreign.contains("not found"), "unexpected error: {foreign}");
+    }
+
+    // The unified conversation model: one conversation carries its account,
+    // contact, platform thread identity and message count.
+    #[test]
+    fn the_unified_model_carries_account_contact_thread_and_message_count() {
+        let connection = conversation_connection();
+        upsert_conversation(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect("upsert");
+        connection
+            .execute_batch(
+                "INSERT INTO messages(id, conversation_id, direction, body, sent_at)
+                 VALUES ('message-1', 'conversation-1', 'inbound', 'Hello', '1'),
+                        ('message-2', 'conversation-1', 'outbound', 'Hi', '1');",
+            )
+            .expect("messages");
+
+        let view = upsert_conversation(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect("re-upsert to read the count");
+        assert_eq!(view.account_id.as_deref(), Some("account-a"));
+        assert_eq!(view.contact_id.as_deref(), Some("contact-a"));
+        assert_eq!(view.platform, "linkedin");
+        assert_eq!(
+            view.external_thread_id.as_deref(),
+            Some("thread-conversation-1")
+        );
+        assert_eq!(view.message_count, 2);
+    }
+
+    // The same external thread on one account maps to one conversation.
+    #[test]
+    fn one_external_thread_maps_to_one_conversation_per_account() {
+        let connection = conversation_connection();
+        conversation_upsert_record(
+            &connection,
+            "workspace-a",
+            ConversationUpsertInput {
+                id: "conversation-1".to_string(),
+                account_id: "account-a".to_string(),
+                contact_id: None,
+                platform: "linkedin".to_string(),
+                external_thread_id: Some("thread-shared".to_string()),
+                status: "new".to_string(),
+            },
+        )
+        .expect("first");
+
+        let error = conversation_upsert_record(
+            &connection,
+            "workspace-a",
+            ConversationUpsertInput {
+                id: "conversation-2".to_string(),
+                account_id: "account-a".to_string(),
+                contact_id: None,
+                platform: "linkedin".to_string(),
+                external_thread_id: Some("thread-shared".to_string()),
+                status: "new".to_string(),
+            },
+        )
+        .expect_err("a duplicate thread on one account must be refused");
+        assert!(error.contains("UNIQUE"), "unexpected error: {error}");
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM conversations", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 1);
+    }
+
+    // The membership gate must apply to conversation writes.
+    #[test]
+    fn conversation_writes_require_workspace_membership() {
+        let connection = conversation_connection();
+        connection
+            .execute_batch("DELETE FROM workspace_memberships WHERE workspace_id='workspace-a';")
+            .expect("membership removal");
+
+        let error = upsert_conversation(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect_err("a non-member must be refused");
+        assert!(
+            error.to_lowercase().contains("unauthorized"),
+            "unexpected error: {error}",
+        );
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM conversations", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused write must persist nothing");
+    }
+
+    #[test]
+    fn an_unsupported_conversation_status_is_refused() {
+        let connection = conversation_connection();
+        let error = conversation_upsert_record(
+            &connection,
+            "workspace-a",
+            ConversationUpsertInput {
+                id: "conversation-1".to_string(),
+                account_id: "account-a".to_string(),
+                contact_id: None,
+                platform: "linkedin".to_string(),
+                external_thread_id: Some("thread-1".to_string()),
+                status: "archived".to_string(),
+            },
+        )
+        .expect_err("an unsupported status must be refused");
+        assert!(
+            error.contains("unsupported conversation status"),
+            "unexpected error: {error}",
         );
     }
 }
@@ -13925,6 +14822,898 @@ mod media_import_tests {
         assert_eq!(infer_media_mime(png), Some("image/png"));
         assert_eq!(infer_media_mime(mp4), Some("video/mp4"));
         assert_eq!(infer_media_mime(pdf), Some("application/pdf"));
+    }
+}
+
+#[cfg(test)]
+mod media_asset_import_tests {
+    use super::*;
+
+    fn media_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');",
+            )
+            .expect("workspace fixture should be created");
+        connection
+    }
+
+    // The unique suffix goes before the extension: media import infers type
+    // from the extension, so a name like "basic.png-123" would not import.
+    fn write_temp(stem: &str, extension: &str, bytes: &[u8]) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "orbit-media-{}-{}.{}",
+            stem,
+            uuid_like(),
+            extension
+        ));
+        fs::write(&path, bytes).expect("fixture file should be written");
+        path
+    }
+
+    // MEDIA-02: the import command end to end, not just the hashing helper.
+    #[test]
+    fn importing_an_asset_persists_it_with_its_real_digest_and_audit() {
+        let connection = media_connection();
+        let bytes = b"PNG fixture bytes";
+        let path = write_temp("basic", "png", bytes);
+        let path_string = path.to_string_lossy().to_string();
+
+        let view = import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-1",
+            &path_string,
+            Some(r#"["launch"]"#.to_string()),
+        )
+        .expect("a regular png should import");
+        let expected_digest = sha256_file(&path).expect("hash");
+        let _ = fs::remove_file(&path);
+
+        assert_eq!(view.id, "asset-1");
+        assert_eq!(view.mime_type, "image/png");
+        assert_eq!(view.kind, "image");
+        assert_eq!(view.size_bytes, 17, "the real file size must be stored");
+        assert_eq!(view.sha256.as_deref(), Some(expected_digest.as_str()));
+        assert_eq!(view.tags_json, r#"["launch"]"#);
+
+        let stored: (String, String, i64) = connection
+            .query_row(
+                "SELECT workspace_id, filename, size_bytes FROM media_assets WHERE id='asset-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("the asset must be persisted");
+        assert_eq!(stored.0, "workspace-a");
+        assert!(
+            stored.1.starts_with("orbit-media-basic-") && stored.1.ends_with(".png"),
+            "the stored filename must be the real on-disk name: {}",
+            stored.1,
+        );
+        assert_eq!(stored.2, 17);
+
+        let audited: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM audit_events
+                 WHERE category='media' AND action='asset_import' AND workspace_id='workspace-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("audit count should be readable");
+        assert_eq!(audited, 1, "an import must be audited under its workspace");
+    }
+
+    #[test]
+    fn importing_rejects_a_path_that_is_not_a_regular_file() {
+        let connection = media_connection();
+        let error = import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-missing",
+            r"D:\definitely\not\here.png",
+            None,
+        )
+        .expect_err("a missing file must not import");
+        assert!(error.contains("regular file"), "unexpected error: {error}",);
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM media_assets", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused import must persist nothing");
+    }
+
+    #[test]
+    fn importing_rejects_an_unsupported_file_type() {
+        let connection = media_connection();
+        let path = write_temp("notes", "exe", b"MZ fixture");
+        let path_string = path.to_string_lossy().to_string();
+        let error = import_media_asset(&connection, "workspace-a", "asset-exe", &path_string, None)
+            .expect_err("an unsupported type must not import");
+        let _ = fs::remove_file(&path);
+        assert!(
+            error.contains("unsupported media file type"),
+            "unexpected error: {error}",
+        );
+    }
+
+    #[test]
+    fn importing_rejects_an_empty_file() {
+        let connection = media_connection();
+        let path = write_temp("empty", "mp4", b"");
+        let path_string = path.to_string_lossy().to_string();
+        let error = import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-empty",
+            &path_string,
+            None,
+        )
+        .expect_err("a zero-byte file must not import");
+        let _ = fs::remove_file(&path);
+        assert!(
+            error.contains("between 1 byte and 2 GB"),
+            "unexpected error: {error}",
+        );
+    }
+
+    #[test]
+    fn importing_rejects_malformed_tags() {
+        let connection = media_connection();
+        let path = write_temp("tags", "png", b"PNG");
+        let path_string = path.to_string_lossy().to_string();
+        let error = import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-tags",
+            &path_string,
+            Some("not json".to_string()),
+        )
+        .expect_err("malformed tags must be refused");
+        let _ = fs::remove_file(&path);
+        assert!(
+            error.contains("tags_json must be a JSON array"),
+            "unexpected error: {error}",
+        );
+    }
+
+    #[test]
+    fn reimporting_the_same_id_updates_the_existing_asset() {
+        let connection = media_connection();
+        let first = write_temp("v1", "png", b"first");
+        let second = write_temp("v2", "png", b"second");
+
+        import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-1",
+            &first.to_string_lossy(),
+            None,
+        )
+        .expect("first import");
+        let updated = import_media_asset(
+            &connection,
+            "workspace-a",
+            "asset-1",
+            &second.to_string_lossy(),
+            Some(r#"["v2"]"#.to_string()),
+        )
+        .expect("second import");
+        let _ = fs::remove_file(&first);
+        let _ = fs::remove_file(&second);
+
+        assert!(
+            updated.filename.starts_with("orbit-media-v2-") && updated.filename.ends_with(".png"),
+            "the update must carry the new file's name: {}",
+            updated.filename,
+        );
+        assert_eq!(updated.tags_json, r#"["v2"]"#);
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM media_assets WHERE id='asset-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("count should be readable");
+        assert_eq!(count, 1, "re-importing must not duplicate the asset");
+    }
+
+    // The upsert carries a workspace guard on its conflict target, so a
+    // colliding id from another workspace updates zero rows. That must be an
+    // error, not a success that silently discarded the file.
+    #[test]
+    fn importing_an_id_owned_by_another_workspace_is_refused() {
+        let connection = media_connection();
+        let first = write_temp("owner", "png", b"owner bytes");
+        let second = write_temp("intruder", "png", b"intruder bytes");
+
+        import_media_asset(
+            &connection,
+            "workspace-a",
+            "shared-id",
+            &first.to_string_lossy(),
+            None,
+        )
+        .expect("workspace-a should own the id");
+        let error = import_media_asset(
+            &connection,
+            "workspace-b",
+            "shared-id",
+            &second.to_string_lossy(),
+            None,
+        )
+        .expect_err("a foreign workspace must not silently discard the import");
+        assert!(
+            error.contains("already used by another workspace"),
+            "the refusal must name the collision: {error}",
+        );
+        let _ = fs::remove_file(&first);
+        let _ = fs::remove_file(&second);
+
+        let owner: (String, String) = connection
+            .query_row(
+                "SELECT workspace_id, filename FROM media_assets WHERE id='shared-id'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("the original asset must still exist");
+        assert_eq!(owner.0, "workspace-a", "ownership must not change");
+        assert!(
+            owner.1.starts_with("orbit-media-owner-") && owner.1.ends_with(".png"),
+            "the owner's file must be untouched: {}",
+            owner.1,
+        );
+    }
+}
+
+#[cfg(test)]
+mod campaign_account_scope_tests {
+    use super::*;
+
+    fn campaign_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        // create_campaign enforces the membership gate, so the fixture models a
+        // local user who actually holds an editor role in workspace-a.
+        connection
+            .execute_batch(
+                "INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user')",
+            )
+            .expect("local user should be identified");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+
+                INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+                VALUES ('account-a', 'workspace-a', 'telegram', 'Account A', 'connected', '1', '1'),
+                       ('account-b', 'workspace-b', 'telegram', 'Account B', 'connected', '1', '1');
+                "#,
+            )
+            .expect("account fixture should be created");
+        connection
+            .execute_batch(
+                "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES ('workspace-a', 'local-user', 'editor', 1, '1')",
+            )
+            .expect("workspace-a membership should be granted");
+        connection
+    }
+
+    // CAMP-02: account membership is enforced when a campaign is created.
+    #[test]
+    fn a_campaign_links_only_accounts_from_its_own_workspace() {
+        let connection = campaign_connection();
+        let view = create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect("a workspace-owned account should link");
+
+        assert_eq!(view.status, "draft");
+        let linked: (String, String) = connection
+            .query_row(
+                "SELECT workspace_id, account_id FROM campaign_accounts WHERE campaign_id=?1",
+                params![&view.id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("the link row must exist");
+        assert_eq!(linked, ("workspace-a".to_string(), "account-a".to_string()));
+    }
+
+    // Attaching another workspace's account must abort the whole campaign.
+    #[test]
+    fn creating_a_campaign_with_a_foreign_account_is_refused() {
+        let connection = campaign_connection();
+        let error = create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-b".to_string()],
+        )
+        .expect_err("a foreign account must not link");
+
+        let campaigns: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaigns", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(
+            campaigns, 0,
+            "the campaign insert must roll back with its account link"
+        );
+        assert!(!error.is_empty(), "the refusal must give a reason",);
+    }
+
+    // A mixed batch must not partially link: one bad account fails the create.
+    #[test]
+    fn a_batch_containing_a_foreign_account_links_none_of_them() {
+        let connection = campaign_connection();
+        create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string(), "account-b".to_string()],
+        )
+        .expect_err("one foreign account must fail the whole batch");
+
+        let links: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaign_accounts", [], |row| {
+                row.get(0)
+            })
+            .expect("count should be readable");
+        assert_eq!(links, 0, "no account may be linked from a failed create");
+
+        let campaigns: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaigns", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(campaigns, 0, "no campaign may survive the failed batch");
+    }
+
+    // An unknown account id is refused rather than creating a dangling link.
+    #[test]
+    fn creating_a_campaign_with_an_unknown_account_is_refused() {
+        let connection = campaign_connection();
+        create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-does-not-exist".to_string()],
+        )
+        .expect_err("an unknown account must not link");
+
+        let campaigns: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaigns", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(campaigns, 0, "no campaign may be created");
+    }
+
+    #[test]
+    fn creating_a_campaign_with_no_accounts_is_refused() {
+        let connection = campaign_connection();
+        let error = create_campaign(&connection, "workspace-a", "Launch", &[])
+            .expect_err("a campaign must have at least one account");
+        assert!(
+            error.contains("at least one account"),
+            "unexpected error: {error}",
+        );
+    }
+
+    // The audit must name the workspace that owns the campaign.
+    #[test]
+    fn campaign_creation_is_audited_under_the_creating_workspace() {
+        let connection = campaign_connection();
+        create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect("creation should succeed");
+
+        let audited: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM audit_events
+                 WHERE category='campaign' AND action='create' AND workspace_id='workspace-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("audit count should be readable");
+        assert_eq!(audited, 1, "the audit must name the creating workspace");
+    }
+
+    // Two workspaces may hold accounts with the same account row id only if
+    // the ids differ; a campaign in one must never reach the other's account.
+    #[test]
+    fn a_campaign_cannot_be_attached_to_an_account_after_the_workspace_changes() {
+        let connection = campaign_connection();
+        let view = create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect("creation should succeed");
+
+        let error = connection
+            .execute(
+                "UPDATE campaign_accounts SET workspace_id='workspace-b'
+                 WHERE campaign_id=?1 AND account_id='account-a'",
+                params![&view.id],
+            )
+            .expect_err("the integrity trigger must refuse a workspace rebind");
+        assert!(
+            error
+                .to_string()
+                .contains("campaign account workspace mismatch"),
+            "unexpected error: {error}",
+        );
+
+        let owner: String = connection
+            .query_row(
+                "SELECT workspace_id FROM campaign_accounts WHERE campaign_id=?1",
+                params![&view.id],
+                |row| row.get(0),
+            )
+            .expect("the link must still exist");
+        assert_eq!(owner, "workspace-a", "the link must not change workspace");
+    }
+}
+
+#[cfg(test)]
+mod opportunity_scope_tests {
+    use super::*;
+
+    fn crm_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+
+                INSERT INTO contacts(id, workspace_id, display_name, status, created_at, updated_at)
+                VALUES ('contact-a', 'workspace-a', 'Contact A', 'new', '1', '1'),
+                       ('contact-b', 'workspace-b', 'Contact B', 'new', '1', '1');
+
+                INSERT INTO campaigns(id, workspace_id, name, status, created_at)
+                VALUES ('campaign-a', 'workspace-a', 'Campaign A', 'draft', '1'),
+                       ('campaign-b', 'workspace-b', 'Campaign B', 'draft', '1');
+                "#,
+            )
+            .expect("crm fixture should be created");
+        connection
+            .execute_batch(
+                "INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user');
+                 INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES ('workspace-a', 'local-user', 'editor', 1, '1'),
+                        ('workspace-b', 'local-user', 'editor', 1, '1');",
+            )
+            .expect("local membership should be granted");
+        connection
+    }
+
+    fn upsert(
+        connection: &Connection,
+        workspace_id: &str,
+        id: &str,
+        contact_id: &str,
+        campaign_id: Option<&str>,
+    ) -> Result<OpportunityView, String> {
+        upsert_opportunity(
+            connection,
+            workspace_id,
+            id,
+            contact_id,
+            campaign_id,
+            "Deal",
+            "new",
+            1000.0,
+            "USD",
+            50.0,
+            None,
+            None,
+        )
+    }
+
+    // OUT-01: outcomes must stay inside the workspace that owns them.
+    #[test]
+    fn an_opportunity_is_created_scoped_and_linked_to_its_workspace() {
+        let connection = crm_connection();
+        let view = upsert(
+            &connection,
+            "workspace-a",
+            "opp-1",
+            "contact-a",
+            Some("campaign-a"),
+        )
+        .expect("a workspace-owned contact should link");
+
+        assert_eq!(view.id, "opp-1");
+        assert_eq!(view.stage, "new");
+
+        let stored: (String, String, String) = connection
+            .query_row(
+                "SELECT workspace_id, contact_id, campaign_id FROM opportunities WHERE id='opp-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("the opportunity must be persisted");
+        assert_eq!(stored.0, "workspace-a");
+        assert_eq!(stored.1, "contact-a");
+        assert_eq!(stored.2, "campaign-a");
+    }
+
+    // Linking a contact from another workspace must be refused.
+    #[test]
+    fn linking_another_workspaces_contact_is_refused() {
+        let connection = crm_connection();
+        let error = upsert(&connection, "workspace-a", "opp-1", "contact-b", None)
+            .expect_err("a foreign contact must not link");
+        assert!(
+            error.contains("contact does not belong"),
+            "unexpected error: {error}",
+        );
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused link must persist nothing");
+    }
+
+    // Linking a campaign from another workspace must be refused.
+    #[test]
+    fn linking_another_workspaces_campaign_is_refused() {
+        let connection = crm_connection();
+        let error = upsert(
+            &connection,
+            "workspace-a",
+            "opp-1",
+            "contact-a",
+            Some("campaign-b"),
+        )
+        .expect_err("a foreign campaign must not link");
+        assert!(
+            error.contains("campaign does not belong"),
+            "unexpected error: {error}",
+        );
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused link must persist nothing");
+    }
+
+    // An id already owned by another workspace must not be silently ignored.
+    #[test]
+    fn an_opportunity_id_owned_by_another_workspace_is_refused() {
+        let connection = crm_connection();
+        upsert(&connection, "workspace-a", "shared", "contact-a", None)
+            .expect("workspace-a should own the id");
+
+        let error = upsert(&connection, "workspace-b", "shared", "contact-b", None)
+            .expect_err("a foreign workspace must not overwrite the opportunity");
+        assert!(
+            error.contains("already belongs to another workspace"),
+            "unexpected error: {error}",
+        );
+
+        let owner: String = connection
+            .query_row(
+                "SELECT workspace_id FROM opportunities WHERE id='shared'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("the original opportunity must still exist");
+        assert_eq!(owner, "workspace-a", "ownership must not change");
+    }
+
+    // The audit must name the workspace that owns the row.
+    #[test]
+    fn the_upsert_is_audited_under_the_writing_workspace() {
+        let connection = crm_connection();
+        upsert(&connection, "workspace-a", "opp-1", "contact-a", None)
+            .expect("upsert should succeed");
+
+        let audited: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM audit_events
+                 WHERE category='crm' AND action='opportunity_upsert' AND workspace_id='workspace-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("audit count should be readable");
+        assert_eq!(audited, 1, "the audit must name the owning workspace");
+    }
+
+    #[test]
+    fn an_invalid_stage_is_refused_before_writing() {
+        let connection = crm_connection();
+        let error = upsert_opportunity(
+            &connection,
+            "workspace-a",
+            "opp-1",
+            "contact-a",
+            None,
+            "Deal",
+            "not-a-stage",
+            1000.0,
+            "USD",
+            50.0,
+            None,
+            None,
+        )
+        .expect_err("an unknown stage must be refused");
+        assert!(!error.is_empty(), "the refusal must give a reason");
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused upsert must persist nothing");
+    }
+
+    #[test]
+    fn a_negative_value_and_an_out_of_range_probability_are_refused() {
+        let connection = crm_connection();
+        upsert_opportunity(
+            &connection,
+            "workspace-a",
+            "opp-negative",
+            "contact-a",
+            None,
+            "Deal",
+            "new",
+            -5.0,
+            "USD",
+            50.0,
+            None,
+            None,
+        )
+        .expect_err("a negative value must be refused");
+
+        upsert_opportunity(
+            &connection,
+            "workspace-a",
+            "opp-probability",
+            "contact-a",
+            None,
+            "Deal",
+            "new",
+            10.0,
+            "USD",
+            140.0,
+            None,
+            None,
+        )
+        .expect_err("a probability above 100 must be refused");
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "both refusals must persist nothing");
+    }
+}
+
+#[cfg(test)]
+mod workspace_membership_gate_tests {
+    use super::*;
+
+    fn gated_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+
+                INSERT INTO contacts(id, workspace_id, display_name, status, created_at, updated_at)
+                VALUES ('contact-a', 'workspace-a', 'Contact A', 'new', '1', '1'),
+                       ('contact-b', 'workspace-b', 'Contact B', 'new', '1', '1');
+
+                INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+                VALUES ('account-a', 'workspace-a', 'telegram', 'Account A', 'connected', '1', '1');
+
+                INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user');
+                "#,
+            )
+            .expect("gated fixture should be created");
+        connection
+    }
+
+    fn grant(connection: &Connection, workspace_id: &str, role: &str) {
+        connection
+            .execute(
+                "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES (?1, 'local-user', ?2, 1, '1')",
+                params![workspace_id, role],
+            )
+            .expect("membership should be granted");
+    }
+
+    // WS-01: access to a workspace requires membership in it. A user who is a
+    // member elsewhere gets nothing.
+    #[test]
+    fn a_user_with_no_membership_is_refused_everywhere() {
+        let connection = gated_connection();
+
+        assert_unauthorized(
+            require_workspace_role_for(&connection, "workspace-a", &["owner", "admin", "editor"]),
+            "a non-member must not be authorized in workspace-a",
+        );
+        assert_unauthorized(
+            require_workspace_role_for(&connection, "workspace-b", &["owner", "admin", "editor"]),
+            "a non-member must not be authorized in workspace-b",
+        );
+    }
+
+    // Membership in one workspace does not carry into another.
+    #[test]
+    fn membership_in_one_workspace_does_not_grant_another() {
+        let connection = gated_connection();
+        grant(&connection, "workspace-a", "editor");
+
+        require_workspace_role_for(&connection, "workspace-a", &["editor"])
+            .expect("the member should be authorized in their own workspace");
+        assert_unauthorized(
+            require_workspace_role_for(&connection, "workspace-b", &["owner", "admin", "editor"]),
+            "membership must not leak across workspaces",
+        );
+    }
+
+    // A deactivated membership is not membership.
+    #[test]
+    fn a_deactivated_membership_is_refused() {
+        let connection = gated_connection();
+        grant(&connection, "workspace-a", "editor");
+        connection
+            .execute(
+                "UPDATE workspace_memberships SET active=0 WHERE workspace_id='workspace-a'",
+                [],
+            )
+            .expect("membership should be deactivated");
+
+        assert_unauthorized(
+            require_workspace_role_for(&connection, "workspace-a", &["owner", "admin", "editor"]),
+            "a deactivated member must not be authorized",
+        );
+    }
+
+    // WS-03: the command path itself refuses a non-member before any write.
+    #[test]
+    fn campaign_create_refuses_a_non_member_before_writing() {
+        let connection = gated_connection();
+        let error = create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect_err("a non-member must not create a campaign");
+
+        assert!(
+            error.to_lowercase().contains("unauthorized")
+                || error.to_lowercase().contains("not authorized"),
+            "the refusal must name the authorization failure: {error}",
+        );
+
+        let campaigns: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaigns", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(campaigns, 0, "no campaign may be written for a non-member");
+        let links: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaign_accounts", [], |row| {
+                row.get(0)
+            })
+            .expect("count should be readable");
+        assert_eq!(links, 0, "no account link may be written for a non-member");
+        let audited: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM audit_events WHERE category='campaign' AND action='create'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("count should be readable");
+        assert_eq!(
+            audited, 0,
+            "a refused create must not be audited as success"
+        );
+    }
+
+    // WS-03: a member with a read-only role is refused the write path.
+    #[test]
+    fn a_viewer_is_refused_the_campaign_write_path() {
+        let connection = gated_connection();
+        grant(&connection, "workspace-a", "viewer");
+
+        create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect_err("a viewer must not create a campaign");
+
+        let campaigns: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaigns", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(campaigns, 0, "a viewer must not write a campaign");
+    }
+
+    // An authorized member of the same role succeeds, proving the refusals
+    // above are about membership rather than a broken command.
+    #[test]
+    fn an_editor_member_is_allowed_through_the_same_path() {
+        let connection = gated_connection();
+        grant(&connection, "workspace-a", "editor");
+
+        let view = create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect("an editor must be allowed to create a campaign");
+
+        assert!(!view.id.is_empty(), "the campaign must be created");
+    }
+
+    // The same gate protects the CRM write path.
+    #[test]
+    fn opportunity_upsert_refuses_a_non_member_before_writing() {
+        let connection = gated_connection();
+        let error = upsert_opportunity(
+            &connection,
+            "workspace-a",
+            "opp-1",
+            "contact-a",
+            None,
+            "Deal",
+            "new",
+            1000.0,
+            "USD",
+            50.0,
+            None,
+            None,
+        )
+        .expect_err("a non-member must not upsert an opportunity");
+        assert!(
+            error.to_lowercase().contains("unauthorized"),
+            "the refusal must name the authorization failure: {error}",
+        );
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM opportunities", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "no opportunity may be written for a non-member");
+    }
+
+    fn assert_unauthorized(result: Result<(), AppError>, context: &str) {
+        match result {
+            Err(AppError::Unauthorized) => {}
+            Ok(()) => panic!("{context}: expected Unauthorized, was allowed"),
+            Err(other) => panic!("{context}: expected Unauthorized, got {other:?}"),
+        }
     }
 }
 
@@ -14112,6 +15901,412 @@ mod execution_counter_tests {
         let after_success =
             load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
         assert_eq!(after_success, (1, 0));
+    }
+
+    // CONN-04 requires that native direct execution *enforces* the local
+    // safety budgets, not merely that counters exist. The enforcement
+    // decision in execute_telegram_task reads these two counters, so assert
+    // the decision the thresholds produce.
+    fn budget_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection
+            .execute_batch(
+                "CREATE TABLE execution_counters(
+                   workspace_id TEXT NOT NULL,
+                   account_id TEXT NOT NULL,
+                   day_key INTEGER NOT NULL,
+                   completed_today INTEGER NOT NULL,
+                   consecutive_failures INTEGER NOT NULL,
+                   PRIMARY KEY(workspace_id, account_id)
+                 );",
+            )
+            .expect("schema");
+        connection
+    }
+
+    #[test]
+    fn the_circuit_breaker_trips_at_the_configured_threshold() {
+        assert_eq!(DEFAULT_CIRCUIT_BREAKER_THRESHOLD, 3);
+        assert_eq!(
+            execution_budget_blocks(0, DEFAULT_CIRCUIT_BREAKER_THRESHOLD - 1),
+            None,
+            "the breaker must stay closed below the threshold",
+        );
+        assert_eq!(
+            execution_budget_blocks(0, DEFAULT_CIRCUIT_BREAKER_THRESHOLD),
+            Some("circuit_breaker_open"),
+            "the breaker must trip at the threshold",
+        );
+    }
+
+    #[test]
+    fn consecutive_failures_reach_the_threshold_and_a_success_resets_them() {
+        let connection = budget_connection();
+        load_execution_counters(&connection, "workspace-1", "account-1").expect("seed counters");
+
+        for attempt in 1..=DEFAULT_CIRCUIT_BREAKER_THRESHOLD {
+            record_execution_failure(&connection, "workspace-1", "account-1")
+                .expect("failure should record");
+            let (completed_today, consecutive_failures) =
+                load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+            assert_eq!(
+                consecutive_failures, attempt,
+                "failure {attempt} must be counted",
+            );
+            assert_eq!(completed_today, 0, "a failure is not a completion");
+        }
+
+        let (completed_today, failures) =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(
+            execution_budget_blocks(completed_today, failures),
+            Some("circuit_breaker_open"),
+            "the breaker must be open after the configured number of failures",
+        );
+
+        record_execution_success(&connection, "workspace-1", "account-1").expect("success");
+        let (completed_today, after_success) =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(
+            execution_budget_blocks(completed_today, after_success),
+            None,
+            "a success must close the breaker again",
+        );
+    }
+
+    #[test]
+    fn the_daily_limit_stops_further_completions() {
+        let connection = budget_connection();
+        load_execution_counters(&connection, "workspace-1", "account-1").expect("seed counters");
+
+        for _ in 0..DEFAULT_DAILY_EXECUTION_LIMIT {
+            let (completed_today, failures) =
+                load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+            assert_eq!(
+                execution_budget_blocks(completed_today, failures),
+                None,
+                "the daily limit must not trip before the budget is spent",
+            );
+            record_execution_success(&connection, "workspace-1", "account-1").expect("success");
+        }
+
+        let (completed_today, failures) =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(completed_today, DEFAULT_DAILY_EXECUTION_LIMIT);
+        assert_eq!(
+            execution_budget_blocks(completed_today, failures),
+            Some("daily_limit_reached"),
+            "the daily limit must stop execution once the budget is spent",
+        );
+    }
+
+    // Budgets are per account and per workspace, never global.
+    #[test]
+    fn execution_budgets_are_scoped_per_account_and_workspace() {
+        let connection = budget_connection();
+        // record_execution_success updates an existing row, so seed it the way
+        // the execution path does.
+        load_execution_counters(&connection, "workspace-1", "account-1").expect("seed counters");
+        for _ in 0..DEFAULT_DAILY_EXECUTION_LIMIT {
+            record_execution_success(&connection, "workspace-1", "account-1")
+                .expect("first account spends its budget");
+        }
+
+        let (spent, _) =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(
+            execution_budget_blocks(spent, 0),
+            Some("daily_limit_reached")
+        );
+
+        for (workspace, account) in [("workspace-1", "account-2"), ("workspace-2", "account-1")] {
+            let (completed_today, _) =
+                load_execution_counters(&connection, workspace, account).expect("load");
+            assert_eq!(
+                completed_today, 0,
+                "{workspace}/{account} must keep its own budget",
+            );
+            assert_eq!(
+                execution_budget_blocks(completed_today, 0),
+                None,
+                "{workspace}/{account} must not inherit another account's exhausted budget",
+            );
+        }
+    }
+
+    // A stale day_key must reset both counters, otherwise an account that hit
+    // its limit yesterday would stay blocked forever.
+    #[test]
+    fn counters_reset_when_the_day_rolls_over() {
+        let connection = budget_connection();
+        connection
+            .execute(
+                "INSERT INTO execution_counters(
+                   workspace_id, account_id, day_key, completed_today, consecutive_failures
+                 ) VALUES ('workspace-1', 'account-1', ?1, ?2, ?3)",
+                params![
+                    execution_day_key() - 1,
+                    DEFAULT_DAILY_EXECUTION_LIMIT,
+                    DEFAULT_CIRCUIT_BREAKER_THRESHOLD
+                ],
+            )
+            .expect("yesterday's counters should be seeded");
+
+        let (completed_today, consecutive_failures) =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(
+            completed_today, 0,
+            "the daily budget must reset on a new day"
+        );
+        assert_eq!(
+            consecutive_failures, 0,
+            "the breaker must reset on a new day"
+        );
+        assert_eq!(
+            execution_budget_blocks(completed_today, consecutive_failures),
+            None,
+            "a new day must clear both budgets",
+        );
+    }
+}
+
+#[cfg(test)]
+mod research_publish_audit_tests {
+    use super::*;
+
+    fn research_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1');
+
+                INSERT INTO knowledge_sources(id, workspace_id, type, title, locator, collected_at)
+                VALUES ('source-a', 'workspace-a', 'url', 'Source', 'https://example.com', '1');
+
+                INSERT INTO research_briefs(id, workspace_id, name, kind, question, objectives_json, status, created_at, updated_at)
+                VALUES ('brief-a', 'workspace-a', 'Brief', 'market', 'Question?', '[]', 'active', '1', '1');
+
+                INSERT INTO research_findings(id, workspace_id, brief_id, title, statement, source_ids_json, confidence, observed_at, expires_at, tags_json, created_at, updated_at)
+                VALUES ('finding-a', 'workspace-a', 'brief-a', 'Finding', 'Grounded statement', '["source-a"]', 0.95, '2026-09-26T00:00:00Z', NULL, '[]', '1', '1');
+                "#,
+            )
+            .expect("research fixture should be created");
+        connection
+    }
+
+    // A variant without the integrity triggers, for tests that must construct
+    // a row the triggers would correctly refuse. Never used to assert that the
+    // triggers allow something.
+    fn research_connection_without_triggers() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        connection
+    }
+
+    fn audit_events(
+        connection: &Connection,
+        category: &str,
+        action: &str,
+    ) -> Vec<(String, String, String, Option<String>)> {
+        let mut statement = connection
+            .prepare(
+                "SELECT outcome, actor, workspace_id, entity_id
+                 FROM audit_events WHERE category=?1 AND action=?2
+                 ORDER BY timestamp",
+            )
+            .expect("audit query should prepare");
+        statement
+            .query_map(params![category, action], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            })
+            .expect("audit query should run")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("audit rows should decode")
+    }
+
+    // RESEARCH-03: publishing to Knowledge must be audited.
+    #[test]
+    fn publishing_a_finding_to_knowledge_writes_an_audit_event() {
+        let connection = research_connection();
+        assert!(
+            audit_events(&connection, "research", "publish_to_knowledge").is_empty(),
+            "no audit event should exist before publishing",
+        );
+
+        publish_finding_to_knowledge(&connection, "workspace-a", "finding-a")
+            .expect("publishing a grounded finding should succeed");
+
+        let events = audit_events(&connection, "research", "publish_to_knowledge");
+        assert_eq!(
+            events.len(),
+            1,
+            "publishing must record exactly one audit event",
+        );
+        assert_eq!(events[0].0, "success");
+        assert_eq!(events[0].1, "user");
+        assert_eq!(events[0].2, "workspace-a");
+        assert_eq!(events[0].3.as_deref(), Some("finding-a"));
+    }
+
+    // The audit chain must remain verifiable after a publish.
+    #[test]
+    fn the_audit_chain_still_verifies_after_publishing() {
+        let connection = research_connection();
+        publish_finding_to_knowledge(&connection, "workspace-a", "finding-a")
+            .expect("publishing should succeed");
+
+        assert!(
+            verify_audit_chain(&connection, "workspace-a").expect("chain check should run"),
+            "the audit chain must verify after a publish",
+        );
+    }
+
+    #[test]
+    fn publishing_promotes_confidence_to_a_trust_level_and_tags_the_item() {
+        let connection = research_connection();
+        let view = publish_finding_to_knowledge(&connection, "workspace-a", "finding-a")
+            .expect("publishing should succeed");
+
+        assert_eq!(view.trust, "verified", "0.95 confidence is verified");
+        assert!(
+            view.tags_json.contains("research"),
+            "published knowledge must be tagged as research: {}",
+            view.tags_json,
+        );
+        assert_eq!(view.statement, "Grounded statement");
+
+        let stored: (String, String) = connection
+            .query_row(
+                "SELECT trust, source_ids_json FROM knowledge_items WHERE id=?1",
+                params![&view.id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("published item should be persisted");
+        assert_eq!(stored.0, "verified");
+        assert_eq!(stored.1, r#"["source-a"]"#);
+    }
+
+    // Republishing updates in place rather than duplicating the item.
+    #[test]
+    fn republishing_updates_the_same_knowledge_item() {
+        let connection = research_connection();
+        let first = publish_finding_to_knowledge(&connection, "workspace-a", "finding-a")
+            .expect("first publish");
+        let second = publish_finding_to_knowledge(&connection, "workspace-a", "finding-a")
+            .expect("second publish");
+
+        assert_eq!(first.id, second.id, "republishing must reuse the same item");
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_items WHERE id=?1",
+                params![&first.id],
+                |row| row.get(0),
+            )
+            .expect("count should be readable");
+        assert_eq!(count, 1, "republishing must not duplicate the item");
+
+        let events = audit_events(&connection, "research", "publish_to_knowledge");
+        assert_eq!(events.len(), 2, "each publish attempt must be audited",);
+    }
+
+    // A finding that is not in the active workspace must not publish.
+    #[test]
+    fn publishing_a_finding_from_another_workspace_is_refused() {
+        let connection = research_connection();
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-b', 'B', '1');
+                INSERT INTO knowledge_sources(id, workspace_id, type, title, locator, collected_at)
+                VALUES ('source-b', 'workspace-b', 'url', 'Source', 'https://other.example', '1');
+                INSERT INTO research_briefs(id, workspace_id, name, kind, question, objectives_json, status, created_at, updated_at)
+                VALUES ('brief-b', 'workspace-b', 'Brief', 'market', 'Question?', '[]', 'active', '1', '1');
+                INSERT INTO research_findings(id, workspace_id, brief_id, title, statement, source_ids_json, confidence, observed_at, expires_at, tags_json, created_at, updated_at)
+                VALUES ('finding-b', 'workspace-b', 'brief-b', 'Finding', 'Foreign statement', '["source-b"]', 0.95, '2026-09-26T00:00:00Z', NULL, '[]', '1', '1');
+                "#,
+            )
+            .expect("second workspace fixture should be created");
+
+        let error = publish_finding_to_knowledge(&connection, "workspace-a", "finding-b")
+            .expect_err("a finding from another workspace must not publish");
+        assert!(
+            error.contains("not found in active workspace"),
+            "unexpected error: {error}",
+        );
+
+        assert!(
+            audit_events(&connection, "research", "publish_to_knowledge").is_empty(),
+            "a refused publish must not record a success audit event",
+        );
+    }
+
+    // A finding whose sources are not in the workspace must be refused before
+    // anything is written.
+    #[test]
+    fn publishing_a_finding_with_foreign_sources_is_refused() {
+        // research_connection() enables the integrity triggers, which correctly
+        // refuse to create a finding citing another workspace's source. Build
+        // this row on a connection without triggers so the test can exercise
+        // what publish_finding_to_knowledge does when handed such a finding.
+        let connection = research_connection_without_triggers();
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                INSERT INTO knowledge_sources(id, workspace_id, type, title, locator, collected_at)
+                VALUES ('source-b', 'workspace-b', 'url', 'Foreign', 'https://other.example', '1');
+                INSERT INTO research_briefs(id, workspace_id, name, kind, question, objectives_json, status, created_at, updated_at)
+                VALUES ('brief-local', 'workspace-a', 'Local brief', 'market', 'Question?', '[]', 'active', '1', '1');
+                "#,
+            )
+            .expect("local fixture should be created");
+
+        // source_ids_json carries a real foreign key, so the mismatched row can
+        // only exist with enforcement off -- which is precisely the corrupted
+        // state this test needs to hand to publish_finding_to_knowledge.
+        connection
+            .execute_batch("PRAGMA foreign_keys = OFF;")
+            .expect("FKs should relax");
+        connection
+            .execute(
+                r#"INSERT INTO research_findings(
+                   id, workspace_id, brief_id, title, statement, source_ids_json,
+                   confidence, observed_at, expires_at, tags_json, created_at, updated_at
+                 ) VALUES (
+                   'finding-bad', 'workspace-a', 'brief-local', 'Bad', 'Cites a foreign source',
+                   '["source-b"]', 0.9, '2026-09-26T00:00:00Z', NULL, '[]', '1', '1'
+                 )"#,
+                [],
+            )
+            .expect("finding citing a foreign source should be seedable");
+        connection
+            .execute_batch("PRAGMA foreign_keys = ON;")
+            .expect("FKs should be restored");
+
+        let error = publish_finding_to_knowledge(&connection, "workspace-a", "finding-bad")
+            .expect_err("a finding citing foreign sources must not publish");
+        assert!(!error.is_empty(), "publishing must fail with a reason");
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM knowledge_items", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "nothing may be persisted for a refused publish");
+        assert!(
+            audit_events(&connection, "research", "publish_to_knowledge").is_empty(),
+            "a refused publish must not record a success audit event",
+        );
     }
 }
 
@@ -14311,7 +16506,7 @@ mod experimentation_runtime_tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("version");
-        assert_eq!(version, 16);
+        assert_eq!(version, SCHEMA_VERSION);
 
         for table in [
             "research_briefs",
@@ -14327,6 +16522,113 @@ mod experimentation_runtime_tests {
                 )
                 .expect("research table query should work");
             assert_eq!(exists, 1, "expected migrated research table {table}");
+        }
+    }
+
+    #[test]
+    fn schema_migrates_to_v17_and_drops_ungrounded_insights() {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("current schema should be creatable");
+
+        // Recreate the v16 insights table, which had no grounding constraint,
+        // and seed it with one grounded and one ungrounded row.
+        connection
+            .execute_batch(
+                "
+                DROP TABLE IF EXISTS insights;
+                CREATE TABLE insights (
+                  id TEXT PRIMARY KEY,
+                  workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id) ON DELETE CASCADE,
+                  kind TEXT NOT NULL CHECK(kind IN ('performance', 'anomaly', 'learning', 'trend', 'recommendation')),
+                  title TEXT NOT NULL,
+                  summary TEXT NOT NULL,
+                  metric TEXT,
+                  value REAL,
+                  confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+                  source_ids_json TEXT NOT NULL DEFAULT '[]',
+                  observed_at TEXT NOT NULL,
+                  created_at TEXT NOT NULL,
+                  updated_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_insights_workspace_kind
+                  ON insights(workspace_id, kind, observed_at);
+                CREATE INDEX IF NOT EXISTS idx_insights_workspace_updated
+                  ON insights(workspace_id, updated_at);
+
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1');
+
+                INSERT INTO insights(
+                  id, workspace_id, kind, title, summary, confidence,
+                  source_ids_json, observed_at, created_at, updated_at
+                ) VALUES (
+                  'grounded', 'workspace-a', 'learning', 'Kept', 'Has a source', 0.7,
+                  '[\"analytics-a\"]', '2026-09-25T00:00:00Z', '1', '1'
+                );
+
+                INSERT INTO insights(
+                  id, workspace_id, kind, title, summary, confidence,
+                  source_ids_json, observed_at, created_at, updated_at
+                ) VALUES (
+                  'ungrounded', 'workspace-a', 'learning', 'Dropped', 'No source', 0.7,
+                  '[]', '2026-09-25T00:00:00Z', '1', '1'
+                );
+
+                PRAGMA user_version = 16;",
+            )
+            .expect("v16 insights fixture should be prepared");
+
+        migrate_schema(&connection).expect("v16 to v17 migration should succeed");
+
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("version should be readable");
+        assert_eq!(version, SCHEMA_VERSION);
+
+        let survivors: Vec<String> = connection
+            .prepare("SELECT id FROM insights ORDER BY id")
+            .expect("insights should be queryable")
+            .query_map([], |row| row.get(0))
+            .expect("insights should be readable")
+            .collect::<Result<Vec<String>, _>>()
+            .expect("ids should decode");
+        assert_eq!(
+            survivors,
+            vec!["grounded".to_string()],
+            "the grounded insight must survive and the ungrounded one must be dropped",
+        );
+
+        // The rebuilt table must carry the constraint.
+        assert!(
+            connection
+                .execute(
+                    "INSERT INTO insights(
+                       id, workspace_id, kind, title, summary, confidence,
+                       source_ids_json, observed_at, created_at, updated_at
+                     ) VALUES (
+                       'later', 'workspace-a', 'learning', 'Later', 'No source', 0.5,
+                       '[]', '2026-09-25T00:00:00Z', '1', '1'
+                     )",
+                    [],
+                )
+                .is_err(),
+            "the rebuilt table must reject an ungrounded insight",
+        );
+
+        for index in [
+            "idx_insights_workspace_kind",
+            "idx_insights_workspace_updated",
+        ] {
+            let exists: i64 = connection
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name=?1",
+                    params![index],
+                    |row| row.get(0),
+                )
+                .expect("index query should work");
+            assert_eq!(exists, 1, "the migration must recreate index {index}");
         }
     }
 
@@ -14536,6 +16838,224 @@ mod operational_audit_bridge_tests {
 }
 
 #[cfg(test)]
+mod operational_event_spine_tests {
+    use super::*;
+
+    fn spine_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user');
+                 INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES ('workspace-a', 'local-user', 'owner', 1, '1'),
+                        ('workspace-b', 'local-user', 'owner', 1, '1');",
+            )
+            .expect("spine fixture should be created");
+        connection
+    }
+
+    fn append(
+        connection: &mut Connection,
+        workspace_id: &str,
+        id: Option<&str>,
+        parent_event_id: Option<&str>,
+        trace_id: Option<&str>,
+    ) -> Result<OperationalEventView, AppError> {
+        append_operational_event(
+            connection,
+            workspace_id,
+            id,
+            "2026-09-26T00:00:00Z",
+            "command.completed",
+            "succeeded",
+            "user",
+            "local-user",
+            Some("task"),
+            Some("task-1"),
+            trace_id,
+            parent_event_id,
+            Some("{}"),
+        )
+    }
+
+    // CMD-01: the dispatcher writes to the persisted spine, not just an
+    // in-memory log. Sequence allocation must survive a reopen.
+    #[test]
+    fn events_are_persisted_with_a_monotonic_sequence() {
+        let mut connection = spine_connection();
+        let first = append(&mut connection, "workspace-a", None, None, None).expect("append");
+        let second = append(&mut connection, "workspace-a", None, None, None).expect("append");
+
+        assert_eq!(first.sequence, 1);
+        assert_eq!(
+            second.sequence, 2,
+            "sequence must advance within a workspace"
+        );
+
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM operational_events WHERE workspace_id='workspace-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("count should be readable");
+        assert_eq!(count, 2, "both events must be persisted");
+    }
+
+    // Sequence is per workspace, not global.
+    #[test]
+    fn sequence_is_allocated_per_workspace() {
+        let mut connection = spine_connection();
+        append(&mut connection, "workspace-a", None, None, None).expect("append a");
+        append(&mut connection, "workspace-b", None, None, None).expect("append b");
+        let third_a = append(&mut connection, "workspace-a", None, None, None).expect("append a2");
+
+        assert_eq!(
+            third_a.sequence, 2,
+            "workspace-a resumes at its own next sequence"
+        );
+    }
+
+    // A parent must already exist in the same workspace: this is what makes
+    // the spine a verifiable chain rather than a flat log.
+    #[test]
+    fn a_parent_event_must_exist_in_the_same_workspace() {
+        let mut connection = spine_connection();
+        let parent = append(&mut connection, "workspace-a", None, None, None).expect("parent");
+
+        let child = append(
+            &mut connection,
+            "workspace-a",
+            None,
+            Some(&parent.id),
+            Some("trace-1"),
+        )
+        .expect("a child of a known parent should be accepted");
+        assert_eq!(child.parent_event_id.as_deref(), Some(parent.id.as_str()));
+        assert_eq!(child.trace_id.as_deref(), Some("trace-1"));
+
+        let error = append(
+            &mut connection,
+            "workspace-a",
+            None,
+            Some("event-that-does-not-exist"),
+            None,
+        )
+        .expect_err("an unknown parent must be refused");
+        assert!(
+            matches!(error, AppError::InvalidPayload),
+            "unexpected error: {error:?}",
+        );
+    }
+
+    // A parent belonging to another workspace is not a valid parent here.
+    #[test]
+    fn a_parent_from_another_workspace_is_refused() {
+        let mut connection = spine_connection();
+        let foreign = append(&mut connection, "workspace-b", None, None, None).expect("append b");
+
+        let error = append(
+            &mut connection,
+            "workspace-a",
+            None,
+            Some(&foreign.id),
+            None,
+        )
+        .expect_err("a foreign parent must be refused");
+        assert!(
+            matches!(error, AppError::InvalidPayload),
+            "unexpected error: {error:?}",
+        );
+    }
+
+    // Reusing an id is refused, so the chain cannot be rewritten.
+    #[test]
+    fn a_duplicate_event_id_is_refused() {
+        let mut connection = spine_connection();
+        append(&mut connection, "workspace-a", Some("event-1"), None, None).expect("first");
+
+        let error = append(&mut connection, "workspace-a", Some("event-1"), None, None)
+            .expect_err("a duplicate id must be refused");
+        assert!(
+            matches!(error, AppError::Database(_)),
+            "unexpected error: {error:?}",
+        );
+        assert!(
+            format!("{error:?}")
+                .to_lowercase()
+                .contains("unique constraint"),
+            "the refusal must name the duplicate id: {error:?}",
+        );
+
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM operational_events WHERE id='event-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("count should be readable");
+        assert_eq!(count, 1, "the original event must be unchanged");
+    }
+
+    #[test]
+    fn an_empty_workspace_or_actor_id_is_refused() {
+        let mut connection = spine_connection();
+        assert!(append(&mut connection, "  ", None, None, None).is_err());
+
+        let error = append_operational_event(
+            &mut connection,
+            "workspace-a",
+            None,
+            "2026-09-26T00:00:00Z",
+            "command.completed",
+            "succeeded",
+            "user",
+            "  ",
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .expect_err("an empty actor id must be refused");
+        assert!(
+            matches!(error, AppError::InvalidPayload),
+            "unexpected error: {error:?}",
+        );
+    }
+
+    // The spine must be queryable per workspace, which is what the dispatcher
+    // relies on when it reads a bounded trace back.
+    #[test]
+    fn events_are_listable_in_sequence_order_per_workspace() {
+        let mut connection = spine_connection();
+        append(&mut connection, "workspace-a", None, None, None).expect("first");
+        append(&mut connection, "workspace-b", None, None, None).expect("other workspace");
+        append(&mut connection, "workspace-a", None, None, None).expect("second");
+
+        let mut statement = connection
+            .prepare(
+                "SELECT sequence FROM operational_events
+                 WHERE workspace_id='workspace-a' ORDER BY sequence",
+            )
+            .expect("query should prepare");
+        let sequences = statement
+            .query_map([], |row| row.get::<_, i64>(0))
+            .expect("query should run")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("rows should decode");
+
+        assert_eq!(sequences, vec![1, 2], "the other workspace must not appear");
+    }
+}
+
+#[cfg(test)]
 mod interrupted_restore_recovery_tests {
     use super::*;
 
@@ -14574,7 +17094,7 @@ mod interrupted_restore_recovery_tests {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version should be readable");
-        assert_eq!(version, 16);
+        assert_eq!(version, SCHEMA_VERSION);
 
         let experiment_tables: Vec<String> = {
             let mut statement = connection
@@ -14770,5 +17290,180 @@ mod interrupted_restore_recovery_tests {
         assert!(!previous.exists());
 
         fs::remove_dir_all(&root).expect("recovery fixture directory should be removed");
+    }
+}
+
+#[cfg(test)]
+mod workspace_role_authorization_tests {
+    use super::*;
+
+    fn membership_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');",
+            )
+            .expect("workspaces should be created");
+        connection
+    }
+
+    fn grant_for_user(connection: &Connection, workspace_id: &str, user_id: &str, role: &str) {
+        connection
+            .execute(
+                "INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES (?1, ?2, ?3, 1, '1')",
+                params![workspace_id, user_id, role],
+            )
+            .expect("membership should be created");
+    }
+
+    fn act_as(connection: &Connection, user_id: &str) {
+        connection
+            .execute(
+                "INSERT INTO runtime_state(key, value) VALUES ('local_user_id', ?1)
+                 ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                params![user_id],
+            )
+            .expect("local user should be switchable");
+    }
+
+    // AppError cannot derive PartialEq (it wraps rusqlite::Error and
+    // io::Error), so assert the refusal by variant instead of by equality.
+    fn assert_denied(result: Result<(), AppError>, context: &str) {
+        match result {
+            Err(AppError::Unauthorized) => {}
+            Err(other) => panic!("{context}: expected Unauthorized, got {other:?}"),
+            Ok(()) => panic!("{context}: expected Unauthorized, but the call succeeded"),
+        }
+    }
+
+    // The write and read gates as the real command paths apply them. These
+    // previously restated the production role lists locally, which meant the
+    // tests passed even if a command's actual required roles changed.
+    fn require_write_role(connection: &Connection, workspace_id: &str) -> Result<(), AppError> {
+        require_workspace_role_for(connection, workspace_id, campaign_write_roles())
+    }
+
+    fn require_read_role(connection: &Connection, workspace_id: &str) -> Result<(), AppError> {
+        require_workspace_role_for(
+            connection,
+            workspace_id,
+            &["owner", "admin", "editor", "operator", "reviewer", "viewer"],
+        )
+    }
+
+    // Campaign creation requires campaign.manage, which packages/core's
+    // access matrix grants to owner, admin and editor only. operator holds
+    // campaign.read and queue.execute but not campaign.manage, so it is
+    // deliberately absent here.
+    #[test]
+    fn every_role_with_campaign_manage_is_authorized_to_write() {
+        let connection = membership_connection();
+        for role in campaign_write_roles() {
+            grant_for_user(&connection, "workspace-a", &format!("user-{role}"), role);
+        }
+        for role in campaign_write_roles() {
+            act_as(&connection, &format!("user-{role}"));
+            assert!(
+                require_write_role(&connection, "workspace-a").is_ok(),
+                "{role} must be authorized to write",
+            );
+        }
+    }
+
+    // The other half of the policy: operator may read campaigns but must not
+    // manage them, so the write gate refuses it.
+    #[test]
+    fn an_operator_is_authorized_to_read_but_refused_campaign_manage() {
+        let connection = membership_connection();
+        grant_for_user(&connection, "workspace-a", "user-operator", "operator");
+        act_as(&connection, "user-operator");
+
+        assert!(
+            require_read_role(&connection, "workspace-a").is_ok(),
+            "operator must be authorized to read",
+        );
+        assert_denied(
+            require_write_role(&connection, "workspace-a"),
+            "operator holds campaign.read but not campaign.manage",
+        );
+    }
+
+    // RBAC-01: a role without write privilege must be refused, not silently
+    // downgraded. reviewer and viewer are the two that exist.
+    #[test]
+    fn reviewer_and_viewer_are_refused_the_write_path() {
+        let connection = membership_connection();
+        grant_for_user(&connection, "workspace-a", "user-reviewer", "reviewer");
+        grant_for_user(&connection, "workspace-a", "user-viewer", "viewer");
+
+        for user in ["user-reviewer", "user-viewer"] {
+            act_as(&connection, user);
+            assert_denied(
+                require_write_role(&connection, "workspace-a"),
+                &format!("{user} write"),
+            );
+            assert!(
+                require_read_role(&connection, "workspace-a").is_ok(),
+                "{user} must retain read access",
+            );
+        }
+    }
+
+    #[test]
+    fn a_user_with_no_membership_is_unauthorized() {
+        let connection = membership_connection();
+        grant_for_user(&connection, "workspace-a", "user-editor", "editor");
+        act_as(&connection, "user-outsider");
+
+        assert_denied(
+            require_write_role(&connection, "workspace-a"),
+            "non-member write",
+        );
+        assert_denied(
+            require_read_role(&connection, "workspace-a"),
+            "non-member read",
+        );
+    }
+
+    // Authorization must not leak across workspaces.
+    #[test]
+    fn membership_in_one_workspace_does_not_authorize_another() {
+        let connection = membership_connection();
+        grant_for_user(&connection, "workspace-a", "user-owner", "owner");
+        act_as(&connection, "user-owner");
+
+        assert!(require_write_role(&connection, "workspace-a").is_ok());
+        assert_denied(
+            require_write_role(&connection, "workspace-b"),
+            "cross-workspace write",
+        );
+    }
+
+    // A deactivated membership must not keep its privileges.
+    #[test]
+    fn a_deactivated_membership_is_unauthorized() {
+        let connection = membership_connection();
+        grant_for_user(&connection, "workspace-a", "user-admin", "admin");
+        act_as(&connection, "user-admin");
+        assert!(require_write_role(&connection, "workspace-a").is_ok());
+
+        connection
+            .execute(
+                "UPDATE workspace_memberships SET active=0
+                 WHERE workspace_id='workspace-a' AND user_id='user-admin'",
+                [],
+            )
+            .expect("membership should be deactivated");
+
+        assert_denied(
+            require_write_role(&connection, "workspace-a"),
+            "deactivated membership",
+        );
     }
 }

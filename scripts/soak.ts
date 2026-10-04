@@ -50,9 +50,12 @@ let port = requestedPort !== undefined && requestedPort > 0 ? requestedPort : 0;
 // 600 MB bounds RSS across a long-running soak deliberately; it is a
 // distinct budget from the 200 MB startup-time peak enforced in
 // scripts/startup-memory-benchmark.mjs. Do not conflate the two.
+const requestedMaxCycles = readNumericArg("--max-cycles");
 const RSS_BUDGET_MB = 600;
 const CYCLE_MS = 2_000;
 const deadline = Date.now() + minutes * 60_000;
+const startedAtMs = Date.now();
+
 
 const root = process.cwd();
 const expectedGitSha = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
@@ -136,8 +139,7 @@ function rssMb(pid: number): number {
   }
 }
 
-function taskForCycle(cycle: number): Task {
-  const timestamp = new Date().toISOString();
+function taskForCycle(cycle: number, timestamp: string): Task {
   return {
     id: `soak-task-${cycle}`,
     workspaceId: "soak-workspace",
@@ -159,7 +161,7 @@ function taskForCycle(cycle: number): Task {
 
 function runCoreInvariantWorkload(cycle: number): void {
   const timestamp = new Date().toISOString();
-  const task = taskForCycle(cycle);
+  const task = taskForCycle(cycle, timestamp);
   const account: SocialAccount = {
     id: task.accountId,
     workspaceId: task.workspaceId,
@@ -465,7 +467,10 @@ async function main(): Promise<void> {
 
   let lastSample = 0;
 
-  while (Date.now() < deadline) {
+  while (
+    Date.now() < deadline &&
+    (requestedMaxCycles === undefined || cycles < requestedMaxCycles)
+  ) {
     if (
       server.exitCode !== null ||
       server.signalCode !== null ||
@@ -621,10 +626,19 @@ async function writeSoakSummary(
     }
   }
 
+  const elapsedMinutes = (Date.now() - startedAtMs) / 60_000;
+  if (elapsedMinutes < minutes) {
+    failures.push(
+      `soak ended after ${elapsedMinutes.toFixed(2)} min of a requested ${minutes} min`,
+    );
+  }
+
   const summary = {
     runId,
     gitSha,
     minutes,
+    requestedMinutes: minutes,
+    elapsedMinutes,
     cycles,
     healthOk,
     healthFailures,

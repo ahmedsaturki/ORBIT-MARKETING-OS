@@ -27,3 +27,11 @@ auditConfig:
   ignoreGhsas:
     - GHSA-86w9-cpqp-85rv
     - GHSA-vfj7-8cjw-p6xm
+
+# GHSA-vfj7-8cjw-p6xm (braces): stack exhaustion via deeply nested glob patterns.
+# braces 3.0.3 is the latest published version and the advisory declares no
+# patched version, so there is nothing to upgrade to. It arrives only through
+# Expo/Metro bundler tooling under packages/mobile and is never part of a
+# shipped runtime artifact; it processes repository-controlled glob patterns
+# during a build, not attacker-supplied input at runtime. Governed by
+# scripts/braces-audit-exception.test.mjs with a review date.

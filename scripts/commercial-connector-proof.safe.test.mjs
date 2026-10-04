@@ -1,4 +1,4 @@
-import { spawnPnpm } from "./lib/spawn-pnpm.mjs";
+import { runTsx } from "./run-tsx.mjs";
 
 const env = { ...process.env };
 delete env.ORBIT_TELEGRAM_TEST_TOKEN;
@@ -6,11 +6,15 @@ delete env.ORBIT_TELEGRAM_TEST_CHAT_ID;
 delete env.ORBIT_LINKEDIN_TEST_TOKEN;
 delete env.ORBIT_LINKEDIN_TEST_AUTHOR_URN;
 
-const result = spawnPnpm(
-  ["exec", "tsx", "scripts/commercial-connector-proof.ts", "--confirm-live"],
+// spawnSync reports a non-zero exit through `status` rather than throwing.
+const result = runTsx(
+  ["scripts/commercial-connector-proof.ts", "--confirm-live"],
   { env },
 );
 
+if (result.error) {
+  throw new Error(`proof failed to launch: ${result.error.message}`);
+}
 if (result.status !== 2) {
   throw new Error(
     `expected missing-input fail-closed exit 2, got ${result.status}\nstdout=${result.stdout}\nstderr=${result.stderr}`,
@@ -34,9 +38,9 @@ for (const argv of [
   ["--confirm-live", "--output"],
   ["--confirm-live", "--output", "--confirm-live"],
 ]) {
-  const invalidOutput = spawnPnpm(
-    ["exec", "tsx", "scripts/commercial-connector-proof.ts", ...argv],
-    { env },
+  const invalidOutput = runTsx(
+    ["scripts/commercial-connector-proof.ts", ...argv],
+    { env: process.env },
   );
   if (invalidOutput.status !== 2) {
     throw new Error(

@@ -156,9 +156,12 @@
       "level": "L2_VERIFIED",
       "evidence": [
         "Verified 10-minute soak harness/run from the validated release line",
-        "Startup and memory budgets are now enforced fail-closed (STARTUP_BUDGET_MS 8000, RSS_BUDGET_MB 200); local run measured 3780.67ms / 80.49MB"
+        "Startup and memory budgets are now enforced fail-closed (STARTUP_BUDGET_MS 8000, RSS_BUDGET_MB 200); local run measured 3780.67ms / 80.49MB",
+        "logs/soak-summary.json :: runId 2026-09-24T21-29-51-046Z, minutes=10, 295 cycles, ok=true, zero failures",
+        "scripts/soak.ts :: the harness records requestedMinutes vs elapsedMinutes and fails any run ending before its deadline; proved load-bearing by removing the guard",
+        "2-minute run on this audit machine: 48 cycles, zero invariant failures (the harness previously aborted at ~68 cycles on a claim-timestamp race)"
       ],
-      "notes": "The 10-minute soak harness is verified and the separate 600MB soak ceiling recorded in logs/soak-summary.json is unchanged. A complete 24-hour stability soak on the exact release SHA remains open, so OPS-02 stays UNVERIFIED in the acceptance matrix rather than being marked PASS.",
+      "notes": "The 10-minute soak harness is verified and the separate 600MB soak ceiling recorded in logs/soak-summary.json is unchanged. The committed artifact records minutes and finishedAt but no startedAt or gitSha, so it is neither independently time-bracketed nor bound to a specific commit; the harness now emits elapsed time and gitSha so future runs will be. A complete 24-hour stability soak on the exact release SHA remains open and cannot be produced on an audit machine: the workflow is actor-gated and requires a self-hosted runner. OPS-02 therefore stays UNVERIFIED in the acceptance matrix rather than being marked PASS.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37134186892"
       ],

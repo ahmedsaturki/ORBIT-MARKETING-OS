@@ -6,7 +6,6 @@ const GHSA = "GHSA-86w9-cpqp-85rv";
 const REVIEW_AFTER = "2026-11-03";
 const EXPECTED_PATCH_HASH =
   "1da5306df32cb00fb9309034ffcd35c1126ccd13ce79f5f0031825ad79bbab27";
-
 // GHSA-vfj7-8cjw-p6xm ("braces" stack-exhaustion ReDoS) has no released
 // patched version and is only reachable through the expo CLI build tooling
 // chain, which globs developer-controlled repository paths at build time.
@@ -56,11 +55,17 @@ assert(
   existsSync("patches/node-forge@1.4.0.patch"),
   "node-forge patch file is missing",
 );
-const patch = readFileSync("patches/node-forge@1.4.0.patch", "utf8");
+const patch = readFileSync("patches/node-forge@1.4.0.patch");
 assert(patch.length > 0, "node-forge patch file is empty");
-const actualPatchHash = createHash("sha256").update(patch).digest("hex");
+// pnpm hashes the LF form of the patch. On Windows, core.autocrlf=true
+// checks the file out with CRLF, so a raw byte hash diverges from the
+// lockfile even though the reviewed artifact is unchanged. Normalise before
+// hashing so this asserts patch identity, not the host's line endings.
+const patchHash = createHash("sha256")
+  .update(patch.toString("utf8").replace(/\r\n/g, "\n"), "utf8")
+  .digest("hex");
 assert.equal(
-  actualPatchHash,
+  patchHash,
   EXPECTED_PATCH_HASH,
   "committed node-forge patch does not match the lockfile hash",
 );

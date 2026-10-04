@@ -1,4 +1,4 @@
-export const DATABASE_SCHEMA_VERSION = 16;
+export const DATABASE_SCHEMA_VERSION = 17;
 
 export const DATABASE_SCHEMA_SQL = `
 PRAGMA foreign_keys = ON;
@@ -540,7 +540,8 @@ CREATE TABLE IF NOT EXISTS insights (
   metric TEXT,
   value REAL,
   confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
-  source_ids_json TEXT NOT NULL DEFAULT '[]',
+  source_ids_json TEXT NOT NULL DEFAULT '[]'
+    CHECK(json_valid(source_ids_json) AND json_array_length(source_ids_json) > 0),
   observed_at TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -666,6 +667,6 @@ CREATE TABLE IF NOT EXISTS marketing_link_evidence (
 CREATE INDEX IF NOT EXISTS idx_marketing_link_evidence_workspace_link
   ON marketing_link_evidence(workspace_id, link_id, observed_at);
 
-PRAGMA user_version = 16;
+PRAGMA user_version = 17;
 
 `;

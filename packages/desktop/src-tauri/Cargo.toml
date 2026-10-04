@@ -35,3 +35,21 @@ time = { version = "0.3", features = ["formatting", "parsing"] }
 tauri = { version = "2.11.5", features = [] }
 thiserror = "2"
 zeroize = "1"
+
+# Local test builds omit debug info: a full Tauri debug build with debuginfo=2
+# needs several GB, which does not fit on constrained CI/dev disks.
+[profile.dev]
+debug = 0
+
+[profile.dev.package."*"]
+debug = 0
+
+# Build scripts and proc-macros are compiled under their own profile; without
+# this they still emit a program database and trip MSVC's LNK1140 size cap.
+[profile.dev.build-override]
+debug = 0
+
+# On Windows/MSVC the linker still emits a program database and aborts with
+# LNK1140 once it exceeds its size cap. Build with
+# `RUSTFLAGS="-C link-arg=/PDB:NONE"` to suppress it; the flag has no effect
+# when set in this manifest.
