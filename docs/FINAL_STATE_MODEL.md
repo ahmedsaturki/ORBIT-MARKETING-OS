@@ -13,7 +13,7 @@ by running the command named beside it, not by reading a prior report.
 
 | Dimension       | Status           | Basis                                                                                                                                                 |
 | --------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Engineering** | **PASS**         | 549 JS tests (core 527, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
+| **Engineering** | **PASS**         | 379 JS tests (core 357, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
 | **Product**     | **PARTIAL**      | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code                                                         |
 | **Release**     | **NOT READY**    | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
 | **Owner Gates** | **10 remaining** | Certificates, credentials, store accounts, human review, wall-clock time                                                                              |
@@ -56,7 +56,7 @@ additive and keep both sides. The acceptance matrix kept this branch's version
 because all four disagreeing statuses were checked: `AI-01` stays PASS on a
 test that runs green here, and `INBOX-01` stays PARTIAL because
 `TelegramConnector.sync` returns `this.connect(context)` and `connect` only
-validates credentials. Six governance gates, 549 JS tests, 182 Rust tests, and typecheck 5/5
+validates credentials. Six governance gates, 379 JS tests, 182 Rust tests, and typecheck 5/5
 pass on the result. See `RECONCILIATION.md` for the per-conflict record.
 
 ### Two script tests fail on this host, and CI proves they are not defects

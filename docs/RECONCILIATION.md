@@ -80,20 +80,20 @@ contract scripts were each run individually rather than trusting the suite.
 
 ## Verification on the merged tree
 
-| Check                                                                                                       | Result                                                           |
-| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `verify:workspace`, `verify:readiness`, `verify:release-docs`, `verify:release`, `verify:ipc`, `verify:omp` | 6/6 PASS                                                         |
-| `pnpm test`                                                                                                 | 549 tests (core 527, desktop 9, mobile 8, web 5), 4/4 tasks PASS |
-| `pnpm typecheck`                                                                                            | 5/5 PASS                                                         |
-| `scripts/health-model-availability.test.mjs`                                                                | PASS                                                             |
-| `scripts/soak-failure-evidence.test.mjs`                                                                    | PASS                                                             |
-| `scripts/braces-audit-exception.test.mjs`                                                                   | PASS                                                             |
-| `scripts/node-forge-audit-exception.test.mjs`                                                               | PASS (after the fix above)                                       |
-| `scripts/release-gate-model.test.mjs`                                                                       | PASS                                                             |
-| `scripts/user-guide-contract.test.mjs`                                                                      | PASS                                                             |
-| `cargo test`                                                                                                | **182 passed, 0 failed**                                         |
-| `cargo clippy --all-targets -- -D warnings`                                                                 | clean                                                            |
-| `cargo fmt --check`                                                                                         | clean                                                            |
+| Check                                                                                                       | Result                                                                        |
+| ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `verify:workspace`, `verify:readiness`, `verify:release-docs`, `verify:release`, `verify:ipc`, `verify:omp` | 6/6 PASS                                                                      |
+| `pnpm test`                                                                                                 | 379 tests (core 357, desktop 9, mobile 8, web 5), 4/4 tasks PASS, matching CI |
+| `pnpm typecheck`                                                                                            | 5/5 PASS                                                                      |
+| `scripts/health-model-availability.test.mjs`                                                                | PASS                                                                          |
+| `scripts/soak-failure-evidence.test.mjs`                                                                    | PASS                                                                          |
+| `scripts/braces-audit-exception.test.mjs`                                                                   | PASS                                                                          |
+| `scripts/node-forge-audit-exception.test.mjs`                                                               | PASS (after the fix above)                                                    |
+| `scripts/release-gate-model.test.mjs`                                                                       | PASS                                                                          |
+| `scripts/user-guide-contract.test.mjs`                                                                      | PASS                                                                          |
+| `cargo test`                                                                                                | **182 passed, 0 failed**                                                      |
+| `cargo clippy --all-targets -- -D warnings`                                                                 | clean                                                                         |
+| `cargo fmt --check`                                                                                         | clean                                                                         |
 
 ### The Rust suite took a second attempt
 

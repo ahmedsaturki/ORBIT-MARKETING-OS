@@ -271,9 +271,14 @@ reporting success.
 > **Counts in sections H and K are as measured at `01cd0622`**, before
 > `origin/main` was merged and before this branch's own test work. They are left
 > as the historical record rather than rewritten. The current figures are
-> **549 JS tests** (core 527, desktop 9, mobile 8, web 5) and **182 Rust tests**;
+> **379 JS tests** (core 357, desktop 9, mobile 8, web 5) and **182 Rust tests**;
 > see `FINAL_STATE_MODEL.md` and `RECONCILIATION.md`. The "105/105 Rust" and
 > "509 JS" numbers in this document are superseded.
+>
+> A later figure of 549 (core 527) was also wrong and has been superseded in turn:
+> it counted the compiled test copies under `packages/core/dist/` that vitest's
+> default glob picked up alongside the sources. `packages/core/vitest.config.ts`
+> now sets `test.include`, so local and CI both report 357.
 
 ### Engineering — **PASS**
 

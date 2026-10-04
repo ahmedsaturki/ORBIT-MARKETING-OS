@@ -23,11 +23,29 @@ Two claims from earlier reporting are corrected by this reconciliation:
 
 - The prior delivery report cited **1046** tests. Its own breakdown does not
   support the figure: the stated parts sum to **1151** (487+9+487+27+36+105),
-  and no run in this tree produces 1046. Measured at commit `2493d4cd`:
-  **533** executing JavaScript tests (core 511, desktop 9, mobile 8, web 5)
+  and no run in this tree produces 1046. Measured at commit `fa1cd782`:
+  **379** executing JavaScript tests (core 357, desktop 9, mobile 8, web 5)
   and **182** Rust tests. The report also cited **87** requirement IDs; this
   matrix defines **83**. `SEARCH-02`..`SEARCH-04`, named in an earlier audit,
   do not exist here and were not counted.
+
+**The 527 figure in earlier drafts of this reconciliation was itself wrong, and
+the cause is a config defect rather than arithmetic.** `packages/core` had no
+`test.include`, so vitest applied its default glob and collected the compiled
+test copies under `dist/` alongside the sources: 28 mirrored files, 170
+duplicate tests, 357 reported as 527 on any machine that had run `pnpm build`
+first. CI orders build after test, so CI never saw `dist/` and reported 357. The
+local total was inflated by exactly the cases CI could not have caught.
+
+`packages/core/vitest.config.ts` now sets
+`include: ["{src,test}/**/*.test.ts"]`, and a local run reports 55 files / 357
+tests, matching CI exactly. The fix was proved load-bearing by removing the
+line and observing 527 return.
+
+The root `pnpm test:coverage` is also broken independently of this: only
+`packages/core` defines a `test:coverage` task, so turbo reports
+"Could not find task". CI already uses `pnpm --filter @orbit/core test:coverage`,
+which works. The matrix row cites the filtered form.
 
 - There is no `FAIL`. The previously reported **REL-02** (`signing=unsigned`) is
   **reclassified** to UNVERIFIED: it is a deliberate documented policy requiring
@@ -151,7 +169,7 @@ runtime. Nothing to fix.
 | OPS-02 | UNVERIFIED | `scripts/soak.ts` + `scripts/soak-failure-evidence.test.mjs` :: the harness reports the duration it actually ran (`requestedMinutes` vs `elapsedMinutes`) and fails a run that ended before its deadline; a 2-minute run completes 48 cycles with zero invariant failures | The 24-hour run itself is still unexecuted. It is owner-triggered (`workflow_dispatch`, actor-gated, self-hosted runner) and cannot be run on this machine. The defect that would have made such evidence worthless — a summary attesting to a duration it never reached — is fixed and proven |
 | PERF-01 | PASS | `scripts/startup-memory-benchmark.mjs (runs in CI, produces STARTUP_MEMORY_BENCHMARK_JSON)` | — |
 | PERF-02 | PASS | `scripts/startup-memory-benchmark.mjs (runs in CI, measures peak RSS)` | — |
-| QA-01 | PASS | `pnpm test:coverage yields 87.86% lines, 85.03% statements, 80.09% branches, 93.98% functions; thresholds met (lines/functions/statements 70, branches 60)` | — |
+| QA-01 | PASS | `pnpm --filter @orbit/core test:coverage yields 88.28% lines, 85.52% statements, 80.69% branches, 93.98% functions; thresholds met (lines/functions/statements 70, branches 60)` | — |
 | QA-02 | PASS | `e2e/ (5 spec files: accessibility-rtl, connector-challenge, public-web, tauri-shell, web-smoke) running in CI via pnpm test:e2e` | E2E suite exists but does not cover all claimed critical paths (approval-gate E2E, publishing E2E, inbox E2E, CRM E2E not present) |
 | DOC-01 | PARTIAL | `scripts/user-guide-contract.test.mjs` (executed locally and wired into `ci.yml`, `user_guide_contract=PASS documented_vars=5`) :: every environment variable the guide tells an operator to set is verified to be read by `server.ts` and offered in `.env.example`; the guide's promise that remote Ollama endpoints are rejected is checked against the enforcement site, which must reject both non-HTTP and non-loopback hosts; the guide is rejected if it shows a non-loopback `OLLAMA_BASE_URL`, contradicting its own guarantee. Both guards were proved load-bearing by drifting the guide and observing the failure | Prose and screenshots still require human review. This contract covers the guide's falsifiable claims, not its descriptive text |
 | DOC-02 | PARTIAL | `scripts/node-forge-audit-exception.test.mjs` (executed locally, `node-forge-audit-exception=PASS ghsa=GHSA-86w9-cpqp-85rv review_after=2026-11-03`) :: the security exception register is machine-enforced, not documentation only. The contract pins the patched-dependency hash to the reviewed artifact, restricts the audit ignore to that single GHSA, asserts the regression test exists and is load-bearing, and **hard-fails after 2026-11-03** | The threat model itself has no executed review artifact — the register is enforced by contract, but no human or independent security review of `SECURITY_THREAT_MODEL.md` is recorded |
