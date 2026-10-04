@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**75 PASS, 0 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements. Every requirement is now either machine-confirmed or carries a stated reason it is not.
+**76 PASS, 1 PARTIAL, 5 UNVERIFIED, 1 FAIL** across 83 requirements. The remaining PARTIAL records evidence that exists alongside a capability that is not built, rather than missing evidence.
 
 Classification rules applied:
 
@@ -107,8 +107,8 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | EXP-06 | PASS | `packages/core/src/experiments/index.test.ts` :: learning write-back is workspace scoped (foreign workspace/experiment/undeclared-variant evidence cannot manufacture a signal; a mismatched summary is refused; every signal and insight carries the experiment's workspace and only its own grounding ids) | — |
 | EXP-07 | PASS | `src/experiments/inference.test.ts (deterministic inference unit tests)` | — |
 | EVENT-01 | PASS | `src/events/index.test.ts (event-spine tests)` | — |
-| INBOX-01 | UNVERIFIED | — | No unified conversation integration test that exercises the conversation model through a connector fixture; native conversation tests exist but do not involve a connector |
-| CRM-01 | UNVERIFIED | — | No test that creates a conversation linked to a contact and verifies the relationship; native conversation_upsert takes contact_id but no integration test exercises this path |
+| INBOX-01 | PARTIAL | `packages/desktop/src-tauri/src/lib.rs` :: conversation_contact_tests :: the_unified_model_carries_account_contact_thread_and_message_count (one conversation carries account, contact, platform thread identity and message count) | No connector ingests into the unified conversation model. Connector.sync is a no-op placeholder in both platforms (telegram delegates to connect, FixtureConnector returns a fixed message) and no fixture drives an inbound message into conversations/messages. The model and its scoping are tested; the ingestion path that would populate it from a platform does not exist yet |
+| CRM-01 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: conversation_contact_tests (the contact link persists rather than echoing on the returned view; relinking and unlinking update the stored row; a cross-workspace or unknown contact is refused with nothing persisted; the account must match the workspace and platform; one external thread maps to one conversation per account; membership gates the write) | — |
 | SYNC-01 | PASS | `packages/core/test/sync.test.ts` :: offline edits survive a restart (edits made while offline and after the last sync both restore; an offline deletion stays deleted and is not resurrected by replaying an older snapshot; state persisted through the encrypted envelope restores with the payload unreadable at rest; five restart cycles neither lose nor drift state) | — |
 | SYNC-02 | PASS | `test/sync-network.test.ts (Yjs convergence tests)` | — |
 | BACK-01 | PASS | `test/backup.test.ts` :: round-trips opaque data (createEncryptedBackup → restoreEncryptedBackup) | — |
