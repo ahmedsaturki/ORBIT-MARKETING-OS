@@ -91,6 +91,22 @@ contract scripts were each run individually rather than trusting the suite.
 | `scripts/node-forge-audit-exception.test.mjs` | PASS (after the fix above) |
 | `scripts/release-gate-model.test.mjs` | PASS |
 | `scripts/user-guide-contract.test.mjs` | PASS |
+| `cargo test` | **DID NOT RUN** — see below |
+
+### Verification gap: the Rust suite could not run
+
+`cargo test` **did not execute** on the merged tree. The build failed with
+`LNK1108: cannot write file at 0x0` and `There is not enough space on the disk
+(os error 112)`. The `C:` volume was at 100%, with roughly 800 MB free of
+390 GB. `cargo clean` released 879 MiB, which was not enough; the space is
+being consumed from outside this repository.
+
+This matters because the merge changed `packages/desktop/src-tauri/src/lib.rs`
+by roughly 3,000 lines, including the schema v17 migration. The TypeScript
+suite, typecheck, and all six governance gates pass, and the workspace gate
+does statically check the Rust schema pin at 17 — but **no Rust test has been
+run against the merged file.** Treat the desktop native side as unverified
+until `cargo test` completes on a machine with free disk space.
 
 ## Still open, and genuinely so
 
