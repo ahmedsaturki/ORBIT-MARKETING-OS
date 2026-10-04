@@ -133,6 +133,12 @@ The security claim that is actually verifiable is `pnpm audit`, which runs in
 this repository: 2 high advisories, both governed by documented exceptions, 0
 unignored. `security:scan` passes.
 
+**The failing check does not block the merge.** `main` requires exactly two
+status checks, `ci` and `security:scan`, and `strict` is `false`. Snyk is not
+among them, so raising the plan or detaching the App is a reporting-hygiene
+decision, not a merge gate. PR #213 reads `mergeable=MERGEABLE`;
+`mergeStateStatus=BLOCKED` reflects the missing approving review, not Snyk.
+
 ---
 
 ## 2. Requirement Reconciliation
