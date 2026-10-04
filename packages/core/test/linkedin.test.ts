@@ -215,3 +215,114 @@ describe("LinkedInConnector", () => {
     ).toThrow("YYYYMM");
   });
 });
+
+describe("LinkedIn capability authorization scoping", () => {
+  // Connecting must not reach for the token when authorization is absent.
+  it("refuses to connect without explicit user confirmation", async () => {
+    const connector = new LinkedInConnector({
+      apiVersion: "202609",
+      tokenResolver: async () => "token-secret",
+      authorResolver: async () => "urn:li:person:123",
+      contentResolver: async () => "Hello",
+    });
+
+    await expect(
+      connector.connect({ accountId: "account-1", userConfirmed: false }),
+    ).resolves.toEqual({
+      status: "blocked",
+      reason: "authorization_required",
+      message: "Explicit authorization is required before connecting LinkedIn.",
+    });
+  });
+
+  it("refuses to connect when the access token is missing", async () => {
+    const connector = new LinkedInConnector({
+      apiVersion: "202609",
+      tokenResolver: async () => null,
+      authorResolver: async () => "urn:li:person:123",
+      contentResolver: async () => "Hello",
+    });
+
+    await expect(connector.connect(context)).resolves.toEqual({
+      status: "blocked",
+      reason: "authorization_required",
+      message: "LinkedIn access token is missing.",
+    });
+  });
+
+  // The token must never be resolved before authorization is confirmed.
+  it("does not resolve the token when authorization is absent", async () => {
+    let tokenResolutions = 0;
+    const connector = new LinkedInConnector({
+      apiVersion: "202609",
+      tokenResolver: async () => {
+        tokenResolutions += 1;
+        return "token-secret";
+      },
+      authorResolver: async () => "urn:li:person:123",
+      contentResolver: async () => "Hello",
+    });
+
+    await connector.connect({ accountId: "account-1", userConfirmed: false });
+    expect(tokenResolutions).toBe(0);
+  });
+
+  // Publishing is gated on the author urn, which is the per-account capability.
+  it("refuses to publish without an author urn", async () => {
+    let calls = 0;
+    const connector = new LinkedInConnector({
+      apiVersion: "202609",
+      tokenResolver: async () => "token-secret",
+      authorResolver: async () => null,
+      contentResolver: async () => "Hello",
+      fetchImpl: async () => {
+        calls += 1;
+        return new Response("{}", { status: 201 });
+      },
+    });
+
+    const outcome = await connector.execute(task, context);
+    expect(outcome.status).not.toBe("succeeded");
+    expect(calls).toBe(0);
+  });
+
+  it("refuses to publish empty content without calling the API", async () => {
+    let calls = 0;
+    const connector = new LinkedInConnector({
+      apiVersion: "202609",
+      tokenResolver: async () => "token-secret",
+      authorResolver: async () => "urn:li:person:123",
+      contentResolver: async () => "   ",
+      fetchImpl: async () => {
+        calls += 1;
+        return new Response("{}", { status: 201 });
+      },
+    });
+
+    const outcome = await connector.execute(task, context);
+    expect(outcome.status).toBe("failed");
+    expect(outcome.message).toContain("empty");
+    expect(calls).toBe(0);
+  });
+
+  // Execution must be explicitly confirmed, not merely connected.
+  it("refuses to publish without explicit confirmation", async () => {
+    let calls = 0;
+    const connector = new LinkedInConnector({
+      apiVersion: "202609",
+      tokenResolver: async () => "token-secret",
+      authorResolver: async () => "urn:li:person:123",
+      contentResolver: async () => "Hello",
+      fetchImpl: async () => {
+        calls += 1;
+        return new Response("{}", { status: 201 });
+      },
+    });
+
+
+    await expect(
+      connector.execute(task, { accountId: "account-1", userConfirmed: false }),
+    ).rejects.toThrow("Explicit user confirmation is required");
+    expect(calls).toBe(0);
+  });
+});
