@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { spawn, execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { readFile } from "node:fs/promises";
 
@@ -48,31 +48,32 @@ async function startOllamaStub(tags) {
   return { server, port: server.address().port };
 }
 
-// PORT=0 lets the OS pick a free port, but the startup banner echoes the
-// configured value rather than the bound one, so resolve the real port from
-// the child's listening socket.
-function findListeningPort(pid) {
-  let output = "";
-  try {
-    output = execFileSync("netstat", ["-ano"], { encoding: "utf8" });
-  } catch {
-    return 0;
+// Bind an ephemeral port, read it back, then release it. There is an inherent
+// race between releasing and the runtime re-binding, which the banner check in
+// startRuntime exists to catch: if the port were taken in between, the runtime
+// would fail to start and the banner would never match.
+async function findFreePort() {
+  const probe = createServer();
+  await new Promise((resolve, reject) => {
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", resolve);
+  });
+  const address = probe.address();
+  const port = typeof address === "object" && address ? address.port : 0;
+  await new Promise((resolve) => probe.close(resolve));
+  if (!Number.isInteger(port) || port <= 0) {
+    throw new Error("could not allocate a free port");
   }
-  for (const row of output.split(/\r?\n/)) {
-    if (row.includes("LISTENING") && row.trim().endsWith(String(pid))) {
-      const port = Number(row.trim().split(/\s+/)[1].split(":")[1]);
-      if (port > 0) return port;
-    }
-  }
-  return 0;
+  return port;
 }
 
 async function startRuntime(ollamaPort, extraEnv = {}) {
+  const port = await findFreePort();
   const child = spawn(process.execPath, ["--import", "tsx", "server.ts"], {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      PORT: "0",
+      PORT: String(port),
       RUNTIME_HOST: "127.0.0.1",
       RUNTIME_AUTH_TOKEN: "",
       OLLAMA_BASE_URL: `http://127.0.0.1:${ollamaPort}`,
@@ -81,6 +82,16 @@ async function startRuntime(ollamaPort, extraEnv = {}) {
     stdio: ["ignore", "pipe", "pipe"],
   });
 
+  // Pick the free port in this process and pass it explicitly, then read it
+  // back from the banner to confirm the runtime bound where we expected.
+  //
+  // Two approaches were rejected here. `netstat -ano` is what this used to do,
+  // and it only ever worked on Windows: that is the only variant that emits
+  // LISTENING rows carrying a trailing PID, so findListeningPort returned 0 on
+  // Linux and macOS and startRuntime threw before any health assertion ran.
+  // Reading the port from the banner does not work either, because with
+  // PORT=0 the banner echoes the configured value rather than the bound one.
+  let observedPort = 0;
   await new Promise((resolve, reject) => {
     let buffer = "";
     const timer = setTimeout(
@@ -89,22 +100,21 @@ async function startRuntime(ollamaPort, extraEnv = {}) {
     );
     child.stdout.on("data", (chunk) => {
       buffer += String(chunk);
-      if (/listening on \S+:\d+/i.test(buffer)) {
+      const match = /listening on (\S+):(\d+)/i.exec(buffer);
+      if (match) {
         clearTimeout(timer);
+        observedPort = Number(match[2]);
         resolve();
       }
     });
     child.on("error", reject);
   });
 
-  let port = 0;
-  for (let attempt = 0; attempt < 40 && port === 0; attempt += 1) {
-    port = findListeningPort(child.pid);
-    if (port === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 150));
-    }
+  if (observedPort !== port) {
+    throw new Error(
+      `runtime bound port ${observedPort} but ${port} was requested`,
+    );
   }
-  if (port === 0) throw new Error("could not determine runtime port");
   return { child, host: "127.0.0.1", port };
 }
 

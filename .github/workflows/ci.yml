@@ -163,6 +163,12 @@ jobs:
       - name: Build
         run: pnpm build
 
+
+      # AI-01 cites this script as its only evidence, but nothing ran it: it is
+      # in no workflow and not in `pnpm test`, so it could rot unnoticed.
+      - name: Health reports only installed models
+        run: pnpm test:health-model-availability
+
       - name: Web E2E
         timeout-minutes: 5
         run: pnpm test:e2e
