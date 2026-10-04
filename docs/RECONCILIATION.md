@@ -80,20 +80,20 @@ contract scripts were each run individually rather than trusting the suite.
 
 ## Verification on the merged tree
 
-| Check                                                                                                       | Result                     |
-| ----------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `verify:workspace`, `verify:readiness`, `verify:release-docs`, `verify:release`, `verify:ipc`, `verify:omp` | 6/6 PASS                   |
-| `pnpm test`                                                                                                 | 524 tests, 4/4 tasks PASS  |
-| `pnpm typecheck`                                                                                            | 5/5 PASS                   |
-| `scripts/health-model-availability.test.mjs`                                                                | PASS                       |
-| `scripts/soak-failure-evidence.test.mjs`                                                                    | PASS                       |
-| `scripts/braces-audit-exception.test.mjs`                                                                   | PASS                       |
-| `scripts/node-forge-audit-exception.test.mjs`                                                               | PASS (after the fix above) |
-| `scripts/release-gate-model.test.mjs`                                                                       | PASS                       |
-| `scripts/user-guide-contract.test.mjs`                                                                      | PASS                       |
-| `cargo test`                                                                                                | **182 passed, 0 failed**   |
-| `cargo clippy --all-targets -- -D warnings`                                                                 | clean                      |
-| `cargo fmt --check`                                                                                         | clean                      |
+| Check                                                                                                       | Result                                                           |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `verify:workspace`, `verify:readiness`, `verify:release-docs`, `verify:release`, `verify:ipc`, `verify:omp` | 6/6 PASS                                                         |
+| `pnpm test`                                                                                                 | 549 tests (core 527, desktop 9, mobile 8, web 5), 4/4 tasks PASS |
+| `pnpm typecheck`                                                                                            | 5/5 PASS                                                         |
+| `scripts/health-model-availability.test.mjs`                                                                | PASS                                                             |
+| `scripts/soak-failure-evidence.test.mjs`                                                                    | PASS                                                             |
+| `scripts/braces-audit-exception.test.mjs`                                                                   | PASS                                                             |
+| `scripts/node-forge-audit-exception.test.mjs`                                                               | PASS (after the fix above)                                       |
+| `scripts/release-gate-model.test.mjs`                                                                       | PASS                                                             |
+| `scripts/user-guide-contract.test.mjs`                                                                      | PASS                                                             |
+| `cargo test`                                                                                                | **182 passed, 0 failed**                                         |
+| `cargo clippy --all-targets -- -D warnings`                                                                 | clean                                                            |
+| `cargo fmt --check`                                                                                         | clean                                                            |
 
 ### The Rust suite took a second attempt
 
@@ -119,6 +119,49 @@ left in place — it was true when written and is no longer.
 Note that 182 is well above the 105 in the older completion report, and the
 current `lib.rs` carries 170 `#[test]` / `#[tokio::test]` attributes plus the
 integration suites. See the test evidence report for the full breakdown.
+
+## What CI found that local runs could not
+
+Publishing as PR #213 surfaced three failures that a single Windows machine
+could never show. All three are now fixed.
+
+### 1. The build failed on all four platforms
+
+`@orbit/desktop`'s build runs `scripts/build-icon.mjs`, which rasterizes the app
+icon through headless Chromium. No workflow had Chromium installed at that
+point:
+
+```
+browserType.launch: Executable doesn't exist at .../chrome-headless-shell
+```
+
+In `ci.yml` the Build step ran at line 152 and `playwright install` at line 155,
+so the build was guaranteed to fail. Three more workflows had the same latent
+bug: `release-desktop.yml` built with no install before it, `desktop-native-validation.yml`
+reached it through `tauri build`'s `beforeBuildCommand`, and `stability-soak.yml`
+had no install anywhere in the job. All four install Chromium first now.
+
+### 2. SonarCloud failed the quality gate on this branch's own code
+
+`javascript:S4036` at `scripts/build-tauri.mjs:83` — the new frontend prebuild
+called `spawnSync` with `shell: true`, which Sonar flags as a PATH injection
+vector because the child runs through a shell. Replaced with the repository's
+existing `spawnPnpm` helper, which handles the Windows `.cmd` requirement
+centrally and documents why shell execution is safe there: every argument is a
+literal from the call site. SonarCloud now reports **0 security issues** on the
+pull request.
+
+The `S2187` findings on the node-run contract scripts are not defects. Those
+files hold 9 to 28 assertions each and execute under plain `node` via
+`package.json` scripts; Sonar expects a test framework inside the file.
+
+### 3. Format check failed
+
+Most of what it reported is this machine's `core.autocrlf=true` rewriting files
+to CRLF on checkout — 106 files flagged locally against **107 on a clean
+`origin/main`**. With CRLF disabled the real number was 26, of which 25 were
+files this branch touched. Those are formatted; the branch now introduces zero
+format violations relative to upstream's own baseline.
 
 ## Still open, and genuinely so
 
