@@ -18,6 +18,13 @@ by running the command named beside it, not by reading a prior report.
 | **Release**     | **NOT READY**   | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
 | **Owner Gates** | **9 remaining** | Certificates, credentials, store accounts, human review, wall-clock time. A tenth (SonarCloud new-code rating) is now closed                          |
 
+All of the above is confirmed by a clean CI run on `cc5979a7`, not by local
+execution alone: 16 of 17 checks pass, including all four platform builds,
+Windows native E2E at 35 passed, Android debug validation, `ci`, `Rust quality`,
+`security:scan`, SonarCloud, CodeRabbit and CodeFactor. The single failure is
+`security/snyk`, which fails on plan quota; `pnpm audit` independently reports 2
+high advisories, both governed by documented exceptions.
+
 ### Overall
 
 > **NOT READY — READY WITH OWNER GATES**
