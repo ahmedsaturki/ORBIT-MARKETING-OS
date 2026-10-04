@@ -293,3 +293,22 @@ claim worth reading.
 
 Three rows remain UNVERIFIED and three PARTIAL. None is closable by writing
 more code.
+
+The operational tracker for all of this is issue **#187**, "release: L3
+production readiness closure board", which carries **18 unchecked items and none
+checked**: release/production controls (SonarCloud A on new code, rollback drill,
+release-tag checksums, production release identity), real-world product
+validation (Telegram and LinkedIn authorization with one real delivery each,
+challenge/manual-intervention, failure-retry-recovery on the real connector
+path, live multi-device CRDT convergence, manual WCAG/RTL audit, 24-hour soak),
+and distribution (signed/notarized desktop, production-signed mobile, store
+submission, SBOM and attestation). This document is the reconciled view; #187 is
+where the work is tracked, and the two should be read together.
+
+**One checkbox on #187 is already stale.** The board was opened at
+2026-10-03T00:51:02Z and still lists "Current-main SonarCloud Security Rating on
+New Code reaches the required A threshold" as unchecked, but issue #112 — the
+tracking issue for that exact rating — was closed at 2026-10-03T16:04:43Z, about
+15 hours later, and `release/readiness.json` records A with zero open new-code
+vulnerabilities. The board carries no comments and has not been updated since.
+That item should be checked; the remaining 17 are genuinely open.
