@@ -50,7 +50,8 @@
     "test:release-gate-tooling": "node scripts/release-gate-tooling.test.mjs",
     "gate:check": "node scripts/check-release-gates.mjs",
     "gate:export": "node scripts/export-gate-status.mjs",
-    "gate:dashboard": "node scripts/gate-dashboard.mjs"
+    "gate:dashboard": "node scripts/gate-dashboard.mjs",
+    "test:health-model-availability": "node --import tsx scripts/health-model-availability.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

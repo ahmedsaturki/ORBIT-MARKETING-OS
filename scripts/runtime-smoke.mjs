@@ -84,11 +84,13 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+// Model served by the fake Ollama below; every spawned runtime is pinned to it.
+const FIXTURE_MODEL = "llama3.2:3b";
 let capturedOllamaBody = null;
 const ollamaServer = createServer((req, res) => {
   if (req.method === "GET" && req.url === "/api/tags") {
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ models: [{ name: "llama3.2:3b" }] }));
+    res.end(JSON.stringify({ models: [{ name: FIXTURE_MODEL }] }));
     return;
   }
   if (req.method === "POST" && req.url === "/api/chat") {
@@ -146,6 +148,11 @@ const child = spawnRuntime({
   PORT: String(RUNTIME_PORT),
   RUNTIME_HOST: "127.0.0.1",
   OLLAMA_BASE_URL: "http://127.0.0.1:" + OLLAMA_PORT,
+  // Pinned to the fixture above; an ambient .env must not decide whether
+  // health reports ok.
+  OLLAMA_MODEL: FIXTURE_MODEL,
+  OLLAMA_FAST_MODEL: FIXTURE_MODEL,
+  OLLAMA_REASONING_MODEL: FIXTURE_MODEL,
 });
 let logs = "";
 child.stdout.on("data", (chunk) => {
@@ -315,6 +322,9 @@ const missingTokenChild = spawnRuntime({
   RUNTIME_ALLOWED_ORIGINS: "",
   RUNTIME_RATE_LIMIT: "6",
   OLLAMA_BASE_URL: `http://127.0.0.1:${OLLAMA_PORT}`,
+  OLLAMA_MODEL: FIXTURE_MODEL,
+  OLLAMA_FAST_MODEL: FIXTURE_MODEL,
+  OLLAMA_REASONING_MODEL: FIXTURE_MODEL,
 });
 let missingTokenLogs = "";
 missingTokenChild.stdout.on("data", (chunk) => {
@@ -372,6 +382,9 @@ const authChild = spawnRuntime({
   RUNTIME_ALLOWED_ORIGINS: "https://allowed.example",
   RUNTIME_RATE_LIMIT: "6",
   OLLAMA_BASE_URL: `http://127.0.0.1:${OLLAMA_PORT}`,
+  OLLAMA_MODEL: FIXTURE_MODEL,
+  OLLAMA_FAST_MODEL: FIXTURE_MODEL,
+  OLLAMA_REASONING_MODEL: FIXTURE_MODEL,
 });
 let authLogs = "";
 authChild.stdout.on("data", (chunk) => {
@@ -473,6 +486,9 @@ const bruteForceChild = spawnRuntime({
   RUNTIME_RATE_LIMIT: "2",
   RUNTIME_ALLOWED_ORIGINS: "",
   OLLAMA_BASE_URL: `http://127.0.0.1:${OLLAMA_PORT}`,
+  OLLAMA_MODEL: FIXTURE_MODEL,
+  OLLAMA_FAST_MODEL: FIXTURE_MODEL,
+  OLLAMA_REASONING_MODEL: FIXTURE_MODEL,
 });
 let bruteForceLogs = "";
 bruteForceChild.stdout.on("data", (chunk) => {
