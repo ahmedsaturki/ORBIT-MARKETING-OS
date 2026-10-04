@@ -220,6 +220,9 @@ jobs:
       - name: Script contract tests (verify-workspace, vercel-install, build-all)
         run: pnpm test:script-contracts
 
+      - name: Gate dashboard HTTP contract
+        run: pnpm test:gate-dashboard
+
   rust:
     name: Rust quality
     runs-on: ubuntu-24.04

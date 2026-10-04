@@ -54,7 +54,18 @@ const isInsideRepo = (target) =>
 
 /** Resolve a request path to a servable file, rejecting traversal outside the repo. */
 function resolveTarget(requestUrl) {
-  const requestPath = decodeURIComponent((requestUrl ?? "/").split("?")[0]);
+  // decodeURIComponent throws URIError on a malformed escape such as "/%". The
+  // request handler is async and calls this before reaching any try block, so
+  // an uncaught throw there becomes an unhandled rejection and, under Node's
+  // default behaviour, exits the process. One request to /% was enough to kill
+  // the dashboard. Return null so the handler answers 404 as it does for any
+  // other unusable path.
+  let requestPath;
+  try {
+    requestPath = decodeURIComponent((requestUrl ?? "/").split("?")[0]);
+  } catch {
+    return null;
+  }
 
   if (requestPath === "/") {
     return join(repoRoot, "scripts", "gate-status-dashboard.html");
