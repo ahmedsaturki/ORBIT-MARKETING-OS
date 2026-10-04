@@ -9,6 +9,7 @@ import {
   summarizeExperiment,
   validateExperiment,
   type ExperimentDefinition,
+  type ExperimentObservation,
 } from "./index.js";
 
 const experiment: ExperimentDefinition = {
@@ -636,5 +637,156 @@ describe("experiment operating bindings and learning write-back", () => {
         kind: "insufficient_evidence",
       }),
     ]);
+  });
+});
+
+describe("experiment learning write-back is workspace scoped", () => {
+  const observation = (
+    overrides: Partial<ExperimentObservation> = {},
+  ): ExperimentObservation => ({
+    experimentId: "exp-1",
+    workspaceId: "ws-1",
+    variantId: "control",
+    subjectId: "a",
+    observedAt: "2026-09-26T00:00:00Z",
+    exposed: true,
+    engaged: false,
+    converted: false,
+    value: 0,
+    ...overrides,
+  });
+
+  // The summary layer already drops foreign observations (see "summarizes
+  // only same-workspace observations"). This covers the layer that was
+  // untested: that cross-workspace evidence cannot manufacture a learning
+  // signal even when it is the only evidence for a variant.
+  it("foreign evidence alone cannot manufacture a learning signal", () => {
+    const summary = summarizeExperiment(experiment, [
+      observation({ exposed: true }),
+      observation({
+        workspaceId: "ws-2",
+        variantId: "benefit",
+        exposed: true,
+        engaged: true,
+        converted: true,
+        value: 999,
+      }),
+    ]);
+
+    const writeback = buildExperimentLearningWriteback(
+      experiment,
+      summary,
+      "2026-09-26T12:00:00Z",
+    );
+    expect(
+      writeback.signals.some((signal) => signal.variantId === "benefit"),
+    ).toBe(false);
+  });
+
+  it("ignores observations from another experiment", () => {
+    const summary = summarizeExperiment(experiment, [
+      observation({ exposed: true }),
+      observation({
+        experimentId: "exp-other",
+        variantId: "benefit",
+        exposed: true,
+        converted: true,
+        value: 500,
+      }),
+    ]);
+
+    const benefit = summary.variants.find((v) => v.variantId === "benefit");
+    expect(benefit?.exposureCount).toBe(0);
+    expect(benefit?.totalValue).toBe(0);
+  });
+
+  it("ignores variants the experiment never declared", () => {
+    const summary = summarizeExperiment(experiment, [
+      observation({ exposed: true }),
+      observation({
+        variantId: "undeclared-variant",
+        exposed: true,
+        converted: true,
+        value: 750,
+      }),
+    ]);
+
+    expect(summary.variants.map((v) => v.variantId)).not.toContain(
+      "undeclared-variant",
+    );
+    expect(summary.variants.every((v) => v.totalValue === 0)).toBe(true);
+  });
+
+  // The write-back refuses a summary built for a different workspace outright,
+  // rather than relabelling it into this one.
+  it("refuses a summary whose workspace does not match the experiment", () => {
+    const foreign = summarizeExperiment(
+      { ...experiment, id: "exp-2", workspaceId: "ws-2" },
+      [
+        {
+          experimentId: "exp-2",
+          workspaceId: "ws-2",
+          variantId: "control",
+          subjectId: "a",
+          observedAt: "2026-09-26T00:00:00Z",
+          exposed: true,
+          engaged: true,
+          converted: true,
+          value: 42,
+        },
+      ],
+    );
+
+    expect(() =>
+      buildExperimentLearningWriteback(experiment, foreign, "2026-09-26T12:00:00Z"),
+    ).toThrow("experiment_learning_workspace_mismatch");
+  });
+
+  it("refuses a summary belonging to another experiment", () => {
+    const other = summarizeExperiment(
+      { ...experiment, id: "exp-2" },
+      [
+        {
+          experimentId: "exp-2",
+          workspaceId: "ws-1",
+          variantId: "control",
+          subjectId: "a",
+          observedAt: "2026-09-26T00:00:00Z",
+          exposed: true,
+          engaged: true,
+          converted: true,
+          value: 42,
+        },
+      ],
+    );
+
+    expect(() =>
+      buildExperimentLearningWriteback(experiment, other, "2026-09-26T12:00:00Z"),
+    ).toThrow("experiment_learning_experiment_mismatch");
+  });
+
+  it("writes no insight and no workspace-crossing source id", () => {
+    const summary = summarizeExperiment(experiment, [
+      observation({ exposed: true, converted: true, value: 10 }),
+    ]);
+    const writeback = buildExperimentLearningWriteback(
+      experiment,
+      summary,
+      "2026-09-26T12:00:00Z",
+    );
+
+    for (const signal of writeback.signals) {
+      expect(signal.workspaceId).toBe("ws-1");
+      expect(signal.experimentId).toBe("exp-1");
+    }
+    for (const insight of writeback.insights) {
+      expect(insight.workspaceId).toBe("ws-1");
+      // Grounding must point only at this experiment.
+      expect(
+        insight.sourceIds.every(
+          (id) => id === "experiment:exp-1" || id.startsWith("experiment:exp-1:"),
+        ),
+      ).toBe(true);
+    }
   });
 });
