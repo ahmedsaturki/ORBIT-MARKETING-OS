@@ -397,6 +397,55 @@ Consequence: **DATA-01, WS-02, QUE-01, CAMP-01, OPS-01, RESEARCH-02 and SEC-03
 are unverified on this machine.** They run in CI. Until one of those runs is
 observed, they should not be presented as machine-confirmed.
 
+### Phase 8 follow-on: a duplicate declaration in the e2e specs was invisible to every gate
+
+CI's `Web E2E` step failed on a commit that had already passed every local
+check, with `SyntaxError: Identifier 'missionWorkspace' has already been
+declared`. The spec binds that name at line 1201 for its own setup, and it was
+redeclared later in the same block.
+
+The cause is structural. `pnpm typecheck` runs `turbo run typecheck`, which
+visits workspace packages only. `e2e/` is not a workspace package and has no
+`tsconfig.json`, so **nothing in the repository type-checked the specs**. A
+syntax error in a spec therefore passes every local gate and surfaces only when
+Playwright loads the file, after a full push, install, build and browser
+install. That is roughly eleven minutes of CI to learn that a text file does not
+compile.
+
+`scripts/verify-e2e-parses.mjs` now parses every `*.spec.ts` under `e2e/` and
+fails on real binding and syntax errors. It runs in `ci.yml` immediately after
+install and before the build.
+
+Two plausible implementations were tried first and **both silently pass a
+duplicate `const`**, which was confirmed by injecting duplicates and watching
+each one report success:
+
+| Approach                                  | Result on three duplicate declarations |
+| ----------------------------------------- | -------------------------------------- |
+| `node --check --experimental-strip-types` | reports clean                          |
+| TypeScript `parseDiagnostics`             | zero diagnostics                       |
+| `tsc --noResolve`                         | **TS2451, fails as intended**          |
+
+Redeclaration is a _binding_ error, not a parse error, so neither parse-only
+approach can see it. `tsc --noResolve` is required, because otherwise the
+compiler follows the specs' imports and reports module-resolution noise;
+TS2307, TS2591, TS7006, TS7016, TS7031 and TS2688 are filtered as that noise.
+
+Verified in both directions on Linux CI and locally: with duplicates injected
+the gate exits 1 naming each one; restored, `e2e-parses=PASS specs=5`.
+
+The gate itself failed CI twice before working, both times because of how it
+was written rather than what it checks: once placed before `pnpm install`, when
+no package had `node_modules` and the compiler could not be resolved, and once
+on `javascript:S2871` (a comparator-less `sort`), which dropped the SonarCloud
+reliability rating below A. Compiler resolution now walks every workspace
+package instead of probing a fixed path list, so it no longer depends on install
+order.
+
+Worth recording plainly: **"all local checks pass" was not evidence of
+correctness for this file.** Neither was "the parse gate passes" until it had
+survived a CI round trip.
+
 ---
 
 ## J. STOP DECISION
