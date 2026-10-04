@@ -133,7 +133,7 @@
       "level": "L2_VERIFIED",
       "evidence": [
         "packages/core/test/sync-network.test.ts drives two devices over a real node:http loopback relay with convergence and tampering rejection before state is applied",
-        "cargo test 182/182 and CI run 37134186892 green"
+        "cargo test --workspace --all-targets 182/182 locally (src/ and tests/ carry exactly 182 #[test] attributes), and CI run 37134186892 green on its Rust tests step"
       ],
       "notes": "Local encrypted convergence and tamper-resistance are verified over a real HTTP transport. Live multi-device CRDT network operation still requires real-world evidence, and encryptSyncUpdate still has no shipped replication caller, so trust boundary 4 remains unproven for a real network.",
       "evidenceRefs": [
@@ -193,6 +193,7 @@
       "startupBudgetMs": 8000,
       "rssBudgetMb": 200,
       "cargoTestsPassed": 182,
+      "cargoTestsPassedScope": "local cargo test --workspace --all-targets; CI run 37134186892 executes a filtered subset reporting 105 passed + 1 passed with 104 filtered out",
       "playwrightPassed": 24,
       "playwrightSkipped": 10,
       "acceptanceMatrix": "77 PASS / 3 PARTIAL / 3 UNVERIFIED across 83 IDs",

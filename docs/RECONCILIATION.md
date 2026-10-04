@@ -117,8 +117,14 @@ the schema v17 migration. The earlier "unverified" caveat is retired rather than
 left in place — it was true when written and is no longer.
 
 Note that 182 is well above the 105 in the older completion report, and the
-current `lib.rs` carries 170 `#[test]` / `#[tokio::test]` attributes plus the
-integration suites. See the test evidence report for the full breakdown.
+source confirms it independently: `src/` and `tests/` carry exactly 182
+`#[test]` attributes, which is the number quoted above. **CI does not execute
+that same 182.** The `Rust quality` job in run 37134186892 reports `105 passed`
+plus `1 passed` with `104 filtered out` — a filtered subset, not the full suite.
+The full `--all-targets` count is a local measurement; CI's green `Rust tests`
+step proves the subset passes, not that 182 tests were executed. Both statements
+are true and the difference is the filter, not a disagreement. See the test
+evidence report for the full breakdown.
 
 ## What CI found that local runs could not
 
