@@ -6,7 +6,7 @@
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
-import { join, dirname, resolve } from "node:path";
+import { join, dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   deriveGateStatus,
@@ -105,7 +105,7 @@ const FORMATS = {
 
     return `# ORBIT Release Gate Status
 
-Exported ${new Date().toISOString()} from \`release/readiness.json\`.
+Exported ${new Date().toISOString()} from \`${(relative(repoRoot, readinessPath) || readinessPath).replaceAll("\\", "/")}\`.
 
 Required level for production: **${L3}**
 
