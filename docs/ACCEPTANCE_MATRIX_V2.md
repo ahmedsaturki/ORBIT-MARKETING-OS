@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**76 PASS, 1 PARTIAL, 5 UNVERIFIED, 1 FAIL** across 83 requirements. The remaining PARTIAL records evidence that exists alongside a capability that is not built, rather than missing evidence.
+**77 PASS, 1 PARTIAL, 4 UNVERIFIED, 1 FAIL** across 83 requirements. The remaining PARTIAL records evidence that exists alongside a capability that is not built, rather than missing evidence.
 
 Classification rules applied:
 
@@ -83,7 +83,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | AN-01 | PASS | `test/analytics.test.ts` :: does not mix metrics from different campaigns | — |
 | AUTO-01 | PASS | `test/automationRules.test.ts` :: rejects enabled external rules that skip confirmation | — |
 | AUTO-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: latest_enabled_pack_provides_bounded_runtime_limits | — |
-| UI-01 | UNVERIFIED | — | No Mission Control E2E test in tauri-shell.spec.ts or web E2E; next-actions tests exist but do not cover Mission Control UI |
+| UI-01 | PASS | `packages/core/src/next-actions/index.test.ts` :: Mission Control operational state (every candidate stamped with the requesting workspace; two workspaces given the same work derive disjoint actions; blank workspace refused; deriving is read-only and a result mutation does not reach the input; rendered queue carries no session/token/secret/password/cookie/authorization material and only declared projection fields; empty state yields an empty queue) + `e2e/tauri-shell.spec.ts` :: Mission Control reflects current workspace state and carries no secrets (drives account, campaign, content and a pending approval; asserts both visible, absent after workspace switch, restored after switching back, and that the surface payload omits the account's planted session secret) | The E2E is registered and typechecks but cannot execute here: the Tauri shell exposes no WebView2 CDP listener, so the boot test cannot attach a page. That limit stops every test in this spec from running locally, so the surface half is CI-attested; the engine half is machine-confirmed |
 | UI-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: strategy_reference_validation_blocks_cross_workspace_references | No E2E test that invokes Strategy Studio commands and verifies workspace isolation |
 | OUT-01 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: opportunity_scope_tests (workspace-scoped creation with same-workspace contact/campaign links, foreign contact/campaign links refused with nothing persisted, foreign id collision refused, audit names the owning workspace, invalid stage/value/probability refused) | — |
 | OUT-02 | PASS | `src/outcomes/index.test.ts` :: validatesOpportunity (rejects unsafe values) | — |
