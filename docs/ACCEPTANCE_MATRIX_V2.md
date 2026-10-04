@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**77 PASS, 2 PARTIAL, 4 UNVERIFIED** across 83 requirements. No row is FAIL: the sole previous FAIL (`REL-02`) was reclassified because the missing capability is owner-controlled by design rather than a defect in this repository. Each PARTIAL records evidence that exists alongside a capability that is not built.
+**77 PASS, 3 PARTIAL, 3 UNVERIFIED** across 83 requirements. No row is FAIL: the sole previous FAIL (`REL-02`) was reclassified because the missing capability is owner-controlled by design rather than a defect in this repository. Each PARTIAL records executing evidence alongside a capability that is not built.
 
 Classification rules applied:
 
@@ -142,7 +142,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | PERF-02 | PASS | `scripts/startup-memory-benchmark.mjs (runs in CI, measures peak RSS)` | — |
 | QA-01 | PASS | `pnpm test:coverage yields 87.86% lines, 85.03% statements, 80.09% branches, 93.98% functions; thresholds met (lines/functions/statements 70, branches 60)` | — |
 | QA-02 | PASS | `e2e/ (5 spec files: accessibility-rtl, connector-challenge, public-web, tauri-shell, web-smoke) running in CI via pnpm test:e2e` | E2E suite exists but does not cover all claimed critical paths (approval-gate E2E, publishing E2E, inbox E2E, CRM E2E not present) |
-| DOC-01 | UNVERIFIED | `docs/USER_GUIDE.md exists` | No automated verification that the guide matches product; only human review possible |
+| DOC-01 | PARTIAL | `scripts/user-guide-contract.test.mjs` (executed locally and wired into `ci.yml`, `user_guide_contract=PASS documented_vars=5`) :: every environment variable the guide tells an operator to set is verified to be read by `server.ts` and offered in `.env.example`; the guide's promise that remote Ollama endpoints are rejected is checked against the enforcement site, which must reject both non-HTTP and non-loopback hosts; the guide is rejected if it shows a non-loopback `OLLAMA_BASE_URL`, contradicting its own guarantee. Both guards were proved load-bearing by drifting the guide and observing the failure | Prose and screenshots still require human review. This contract covers the guide's falsifiable claims, not its descriptive text |
 | DOC-02 | PARTIAL | `scripts/node-forge-audit-exception.test.mjs` (executed locally, `node-forge-audit-exception=PASS ghsa=GHSA-86w9-cpqp-85rv review_after=2026-11-03`) :: the security exception register is machine-enforced, not documentation only. The contract pins the patched-dependency hash to the reviewed artifact, restricts the audit ignore to that single GHSA, asserts the regression test exists and is load-bearing, and **hard-fails after 2026-11-03** | The threat model itself has no executed review artifact — the register is enforced by contract, but no human or independent security review of `SECURITY_THREAT_MODEL.md` is recorded |
 | RESEARCH-01 | PASS | `test/research.test.ts (research brief validation tests)` | — |
 | RESEARCH-02 | PASS | `e2e/tauri-shell.spec.ts` :: research intelligence stays workspace-scoped and evidence-backed (native integrity E2E) | — |

@@ -105,6 +105,9 @@ jobs:
       - name: Dependency audit
         run: pnpm audit --audit-level=moderate
 
+      - name: User guide matches product
+        run: pnpm test:user-guide-contract
+
       - name: Typecheck
         run: pnpm typecheck
 
