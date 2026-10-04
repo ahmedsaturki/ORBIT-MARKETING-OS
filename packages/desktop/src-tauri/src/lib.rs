@@ -16448,6 +16448,224 @@ mod operational_audit_bridge_tests {
 }
 
 #[cfg(test)]
+mod operational_event_spine_tests {
+    use super::*;
+
+    fn spine_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user');
+                 INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES ('workspace-a', 'local-user', 'owner', 1, '1'),
+                        ('workspace-b', 'local-user', 'owner', 1, '1');",
+            )
+            .expect("spine fixture should be created");
+        connection
+    }
+
+    fn append(
+        connection: &mut Connection,
+        workspace_id: &str,
+        id: Option<&str>,
+        parent_event_id: Option<&str>,
+        trace_id: Option<&str>,
+    ) -> Result<OperationalEventView, AppError> {
+        append_operational_event(
+            connection,
+            workspace_id,
+            id,
+            "2026-09-26T00:00:00Z",
+            "command.completed",
+            "succeeded",
+            "user",
+            "local-user",
+            Some("task"),
+            Some("task-1"),
+            trace_id,
+            parent_event_id,
+            Some("{}"),
+        )
+    }
+
+    // CMD-01: the dispatcher writes to the persisted spine, not just an
+    // in-memory log. Sequence allocation must survive a reopen.
+    #[test]
+    fn events_are_persisted_with_a_monotonic_sequence() {
+        let mut connection = spine_connection();
+        let first = append(&mut connection, "workspace-a", None, None, None).expect("append");
+        let second = append(&mut connection, "workspace-a", None, None, None).expect("append");
+
+        assert_eq!(first.sequence, 1);
+        assert_eq!(
+            second.sequence, 2,
+            "sequence must advance within a workspace"
+        );
+
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM operational_events WHERE workspace_id='workspace-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("count should be readable");
+        assert_eq!(count, 2, "both events must be persisted");
+    }
+
+    // Sequence is per workspace, not global.
+    #[test]
+    fn sequence_is_allocated_per_workspace() {
+        let mut connection = spine_connection();
+        append(&mut connection, "workspace-a", None, None, None).expect("append a");
+        append(&mut connection, "workspace-b", None, None, None).expect("append b");
+        let third_a = append(&mut connection, "workspace-a", None, None, None).expect("append a2");
+
+        assert_eq!(
+            third_a.sequence, 2,
+            "workspace-a resumes at its own next sequence"
+        );
+    }
+
+    // A parent must already exist in the same workspace: this is what makes
+    // the spine a verifiable chain rather than a flat log.
+    #[test]
+    fn a_parent_event_must_exist_in_the_same_workspace() {
+        let mut connection = spine_connection();
+        let parent = append(&mut connection, "workspace-a", None, None, None).expect("parent");
+
+        let child = append(
+            &mut connection,
+            "workspace-a",
+            None,
+            Some(&parent.id),
+            Some("trace-1"),
+        )
+        .expect("a child of a known parent should be accepted");
+        assert_eq!(child.parent_event_id.as_deref(), Some(parent.id.as_str()));
+        assert_eq!(child.trace_id.as_deref(), Some("trace-1"));
+
+        let error = append(
+            &mut connection,
+            "workspace-a",
+            None,
+            Some("event-that-does-not-exist"),
+            None,
+        )
+        .expect_err("an unknown parent must be refused");
+        assert!(
+            matches!(error, AppError::InvalidPayload),
+            "unexpected error: {error:?}",
+        );
+    }
+
+    // A parent belonging to another workspace is not a valid parent here.
+    #[test]
+    fn a_parent_from_another_workspace_is_refused() {
+        let mut connection = spine_connection();
+        let foreign = append(&mut connection, "workspace-b", None, None, None).expect("append b");
+
+        let error = append(
+            &mut connection,
+            "workspace-a",
+            None,
+            Some(&foreign.id),
+            None,
+        )
+        .expect_err("a foreign parent must be refused");
+        assert!(
+            matches!(error, AppError::InvalidPayload),
+            "unexpected error: {error:?}",
+        );
+    }
+
+    // Reusing an id is refused, so the chain cannot be rewritten.
+    #[test]
+    fn a_duplicate_event_id_is_refused() {
+        let mut connection = spine_connection();
+        append(&mut connection, "workspace-a", Some("event-1"), None, None).expect("first");
+
+        let error = append(&mut connection, "workspace-a", Some("event-1"), None, None)
+            .expect_err("a duplicate id must be refused");
+        assert!(
+            matches!(error, AppError::Database(_)),
+            "unexpected error: {error:?}",
+        );
+        assert!(
+            format!("{error:?}")
+                .to_lowercase()
+                .contains("unique constraint"),
+            "the refusal must name the duplicate id: {error:?}",
+        );
+
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM operational_events WHERE id='event-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("count should be readable");
+        assert_eq!(count, 1, "the original event must be unchanged");
+    }
+
+    #[test]
+    fn an_empty_workspace_or_actor_id_is_refused() {
+        let mut connection = spine_connection();
+        assert!(append(&mut connection, "  ", None, None, None).is_err());
+
+        let error = append_operational_event(
+            &mut connection,
+            "workspace-a",
+            None,
+            "2026-09-26T00:00:00Z",
+            "command.completed",
+            "succeeded",
+            "user",
+            "  ",
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .expect_err("an empty actor id must be refused");
+        assert!(
+            matches!(error, AppError::InvalidPayload),
+            "unexpected error: {error:?}",
+        );
+    }
+
+    // The spine must be queryable per workspace, which is what the dispatcher
+    // relies on when it reads a bounded trace back.
+    #[test]
+    fn events_are_listable_in_sequence_order_per_workspace() {
+        let mut connection = spine_connection();
+        append(&mut connection, "workspace-a", None, None, None).expect("first");
+        append(&mut connection, "workspace-b", None, None, None).expect("other workspace");
+        append(&mut connection, "workspace-a", None, None, None).expect("second");
+
+        let mut statement = connection
+            .prepare(
+                "SELECT sequence FROM operational_events
+                 WHERE workspace_id='workspace-a' ORDER BY sequence",
+            )
+            .expect("query should prepare");
+        let sequences = statement
+            .query_map([], |row| row.get::<_, i64>(0))
+            .expect("query should run")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("rows should decode");
+
+        assert_eq!(sequences, vec![1, 2], "the other workspace must not appear");
+    }
+}
+
+#[cfg(test)]
 mod interrupted_restore_recovery_tests {
     use super::*;
 
