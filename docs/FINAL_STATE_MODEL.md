@@ -286,7 +286,17 @@ git ls-files | grep -E '\.(test|spec)\.(ts|tsx|mjs)$' | grep -v node_modules | w
 
 ## 6. What Could Not Be Verified Here
 
-- **The 24-hour soak.** Actor-gated, self-hosted runner.
+- **The 24-hour soak.** Actor-gated, self-hosted runner. The path is verified
+  ready, not merely untried: `scripts/soak.ts` accepts `--hours` and 24 resolves
+  to 1440 minutes within safe-integer range; the JSONL log is one long-lived
+  `createWriteStream` with `flags: "w"` closed once at the end, so ~25,700
+  appends over a day do not leak descriptors; projected log size is ~3 MB from
+  the 117 KB actually produced in 55 minutes; and `stability-soak.yml` sets
+  `timeout-minutes: 1500`, leaving 60 minutes of headroom over the 1440-minute
+  deadline for shutdown. The workflow also gates on `github.actor ==
+'ahmedsaturki'` with `ref == 'main'` and hard-fails unless `hours` is exactly
+  `24`, so a shorter run cannot be recorded as evidence. What is missing is a
+  self-hosted x64 Linux runner and the run itself.
 - **Node engine warning.** `Unsupported engine: wanted {"node":">=22 <25"}` on
   a local v26 runtime. Advisory only: no `.npmrc` sets `engine-strict`, CI pins
   Node 22 in all 24 places that use Node, and `rebuild-rust.yml` is Rust-only.
