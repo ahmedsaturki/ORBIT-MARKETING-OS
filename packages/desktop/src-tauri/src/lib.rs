@@ -812,6 +812,22 @@ fn execution_day_key() -> i64 {
         .div_euclid(86_400)
 }
 
+/// The single decision point for local direct-execution safety budgets.
+/// Extracted so the thresholds are enforced in exactly one place and can be
+/// asserted directly; `execute_telegram_task` must call this and honour it.
+fn execution_budget_blocks(
+    completed_today: i64,
+    consecutive_failures: i64,
+) -> Option<&'static str> {
+    if consecutive_failures >= DEFAULT_CIRCUIT_BREAKER_THRESHOLD {
+        Some("circuit_breaker_open")
+    } else if completed_today >= DEFAULT_DAILY_EXECUTION_LIMIT {
+        Some("daily_limit_reached")
+    } else {
+        None
+    }
+}
+
 fn next_utc_midnight_timestamp() -> String {
     let next_epoch = (execution_day_key() + 1) * 86_400;
     match OffsetDateTime::from_unix_timestamp(next_epoch) {
@@ -2754,57 +2770,60 @@ async fn telegram_execute_task(
     let (completed_today, consecutive_failures) =
         load_execution_counters(&connection, &workspace_id, &account_id)
             .map_err(|error| error.to_string())?;
-    if consecutive_failures >= DEFAULT_CIRCUIT_BREAKER_THRESHOLD {
-        connection
-            .execute(
-                "UPDATE tasks
-                 SET status='awaiting_user_action'
-                 WHERE id=?1 AND workspace_id=?2 AND status='running'",
-                params![&task_id, &workspace_id],
-            )
-            .map_err(|error| error.to_string())?;
-        telegram_task_audit(
-            &connection,
-            &workspace_id,
-            &task_id,
-            "circuit_breaker_open",
-            "blocked",
-        )?;
-        return Ok(TelegramExecutionView {
-            task_id,
-            status: "awaiting_user_action".to_string(),
-            external_message_id: None,
-            message: "Local execution circuit breaker is open after repeated failures.".to_string(),
-            retry_at: None,
-        });
-    }
-
-    if completed_today >= DEFAULT_DAILY_EXECUTION_LIMIT {
-        let retry_at = next_utc_midnight_timestamp();
-        connection
-            .execute(
-                "UPDATE tasks
-                 SET status='pending', available_at=?1
-                 WHERE id=?2 AND workspace_id=?3 AND status='running'",
-                params![&retry_at, &task_id, &workspace_id],
-            )
-            .map_err(|error| error.to_string())?;
-        telegram_task_audit(
-            &connection,
-            &workspace_id,
-            &task_id,
-            "daily_limit_reached",
-            "blocked",
-        )?;
-        return Ok(TelegramExecutionView {
-            task_id,
-            status: "pending".to_string(),
-            external_message_id: None,
-            message:
-                "Local daily execution budget is exhausted; task deferred until the next UTC day."
+    match execution_budget_blocks(completed_today, consecutive_failures) {
+        Some("circuit_breaker_open") => {
+            connection
+                .execute(
+                    "UPDATE tasks
+                     SET status='awaiting_user_action'
+                     WHERE id=?1 AND workspace_id=?2 AND status='running'",
+                    params![&task_id, &workspace_id],
+                )
+                .map_err(|error| error.to_string())?;
+            telegram_task_audit(
+                &connection,
+                &workspace_id,
+                &task_id,
+                "circuit_breaker_open",
+                "blocked",
+            )?;
+            return Ok(TelegramExecutionView {
+                task_id,
+                status: "awaiting_user_action".to_string(),
+                external_message_id: None,
+                message: "Local execution circuit breaker is open after repeated failures."
                     .to_string(),
-            retry_at: Some(retry_at),
-        });
+                retry_at: None,
+            });
+        }
+        Some(_) => {
+            let retry_at = next_utc_midnight_timestamp();
+            connection
+                .execute(
+                    "UPDATE tasks
+                     SET status='pending', available_at=?1
+                     WHERE id=?2 AND workspace_id=?3 AND status='running'",
+                    params![&retry_at, &task_id, &workspace_id],
+                )
+                .map_err(|error| error.to_string())?;
+            telegram_task_audit(
+                &connection,
+                &workspace_id,
+                &task_id,
+                "daily_limit_reached",
+                "blocked",
+            )?;
+            return Ok(TelegramExecutionView {
+                task_id,
+                status: "pending".to_string(),
+                external_message_id: None,
+                message:
+                    "Local daily execution budget is exhausted; task deferred until the next UTC day."
+                        .to_string(),
+                retry_at: Some(retry_at),
+            });
+        }
+        None => {}
     }
 
     let (session_payload_json, account_status) = connection
@@ -2817,7 +2836,7 @@ async fn telegram_execute_task(
 
     if account_status != "connected" {
         connection
-            .execute(
+        .execute(
                 "UPDATE tasks SET status='awaiting_user_action' WHERE id=?1 AND workspace_id=?2 AND status='running'",
                 params![&task_id, workspace_id],
             )
@@ -14488,6 +14507,172 @@ mod execution_counter_tests {
         let after_success =
             load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
         assert_eq!(after_success, (1, 0));
+    }
+
+    // CONN-04 requires that native direct execution *enforces* the local
+    // safety budgets, not merely that counters exist. The enforcement
+    // decision in execute_telegram_task reads these two counters, so assert
+    // the decision the thresholds produce.
+    fn budget_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite");
+        connection
+            .execute_batch(
+                "CREATE TABLE execution_counters(
+                   workspace_id TEXT NOT NULL,
+                   account_id TEXT NOT NULL,
+                   day_key INTEGER NOT NULL,
+                   completed_today INTEGER NOT NULL,
+                   consecutive_failures INTEGER NOT NULL,
+                   PRIMARY KEY(workspace_id, account_id)
+                 );",
+            )
+            .expect("schema");
+        connection
+    }
+
+    #[test]
+    fn the_circuit_breaker_trips_at_the_configured_threshold() {
+        assert_eq!(DEFAULT_CIRCUIT_BREAKER_THRESHOLD, 3);
+        assert_eq!(
+            execution_budget_blocks(0, DEFAULT_CIRCUIT_BREAKER_THRESHOLD - 1),
+            None,
+            "the breaker must stay closed below the threshold",
+        );
+        assert_eq!(
+            execution_budget_blocks(0, DEFAULT_CIRCUIT_BREAKER_THRESHOLD),
+            Some("circuit_breaker_open"),
+            "the breaker must trip at the threshold",
+        );
+    }
+
+    #[test]
+    fn consecutive_failures_reach_the_threshold_and_a_success_resets_them() {
+        let connection = budget_connection();
+        load_execution_counters(&connection, "workspace-1", "account-1").expect("seed counters");
+
+        for attempt in 1..=DEFAULT_CIRCUIT_BREAKER_THRESHOLD {
+            record_execution_failure(&connection, "workspace-1", "account-1")
+                .expect("failure should record");
+            let (completed_today, consecutive_failures) =
+                load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+            assert_eq!(
+                consecutive_failures, attempt,
+                "failure {attempt} must be counted",
+            );
+            assert_eq!(completed_today, 0, "a failure is not a completion");
+        }
+
+        let (completed_today, failures) =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(
+            execution_budget_blocks(completed_today, failures),
+            Some("circuit_breaker_open"),
+            "the breaker must be open after the configured number of failures",
+        );
+
+        record_execution_success(&connection, "workspace-1", "account-1").expect("success");
+        let (completed_today, after_success) =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(
+            execution_budget_blocks(completed_today, after_success),
+            None,
+            "a success must close the breaker again",
+        );
+    }
+
+    #[test]
+    fn the_daily_limit_stops_further_completions() {
+        let connection = budget_connection();
+        load_execution_counters(&connection, "workspace-1", "account-1").expect("seed counters");
+
+        for _ in 0..DEFAULT_DAILY_EXECUTION_LIMIT {
+            let (completed_today, failures) =
+                load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+            assert_eq!(
+                execution_budget_blocks(completed_today, failures),
+                None,
+                "the daily limit must not trip before the budget is spent",
+            );
+            record_execution_success(&connection, "workspace-1", "account-1").expect("success");
+        }
+
+        let (completed_today, failures) =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(completed_today, DEFAULT_DAILY_EXECUTION_LIMIT);
+        assert_eq!(
+            execution_budget_blocks(completed_today, failures),
+            Some("daily_limit_reached"),
+            "the daily limit must stop execution once the budget is spent",
+        );
+    }
+
+    // Budgets are per account and per workspace, never global.
+    #[test]
+    fn execution_budgets_are_scoped_per_account_and_workspace() {
+        let connection = budget_connection();
+        // record_execution_success updates an existing row, so seed it the way
+        // the execution path does.
+        load_execution_counters(&connection, "workspace-1", "account-1").expect("seed counters");
+        for _ in 0..DEFAULT_DAILY_EXECUTION_LIMIT {
+            record_execution_success(&connection, "workspace-1", "account-1")
+                .expect("first account spends its budget");
+        }
+
+        let (spent, _) =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(
+            execution_budget_blocks(spent, 0),
+            Some("daily_limit_reached")
+        );
+
+        for (workspace, account) in [("workspace-1", "account-2"), ("workspace-2", "account-1")] {
+            let (completed_today, _) =
+                load_execution_counters(&connection, workspace, account).expect("load");
+            assert_eq!(
+                completed_today, 0,
+                "{workspace}/{account} must keep its own budget",
+            );
+            assert_eq!(
+                execution_budget_blocks(completed_today, 0),
+                None,
+                "{workspace}/{account} must not inherit another account's exhausted budget",
+            );
+        }
+    }
+
+    // A stale day_key must reset both counters, otherwise an account that hit
+    // its limit yesterday would stay blocked forever.
+    #[test]
+    fn counters_reset_when_the_day_rolls_over() {
+        let connection = budget_connection();
+        connection
+            .execute(
+                "INSERT INTO execution_counters(
+                   workspace_id, account_id, day_key, completed_today, consecutive_failures
+                 ) VALUES ('workspace-1', 'account-1', ?1, ?2, ?3)",
+                params![
+                    execution_day_key() - 1,
+                    DEFAULT_DAILY_EXECUTION_LIMIT,
+                    DEFAULT_CIRCUIT_BREAKER_THRESHOLD
+                ],
+            )
+            .expect("yesterday's counters should be seeded");
+
+        let (completed_today, consecutive_failures) =
+            load_execution_counters(&connection, "workspace-1", "account-1").expect("load");
+        assert_eq!(
+            completed_today, 0,
+            "the daily budget must reset on a new day"
+        );
+        assert_eq!(
+            consecutive_failures, 0,
+            "the breaker must reset on a new day"
+        );
+        assert_eq!(
+            execution_budget_blocks(completed_today, consecutive_failures),
+            None,
+            "a new day must clear both budgets",
+        );
     }
 }
 
