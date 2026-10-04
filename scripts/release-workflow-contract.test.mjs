@@ -36,20 +36,39 @@ async function stepList(workflow) {
   return out;
 }
 
+// A build step counts if it is the workspace build or the web package's own
+// filter. Several workflows use `pnpm --filter @orbit/web build`, which emits
+// packages/web/out just the same because next.config.mjs sets
+// `output: "export"`. Matching only the literal `pnpm build` would leave those
+// workflows unchecked.
+const WEB_BUILD =
+  /^pnpm (build|--filter @orbit\/web build|--dir packages\/web build)$/;
+
 async function assertBuildPrecedesE2E(workflow) {
   const found = await stepList(workflow);
-  const build = found.find((s) => s.run === "pnpm build");
+  const build = found.find((s) => s.run && WEB_BUILD.test(s.run));
   const e2e = found.find((s) => s.run === "pnpm test:e2e");
 
-  assert.ok(build, `${workflow} must run "pnpm build"`);
+  assert.ok(
+    build,
+    `${workflow} must build the web export (pnpm build or ` +
+      `pnpm --filter @orbit/web build) before running E2E`,
+  );
   assert.ok(e2e, `${workflow} must run "pnpm test:e2e"`);
   assert.ok(
     build.line < e2e.line,
-    `${workflow}: "pnpm build" (line ${build.line}) must precede ` +
-      `"pnpm test:e2e" (line ${e2e.line}); otherwise packages/web/out ` +
-      `does not exist when Playwright starts its webServer`,
+    `${workflow}: the web build (line ${build.line}, "${build.run}") must ` +
+      `precede "pnpm test:e2e" (line ${e2e.line}); otherwise ` +
+      `packages/web/out does not exist when Playwright starts its webServer`,
   );
 }
+
+test("desktop-native-validation builds the web export before running E2E", async () => {
+  // This workflow runs the native E2E suite, which also serves the static web
+  // surface. It builds via `pnpm --filter @orbit/web build`, so the literal
+  // `pnpm build` check would not have applied.
+  await assertBuildPrecedesE2E("desktop-native-validation.yml");
+});
 
 test("release quality gate builds the web export before running browser E2E", async () => {
   // The E2E suite serves packages/web/out through scripts/static-server.mjs and
@@ -59,6 +78,40 @@ test("release quality gate builds the web export before running browser E2E", as
   // release run 37205123765 failed on tag v1.0.0, blocking Build checksums
   // and Publish GitHub Release and leaving REL-03 without evidence.
   await assertBuildPrecedesE2E("release-desktop.yml");
+});
+
+test("every workflow running pnpm test:e2e builds the web export first", async () => {
+  // Covers whatever workflows exist today rather than a hand-picked list, so a
+  // new E2E workflow cannot skip the build. Three build forms are in use —
+  // `pnpm build`, `pnpm --filter @orbit/web build` and
+  // `pnpm --dir packages/web build` — and all three emit packages/web/out
+  // because packages/web/next.config.mjs sets `output: "export"`.
+  const files = await workflowFiles();
+  let covered = 0;
+
+  for (const file of files) {
+    const found = await stepList(file);
+    if (!found.some((s) => s.run === "pnpm test:e2e")) continue;
+
+    covered++;
+    const build = found.find((s) => s.run && WEB_BUILD.test(s.run));
+
+    assert.ok(
+      build,
+      `${file} runs "pnpm test:e2e" but has no web export build step. The ` +
+        `E2E suite serves packages/web/out, so Playwright's webServer will ` +
+        `time out after 30s.`,
+    );
+    assert.ok(
+      build.line < found.find((s) => s.run === "pnpm test:e2e").line,
+      `${file} builds the web export (line ${build.line}) after ` +
+        `"pnpm test:e2e" (line ${
+          found.find((s) => s.run === "pnpm test:e2e").line
+        }); the export does not exist yet when Playwright starts.`,
+    );
+  }
+
+  assert.ok(covered >= 3, `expected several E2E workflows, found ${covered}`);
 });
 
 test("ci orders its build before web E2E, matching the release workflow", async () => {
