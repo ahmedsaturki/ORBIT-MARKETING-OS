@@ -36,9 +36,16 @@ earlier in this document.
 What survives, and is why this work still has value: the soak harness defects
 are real and unfixed upstream. `origin/main:scripts/soak.ts` still takes
 `taskForCycle(cycle: number)` with its own clock read, still records requested
-minutes as elapsed, and has no bounded-run flag. Both soak defects, the
-readiness evidence-existence check, the user-guide contract, and the
-audit-workspace scoping fix are absent upstream.
+minutes as elapsed, and has no bounded-run flag. The readiness
+evidence-existence check, the user-guide contract, and the braces exception
+contract are all absent from the remote (`origin/main` has no
+`release-gate-model.test.mjs` at all).
+
+One finding is narrower than stated: the conversation audit-workspace defect
+exists only in this branch's refactor. Upstream never extracted a
+`conversation_upsert_record` helper, so the mismatch between the function's
+workspace argument and the global used for auditing could not arise there. The
+fix is still correct for this branch.
 
 **Consequence:** this branch cannot be merged as-is. It needs a rebase onto
 `origin/main`, after which the duplicate-name renames and the v17 schema pin
