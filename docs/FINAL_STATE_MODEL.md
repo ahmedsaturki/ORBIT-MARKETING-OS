@@ -18,14 +18,14 @@ by running the command named beside it, not by reading a prior report.
 | **Release**     | **NOT READY** | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
 | **Owner Gates** | **5 of 13**   | `external_connectors`, `accessibility`, `stability_soak`, `commercial_billing`, `legal_commercial`. Nine owner _actions_ remain, listed in section 7  |
 
-All of the above is confirmed by a clean CI run, not by local execution alone:
-16 of 17 checks pass, including all four platform builds, Windows native E2E at
-35 passed, Android debug validation, `ci`, `Rust quality`, `security:scan`,
-CodeRabbit and CodeFactor. The single failure is `security/snyk`, which fails on
-plan quota; `pnpm audit` independently reports 2 high advisories, both governed
-by documented exceptions. The SonarCloud status posted to pull requests comes
-from an external GitHub App rather than a workflow in this repository — see the
-correction in section 7.
+All of the above is confirmed by CI, not by local execution alone: 15 of 16
+checks pass, including all four platform builds, Windows native E2E at 35
+passed, Android debug validation, `ci`, `Rust quality`, `security:scan`,
+CodeRabbit and CodeFactor. The one failure, `security/snyk`, is an external
+GitHub App reporting a billing limit rather than a scan result — no workflow in
+this repository runs it, for the same reason SonarCloud does not. `pnpm audit`
+independently reports 2 high advisories, both governed by documented exceptions,
+and 0 unignored.
 
 ### Overall
 
@@ -117,15 +117,23 @@ Verified on the Windows native E2E job at `9d95c888`:
 Windows native E2E  Run native and web E2E  35 passed (25.8s)
 ```
 
-### PR #213 status: 14 of 15 checks pass
+### PR #213 status: 15 of 16 checks pass
 
 `ci`, `security:scan`, `Rust quality`, `SonarCloud Code Analysis`, `CodeFactor`,
-`CodeRabbit`, `Android debug validation`, `Windows native E2E`, and all four
-platform builds (`linux-x64`, `macos-arm64`, `macos-x64`, `windows-x64`) pass.
+`CodeRabbit`, `Android debug validation`, `Windows native E2E`, the four platform
+builds (`linux-x64`, `macos-arm64`, `macos-x64`, `windows-x64`) and the three
+Vercel checks pass. `Vulnerability analysis` (Debricked) skips.
 
-`security/snyk` fails on plan quota, not on findings. Verified independently:
-`pnpm audit` reports 2 high advisories, both governed by documented exceptions,
-and 0 unignored advisories.
+`security/snyk` fails, and it is **not a check this repository can influence**.
+Like SonarCloud, it comes from an external GitHub App rather than a workflow here:
+the repository has 17 workflow files and none references Snyk. The check reports
+`You have used your limit of private tests` in 0 seconds, which is a billing state
+on the Snyk account, not a scan result.
+
+It is therefore recorded as **not evaluated**, not as a passing security check.
+The security claim that is actually verifiable is `pnpm audit`, which runs in
+this repository: 2 high advisories, both governed by documented exceptions, 0
+unignored. `security:scan` passes.
 
 ---
 
@@ -200,7 +208,6 @@ pinned in `scripts/dependency-audit-exceptions.test.mjs`, it blocks inputs neste
 deeper than 100 (`Input depth (101), exceeds max depth (100)`) while leaving
 `expand` and `compile` behavior unchanged, and `braces` reaches this repository
 only transitively through `micromatch@4.0.8`. Adopting it is safe.
-
 
 ---
 

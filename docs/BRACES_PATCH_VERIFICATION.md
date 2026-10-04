@@ -21,12 +21,12 @@ The governance exception permits ignoring GHSA-vfj7-8cjw-p6xm (braces uncontroll
    - `lib/constants.js` adds `MAX_DEPTH: 100` and exports it
    - The patch adds **four** independent depth guards, not one:
 
-     | File | Guard | Error type |
-     | --- | --- | --- |
-     | `lib/parse.js` | counts `nesting` while scanning; `+ 1` in the message | `SyntaxError` |
-     | `lib/expand.js` | depth counter through expansion | `RangeError` |
-     | `lib/stringify.js` | depth counter through stringify | `RangeError` |
-     | `lib/compile.js` | depth counter through the AST walk | `RangeError` |
+     | File               | Guard                                                 | Error type    |
+     | ------------------ | ----------------------------------------------------- | ------------- |
+     | `lib/parse.js`     | counts `nesting` while scanning; `+ 1` in the message | `SyntaxError` |
+     | `lib/expand.js`    | depth counter through expansion                       | `RangeError`  |
+     | `lib/stringify.js` | depth counter through stringify                       | `RangeError`  |
+     | `lib/compile.js`   | depth counter through the AST walk                    | `RangeError`  |
 
    - Each clamps its own limit: `Number.isFinite(opts.maxDepth) ? Math.min(MAX_DEPTH, opts.maxDepth) : MAX_DEPTH`,
      so a caller may lower the ceiling but never raise it above 100.
@@ -36,7 +36,7 @@ The governance exception permits ignoring GHSA-vfj7-8cjw-p6xm (braces uncontroll
 3. **Behavioral testing:**
    - Built clean test tree with patched braces plus transitive deps (`fill-range`, `to-regex-range`, `is-number`)
    - **Depth 50 (under the limit):** returns the nesting preserved as a literal — the deep
-     `{…a…}` payload is not a brace *expression*, so `expand` echoes it back rather than expanding
+     `{…a…}` payload is not a brace _expression_, so `expand` echoes it back rather than expanding
      it. The patched and unpatched trees produce identical output at depths 1, 2, 3, 5, 10, 50
      and 99, which is the actual evidence that the patch changes nothing below the limit.
    - **Depth 101 (over the limit):** `SyntaxError: Input depth (101), exceeds max depth (100)`
@@ -51,16 +51,16 @@ The governance exception permits ignoring GHSA-vfj7-8cjw-p6xm (braces uncontroll
 
 ### Each guard was executed, not just read
 
-`expand()` calls `parse()` first, so a deep *string* input is always stopped by
+`expand()` calls `parse()` first, so a deep _string_ input is always stopped by
 `lib/parse.js`. To reach the other three guards I hand-built ASTs deeper than the
 limit and passed them in directly:
 
-| Call | Result |
-| --- | --- |
+| Call                                 | Result                                                    |
+| ------------------------------------ | --------------------------------------------------------- |
 | `parse` via `expand('{…101 deep…}')` | `SyntaxError: Input depth (101), exceeds max depth (100)` |
-| `stringify(150-deep AST)` | `RangeError: AST depth (101), exceeds max depth (100)` |
-| `compile(150-deep AST)` | `RangeError: AST depth (101), exceeds max depth (100)` |
-| `stringify(99-deep AST)` | no throw — inside the limit |
+| `stringify(150-deep AST)`            | `RangeError: AST depth (101), exceeds max depth (100)`    |
+| `compile(150-deep AST)`              | `RangeError: AST depth (101), exceeds max depth (100)`    |
+| `stringify(99-deep AST)`             | no throw — inside the limit                               |
 
 The `expand` guard is covered by the parse guard on this path; it was not
 separately triggered, because `expand` cannot reach its own counter without first
@@ -99,6 +99,7 @@ The governance test's assertion that `braces` is not a shipped dependency is cor
 **PR #196's braces patch is valid, applies cleanly, and blocks the uncontrolled resource consumption attack while preserving normal usage.**
 
 The patch is:
+
 - Byte-for-byte identical to the blob referenced in the governance test (SHA256 matches)
 - Applied cleanly to installed braces 3.0.3 via `git apply`
 - Functional: blocks depth > 100 on the `parse`, `stringify`, and `compile` paths, passes depth ≤ 100,
