@@ -9,6 +9,19 @@ This report supersedes `orbit-final-delivery-report.md` and
 `orbit-completion-verification.md`. Both are cited below only where their
 claims were checked against the repository.
 
+> **Superseded (2026-10-04, later pass).** A subsequent audit pass re-verified
+> this repository at commit `2493d4cd` and supersedes the counts in this
+> document. The current classification is **77 PASS, 3 PARTIAL, 3 UNVERIFIED,
+> 0 FAIL** across 83 requirements, recorded in `ACCEPTANCE_MATRIX_V2.md`, which
+> is the authoritative source. Findings below remain valid as history; where a
+> count here differs, the matrix governs.
+>
+> Defects closed after this report was written: `verify:workspace` had been red
+> across eleven workflows since schema v17 (fixed); the soak summary reported
+> requested minutes as elapsed (fixed); the soak harness aborted on a
+> claim-timestamp race (fixed); `REL-02` was reclassified from FAIL because
+> signing is owner-controlled policy, not a code defect.
+
 ---
 
 ## A. HEADLINE FINDING

@@ -17,15 +17,17 @@ Classification rules applied:
 
 - `PASS` requires the evidence named in the "Evidence required" column to exist and run.
 - `PARTIAL` means some named evidence exists but at least one required kind does not.
-- `UNVERIFIED` means no executing evidence was found for a runtime requirement.
 - Source inspection alone never produced `PASS`, per the rule above.
 
 Two claims from earlier reporting are corrected by this reconciliation:
 
-- The prior delivery report cited **1046** tests and **87** requirement IDs. The
-  repository contains **348** executing tests and this matrix defines **83** IDs.
-  Three additional IDs (`SEARCH-02`..`SEARCH-04`) named in an earlier audit do not
-  exist here and were not counted.
+- The prior delivery report cited **1046** tests. Its own breakdown does not
+  support the figure: the stated parts sum to **1151** (487+9+487+27+36+105),
+  and no run in this tree produces 1046. Measured at commit `2493d4cd`:
+  **533** executing JavaScript tests (core 511, desktop 9, mobile 8, web 5)
+  and **182** Rust tests. The report also cited **87** requirement IDs; this
+  matrix defines **83**. `SEARCH-02`..`SEARCH-04`, named in an earlier audit,
+  do not exist here and were not counted.
 
 - There is no `FAIL`. The previously reported **REL-02** (`signing=unsigned`) is
   **reclassified** to UNVERIFIED: it is a deliberate documented policy requiring
@@ -49,7 +51,8 @@ release build failed from a clean checkout. That blocker is closed.
 `pnpm verify:workspace` was also red across the repository since `370586a4`
 landed schema v17: three pairs of Rust test helpers shared a name across
 separate modules, and the schema pins still expected 16. That gate runs in
-five workflows, including `ci.yml` and `release-desktop.yml`. All three
+**eleven** workflows, including `ci.yml`, `desktop-native-validation.yml`,
+`mobile-validation.yml` and `release-desktop.yml`. All three
 helper pairs are renamed and the pins now expect 17; the gate passes. The
 pins were proved still load-bearing by setting one to 18 and observing the
 failure.
