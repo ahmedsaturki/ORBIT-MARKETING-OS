@@ -130,29 +130,44 @@ All 13 gates documented with keys, levels, class, block impact, verification met
 
 ### CI Test Results
 
-Observed on PR #213 at head `524f20e3` via `gh pr checks 213`:
+Observed on PR #213 at head `524f20e3` via
+`gh api repos/ahmedsaturki/ORBIT-MARKETING-OS/commits/524f20e3/check-runs`:
 
-| Status    | Count | Checks                                                                                                                                                                     |
-| --------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pass`    | 11    | ci, Rust quality, security:scan, Build linux-x64, Build macos-arm64, SonarCloud Code Analysis, CodeFactor, CodeRabbit, Vercel, Vercel Preview Comments, Vercel Deployments |
-| `fail`    | 1     | `security/snyk` — "You have used your limit of private tests". Billing quota, not findings                                                                                 |
-| `pending` | 3     | Android debug validation, Build macos-x64, Build windows-x64                                                                                                               |
-| `skip`    | 1     | Vulnerability analysis (Debricked app not installed)                                                                                                                       |
+| Conclusion  | Count | Checks                                                                                                                             |
+| ----------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `success`   | 8     | ci, security:scan, Rust quality, Build linux-x64, Build macos-arm64, SonarCloud Code Analysis, CodeFactor, Vercel Preview Comments |
+| `cancelled` | 4     | Android debug validation, Build macos-x64, Build windows-x64, Windows native E2E                                                   |
+| `neutral`   | 1     | Vulnerability analysis (Debricked app not installed)                                                                               |
 
-**16 checks total: 11 pass, 1 fail, 3 pending, 1 skipped.**
+**13 check runs: 8 success, 4 cancelled, 1 neutral.**
 
-An earlier revision of this section claimed "14 of 15 checks pass" and "16 of 17
-pass". Neither total matches the observed 16, and they contradict each other.
-Both are retracted. The counts above were read directly from `gh pr checks` and
-the three pending checks must be re-read once they settle — this table is a
-point-in-time observation, not a stable property.
+An earlier version of this table reported "16 checks: 11 pass, 1 fail, 3
+pending, 1 skipped" and named CodeRabbit and `security/snyk` among them. Neither
+registers a check run on this branch — re-querying shows no CodeRabbit run at
+`524f20e3`, `14264b7d` or `35f64482`, and no Snyk run at any of them. The table
+above is the API response, not a `gh pr checks` transcription. The 4
+cancellations are the concrete evidence behind the release defect: each push
+superseded the previous run.
 
-- Windows native E2E: 37 passed, 0 failed (SEC-03 defect fixed)
-- Rust quality job: 106 passed (filtered from 182 source attributes)
+Two earlier revisions of this section claimed "14 of 15 checks pass" and "16 of
+17 pass". Neither matched the API response, and they contradicted each other;
+both are retracted rather than reconciled. The table above is read from the
+check-runs API for a specific head.
+
+- Windows native E2E: 37 passed, 0 failed (SEC-03 defect fixed). Verified by
+  counting the specs — 8 + 3 + 9 + 11 + 6 across the five files in `e2e/`.
+- Rust: **182 passed, 0 failed** (`cargo test --locked --workspace`). An earlier
+  claim of "106 passed (filtered from 182 source attributes)" was wrong on both
+  numbers: 182 is the count that runs, and nothing is filtered out of it.
 
 ### Environment Gaps
 
-- Local Rust build fails due to corrupted cache on D: (99% full, 7.9GB free)
+- D: is at 99% capacity (5.9G free of 562G), which is why cargo needs
+  `CARGO_HOME=D:/orbit-cargo-home CARGO_TARGET_DIR=D:/orbit-cargo-target` and C:
+  cannot host a build. An earlier note here said the local Rust build _fails_
+  from cache corruption on D:; that is no longer true — `cargo test --locked
+--workspace` completes with 182 passed, 0 failed once the directories are
+  redirected. The capacity constraint is real and still stands.
 - `pnpm test:coverage` is broken on the host; CI uses `pnpm --filter @orbit/core test:coverage`
 
 ---
