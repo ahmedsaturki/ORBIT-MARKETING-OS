@@ -56,7 +56,7 @@ additive and keep both sides. The acceptance matrix kept this branch's version
 because all four disagreeing statuses were checked: `AI-01` stays PASS on a
 test that runs green here, and `INBOX-01` stays PARTIAL because
 `TelegramConnector.sync` returns `this.connect(context)` and `connect` only
-validates credentials. Six governance gates, 524 JS tests, and typecheck 5/5
+validates credentials. Six governance gates, 537 JS tests, 182 Rust tests, and typecheck 5/5
 pass on the result. See `RECONCILIATION.md` for the per-conflict record.
 
 

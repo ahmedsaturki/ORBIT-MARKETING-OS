@@ -263,6 +263,13 @@ audit; the only new dependency-free code added is test code.
 
 ## H. FOUR-WAY STATUS
 
+> **Counts in sections H and K are as measured at `01cd0622`**, before
+> `origin/main` was merged and before this branch's own test work. They are left
+> as the historical record rather than rewritten. The current figures are
+> **537 JS tests** (core 515, desktop 9, mobile 8, web 5) and **182 Rust tests**;
+> see `FINAL_STATE_MODEL.md` and `RECONCILIATION.md`. The "105/105 Rust" and
+> "509 JS" numbers in this document are superseded.
+
 ### Engineering — **PASS**
 509 JS tests, 114 Rust tests, clippy `-D warnings` clean, fmt clean, typecheck
 5/5, security scan passed, runtime smoke 4/4, e2e 24 passing, and a real
