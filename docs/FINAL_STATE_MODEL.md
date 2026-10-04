@@ -59,6 +59,28 @@ test that runs green here, and `INBOX-01` stays PARTIAL because
 validates credentials. Six governance gates, 549 JS tests, 182 Rust tests, and typecheck 5/5
 pass on the result. See `RECONCILIATION.md` for the per-conflict record.
 
+### Two script tests fail on this host, and CI proves they are not defects
+
+`scripts/vercel-ignore.test.mjs` reports 2 failures when run locally
+(`only the commit that changes the release marker can trigger a build`, and
+`vercel ignore builds when the current commit has no parent`), both `0 !== 1`.
+They fail identically at `d703fc88`, before any work in this branch, and the `ci`
+job runs this file explicitly and passes.
+
+The cause is the shell, not the script. `bash` resolves to
+`C:\WINDOWS\system32\bash.exe` — the WSL launcher, which does not carry Windows
+environment variables into the Linux namespace. So `VERCEL_GIT_COMMIT_REF` never
+arrives, `vercel-ignore.sh` takes its "only the protected main branch may build"
+path, and the test reads exit 0 where it expects 1. Git Bash
+(`C:\Program Files\Git\bin\bash.exe`) receives the variable correctly, but node
+resolves `bash` through Windows PATH and picks the WSL shim regardless of PATH
+order.
+
+The script's own root-commit handling is correct: it runs
+`git rev-parse --verify HEAD^` and exits 1 when the parent cannot be established.
+Nothing in the script or the test was changed to accommodate this host, because
+the defect is in the environment and CI exercises the real one.
+
 ---
 
 ## 2. Requirement Reconciliation
