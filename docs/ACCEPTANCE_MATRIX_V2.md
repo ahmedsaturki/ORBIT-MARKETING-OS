@@ -47,6 +47,17 @@ The root `pnpm test:coverage` is also broken independently of this: only
 "Could not find task". CI already uses `pnpm --filter @orbit/core test:coverage`,
 which works. The matrix row cites the filtered form.
 
+**Skipped and flaky tests.** The whole tree contains exactly one `test.skip`,
+and it is conditional rather than disabled: `e2e/tauri-shell.spec.ts:189` skips
+the Tauri capability suite when `scripts/build-tauri.mjs --release` has not
+produced a binary. That is why the browser-only run reports 24 passed / 10
+skipped while the Windows native E2E job reports 35 passed — the same tests,
+with the binary present. No other skip, `todo`, `xit` or `xdescribe` exists in
+`packages/*/src`, `packages/*/test` or `e2e`.
+
+Three consecutive `pnpm test` runs each reported 357 + 9 + 5 with no failure and
+no retry, so no flakiness was observed in the local environment.
+
 - There is no `FAIL`. The previously reported **REL-02** (`signing=unsigned`) is
   **reclassified** to UNVERIFIED: it is a deliberate documented policy requiring
   owner-controlled certificates, not a code defect. Every remaining non-PASS row
