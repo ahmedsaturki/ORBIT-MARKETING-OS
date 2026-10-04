@@ -177,16 +177,17 @@ owner-controlled gate. That is policy, not a defect in this repository.
 
 Each was proven load-bearing by reverting it and observing the failure.
 
-| #   | Defect                                                                                                                                                                                            | Class                                          |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| 1   | `soak.ts` recorded **requested** minutes as elapsed; a 1-minute run wrote `"minutes": 1440, "ok": true`                                                                                           | Verification asserting what it hadn't measured |
-| 2   | Soak harness aborted at ~68 cycles on a claim-timestamp race                                                                                                                                      | Test-harness bug                               |
-| 3   | `pnpm verify:workspace` failed repo-wide in **eleven** workflows since schema v17                                                                                                                 | Gate red since 2026-10-04                      |
-| 4   | Readiness evidence could cite files that no longer exist                                                                                                                                          | Unenforced truth claim                         |
-| 5   | `pnpm audit` exited 1 in **five** workflows since 2026-09-25                                                                                                                                      | Security gate red                              |
-| 6   | `conversation_upsert` audited under the global workspace, not its argument                                                                                                                        | Cross-tenant audit write                       |
-| 7   | Duplicate Rust test helpers (`upsert`, `grant`, `assert_unauthorized`) broke a name-uniqueness gate                                                                                               | Naming collision                               |
-| 8   | Public web pages had no skip link (WCAG 2.4.1), so keyboard and screen-reader users had no bypass mechanism. **Fixed.** Sub-pages still lack banner/contentinfo landmarks (WCAG 1.3.1) — **open** | Accessibility                                  |
+| #   | Defect                                                                                                                                                                                       | Class                                          |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| 1   | `soak.ts` recorded **requested** minutes as elapsed; a 1-minute run wrote `"minutes": 1440, "ok": true`                                                                                      | Verification asserting what it hadn't measured |
+| 2   | Soak harness aborted at ~68 cycles on a claim-timestamp race                                                                                                                                 | Test-harness bug                               |
+| 3   | `pnpm verify:workspace` failed repo-wide in **eleven** workflows since schema v17                                                                                                            | Gate red since 2026-10-04                      |
+| 4   | Readiness evidence could cite files that no longer exist                                                                                                                                     | Unenforced truth claim                         |
+| 5   | `pnpm audit` exited 1 in **five** workflows since 2026-09-25                                                                                                                                 | Security gate red                              |
+| 6   | `conversation_upsert` audited under the global workspace, not its argument                                                                                                                   | Cross-tenant audit write                       |
+| 7   | Duplicate Rust test helpers (`upsert`, `grant`, `assert_unauthorized`) broke a name-uniqueness gate                                                                                          | Naming collision                               |
+| 8   | Public web pages had no skip link (WCAG 2.4.1), so keyboard and screen-reader users had no bypass mechanism. **Fixed.**                                                                      | Accessibility                                  |
+| 9   | Public web pages exposed no `banner`/`navigation`/`contentinfo` landmarks: every sub-page nested its `<header>` inside `<main>`, which does not map to a banner role (WCAG 1.3.1). **Fixed** | Accessibility                                  |
 
 Two more were corrected in reporting rather than code: the workflow count was
 understated as five (it is eleven), and a prior audit's counts now conflict with
@@ -214,7 +215,7 @@ deeper than 100 (`Input depth (101), exceeds max depth (100)`) while leaving
 `expand` and `compile` behavior unchanged, and `braces` reaches this repository
 only transitively through `micromatch@4.0.8`. Adopting it is safe.
 
-### Accessibility: skip link added, landmark gap left open
+### Accessibility: skip link and landmarks both fixed
 
 The accessibility gate was previously described as owner-gated human review only.
 That was incomplete — automated checks run locally, and running them found a real
@@ -233,17 +234,25 @@ off-screen to the **right**. A first assertion checking `rect.right < 0` was
 wrong and failed; the test now asserts "entirely past the right edge" before
 focus and "fully within the viewport" after.
 
-`e2e/accessibility-rtl.spec.ts` gains two tests. The skip-link test was proved
-load-bearing by deleting the link, rebuilding, and observing it fail
-(`toHaveCount` expected 1, received 0). Spec is now 8/8.
+**Also fixed.** Every sub-page rendered `<main>` with its `<header>` nested
+_inside_ it, so no page exposed `banner`, `navigation` or `contentinfo` landmarks
+(WCAG 1.3.1) — and, per the ARIA mapping rules, a `<header>` inside `<main>` does
+not become a banner at all. The first fix attempt placed the shared chrome inside
+`<main>` and the landmark test correctly failed with `getByRole('banner')`
+resolved to 0 elements. The header now sits outside `<main>` on all six routes.
 
-**Still open.** `/pricing/`, `/legal/privacy/`, `/legal/terms/`, `/legal/eula/` and
-`/legal/refunds/` render `<main>` only — no `header`, `nav` or `footer` landmark,
-unlike `/`. That is a WCAG 1.3.1 gap. The new test does **not** assert it and it
-is deliberately left as a known finding rather than papered over. The
-accessibility gate still needs human review regardless: automated coverage cannot
-judge contrast on rendered Arabic text, screen-reader announcement order, or
-cognitive accessibility.
+Navigation and footer were extracted from the homepage into
+`packages/web/src/components/site-chrome.tsx` and rendered by every page. Markup
+and class names are unchanged, so this is a structure fix, not a restyle.
+
+`e2e/accessibility-rtl.spec.ts` now covers all six routes for `main`, `banner`,
+`navigation` and `contentinfo`, and both new tests were proved load-bearing by
+removing the markup and observing them fail. Spec is 8/8; `public-web` and
+`web-smoke` remain 15/15; web unit tests 5/5.
+
+**Still owner-gated.** The accessibility gate still needs human review: automated
+coverage cannot judge contrast on rendered Arabic text, screen-reader announcement
+order, or cognitive accessibility.
 ---
 
 ## 5. Claims From Prior Reporting That Do Not Survive

@@ -160,17 +160,25 @@ test.describe("ORBIT accessibility and RTL", () => {
     }
   });
 
-  test("every public route exposes exactly one main landmark as the skip target", async ({
+  test("every public route exposes banner, navigation and contentinfo landmarks", async ({
     page,
   }) => {
-    // The skip link must resolve to a single, unambiguous main region on every
-    // route. Sub-pages carry no banner or contentinfo landmark; that remains a
-    // known gap recorded in docs/FINAL_STATE_MODEL.md and is deliberately not
-    // asserted here, because it is not yet fixed.
-    for (const path of ["/", "/pricing/", "/legal/privacy/", "/legal/terms/"]) {
+    // WCAG 1.3.1 / 2.4.1: sub-pages previously rendered <main> only, so
+    // assistive tech had no site-wide navigation or footer landmark to jump to.
+    for (const path of [
+      "/",
+      "/pricing/",
+      "/legal/privacy/",
+      "/legal/terms/",
+      "/legal/eula/",
+      "/legal/refunds/",
+    ]) {
       await page.goto(path);
       await expect(page.locator("main#main-content")).toHaveCount(1);
       await expect(page.getByRole("main")).toHaveCount(1);
+      await expect(page.getByRole("banner")).toHaveCount(1);
+      await expect(page.getByRole("navigation")).toHaveCount(1);
+      await expect(page.getByRole("contentinfo")).toHaveCount(1);
     }
   });
 });

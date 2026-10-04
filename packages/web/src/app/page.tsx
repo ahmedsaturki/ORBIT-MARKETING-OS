@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import Link from "next/link";
+import { releaseSha, SiteFooter, SiteHeader } from "../components/site-chrome";
 
 const features = [
   "امتلاك البيانات التشغيلية على جهازك",
@@ -10,79 +11,54 @@ const features = [
   "سطح مكتبي للعمليات الحساسة",
 ];
 
-const declaredReleaseSha = process.env.NEXT_PUBLIC_ORBIT_RELEASE_SHA?.trim();
-const vercelGitCommitSha = process.env.VERCEL_GIT_COMMIT_SHA?.trim();
-const releaseSha = declaredReleaseSha || vercelGitCommitSha || "unreleased";
-const releaseShaSource = declaredReleaseSha
-  ? "NEXT_PUBLIC_ORBIT_RELEASE_SHA"
-  : vercelGitCommitSha
-    ? "VERCEL_GIT_COMMIT_SHA"
-    : "none";
-
 export default function HomePage(): ReactElement {
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      data-release="1.0.0"
-      data-release-sha={releaseSha}
-    >
-      <header className="topbar">
-        <div className="container nav">
-          <strong>ORBIT</strong>
-          <nav aria-label="التنقل الرئيسي">
-            <Link href="/pricing/">الأسعار</Link>
-            <Link href="/legal/privacy/">الخصوصية</Link>
-            <Link href="/legal/terms/">الشروط</Link>
-            <Link href="/legal/refunds/">الاسترداد</Link>
-            <Link href="/legal/eula/">EULA</Link>
-          </nav>
-        </div>
-      </header>
+    <>
+      <SiteHeader />
+      <main
+        id="main-content"
+        tabIndex={-1}
+        data-release="1.0.0"
+        data-release-sha={releaseSha}
+      >
+        <section className="hero container">
+          <div className="eyebrow">LOCAL-FIRST MARKETING OPERATIONS</div>
+          <h1>مركز تشغيل تسويقك، مع ملكية بياناتك على جهازك.</h1>
+          <p>
+            ORBIT يجمع التخطيط، المحتوى، CRM، صندوق المحادثات، والمهام في مساحة
+            واحدة، مع تشغيل محلي للبيانات الحساسة ومساعد AI عبر Ollama.
+          </p>
+          <div className="actions">
+            <Link className="button primary" href="/pricing/">
+              استكشف الخطط
+            </Link>
+            <a
+              className="button secondary"
+              href="https://github.com/ahmedsaturki/ORBIT-MARKETING-OS"
+            >
+              المستودع
+            </a>
+          </div>
+        </section>
 
-      <section className="hero container">
-        <div className="eyebrow">LOCAL-FIRST MARKETING OPERATIONS</div>
-        <h1>مركز تشغيل تسويقك، مع ملكية بياناتك على جهازك.</h1>
-        <p>
-          ORBIT يجمع التخطيط، المحتوى، CRM، صندوق المحادثات، والمهام في مساحة
-          واحدة، مع تشغيل محلي للبيانات الحساسة ومساعد AI عبر Ollama.
-        </p>
-        <div className="actions">
-          <Link className="button primary" href="/pricing/">
-            استكشف الخطط
-          </Link>
-          <a
-            className="button secondary"
-            href="https://github.com/ahmedsaturki/ORBIT-MARKETING-OS"
-          >
-            المستودع
-          </a>
-        </div>
-      </section>
+        <section className="container feature-grid" aria-label="المزايا">
+          {features.map((feature) => (
+            <article key={feature} className="card">
+              <div className="check">✓</div>
+              <h2>{feature}</h2>
+            </article>
+          ))}
+        </section>
 
-      <section className="container feature-grid" aria-label="المزايا">
-        {features.map((feature) => (
-          <article key={feature} className="card">
-            <div className="check">✓</div>
-            <h2>{feature}</h2>
-          </article>
-        ))}
-      </section>
-
-      <section className="container note">
-        <h2>السطح السحابي ليس خزنة جلسات</h2>
-        <p>
-          Web مخصص للتعريف والشراء والوصول السريع. كلمات المرور، الكوكيز،
-          وبيانات الجلسات الحساسة لا تُخزن في الموقع العام.
-        </p>
-      </section>
-
-      <footer className="container footer" aria-label="معلومات الإصدار">
-        ORBIT Marketing OS • v1.0.0 • Local-first • إصدار:{" "}
-        <code data-release-source={releaseShaSource}>
-          {releaseSha === "unreleased" ? "غير منشور" : releaseSha.slice(0, 12)}
-        </code>
-      </footer>
-    </main>
+        <section className="container note">
+          <h2>السطح السحابي ليس خزنة جلسات</h2>
+          <p>
+            Web مخصص للتعريف والشراء والوصول السريع. كلمات المرور، الكوكيز،
+            وبيانات الجلسات الحساسة لا تُخزن في الموقع العام.
+          </p>
+        </section>
+      </main>
+      <SiteFooter />
+    </>
   );
 }
