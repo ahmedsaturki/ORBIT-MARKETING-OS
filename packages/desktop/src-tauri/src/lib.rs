@@ -3741,14 +3741,24 @@ fn campaign_create(
     account_ids: Vec<String>,
 ) -> Result<CampaignView, String> {
     let workspace_id = active_workspace_id();
-    let name = validate_label(&name).map_err(|error| error.to_string())?;
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
+        .map_err(|error| error.to_string())?;
+
+    create_campaign(&connection, &workspace_id, &name, &account_ids)
+}
+
+fn create_campaign(
+    connection: &Connection,
+    workspace_id: &str,
+    name: &str,
+    account_ids: &[String],
+) -> Result<CampaignView, String> {
+    let name = validate_label(name).map_err(|error| error.to_string())?;
     if account_ids.is_empty() {
         return Err("at least one account is required".to_string());
     }
 
-    let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(&connection, &workspace_id, &["owner", "admin", "editor"])
-        .map_err(|error| error.to_string())?;
     let campaign_id = format!("camp-{}", uuid_like());
     let timestamp = chrono_like_timestamp();
     let transaction = connection
@@ -3762,19 +3772,39 @@ fn campaign_create(
         )
         .map_err(|error| error.to_string())?;
 
-    for account_id in &account_ids {
+    for account_id in account_ids {
+        let account_id = validate_label(account_id).map_err(|error| error.to_string())?;
+
+        // Check ownership in the application rather than relying solely on
+        // orbit_campaign_accounts_insert_workspace: a trigger that is renamed
+        // or dropped in a future migration would otherwise let a campaign
+        // attach another workspace's account.
+        let owned: i64 = transaction
+            .query_row(
+                "SELECT COUNT(*) FROM accounts WHERE id=?1 AND workspace_id=?2",
+                params![&account_id, workspace_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if owned != 1 {
+            return Err(format!(
+                "account does not belong to the active workspace: {account_id}"
+            ));
+        }
+
         transaction
             .execute(
                 "INSERT INTO campaign_accounts(workspace_id, campaign_id, account_id) VALUES (?1, ?2, ?3)",
-                params![workspace_id, campaign_id, validate_label(account_id).map_err(|error| error.to_string())?],
+                params![workspace_id, campaign_id, &account_id],
             )
             .map_err(|error| error.to_string())?;
     }
 
     transaction.commit().map_err(|error| error.to_string())?;
 
-    write_audit(
-        &connection,
+    write_audit_for_workspace(
+        connection,
+        workspace_id,
         "campaign",
         "create",
         "success",
@@ -14631,6 +14661,192 @@ mod media_asset_import_tests {
             "the owner's file must be untouched: {}",
             owner.1,
         );
+    }
+}
+
+#[cfg(test)]
+mod campaign_account_scope_tests {
+    use super::*;
+
+    fn campaign_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        create_integrity_triggers(&connection).expect("integrity triggers should be created");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO workspaces(id, name, created_at)
+                VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+
+                INSERT INTO accounts(id, workspace_id, platform, display_name, status, created_at, updated_at)
+                VALUES ('account-a', 'workspace-a', 'telegram', 'Account A', 'connected', '1', '1'),
+                       ('account-b', 'workspace-b', 'telegram', 'Account B', 'connected', '1', '1');
+                "#,
+            )
+            .expect("account fixture should be created");
+        connection
+    }
+
+    // CAMP-02: account membership is enforced when a campaign is created.
+    #[test]
+    fn a_campaign_links_only_accounts_from_its_own_workspace() {
+        let connection = campaign_connection();
+        let view = create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect("a workspace-owned account should link");
+
+        assert_eq!(view.status, "draft");
+        let linked: (String, String) = connection
+            .query_row(
+                "SELECT workspace_id, account_id FROM campaign_accounts WHERE campaign_id=?1",
+                params![&view.id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("the link row must exist");
+        assert_eq!(linked, ("workspace-a".to_string(), "account-a".to_string()));
+    }
+
+    // Attaching another workspace's account must abort the whole campaign.
+    #[test]
+    fn creating_a_campaign_with_a_foreign_account_is_refused() {
+        let connection = campaign_connection();
+        let error = create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-b".to_string()],
+        )
+        .expect_err("a foreign account must not link");
+
+        let campaigns: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaigns", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(
+            campaigns, 0,
+            "the campaign insert must roll back with its account link"
+        );
+        assert!(!error.is_empty(), "the refusal must give a reason",);
+    }
+
+    // A mixed batch must not partially link: one bad account fails the create.
+    #[test]
+    fn a_batch_containing_a_foreign_account_links_none_of_them() {
+        let connection = campaign_connection();
+        create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string(), "account-b".to_string()],
+        )
+        .expect_err("one foreign account must fail the whole batch");
+
+        let links: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaign_accounts", [], |row| {
+                row.get(0)
+            })
+            .expect("count should be readable");
+        assert_eq!(links, 0, "no account may be linked from a failed create");
+
+        let campaigns: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaigns", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(campaigns, 0, "no campaign may survive the failed batch");
+    }
+
+    // An unknown account id is refused rather than creating a dangling link.
+    #[test]
+    fn creating_a_campaign_with_an_unknown_account_is_refused() {
+        let connection = campaign_connection();
+        create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-does-not-exist".to_string()],
+        )
+        .expect_err("an unknown account must not link");
+
+        let campaigns: i64 = connection
+            .query_row("SELECT COUNT(*) FROM campaigns", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(campaigns, 0, "no campaign may be created");
+    }
+
+    #[test]
+    fn creating_a_campaign_with_no_accounts_is_refused() {
+        let connection = campaign_connection();
+        let error = create_campaign(&connection, "workspace-a", "Launch", &[])
+            .expect_err("a campaign must have at least one account");
+        assert!(
+            error.contains("at least one account"),
+            "unexpected error: {error}",
+        );
+    }
+
+    // The audit must name the workspace that owns the campaign.
+    #[test]
+    fn campaign_creation_is_audited_under_the_creating_workspace() {
+        let connection = campaign_connection();
+        create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect("creation should succeed");
+
+        let audited: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM audit_events
+                 WHERE category='campaign' AND action='create' AND workspace_id='workspace-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("audit count should be readable");
+        assert_eq!(audited, 1, "the audit must name the creating workspace");
+    }
+
+    // Two workspaces may hold accounts with the same account row id only if
+    // the ids differ; a campaign in one must never reach the other's account.
+    #[test]
+    fn a_campaign_cannot_be_attached_to_an_account_after_the_workspace_changes() {
+        let connection = campaign_connection();
+        let view = create_campaign(
+            &connection,
+            "workspace-a",
+            "Launch",
+            &["account-a".to_string()],
+        )
+        .expect("creation should succeed");
+
+        let error = connection
+            .execute(
+                "UPDATE campaign_accounts SET workspace_id='workspace-b'
+                 WHERE campaign_id=?1 AND account_id='account-a'",
+                params![&view.id],
+            )
+            .expect_err("the integrity trigger must refuse a workspace rebind");
+        assert!(
+            error
+                .to_string()
+                .contains("campaign account workspace mismatch"),
+            "unexpected error: {error}",
+        );
+
+        let owner: String = connection
+            .query_row(
+                "SELECT workspace_id FROM campaign_accounts WHERE campaign_id=?1",
+                params![&view.id],
+                |row| row.get(0),
+            )
+            .expect("the link must still exist");
+        assert_eq!(owner, "workspace-a", "the link must not change workspace");
     }
 }
 
