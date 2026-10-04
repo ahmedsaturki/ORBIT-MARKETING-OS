@@ -549,16 +549,21 @@ Verified passing with a deliberately conflicting `.env`.
 | Ollama restarted          | health and chat recovered **without** runtime restart        |
 | E2E (browser)             | 34 tests: **24 passed**, 10 skipped pending Tauri binary     |
 | typecheck                 | 5/5                                                          |
-| Full suite                | 509 passed                                                   |
+| Full suite                | 379 JS tests — see the count correction below                |
 
 ### K4. Honest gaps — what could NOT be verified
 
-| Gap                            | Reason                                                                                 |
-| ------------------------------ | -------------------------------------------------------------------------------------- |
-| 10 `tauri-shell.spec.ts` tests | Need a built Tauri `.exe`; the SQLite persistence evidence behind DATA-01/WS-02/OPS-01 |
-| Live connector workflows       | No Telegram/LinkedIn tokens (unchanged)                                                |
-| Billing                        | No payment provider (unchanged)                                                        |
-| Arabic content **quality**     | Only a 0.5B model available; output is coherent but weak. Not a code defect            |
+| Gap                        | Reason                                                                      |
+| -------------------------- | --------------------------------------------------------------------------- |
+| Live connector workflows   | No Telegram/LinkedIn tokens (unchanged)                                     |
+| Billing                    | No payment provider (unchanged)                                             |
+| Arabic content **quality** | Only a 0.5B model available; output is coherent but weak. Not a code defect |
+
+The `tauri-shell.spec.ts` gap this table previously carried is closed. Those 10
+tests needed a built Tauri binary, which this host could not produce, but the
+Windows native E2E job does exactly that and reports 35 passed, 0 failed. The
+SQLite persistence evidence behind DATA-01, WS-02 and OPS-01 is therefore
+machine-confirmed rather than CI-attested.
 
 `packages/web/out` is gitignored and empty in a clean checkout, so `pnpm test:e2e`
 fails until `pnpm build` runs. **This is correct and matches CI**
@@ -569,3 +574,37 @@ fails until `pnpm build` runs. **This is correct and matches CI**
 The prior report's "34 e2e tests" was **correct** — 34 individual Playwright
 tests across 5 spec files. My earlier table listed "E2E specs: 5" as if it
 contradicted the claim. It did not; the two numbers count different units.
+
+### K6. Re-executed end-to-end (2026-10-04, this branch)
+
+The runtime was started for real (`PORT=41788 pnpm runtime:start`) and driven
+from outside the process. Ollama was serving `qwen2.5:0.5b` locally, so every AI
+call below is real inference, not a fixture.
+
+| Step                   | Result                                                                |
+| ---------------------- | --------------------------------------------------------------------- |
+| Start                  | `listening on 127.0.0.1:41788`                                        |
+| Health (model present) | 200 `ok`, `modelAvailable:true`, profiles resolved                    |
+| Chat inference         | 200 `{"text":"ORBIT_OK","modelUsed":"qwen2.5:0.5b"}`                  |
+| Chat after recovery    | 200 `{"text":"RECOVERED",...}` — same runtime process                 |
+| generate-content       | 200, real Arabic body with platform sections                          |
+| Validation             | missing topic → 400; empty/whitespace text → 400; >100 messages → 400 |
+| Size guard             | 10×13k chars (130k total) → 400 citing the 120,000 limit              |
+| Unknown route          | 404                                                                   |
+| Ollama killed          | health → `degraded`, `modelAvailable:false`, `availableModels:[]`     |
+| Chat with Ollama down  | 502 `fetch failed` — honest failure, no fabricated success            |
+| Server during outage   | stayed up; unknown route still 404                                    |
+| Ollama restarted       | health → `ok` and chat → 200, **no runtime restart needed**           |
+
+Two earlier readings were wrong and are corrected here. A wrong bearer token
+returned 200, which looked like missing authentication; `runtimeAuthRequired()`
+returns `!isLoopbackHost(RUNTIME_HOST)`, so tokens are enforced only off-host
+and a loopback request is authorized by construction. That is the documented
+LAN-perimeter design, and `scripts/runtime-smoke.mjs` covers the non-loopback
+path. Separately, a single message over 120,000 characters returns 200 rather
+than 400, because each message is sliced to 20,000 at parse time before the
+total is summed; the total guard still rejects 130,000 spread across ten
+messages. Both are intended behavior, not defects.
+
+The runtime-smoke suite passes as a whole: AI smoke, missing-token startup
+guard, LAN perimeter, and invalid-token rate-limit smokes.
