@@ -304,7 +304,8 @@ itself is sound.
 3. Cut a tagged release to produce checksums (`REL-03`)
 4. Build the connector ingestion path (`INBOX-01`) — **reclassified from an owner
    action to engineering work.** Credentials are not the blocker; see below.
-5. Open mobile store accounts
+5. Open mobile store accounts — **narrowed.** The app is already configured for
+   both stores; only the accounts and signing credentials are missing. See below.
 6. Activate a payment provider
 7. Complete legal/commercial publication review
 8. Complete the WCAG/RTL accessibility audit
@@ -356,6 +357,23 @@ across a WAN, high latency), actual mobile backgrounding and process death,
 key provisioning across physical devices, and clock skew. Those need hardware,
 so the item stays — but it is now correctly scoped to a physical-device check
 rather than an unverified subsystem.
+
+**Correction to item 5 — the mobile app is already store-ready.** This was listed
+as "open mobile store accounts", which implies packaging work remains. It does not.
+
+- `packages/mobile/app.json` declares both identifiers — `android.package` and
+  `ios.bundleIdentifier` are `com.orbitmarketing.os`, with `version 1.0.0`,
+  `scheme: orbit`, and the `expo-router` and `expo-secure-store` plugins.
+- `@orbit/mobile` typechecks clean and its 8 tests pass.
+- `MOB-01` is PASS on the strength of the `mobile-validation` workflow
+  (typecheck + `expo prebuild` + `gradle assembleDebug`).
+
+What is missing is only the external half: the Apple Developer and Google Play
+Console accounts, and the signing credentials that belong to them. There is no
+`eas.json` and no EAS release configuration, so a store build has no configured
+path yet — a small engineering step the owner can authorise, but it cannot be
+done before the accounts exist. The item therefore stays, correctly scoped to
+accounts plus a build pipeline rather than packaging.
 
 **Correction to item 4 — credentials are not the blocker.** This item was listed
 as "supply Telegram and LinkedIn credentials", which implies the connectors work
