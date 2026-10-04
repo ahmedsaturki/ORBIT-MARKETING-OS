@@ -138,7 +138,7 @@ export function deriveGateStatus(readiness) {
   // gates that are present.
   const untracked = Object.keys(critical)
     .filter((key) => !GATE_KEYS.includes(key))
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
 
   if (untracked.length > 0) {
     throw new Error(

@@ -43,10 +43,12 @@ function collectSpecs(dir) {
       found.push(full);
     }
   }
-  // Explicit comparator: the default sort is lexicographic, which orders
-  // uppercase before lowercase and would report specs in an order that does
-  // not match the filesystem listing.
-  return found.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  // localeCompare rather than the default sort: the default is a code-unit
+  // comparison that orders uppercase before lowercase, so spec paths would be
+  // reported in an order that does not match the filesystem listing. Sonar
+  // flags a comparator-less sort as S2871, and flags relational comparators as
+  // non-portable, so localeCompare satisfies both.
+  return found.sort((a, b) => a.localeCompare(b));
 }
 
 // Under pnpm the compiler is only linked into workspace packages, never at the
