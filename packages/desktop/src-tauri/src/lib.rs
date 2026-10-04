@@ -10145,17 +10145,36 @@ fn count_conversation_messages(
     )
 }
 
-#[tauri::command]
-fn conversation_upsert(
-    app: tauri::AppHandle,
+fn conversation_write_roles() -> &'static [&'static str] {
+    &["owner", "admin", "editor", "operator"]
+}
+
+struct ConversationUpsertInput {
     id: String,
     account_id: String,
     contact_id: Option<String>,
     platform: String,
     external_thread_id: Option<String>,
     status: String,
+}
+
+fn conversation_upsert_record(
+    connection: &Connection,
+    workspace_id: &str,
+    input: ConversationUpsertInput,
 ) -> Result<ConversationView, String> {
-    let workspace_id = active_workspace_id();
+    let ConversationUpsertInput {
+        id,
+        account_id,
+        contact_id,
+        platform,
+        external_thread_id,
+        status,
+    } = input;
+    // The membership gate lives here rather than only in the command wrapper so
+    // it is part of the path under test.
+    require_workspace_role_for(connection, workspace_id, conversation_write_roles())
+        .map_err(|error| error.to_string())?;
     let id = validate_label(&id).map_err(|error| error.to_string())?;
     let account_id = validate_label(&account_id).map_err(|error| error.to_string())?;
     let platform = validate_platform(&platform).map_err(|error| error.to_string())?;
@@ -10170,13 +10189,6 @@ fn conversation_upsert(
         return Err("unsupported conversation status".to_string());
     }
 
-    let connection = open_db(&app).map_err(|error| error.to_string())?;
-    require_workspace_role_for(
-        &connection,
-        &workspace_id,
-        &["owner", "admin", "editor", "operator"],
-    )
-    .map_err(|error| error.to_string())?;
     let account_platform: Option<String> = connection
         .query_row(
             "SELECT platform FROM accounts WHERE id=?1 AND workspace_id=?2",
@@ -10239,10 +10251,11 @@ fn conversation_upsert(
     }
 
     let message_count =
-        count_conversation_messages(&connection, &id).map_err(|error| error.to_string())?;
+        count_conversation_messages(connection, &id).map_err(|error| error.to_string())?;
 
-    write_audit(
-        &connection,
+    write_audit_for_workspace(
+        connection,
+        workspace_id,
         "conversation",
         "upsert",
         "success",
@@ -10261,6 +10274,32 @@ fn conversation_upsert(
         message_count,
         updated_at: timestamp,
     })
+}
+
+#[tauri::command]
+fn conversation_upsert(
+    app: tauri::AppHandle,
+    id: String,
+    account_id: String,
+    contact_id: Option<String>,
+    platform: String,
+    external_thread_id: Option<String>,
+    status: String,
+) -> Result<ConversationView, String> {
+    let workspace_id = active_workspace_id();
+    let connection = open_db(&app).map_err(|error| error.to_string())?;
+    conversation_upsert_record(
+        &connection,
+        &workspace_id,
+        ConversationUpsertInput {
+            id,
+            account_id,
+            contact_id,
+            platform,
+            external_thread_id,
+            status,
+        },
+    )
 }
 
 #[tauri::command]
@@ -14319,6 +14358,356 @@ mod conversation_count_tests {
         assert_eq!(
             count_conversation_messages(&connection, "conversation-1").expect("message count"),
             2
+        );
+    }
+}
+
+#[cfg(test)]
+mod conversation_contact_tests {
+    use super::*;
+
+    fn conversation_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        connection
+            .execute_batch(SCHEMA)
+            .expect("fresh schema should be creatable");
+        migrate_schema(&connection).expect("current schema migrations should be applied");
+        connection
+            .execute_batch(
+                "INSERT INTO workspaces(id, name, created_at)
+                 VALUES ('workspace-a', 'A', '1'), ('workspace-b', 'B', '1');
+                 INSERT INTO runtime_state(key, value) VALUES ('local_user_id', 'local-user');
+                 INSERT INTO workspace_memberships(workspace_id, user_id, role, active, created_at)
+                 VALUES ('workspace-a', 'local-user', 'owner', 1, '1'),
+                        ('workspace-b', 'local-user', 'owner', 1, '1');
+                 INSERT INTO accounts(id, workspace_id, platform, display_name, username, status,
+                                      session_payload_json, created_at, updated_at)
+                 VALUES ('account-a', 'workspace-a', 'linkedin', 'Acme', 'acme', 'connected', '{}', '1', '1');
+                 INSERT INTO contacts(id, workspace_id, display_name, source_platform, status,
+                                      created_at, updated_at)
+                 VALUES ('contact-a', 'workspace-a', 'Alice', 'linkedin', 'active', '1', '1');",
+            )
+            .expect("conversation fixture should be created");
+        connection
+    }
+
+    fn upsert(
+        connection: &Connection,
+        workspace_id: &str,
+        id: &str,
+        contact_id: Option<&str>,
+    ) -> Result<ConversationView, String> {
+        conversation_upsert_record(
+            connection,
+            workspace_id,
+            ConversationUpsertInput {
+                id: id.to_string(),
+                account_id: "account-a".to_string(),
+                contact_id: contact_id.map(str::to_string),
+                platform: "linkedin".to_string(),
+                external_thread_id: Some(format!("thread-{id}")),
+                status: "new".to_string(),
+            },
+        )
+    }
+
+    // CRM-01: the conversation/contact relationship must persist, not just
+    // echo back on the returned view.
+    #[test]
+    fn a_conversation_persists_its_contact_relationship() {
+        let connection = conversation_connection();
+
+        let view = upsert(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect("a linked conversation should be accepted");
+        assert_eq!(view.contact_id.as_deref(), Some("contact-a"));
+
+        let stored: Option<String> = connection
+            .query_row(
+                "SELECT contact_id FROM conversations WHERE id='conversation-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("conversation should be readable");
+        assert_eq!(
+            stored.as_deref(),
+            Some("contact-a"),
+            "the contact relationship must be persisted",
+        );
+    }
+
+    // Re-linking an existing conversation must update the stored relationship.
+    #[test]
+    fn relinking_a_conversation_updates_the_stored_contact() {
+        let connection = conversation_connection();
+        connection
+            .execute_batch(
+                "INSERT INTO contacts(id, workspace_id, display_name, source_platform, status,
+                                      created_at, updated_at)
+                 VALUES ('contact-b', 'workspace-a', 'Bob', 'linkedin', 'active', '1', '1');",
+            )
+            .expect("second contact");
+
+        upsert(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect("first");
+        upsert(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-b"),
+        )
+        .expect("relink");
+
+        let stored: Option<String> = connection
+            .query_row(
+                "SELECT contact_id FROM conversations WHERE id='conversation-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("conversation should be readable");
+        assert_eq!(stored.as_deref(), Some("contact-b"));
+    }
+
+    // A contact from another workspace must not be linkable.
+    #[test]
+    fn a_contact_from_another_workspace_cannot_be_linked() {
+        let connection = conversation_connection();
+        connection
+            .execute_batch(
+                "INSERT INTO contacts(id, workspace_id, display_name, source_platform, status,
+                                      created_at, updated_at)
+                 VALUES ('contact-foreign', 'workspace-b', 'Mallory', 'linkedin', 'active', '1', '1');",
+            )
+            .expect("foreign contact");
+
+        let error = upsert(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-foreign"),
+        )
+        .expect_err("a foreign contact must be refused");
+        assert!(error.contains("not found"), "unexpected error: {error}");
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM conversations", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused link must persist nothing");
+    }
+
+    #[test]
+    fn an_unknown_contact_cannot_be_linked() {
+        let connection = conversation_connection();
+        assert!(upsert(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("no-such-contact")
+        )
+        .is_err());
+    }
+
+    // Unlinking must clear the relationship rather than orphan it.
+    #[test]
+    fn a_conversation_can_be_unlinked_from_its_contact() {
+        let connection = conversation_connection();
+        upsert(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect("link");
+
+        let view = upsert(&connection, "workspace-a", "conversation-1", None).expect("unlink");
+        assert_eq!(view.contact_id, None);
+
+        let stored: Option<String> = connection
+            .query_row(
+                "SELECT contact_id FROM conversations WHERE id='conversation-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("conversation should be readable");
+        assert_eq!(stored, None);
+    }
+
+    // The account must belong to the workspace and match the platform.
+    #[test]
+    fn the_account_must_belong_to_the_same_workspace_and_platform() {
+        let connection = conversation_connection();
+        connection
+            .execute_batch(
+                "INSERT INTO accounts(id, workspace_id, platform, display_name, username, status,
+                                      session_payload_json, created_at, updated_at)
+                 VALUES ('account-telegram', 'workspace-a', 'telegram', 'Chan', 'chan', 'connected', '{}', '1', '1');",
+            )
+            .expect("telegram account");
+
+        let mismatched = conversation_upsert_record(
+            &connection,
+            "workspace-a",
+            ConversationUpsertInput {
+                id: "conversation-1".to_string(),
+                account_id: "account-telegram".to_string(),
+                contact_id: Some("contact-a".to_string()),
+                platform: "linkedin".to_string(),
+                external_thread_id: Some("thread-1".to_string()),
+                status: "new".to_string(),
+            },
+        )
+        .expect_err("a platform mismatch must be refused");
+        assert!(
+            mismatched.contains("platform does not match"),
+            "unexpected error: {mismatched}",
+        );
+
+        let foreign = conversation_upsert_record(
+            &connection,
+            "workspace-a",
+            ConversationUpsertInput {
+                id: "conversation-1".to_string(),
+                account_id: "account-foreign".to_string(),
+                contact_id: Some("contact-a".to_string()),
+                platform: "linkedin".to_string(),
+                external_thread_id: Some("thread-1".to_string()),
+                status: "new".to_string(),
+            },
+        )
+        .expect_err("an unknown account must be refused");
+        assert!(foreign.contains("not found"), "unexpected error: {foreign}");
+    }
+
+    // The unified conversation model: one conversation carries its account,
+    // contact, platform thread identity and message count.
+    #[test]
+    fn the_unified_model_carries_account_contact_thread_and_message_count() {
+        let connection = conversation_connection();
+        upsert(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect("upsert");
+        connection
+            .execute_batch(
+                "INSERT INTO messages(id, conversation_id, direction, body, sent_at)
+                 VALUES ('message-1', 'conversation-1', 'inbound', 'Hello', '1'),
+                        ('message-2', 'conversation-1', 'outbound', 'Hi', '1');",
+            )
+            .expect("messages");
+
+        let view = upsert(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect("re-upsert to read the count");
+        assert_eq!(view.account_id.as_deref(), Some("account-a"));
+        assert_eq!(view.contact_id.as_deref(), Some("contact-a"));
+        assert_eq!(view.platform, "linkedin");
+        assert_eq!(
+            view.external_thread_id.as_deref(),
+            Some("thread-conversation-1")
+        );
+        assert_eq!(view.message_count, 2);
+    }
+
+    // The same external thread on one account maps to one conversation.
+    #[test]
+    fn one_external_thread_maps_to_one_conversation_per_account() {
+        let connection = conversation_connection();
+        conversation_upsert_record(
+            &connection,
+            "workspace-a",
+            ConversationUpsertInput {
+                id: "conversation-1".to_string(),
+                account_id: "account-a".to_string(),
+                contact_id: None,
+                platform: "linkedin".to_string(),
+                external_thread_id: Some("thread-shared".to_string()),
+                status: "new".to_string(),
+            },
+        )
+        .expect("first");
+
+        let error = conversation_upsert_record(
+            &connection,
+            "workspace-a",
+            ConversationUpsertInput {
+                id: "conversation-2".to_string(),
+                account_id: "account-a".to_string(),
+                contact_id: None,
+                platform: "linkedin".to_string(),
+                external_thread_id: Some("thread-shared".to_string()),
+                status: "new".to_string(),
+            },
+        )
+        .expect_err("a duplicate thread on one account must be refused");
+        assert!(error.contains("UNIQUE"), "unexpected error: {error}");
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM conversations", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 1);
+    }
+
+    // The membership gate must apply to conversation writes.
+    #[test]
+    fn conversation_writes_require_workspace_membership() {
+        let connection = conversation_connection();
+        connection
+            .execute_batch("DELETE FROM workspace_memberships WHERE workspace_id='workspace-a';")
+            .expect("membership removal");
+
+        let error = upsert(
+            &connection,
+            "workspace-a",
+            "conversation-1",
+            Some("contact-a"),
+        )
+        .expect_err("a non-member must be refused");
+        assert!(
+            error.to_lowercase().contains("unauthorized"),
+            "unexpected error: {error}",
+        );
+
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM conversations", [], |row| row.get(0))
+            .expect("count should be readable");
+        assert_eq!(count, 0, "a refused write must persist nothing");
+    }
+
+    #[test]
+    fn an_unsupported_conversation_status_is_refused() {
+        let connection = conversation_connection();
+        let error = conversation_upsert_record(
+            &connection,
+            "workspace-a",
+            ConversationUpsertInput {
+                id: "conversation-1".to_string(),
+                account_id: "account-a".to_string(),
+                contact_id: None,
+                platform: "linkedin".to_string(),
+                external_thread_id: Some("thread-1".to_string()),
+                status: "archived".to_string(),
+            },
+        )
+        .expect_err("an unsupported status must be refused");
+        assert!(
+            error.contains("unsupported conversation status"),
+            "unexpected error: {error}",
         );
     }
 }
