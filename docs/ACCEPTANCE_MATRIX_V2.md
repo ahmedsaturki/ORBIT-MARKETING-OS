@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**65 PASS, 10 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
+**67 PASS, 8 PARTIAL, 7 UNVERIFIED, 1 FAIL** across 83 requirements.
 
 Classification rules applied:
 
@@ -77,7 +77,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | CONT-02 | PASS | `test/media.test.ts` :: searches by text, kind, and all requested tags (in-memory search) | — |
 | CONT-03 | PASS | `test/content.test.ts (3 tests: selects platform variant, falls back to base body, rejects malformed content)` | — |
 | MEDIA-01 | PASS | `test/media.test.ts` :: validates a local media asset, rejects kind/mime mismatch, searches by text/kind/tags | — |
-| MEDIA-02 | PARTIAL | `packages/desktop/src-tauri/src/lib.rs` :: sha256_file_matches_known_digest (unit test on a temp file) | No test that exercises the media_asset_import command end-to-end; only the hashing helper is tested |
+| MEDIA-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: media_asset_import_tests (real file imports with true size/digest and an audit under the importing workspace; missing path, unsupported type, zero-byte file and malformed tags refused without persisting; re-import updates in place; foreign id collision refused) | — |
 | AN-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: outcome_analytics_is_grouped_by_currency | — |
 | AN-03 | PASS | `test/analytics.test.ts` :: detects spikes and drops using only the preceding window | — |
 | AN-01 | PASS | `test/analytics.test.ts` :: does not mix metrics from different campaigns | — |
@@ -85,7 +85,7 @@ Per the gate rules below, the 7 `UNVERIFIED` runtime requirements block any
 | AUTO-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: latest_enabled_pack_provides_bounded_runtime_limits | — |
 | UI-01 | UNVERIFIED | — | No Mission Control E2E test in tauri-shell.spec.ts or web E2E; next-actions tests exist but do not cover Mission Control UI |
 | UI-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: strategy_reference_validation_blocks_cross_workspace_references | No E2E test that invokes Strategy Studio commands and verifies workspace isolation |
-| OUT-01 | PARTIAL | `packages/desktop/src-tauri/src/lib.rs` :: schema_v12_outcomes_are_workspace_scoped_and_linkable (workspace scoping test) | No negative IPC test that attempts to create a cross-workspace opportunity/reference via IPC and verifies rejection |
+| OUT-01 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: opportunity_scope_tests (workspace-scoped creation with same-workspace contact/campaign links, foreign contact/campaign links refused with nothing persisted, foreign id collision refused, audit names the owning workspace, invalid stage/value/probability refused) | — |
 | OUT-02 | PASS | `src/outcomes/index.test.ts` :: validatesOpportunity (rejects unsafe values) | — |
 | INS-01 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: insight_workspace_scope_tests (persist, update-in-place, cross-workspace rebind rejected, list scoping, grounding CHECK) | `packages/core/test/schema.test.ts` :: rejects an insight with no grounding source |
 | INS-02 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: schema_v12_outcomes_are_workspace_scoped_and_linkable (tests CHECK(confidence between 0 and 1)) | — |
