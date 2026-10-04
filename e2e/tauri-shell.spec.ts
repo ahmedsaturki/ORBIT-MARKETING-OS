@@ -1226,7 +1226,9 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
           displayName: "Mission Control Account",
           username: "mission-control-e2e",
           status: "connected",
-          sessionPayloadJson: JSON.stringify({ secretToken: "must-not-surface" }),
+          sessionPayloadJson: JSON.stringify({
+            secretToken: "must-not-surface",
+          }),
         }),
       { id: `e2e-mission-account-${suffix}`, workspaceId: missionWorkspace.id },
     )) as { id: string };
@@ -1324,7 +1326,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     // Nothing the Mission Control surface reads may carry session secrets.
     // The account carries a secretToken in its session payload; the views the
     // operational surface consumes must not expose it.
-    const surface = JSON.stringify({ approvals: restoredApprovals, campaigns: otherCampaigns });
+    const surface = JSON.stringify({
+      approvals: restoredApprovals,
+      campaigns: otherCampaigns,
+    });
     expect(surface.toLowerCase()).not.toContain("must-not-surface");
     expect(surface.toLowerCase()).not.toContain("sessionpayload");
     expect(surface.toLowerCase()).not.toContain("secrettoken");

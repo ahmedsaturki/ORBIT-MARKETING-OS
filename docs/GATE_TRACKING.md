@@ -45,11 +45,11 @@ expected but missing from the document, are both surfaced rather than dropped.
 
 ## Levels
 
-| Level | Meaning |
-| --- | --- |
-| `L0_DESIGNED` | Designed, not implemented |
-| `L1_IMPLEMENTED` | Implemented, not verified |
-| `L2_VERIFIED` | Verified, not yet proven in production |
+| Level                  | Meaning                                        |
+| ---------------------- | ---------------------------------------------- |
+| `L0_DESIGNED`          | Designed, not implemented                      |
+| `L1_IMPLEMENTED`       | Implemented, not verified                      |
+| `L2_VERIFIED`          | Verified, not yet proven in production         |
 | `L3_PRODUCTION_PROVEN` | Proven in production — the release requirement |
 
 Production readiness requires **every** release-critical gate at `L3_PRODUCTION_PROVEN`.
@@ -61,38 +61,38 @@ L3 additionally requires `evidenceRefs` and `verifiedAt`, which
 Owner and priority are static metadata defined in the gate model. Level and blocker
 come from `release/readiness.json`.
 
-| Key | Gate | Owner | Priority | Level | Blocker |
-| --- | --- | --- | --- | --- | --- |
-| `source_integrity` | Source Integrity | Engineering | high | L2 | SonarCloud is B on New Code, A required |
-| `build` | Build | Engineering | high | L2 | Desktop/mobile signing and store distribution not configured |
-| `runtime` | Runtime | Engineering | high | L2 | Forced-crash recovery and 24h stability open |
-| `product_workflows` | Product Workflows | Engineering | medium | L2 | Real external connector workflows separate |
-| `security_governance` | Security Governance | Engineering | medium | L2 | Final L3 commercial governance needs auditable evidence |
-| `distribution` | Distribution | Engineering | high | L2 | Desktop signing/notarization and mobile store distribution open |
-| `web_production` | Web Production | Engineering | medium | L2 | Rollback and remaining gates open |
-| `external_connectors` | External Connectors | Commercial | high | L1 | Real Telegram/LinkedIn authorization evidence required |
-| `sync_network` | Sync Network | Engineering | medium | L2 | Live multi-device CRDT operation unproven |
-| `accessibility` | Accessibility | Engineering | medium | L2 | Manual WCAG/RTL audit open |
-| `stability_soak` | Stability Soak | Engineering | high | L2 | 24h soak on the exact release SHA not completed |
-| `commercial_billing` | Commercial Billing | Commercial | low | L1 | Payment/billing provider not activated |
-| `legal_commercial` | Legal/Commercial | Commercial | low | L1 | Legal/commercial publication review pending |
+| Key                   | Gate                | Owner       | Priority | Level | Blocker                                                         |
+| --------------------- | ------------------- | ----------- | -------- | ----- | --------------------------------------------------------------- |
+| `source_integrity`    | Source Integrity    | Engineering | high     | L2    | SonarCloud is B on New Code, A required                         |
+| `build`               | Build               | Engineering | high     | L2    | Desktop/mobile signing and store distribution not configured    |
+| `runtime`             | Runtime             | Engineering | high     | L2    | Forced-crash recovery and 24h stability open                    |
+| `product_workflows`   | Product Workflows   | Engineering | medium   | L2    | Real external connector workflows separate                      |
+| `security_governance` | Security Governance | Engineering | medium   | L2    | Final L3 commercial governance needs auditable evidence         |
+| `distribution`        | Distribution        | Engineering | high     | L2    | Desktop signing/notarization and mobile store distribution open |
+| `web_production`      | Web Production      | Engineering | medium   | L2    | Rollback and remaining gates open                               |
+| `external_connectors` | External Connectors | Commercial  | high     | L1    | Real Telegram/LinkedIn authorization evidence required          |
+| `sync_network`        | Sync Network        | Engineering | medium   | L2    | Live multi-device CRDT operation unproven                       |
+| `accessibility`       | Accessibility       | Engineering | medium   | L2    | Manual WCAG/RTL audit open                                      |
+| `stability_soak`      | Stability Soak      | Engineering | high     | L2    | 24h soak on the exact release SHA not completed                 |
+| `commercial_billing`  | Commercial Billing  | Commercial  | low      | L1    | Payment/billing provider not activated                          |
+| `legal_commercial`    | Legal/Commercial    | Commercial  | low      | L1    | Legal/commercial publication review pending                     |
 
 Counts at the time of writing: 3 at L1, 10 at L2, 0 at L3, 13 blocked;
 10 engineering-owned, 3 commercial-owned; 6 high, 5 medium, 2 low priority.
 
 ## Files
 
-| File | Role |
-| --- | --- |
-| `release/readiness.json` | Authoritative gate levels and evidence |
-| `scripts/release-gate-model.mjs` | Single definition of gate status semantics |
-| `scripts/check-release-gates.mjs` | CLI report, `--json`, `--commercial` |
-| `scripts/export-gate-status.mjs` | JSON / CSV / Markdown export |
-| `scripts/gate-dashboard.mjs` | Serves the dashboard and its data |
-| `scripts/gate-status-dashboard.html` | Dashboard UI |
-| `scripts/release-gate-model.test.mjs` | Model semantics and authority agreement |
+| File                                    | Role                                       |
+| --------------------------------------- | ------------------------------------------ |
+| `release/readiness.json`                | Authoritative gate levels and evidence     |
+| `scripts/release-gate-model.mjs`        | Single definition of gate status semantics |
+| `scripts/check-release-gates.mjs`       | CLI report, `--json`, `--commercial`       |
+| `scripts/export-gate-status.mjs`        | JSON / CSV / Markdown export               |
+| `scripts/gate-dashboard.mjs`            | Serves the dashboard and its data          |
+| `scripts/gate-status-dashboard.html`    | Dashboard UI                               |
+| `scripts/release-gate-model.test.mjs`   | Model semantics and authority agreement    |
 | `scripts/release-gate-tooling.test.mjs` | CLI, export, and dashboard-wiring contract |
-| `scripts/verify-release-readiness.mjs` | Pre-existing readiness authority |
+| `scripts/verify-release-readiness.mjs`  | Pre-existing readiness authority           |
 
 ## Dashboard
 

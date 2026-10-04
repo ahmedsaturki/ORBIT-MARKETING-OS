@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,7 +34,10 @@ const promote = (document) => {
   const copy = JSON.parse(JSON.stringify(document));
   for (const gate of Object.values(copy.releaseCritical)) {
     gate.level = L3;
-    gate.evidenceRefs = [...(gate.evidenceRefs ?? []), "https://example.test/evidence"];
+    gate.evidenceRefs = [
+      ...(gate.evidenceRefs ?? []),
+      "https://example.test/evidence",
+    ];
     gate.verifiedAt = "2026-10-04T00:00:00Z";
   }
   return copy;
@@ -63,7 +72,11 @@ assert.equal(allL3Stats.blocked, 0);
 assert.equal(isAllGatesL3(allL3.gates), true);
 for (const gate of Object.values(allL3.gates)) {
   assert.equal(gate.blocked, false, `${gate.key} clears when proven`);
-  assert.equal(gate.blockingReason, "", `${gate.key} reports no blocker when proven`);
+  assert.equal(
+    gate.blockingReason,
+    "",
+    `${gate.key} reports no blocker when proven`,
+  );
 }
 
 // A single gate short must keep the release blocked.
@@ -80,21 +93,32 @@ const missingGate = JSON.parse(JSON.stringify(readiness));
 delete missingGate.releaseCritical[firstKey];
 const missing = deriveGateStatus(missingGate);
 assert.deepEqual(missing.missing, [firstKey]);
-assert.equal(isAllGatesL3(missing.gates), false, "an incomplete gate set is never all-L3");
+assert.equal(
+  isAllGatesL3(missing.gates),
+  false,
+  "an incomplete gate set is never all-L3",
+);
 
 // Malformed input is rejected rather than reported as ready.
 for (const bad of [{}, { releaseCritical: [] }, { releaseCritical: null }]) {
-  assert.throws(() => deriveGateStatus(bad), /releaseCritical must be an object/);
+  assert.throws(
+    () => deriveGateStatus(bad),
+    /releaseCritical must be an object/,
+  );
 }
 
 // The model must agree with scripts/verify-release-readiness.mjs, the authority
 // for readiness semantics, on every fixture.
 const authorityLevel = (file) => {
-  const stdout = execFileSync("node", ["scripts/verify-release-readiness.mjs"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    env: { ...process.env, ORBIT_READINESS_FILE: file },
-  });
+  const stdout = execFileSync(
+    "node",
+    ["scripts/verify-release-readiness.mjs"],
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      env: { ...process.env, ORBIT_READINESS_FILE: file },
+    },
+  );
   return Number(/production-proven=(\d+)/.exec(stdout)[1]);
 };
 
@@ -120,7 +144,9 @@ for (const gate of Object.values(readiness.releaseCritical)) {
   for (const claim of gate.evidence ?? []) {
     // Only paths with a real repository prefix are repo claims. A bare
     // "/api/health.json" is an endpoint probe, not a file reference.
-    const named = claim.match(/(?:^|[\s(])((?:scripts|docs|logs|release|e2e|packages|src|test)\/[\w./-]+\.[a-z]+)\b/);
+    const named = claim.match(
+      /(?:^|[\s(])((?:scripts|docs|logs|release|e2e|packages|src|test)\/[\w./-]+\.[a-z]+)\b/,
+    );
     if (!named) {
       continue;
     }
@@ -134,4 +160,3 @@ for (const gate of Object.values(readiness.releaseCritical)) {
 }
 
 console.log("release-gate-model=PASS");
-

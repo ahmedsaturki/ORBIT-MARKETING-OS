@@ -9,14 +9,14 @@ history legible and leaves the upstream commits addressable).
 
 ## What the 13 upstream commits were
 
-| Commit | Subject |
-|---|---|
-| `3978c0fc` | Close SonarCloud S5145 + 9x S4036 findings (#200) |
-| `daff2746` | Acceptance matrix restructure with enforced Status column (#205) |
+| Commit     | Subject                                                                    |
+| ---------- | -------------------------------------------------------------------------- |
+| `3978c0fc` | Close SonarCloud S5145 + 9x S4036 findings (#200)                          |
+| `daff2746` | Acceptance matrix restructure with enforced Status column (#205)           |
 | `77517a48` | Action-pinning gate for all 17 workflows + audit-exception ordering (#202) |
-| `4a07914e` | Windows pnpm spawn repair; correct four inflated matrix statuses (#207) |
-| `ddf73d99` | Record SonarCloud new-code security rating A (#212) |
-| others | Provenance verifier, performance budgets, CI triage partitioning |
+| `4a07914e` | Windows pnpm spawn repair; correct four inflated matrix statuses (#207)    |
+| `ddf73d99` | Record SonarCloud new-code security rating A (#212)                        |
+| others     | Provenance verifier, performance budgets, CI triage partitioning           |
 
 ## Three findings retracted
 
@@ -38,16 +38,16 @@ in this branch's refactor, because upstream never extracted a
 
 Resolved by checking which side was factually right, not by preferring a side.
 
-| File | Resolution | Basis |
-|---|---|---|
-| `scripts/soak.ts` | **Both** | Upstream's RSS budget comment and this branch's `--max-cycles` are unrelated additions |
-| `pnpm-workspace.yaml` | **Both** | Upstream carries the advisory ids; this branch adds the rationale |
-| `release/readiness.json` | **Both, corrected** | See below |
-| `scripts/soak-failure-evidence.test.mjs` | **Upstream** | Strict superset: keeps the SHA-mismatch assertions, adds the short-run case, uses `runTsx` |
-| `scripts/orbit-surface-smoke.mjs` | **Upstream** | Follows upstream's `spawnPnpm` → `runTsx` refactor |
-| `scripts/commercial-connector-proof.safe.test.mjs` | **Upstream** | Same refactor |
-| `docs/SECURITY_EXCEPTIONS.md` | **Upstream** | Identical node-forge section, fuller braces entry with machine-checked mitigations |
-| `docs/ACCEPTANCE_MATRIX_V2.md` | **This branch** | All four disagreeing statuses checked individually |
+| File                                               | Resolution          | Basis                                                                                      |
+| -------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------ |
+| `scripts/soak.ts`                                  | **Both**            | Upstream's RSS budget comment and this branch's `--max-cycles` are unrelated additions     |
+| `pnpm-workspace.yaml`                              | **Both**            | Upstream carries the advisory ids; this branch adds the rationale                          |
+| `release/readiness.json`                           | **Both, corrected** | See below                                                                                  |
+| `scripts/soak-failure-evidence.test.mjs`           | **Upstream**        | Strict superset: keeps the SHA-mismatch assertions, adds the short-run case, uses `runTsx` |
+| `scripts/orbit-surface-smoke.mjs`                  | **Upstream**        | Follows upstream's `spawnPnpm` → `runTsx` refactor                                         |
+| `scripts/commercial-connector-proof.safe.test.mjs` | **Upstream**        | Same refactor                                                                              |
+| `docs/SECURITY_EXCEPTIONS.md`                      | **Upstream**        | Identical node-forge section, fuller braces entry with machine-checked mitigations         |
+| `docs/ACCEPTANCE_MATRIX_V2.md`                     | **This branch**     | All four disagreeing statuses checked individually                                         |
 
 ### The readiness correction
 
@@ -63,12 +63,12 @@ is not bound to a commit should not be read as proving a 24-hour soak.
 
 ### The four matrix statuses
 
-| ID | Upstream | Here | Why |
-|---|---|---|---|
-| `AI-01` | PARTIAL | **PASS** | `scripts/health-model-availability.test.mjs` asserts `/api/health` only reports ok when the configured Ollama models are installed. It runs green. Upstream cited only a client contract test |
-| `INBOX-01` | PASS | **PARTIAL** | `TelegramConnector.sync` returns `this.connect(context)`; `connect` only validates credentials. Nothing ingests into the unified conversation model |
-| `UI-01` | PARTIAL | **PASS** | Mission Control tests pass with no server-side secrets |
-| `REL-02` | PARTIAL | **UNVERIFIED** | No code defect: the pipeline deliberately builds unsigned. Release signing is owner-controlled policy, not a defect to fix |
+| ID         | Upstream | Here           | Why                                                                                                                                                                                           |
+| ---------- | -------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AI-01`    | PARTIAL  | **PASS**       | `scripts/health-model-availability.test.mjs` asserts `/api/health` only reports ok when the configured Ollama models are installed. It runs green. Upstream cited only a client contract test |
+| `INBOX-01` | PASS     | **PARTIAL**    | `TelegramConnector.sync` returns `this.connect(context)`; `connect` only validates credentials. Nothing ingests into the unified conversation model                                           |
+| `UI-01`    | PARTIAL  | **PASS**       | Mission Control tests pass with no server-side secrets                                                                                                                                        |
+| `REL-02`   | PARTIAL  | **UNVERIFIED** | No code defect: the pipeline deliberately builds unsigned. Release signing is owner-controlled policy, not a defect to fix                                                                    |
 
 ## Defect the merge introduced
 
@@ -80,20 +80,20 @@ contract scripts were each run individually rather than trusting the suite.
 
 ## Verification on the merged tree
 
-| Check | Result |
-|---|---|
-| `verify:workspace`, `verify:readiness`, `verify:release-docs`, `verify:release`, `verify:ipc`, `verify:omp` | 6/6 PASS |
-| `pnpm test` | 524 tests, 4/4 tasks PASS |
-| `pnpm typecheck` | 5/5 PASS |
-| `scripts/health-model-availability.test.mjs` | PASS |
-| `scripts/soak-failure-evidence.test.mjs` | PASS |
-| `scripts/braces-audit-exception.test.mjs` | PASS |
-| `scripts/node-forge-audit-exception.test.mjs` | PASS (after the fix above) |
-| `scripts/release-gate-model.test.mjs` | PASS |
-| `scripts/user-guide-contract.test.mjs` | PASS |
-| `cargo test` | **182 passed, 0 failed** |
-| `cargo clippy --all-targets -- -D warnings` | clean |
-| `cargo fmt --check` | clean |
+| Check                                                                                                       | Result                     |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `verify:workspace`, `verify:readiness`, `verify:release-docs`, `verify:release`, `verify:ipc`, `verify:omp` | 6/6 PASS                   |
+| `pnpm test`                                                                                                 | 524 tests, 4/4 tasks PASS  |
+| `pnpm typecheck`                                                                                            | 5/5 PASS                   |
+| `scripts/health-model-availability.test.mjs`                                                                | PASS                       |
+| `scripts/soak-failure-evidence.test.mjs`                                                                    | PASS                       |
+| `scripts/braces-audit-exception.test.mjs`                                                                   | PASS                       |
+| `scripts/node-forge-audit-exception.test.mjs`                                                               | PASS (after the fix above) |
+| `scripts/release-gate-model.test.mjs`                                                                       | PASS                       |
+| `scripts/user-guide-contract.test.mjs`                                                                      | PASS                       |
+| `cargo test`                                                                                                | **182 passed, 0 failed**   |
+| `cargo clippy --all-targets -- -D warnings`                                                                 | clean                      |
+| `cargo fmt --check`                                                                                         | clean                      |
 
 ### The Rust suite took a second attempt
 

@@ -56,7 +56,6 @@ const CYCLE_MS = 2_000;
 const deadline = Date.now() + minutes * 60_000;
 const startedAtMs = Date.now();
 
-
 const root = process.cwd();
 const expectedGitSha = process.env.ORBIT_EXPECTED_RELEASE_SHA?.trim();
 const logsDir = process.env.ORBIT_SOAK_LOG_DIR?.trim()

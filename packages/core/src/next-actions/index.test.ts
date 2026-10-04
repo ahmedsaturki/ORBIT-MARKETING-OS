@@ -108,7 +108,9 @@ describe("Mission Control operational state", () => {
       now: "2026-09-26T00:00:00.000Z",
     });
 
-    expect(first.every((action) => action.workspaceId === "workspace-1")).toBe(true);
+    expect(first.every((action) => action.workspaceId === "workspace-1")).toBe(
+      true,
+    );
     expect(second).toEqual([]);
   });
 
@@ -137,7 +139,11 @@ describe("Mission Control operational state", () => {
 
     // Mutating the result must not reach back into the input either.
     const [firstAction] = actions;
-    if (firstAction && typeof firstAction === "object" && "title" in firstAction) {
+    if (
+      firstAction &&
+      typeof firstAction === "object" &&
+      "title" in firstAction
+    ) {
       Object.defineProperty(firstAction, "title", {
         value: "tampered",
         writable: false,
@@ -147,14 +153,12 @@ describe("Mission Control operational state", () => {
   });
 
   // The projection carries only id/title per item, so no session or token
- // material can reach the Mission Control surface.
+  // material can reach the Mission Control surface.
   it("emits no credential or session material", () => {
     const actions = deriveNextActions({
       workspaceId: "workspace-1",
       now: "2026-09-26T00:00:00.000Z",
-      interventions: [
- { id: "t1", title: "Approve publish" },
-      ],
+      interventions: [{ id: "t1", title: "Approve publish" }],
       approvals: [{ id: "a1", title: "Review budget" }],
       failedWork: [{ id: "f1", title: "Retry send" }],
       overdueWork: [{ id: "o1", title: "Chase invoice" }],

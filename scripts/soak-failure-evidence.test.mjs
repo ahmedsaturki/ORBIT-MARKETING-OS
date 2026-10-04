@@ -19,7 +19,11 @@ try {
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  assert.equal(result.error, undefined, `soak failed to launch: ${result.error?.message}`);
+  assert.equal(
+    result.error,
+    undefined,
+    `soak failed to launch: ${result.error?.message}`,
+  );
   assert.equal(result.status, 1, "source SHA mismatch must exit 1");
 
   const summaryPath = join(outputDir, "soak-summary.json");
@@ -39,15 +43,7 @@ const shortRunDir = mkdtempSync(join(tmpdir(), "orbit-soak-short-"));
 
 try {
   const shortResult = runTsx(
-    [
-      "scripts/soak.ts",
-      "--hours",
-      "24",
-      "--port",
-      "0",
-      "--max-cycles",
-      "1",
-    ],
+    ["scripts/soak.ts", "--hours", "24", "--port", "0", "--max-cycles", "1"],
     {
       env: { ...process.env, ORBIT_SOAK_LOG_DIR: shortRunDir },
       stdio: ["ignore", "pipe", "pipe"],

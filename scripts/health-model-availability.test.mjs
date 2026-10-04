@@ -127,10 +127,14 @@ const MISSING = {
 
 // Case 1: configured model missing from Ollama -> degraded, not ok.
 {
-  const ollama = await startOllamaStub({ models: [{ name: "some-other-model:1b" }] });
+  const ollama = await startOllamaStub({
+    models: [{ name: "some-other-model:1b" }],
+  });
   const runtime = await startRuntime(ollama.port, MISSING);
   try {
-    const response = await fetch(`http://${runtime.host}:${runtime.port}/api/health`);
+    const response = await fetch(
+      `http://${runtime.host}:${runtime.port}/api/health`,
+    );
     const body = await response.json();
     assert.equal(body.status, "degraded", "missing model must degrade health");
     assert.equal(body.ai.modelAvailable, false);
@@ -141,7 +145,8 @@ const MISSING = {
       "degraded health must list what is actually installed",
     );
     assert.ok(
-      Array.isArray(body.ai.requiredModels) && body.ai.requiredModels.length > 0,
+      Array.isArray(body.ai.requiredModels) &&
+        body.ai.requiredModels.length > 0,
       "degraded health must name the required models",
     );
   } finally {
@@ -154,7 +159,9 @@ const MISSING = {
   const ollama = await startOllamaStub({ models: [{ name: "llama3.2:3b" }] });
   const runtime = await startRuntime(ollama.port, MISSING);
   try {
-    const response = await fetch(`http://${runtime.host}:${runtime.port}/api/health`);
+    const response = await fetch(
+      `http://${runtime.host}:${runtime.port}/api/health`,
+    );
     const body = await response.json();
     assert.equal(body.status, "ok", "installed model must report ok");
     assert.equal(body.ai.modelAvailable, true);
@@ -178,9 +185,15 @@ const MISSING = {
 
   const runtime = await startRuntime(deadPort, MISSING);
   try {
-    const response = await fetch(`http://${runtime.host}:${runtime.port}/api/health`);
+    const response = await fetch(
+      `http://${runtime.host}:${runtime.port}/api/health`,
+    );
     const body = await response.json();
-    assert.equal(body.status, "degraded", "unreachable Ollama must degrade health");
+    assert.equal(
+      body.status,
+      "degraded",
+      "unreachable Ollama must degrade health",
+    );
     assert.equal(body.ai.modelAvailable, false);
   } finally {
     await stop(runtime.child, null);

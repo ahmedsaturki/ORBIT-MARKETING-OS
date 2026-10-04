@@ -59,7 +59,6 @@ has none of those duplicate helpers, and its gate passes. The upstream braces
 audit exception likewise already exists (`3978c0fc`), so the one added here is
 redundant against the remote. Read `FINAL_STATE_MODEL.md` before merging.
 
-
 `OPS-02` (24h stability) and `REL-03` (checksums) are `UNVERIFIED` because the
 soak workflow and checksum verification are defined but have no completed run.
 Both are already tracked as blocked gates in `release/readiness.json`.
@@ -74,8 +73,8 @@ pin). There is no `.npmrc` with `engine-strict`, so the warning cannot fail an
 install; every result in this matrix was produced on the out-of-range local
 runtime. Nothing to fix.
 
-| ID | Status | Primary evidence | Gap |
-| --- | --- | --- | --- |
+| ID  | Status | Primary evidence | Gap |
+| --- | ------ | ---------------- | --- |
 
 | SEC-01 | PASS | `src/security.test.ts` :: encrypts and decrypts without exposing plaintext in the payload | — |
 | SEC-02 | PASS | `src/security.test.ts` :: removes credential values recursively | — |
@@ -184,6 +183,7 @@ remote already carries that exception (`3978c0fc`); the local gate was red
 only because this branch had not received that commit.
 
 ### Source Requirements (as originally specified)
+
 | ID       | Requirement                                                                                                                              | Evidence required                                              |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | SEC-01   | Secrets encrypted at rest                                                                                                                | cryptographic tests + restore test                             |

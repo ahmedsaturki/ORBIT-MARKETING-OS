@@ -738,30 +738,35 @@ describe("experiment learning write-back is workspace scoped", () => {
     );
 
     expect(() =>
-      buildExperimentLearningWriteback(experiment, foreign, "2026-09-26T12:00:00Z"),
+      buildExperimentLearningWriteback(
+        experiment,
+        foreign,
+        "2026-09-26T12:00:00Z",
+      ),
     ).toThrow("experiment_learning_workspace_mismatch");
   });
 
   it("refuses a summary belonging to another experiment", () => {
-    const other = summarizeExperiment(
-      { ...experiment, id: "exp-2" },
-      [
-        {
-          experimentId: "exp-2",
-          workspaceId: "ws-1",
-          variantId: "control",
-          subjectId: "a",
-          observedAt: "2026-09-26T00:00:00Z",
-          exposed: true,
-          engaged: true,
-          converted: true,
-          value: 42,
-        },
-      ],
-    );
+    const other = summarizeExperiment({ ...experiment, id: "exp-2" }, [
+      {
+        experimentId: "exp-2",
+        workspaceId: "ws-1",
+        variantId: "control",
+        subjectId: "a",
+        observedAt: "2026-09-26T00:00:00Z",
+        exposed: true,
+        engaged: true,
+        converted: true,
+        value: 42,
+      },
+    ]);
 
     expect(() =>
-      buildExperimentLearningWriteback(experiment, other, "2026-09-26T12:00:00Z"),
+      buildExperimentLearningWriteback(
+        experiment,
+        other,
+        "2026-09-26T12:00:00Z",
+      ),
     ).toThrow("experiment_learning_experiment_mismatch");
   });
 
@@ -784,7 +789,8 @@ describe("experiment learning write-back is workspace scoped", () => {
       // Grounding must point only at this experiment.
       expect(
         insight.sourceIds.every(
-          (id) => id === "experiment:exp-1" || id.startsWith("experiment:exp-1:"),
+          (id) =>
+            id === "experiment:exp-1" || id.startsWith("experiment:exp-1:"),
         ),
       ).toBe(true);
     }

@@ -14,19 +14,63 @@ export const L3 = "L3_PRODUCTION_PROVEN";
 
 /** Release-critical gate metadata. The keys must match release/readiness.json. */
 export const GATES = {
-  source_integrity: { name: "Source Integrity", owner: "Engineering Team", priority: "high" },
+  source_integrity: {
+    name: "Source Integrity",
+    owner: "Engineering Team",
+    priority: "high",
+  },
   build: { name: "Build", owner: "Engineering Team", priority: "high" },
   runtime: { name: "Runtime", owner: "Engineering Team", priority: "high" },
-  product_workflows: { name: "Product Workflows", owner: "Engineering Team", priority: "medium" },
-  security_governance: { name: "Security Governance", owner: "Engineering Team", priority: "medium" },
-  distribution: { name: "Distribution", owner: "Engineering Team", priority: "high" },
-  web_production: { name: "Web Production", owner: "Engineering Team", priority: "medium" },
-  external_connectors: { name: "External Connectors", owner: "Commercial Team", priority: "high" },
-  sync_network: { name: "Sync Network", owner: "Engineering Team", priority: "medium" },
-  accessibility: { name: "Accessibility", owner: "Engineering Team", priority: "medium" },
-  stability_soak: { name: "Stability Soak", owner: "Engineering Team", priority: "high" },
-  commercial_billing: { name: "Commercial Billing", owner: "Commercial Team", priority: "low" },
-  legal_commercial: { name: "Legal/Commercial", owner: "Commercial Team", priority: "low" },
+  product_workflows: {
+    name: "Product Workflows",
+    owner: "Engineering Team",
+    priority: "medium",
+  },
+  security_governance: {
+    name: "Security Governance",
+    owner: "Engineering Team",
+    priority: "medium",
+  },
+  distribution: {
+    name: "Distribution",
+    owner: "Engineering Team",
+    priority: "high",
+  },
+  web_production: {
+    name: "Web Production",
+    owner: "Engineering Team",
+    priority: "medium",
+  },
+  external_connectors: {
+    name: "External Connectors",
+    owner: "Commercial Team",
+    priority: "high",
+  },
+  sync_network: {
+    name: "Sync Network",
+    owner: "Engineering Team",
+    priority: "medium",
+  },
+  accessibility: {
+    name: "Accessibility",
+    owner: "Engineering Team",
+    priority: "medium",
+  },
+  stability_soak: {
+    name: "Stability Soak",
+    owner: "Engineering Team",
+    priority: "high",
+  },
+  commercial_billing: {
+    name: "Commercial Billing",
+    owner: "Commercial Team",
+    priority: "low",
+  },
+  legal_commercial: {
+    name: "Legal/Commercial",
+    owner: "Commercial Team",
+    priority: "low",
+  },
 };
 
 export const GATE_KEYS = Object.keys(GATES);
@@ -78,7 +122,8 @@ export function deriveGateStatus(readiness) {
       blockingReason: blocked ? (entry.notes ?? "").trim() : "",
       evidence: Array.isArray(entry.evidence) ? entry.evidence : [],
       evidenceRefs: Array.isArray(entry.evidenceRefs) ? entry.evidenceRefs : [],
-      verifiedAt: typeof entry.verifiedAt === "string" ? entry.verifiedAt : null,
+      verifiedAt:
+        typeof entry.verifiedAt === "string" ? entry.verifiedAt : null,
     };
   }
 
@@ -119,5 +164,8 @@ export function calculateStats(gates) {
 
 export function isAllGatesL3(gates) {
   const values = Object.values(gates);
-  return values.length === GATE_KEYS.length && values.every((gate) => gate.level === L3);
+  return (
+    values.length === GATE_KEYS.length &&
+    values.every((gate) => gate.level === L3)
+  );
 }

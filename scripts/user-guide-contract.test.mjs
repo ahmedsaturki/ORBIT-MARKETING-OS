@@ -16,9 +16,9 @@ const envExample = readFileSync(".env.example", "utf8");
 // Every variable the guide tells an operator to set must be one the runtime
 // actually reads. A guide variable the runtime ignores sends the operator
 // through setup that has no effect.
-const documentedVars = [
-  ...guide.matchAll(/^(OLLAMA_[A-Z_]+)=/gm),
-].map((match) => match[1]);
+const documentedVars = [...guide.matchAll(/^(OLLAMA_[A-Z_]+)=/gm)].map(
+  (match) => match[1],
+);
 
 if (documentedVars.length === 0) {
   throw new Error("USER_GUIDE.md no longer documents any Ollama variables");

@@ -13,7 +13,12 @@ export async function removeFixture(cwd) {
   let lastError;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      await rm(cwd, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      await rm(cwd, {
+        recursive: true,
+        force: true,
+        maxRetries: 3,
+        retryDelay: 100,
+      });
       return;
     } catch (error) {
       lastError = error;

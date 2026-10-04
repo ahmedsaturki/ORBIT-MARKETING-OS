@@ -69,19 +69,29 @@ if (asJson) {
     ),
   );
 } else {
-  const width = Math.max(...Object.values(gates).map((gate) => gate.name.length));
-  console.log(`release-gates total=${stats.total} l3=${stats.L3} blocked=${stats.blocked}`);
+  const width = Math.max(
+    ...Object.values(gates).map((gate) => gate.name.length),
+  );
+  console.log(
+    `release-gates total=${stats.total} l3=${stats.L3} blocked=${stats.blocked}`,
+  );
   if (missing.length > 0) {
     console.log(`missing-from-readiness: ${missing.join(", ")}`);
   }
   for (const gate of Object.values(gates)) {
     console.log("");
     console.log(`  ${gate.name.padEnd(width)}  ${gate.levelLabel}`);
-    console.log(`  ${" ".repeat(width)}  owner=${gate.owner} priority=${gate.priority}`);
+    console.log(
+      `  ${" ".repeat(width)}  owner=${gate.owner} priority=${gate.priority}`,
+    );
     if (gate.blocked) {
-      console.log(`  ${" ".repeat(width)}  BLOCKED: ${gate.blockingReason || "(no notes recorded)"}`);
+      console.log(
+        `  ${" ".repeat(width)}  BLOCKED: ${gate.blockingReason || "(no notes recorded)"}`,
+      );
     } else {
-      console.log(`  ${" ".repeat(width)}  verifiedAt=${gate.verifiedAt ?? "unrecorded"}`);
+      console.log(
+        `  ${" ".repeat(width)}  verifiedAt=${gate.verifiedAt ?? "unrecorded"}`,
+      );
     }
   }
   console.log("");

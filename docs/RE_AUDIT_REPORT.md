@@ -78,15 +78,15 @@ verified gate list.
 
 ### B3. Test-file count inflated ~10x
 
-| Claim | Claimed | Measured | Method |
-|---|---|---|---|
-| Test files | 609 | **59** | `find packages -name "*.test.ts" -not -path "*/node_modules/*" \| wc -l` |
-| Test cases | 1046 | **509** | `pnpm test` (core 487, desktop 9, web 5, mobile 8) |
-| Rust tests | 105 | **114** | `cargo test --lib` |
-| E2E tests | 34 | **34** (24 pass, 1 fail, 9 not run) | `pnpm test:e2e` |
+| Claim      | Claimed | Measured                            | Method                                                                   |
+| ---------- | ------- | ----------------------------------- | ------------------------------------------------------------------------ |
+| Test files | 609     | **59**                              | `find packages -name "*.test.ts" -not -path "*/node_modules/*" \| wc -l` |
+| Test cases | 1046    | **509**                             | `pnpm test` (core 487, desktop 9, web 5, mobile 8)                       |
+| Rust tests | 105     | **114**                             | `cargo test --lib`                                                       |
+| E2E tests  | 34      | **34** (24 pass, 1 fail, 9 not run) | `pnpm test:e2e`                                                          |
 
 The 609 figure has no plausible source in this tree. Note the Rust count is
-*higher* than claimed, because this audit added 9 tests.
+_higher_ than claimed, because this audit added 9 tests.
 
 ### B4. Matrix shape contradicts the file
 
@@ -128,10 +128,10 @@ could not have been true for this tree.
 
 ### Fixes applied
 
-| File | Change |
-|---|---|
-| `packages/desktop/package.json` | `build` now runs `node ../../scripts/build-icon.mjs` first |
-| `package.json` | added `build:icons` script |
+| File                                    | Change                                                                                                     |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `packages/desktop/package.json`         | `build` now runs `node ../../scripts/build-icon.mjs` first                                                 |
+| `package.json`                          | added `build:icons` script                                                                                 |
 | `packages/desktop/src-tauri/Cargo.toml` | `[profile.dev] debug = 0`, `[profile.dev.package."*"] debug = 0`, `[profile.dev.build-override] debug = 0` |
 
 The `build-override` entry is load-bearing: build scripts and proc-macros
@@ -163,37 +163,37 @@ desktop artifact can be produced. Requires owner-controlled certificates.
 
 ### The 7 UNVERIFIED (each blocks a "production ready" claim)
 
-| ID | Requirement | Why unverified |
-|---|---|---|
-| UI-01 | UI rendering evidence | No executing browser evidence |
-| INBOX-01 | Inbox workflow | Needs live connector |
-| CRM-01 | CRM workflow | Needs live connector |
-| BACK-02 | Corrupt-backup rejection | **Closed this audit** → PASS |
-| BACK-03 | Newer-schema rejection | **Closed this audit** → PASS |
-| OPS-02 | 24h stability soak | Harness defined; 24h wall-clock never run |
-| REL-03 | Checksum verification | Defined; no tagged release to verify |
-| DOC-01/02 | Docs review | Requires human reviewer |
+| ID        | Requirement              | Why unverified                            |
+| --------- | ------------------------ | ----------------------------------------- |
+| UI-01     | UI rendering evidence    | No executing browser evidence             |
+| INBOX-01  | Inbox workflow           | Needs live connector                      |
+| CRM-01    | CRM workflow             | Needs live connector                      |
+| BACK-02   | Corrupt-backup rejection | **Closed this audit** → PASS              |
+| BACK-03   | Newer-schema rejection   | **Closed this audit** → PASS              |
+| OPS-02    | 24h stability soak       | Harness defined; 24h wall-clock never run |
+| REL-03    | Checksum verification    | Defined; no tagged release to verify      |
+| DOC-01/02 | Docs review              | Requires human reviewer                   |
 
-*(BACK-02/03 were UNVERIFIED at audit start and are now PASS; the remaining 7
-are listed in the matrix.)*
+_(BACK-02/03 were UNVERIFIED at audit start and are now PASS; the remaining 7
+are listed in the matrix.)_
 
 ### Requirements closed by this audit (5)
 
-| ID | Was | Now | New evidence |
-|---|---|---|---|
-| BACK-02 | UNVERIFIED | PASS | `restore_rejects_corrupt_database_before_replacing_the_live_target` |
-| BACK-03 | UNVERIFIED | PASS | `restore_rejects_a_backup_newer_than_this_application`; `restore_accepts_a_backup_at_the_current_schema_version` |
-| SEC-04 | PARTIAL | PASS | `rejects a license whose signed payload was mutated`; `rejects a license signed by an untrusted key` |
-| LIC-01 | PARTIAL | PASS | `lifecycle_storage_installs_reads_and_deletes_the_token`; `account_limit_is_enforced_against_live_account_counts` |
-| INS-01 | PARTIAL | PARTIAL | zero-source rejection added; workspace scoping still uncovered |
+| ID      | Was        | Now     | New evidence                                                                                                      |
+| ------- | ---------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| BACK-02 | UNVERIFIED | PASS    | `restore_rejects_corrupt_database_before_replacing_the_live_target`                                               |
+| BACK-03 | UNVERIFIED | PASS    | `restore_rejects_a_backup_newer_than_this_application`; `restore_accepts_a_backup_at_the_current_schema_version`  |
+| SEC-04  | PARTIAL    | PASS    | `rejects a license whose signed payload was mutated`; `rejects a license signed by an untrusted key`              |
+| LIC-01  | PARTIAL    | PASS    | `lifecycle_storage_installs_reads_and_deletes_the_token`; `account_limit_is_enforced_against_live_account_counts` |
+| INS-01  | PARTIAL    | PARTIAL | zero-source rejection added; workspace scoping still uncovered                                                    |
 
 ### Two corrections this audit made to its own work
 
 Recorded for auditability:
 
-1. Two new Rust tests initially asserted a specific SQLite *rejection message*.
+1. Two new Rust tests initially asserted a specific SQLite _rejection message_.
    SQLite reports `file is not a database` and `database disk image is
-   malformed` **before** `integrity_check` executes. Both are still correct
+malformed` **before** `integrity_check` executes. Both are still correct
    rejections. The assertions were corrected to test behavior, not wording.
 2. An intermediate claim that Rust license verification does not check
    signatures was **wrong**. `license.rs:147-162` verifies Ed25519 against an
@@ -206,25 +206,25 @@ Recorded for auditability:
 
 Extracted from `release/readiness.json` → `releaseCritical`.
 
-| # | Gate | Level | Blocked by | Closable in-repo? |
-|---|---|---|---|---|
-| 1 | source_integrity | L2_VERIFIED | SonarCloud **B** on new code, requires **A** (issue #112) | No — external service |
-| 2 | build | L2_VERIFIED | L3 needs signed native artifacts | No — certificates |
-| 3 | runtime | L2_VERIFIED | Recovery evidence from CI runs | Partly |
-| 4 | product_workflows | L2_VERIFIED | Needs live connectors | No |
-| 5 | security_governance | L2_VERIFIED | L3 needs external security review | No |
-| 6 | distribution | L2_VERIFIED | Store accounts + signing | No |
-| 7 | web_production | L2_VERIFIED | Alias serves older SHA | No — deploy control |
-| 8 | external_connectors | **L1_IMPLEMENTED** | Real Telegram/LinkedIn tokens | No — owner tokens |
-| 9 | sync_network | L2_VERIFIED | Live multi-device CRDT; proof uses loopback | No |
-| 10 | accessibility | L2_VERIFIED | Manual WCAG/RTL audit | No — human |
-| 11 | stability_soak | L2_VERIFIED | 24h soak on exact release SHA | No — wall-clock |
-| 12 | commercial_billing | **L1_IMPLEMENTED** | Payment provider not configured | No |
-| 13 | legal_commercial | **L1_IMPLEMENTED** | Legal publication review | No — human/legal |
+| #   | Gate                | Level              | Blocked by                                                | Closable in-repo?     |
+| --- | ------------------- | ------------------ | --------------------------------------------------------- | --------------------- |
+| 1   | source_integrity    | L2_VERIFIED        | SonarCloud **B** on new code, requires **A** (issue #112) | No — external service |
+| 2   | build               | L2_VERIFIED        | L3 needs signed native artifacts                          | No — certificates     |
+| 3   | runtime             | L2_VERIFIED        | Recovery evidence from CI runs                            | Partly                |
+| 4   | product_workflows   | L2_VERIFIED        | Needs live connectors                                     | No                    |
+| 5   | security_governance | L2_VERIFIED        | L3 needs external security review                         | No                    |
+| 6   | distribution        | L2_VERIFIED        | Store accounts + signing                                  | No                    |
+| 7   | web_production      | L2_VERIFIED        | Alias serves older SHA                                    | No — deploy control   |
+| 8   | external_connectors | **L1_IMPLEMENTED** | Real Telegram/LinkedIn tokens                             | No — owner tokens     |
+| 9   | sync_network        | L2_VERIFIED        | Live multi-device CRDT; proof uses loopback               | No                    |
+| 10  | accessibility       | L2_VERIFIED        | Manual WCAG/RTL audit                                     | No — human            |
+| 11  | stability_soak      | L2_VERIFIED        | 24h soak on exact release SHA                             | No — wall-clock       |
+| 12  | commercial_billing  | **L1_IMPLEMENTED** | Payment provider not configured                           | No                    |
+| 13  | legal_commercial    | **L1_IMPLEMENTED** | Legal publication review                                  | No — human/legal      |
 
 **0 of 13 reach L3_PRODUCTION_PROVEN.** The rule in `readiness.json:158` is
-explicit: *"Commercial Production Proven requires every release-critical gate
-to be L3_PRODUCTION_PROVEN."*
+explicit: _"Commercial Production Proven requires every release-critical gate
+to be L3_PRODUCTION_PROVEN."_
 
 Three gates sit at **L1** — these are the weakest and are all owner-controlled.
 
@@ -246,18 +246,18 @@ audit; the only new dependency-free code added is test code.
 
 ## G. PHASE-BY-PHASE STATUS
 
-| Phase | Result |
-|---|---|
-| 1. Repository state audit | Done — SHA `01cd0622`, 383 tracked files |
-| 2. Matrix reconciliation | Done — 83 classified |
-| 3. External gates | Done — 13 gates, section E |
-| 4. Test verification | Done — 509 JS + 114 Rust |
-| 5. OMP warning | Done — benign, environment-only (B6) |
-| 6. Premature stopping | Done — "ALL CONDITIONS SATISFIED" is **contradicted** |
+| Phase                     | Result                                                                                  |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| 1. Repository state audit | Done — SHA `01cd0622`, 383 tracked files                                                |
+| 2. Matrix reconciliation  | Done — 83 classified                                                                    |
+| 3. External gates         | Done — 13 gates, section E                                                              |
+| 4. Test verification      | Done — 509 JS + 114 Rust                                                                |
+| 5. OMP warning            | Done — benign, environment-only (B6)                                                    |
+| 6. Premature stopping     | Done — "ALL CONDITIONS SATISFIED" is **contradicted**                                   |
 | 7. Black-box verification | **Done** — live runtime exercised end-to-end; 1 real defect found and fixed (section K) |
-| 8. Security re-validation | Done — section F |
-| 9. Release gates | Done — section E |
-| 10. Final state model | Below |
+| 8. Security re-validation | Done — section F                                                                        |
+| 9. Release gates          | Done — section E                                                                        |
+| 10. Final state model     | Below                                                                                   |
 
 ---
 
@@ -266,11 +266,12 @@ audit; the only new dependency-free code added is test code.
 > **Counts in sections H and K are as measured at `01cd0622`**, before
 > `origin/main` was merged and before this branch's own test work. They are left
 > as the historical record rather than rewritten. The current figures are
-> **537 JS tests** (core 515, desktop 9, mobile 8, web 5) and **182 Rust tests**;
+> **549 JS tests** (core 527, desktop 9, mobile 8, web 5) and **182 Rust tests**;
 > see `FINAL_STATE_MODEL.md` and `RECONCILIATION.md`. The "105/105 Rust" and
 > "509 JS" numbers in this document are superseded.
 
 ### Engineering — **PASS**
+
 509 JS tests, 114 Rust tests, clippy `-D warnings` clean, fmt clean, typecheck
 5/5, security scan passed, runtime smoke 4/4, e2e 24 passing, and a real
 15.6 MB desktop binary built from a clean checkout. **Seven code defects were
@@ -281,16 +282,19 @@ would break every Linux runner, and a security-exception test that read a
 valid patch as tampered. No blocking defect remains in the code.
 
 ### Product — **PARTIAL**
+
 61/83 requirements PASS. Core workflows are implemented and tested. The
 uncovered surface is real but bounded: three live-connector workflows, three
 manual-review items, and the 24h soak.
 
 ### Release — **NOT READY**
+
 0 of 13 gates at L3. One acceptance requirement is a hard FAIL (REL-02,
 unsigned artifacts). The repo's own rule requires all 13 at L3. The prior
 "RELEASE READY" recommendation does not satisfy that rule.
 
 ### Owner Gates — **8 remaining, all external**
+
 1. Desktop signing/notarization certificates → REL-02, gate `build`
 2. Mobile store accounts → gate `distribution`
 3. Real Telegram + LinkedIn tokens → gate `external_connectors`
@@ -305,23 +309,23 @@ unsigned artifacts). The repo's own rule requires all 13 at L3. The prior
 
 ## I. REMAINING ITEMS
 
-| Sev | Item | In-repo fixable? | Next action |
-|---|---|---|---|
-| **HIGH** | REL-02 unsigned desktop artifacts | No | Obtain signing certs; set `signing=signed` |
-| ~~HIGH~~ | ~~Rust crate unbuildable on clean checkout~~ | **Yes — FIXED** | icons wired into build |
-| ~~HIGH~~ | ~~`/api/health` reported `ok` with no installed model~~ | **Yes — FIXED** | Verifies model presence; regression test added |
-| ~~MED~~ | ~~`runtime-smoke.mjs` depended on ambient `.env`~~ | **Yes — FIXED** | Fixture model pinned in all spawn blocks |
-| ~~MED~~ | ~~Tauri build failed: `frontendDist` missing~~ | **Yes — FIXED** | Frontend built before cargo |
-| ~~MED~~ | ~~`node-forge-audit-exception` hash mismatch~~ | **Yes — FIXED** | CRLF-normalized hashing; lockfile was always correct |
-| ~~MED~~ | ~~`vercel-ignore.test.mjs` EBUSY~~ | **Yes — FIXED** | Retrying `removeFixture()` |
-| ~~HIGH~~ | ~~All 9 `*.sh` CRLF — broken on Linux~~ | **Yes — FIXED** | `.gitattributes` + renormalized index |
-| ~~HIGH~~ | ~~`release-evidence-collector` asserts clean worktree~~ | **Yes — FIXED** | Passes now that the work is committed |
-| MED | 7 PASS rows cite `tauri-shell` tests that cannot attach here | Partly | Needs a host where WebView2 CDP attaches |
-| MED | `vercel-ignore.test.mjs` env assertions | No | Host `bash` cannot hold string variables; needs Git Bash or real Linux |
-| MED | 3 gates at L1_IMPLEMENTED | No | Owner tokens/providers |
-| MED | SonarCloud B vs required A | No | External service |
-| LOW | 14 PARTIAL requirements | Partly | Per-row gaps in matrix |
-| LOW | 7 UNVERIFIED requirements | No | Live/soak/manual evidence |
+| Sev      | Item                                                         | In-repo fixable? | Next action                                                            |
+| -------- | ------------------------------------------------------------ | ---------------- | ---------------------------------------------------------------------- |
+| **HIGH** | REL-02 unsigned desktop artifacts                            | No               | Obtain signing certs; set `signing=signed`                             |
+| ~~HIGH~~ | ~~Rust crate unbuildable on clean checkout~~                 | **Yes — FIXED**  | icons wired into build                                                 |
+| ~~HIGH~~ | ~~`/api/health` reported `ok` with no installed model~~      | **Yes — FIXED**  | Verifies model presence; regression test added                         |
+| ~~MED~~  | ~~`runtime-smoke.mjs` depended on ambient `.env`~~           | **Yes — FIXED**  | Fixture model pinned in all spawn blocks                               |
+| ~~MED~~  | ~~Tauri build failed: `frontendDist` missing~~               | **Yes — FIXED**  | Frontend built before cargo                                            |
+| ~~MED~~  | ~~`node-forge-audit-exception` hash mismatch~~               | **Yes — FIXED**  | CRLF-normalized hashing; lockfile was always correct                   |
+| ~~MED~~  | ~~`vercel-ignore.test.mjs` EBUSY~~                           | **Yes — FIXED**  | Retrying `removeFixture()`                                             |
+| ~~HIGH~~ | ~~All 9 `*.sh` CRLF — broken on Linux~~                      | **Yes — FIXED**  | `.gitattributes` + renormalized index                                  |
+| ~~HIGH~~ | ~~`release-evidence-collector` asserts clean worktree~~      | **Yes — FIXED**  | Passes now that the work is committed                                  |
+| MED      | 7 PASS rows cite `tauri-shell` tests that cannot attach here | Partly           | Needs a host where WebView2 CDP attaches                               |
+| MED      | `vercel-ignore.test.mjs` env assertions                      | No               | Host `bash` cannot hold string variables; needs Git Bash or real Linux |
+| MED      | 3 gates at L1_IMPLEMENTED                                    | No               | Owner tokens/providers                                                 |
+| MED      | SonarCloud B vs required A                                   | No               | External service                                                       |
+| LOW      | 14 PARTIAL requirements                                      | Partly           | Per-row gaps in matrix                                                 |
+| LOW      | 7 UNVERIFIED requirements                                    | No               | Live/soak/manual evidence                                              |
 
 ### Environment limits hit during this audit
 
@@ -424,18 +428,20 @@ real. Doing so surfaced a defect no static check had caught.
 ollamaStatus = response.ok ? "ok" : "degraded";
 ```
 
-This only asked *is Ollama reachable*. It never checked whether the configured
+This only asked _is Ollama reachable_. It never checked whether the configured
 model was present. With `OLLAMA_MODEL=llama3.2:3b` and only `qwen2.5:0.5b`
 installed, the runtime reported:
 
 ```json
-{"status":"ok","ai":{"status":"ok","model":"llama3.2:3b"}}
+{ "status": "ok", "ai": { "status": "ok", "model": "llama3.2:3b" } }
 ```
 
 while every AI call failed:
 
 ```json
-{"error":"Ollama request failed (404): {\"error\":\"model 'llama3.2:3b' not found\"}"}
+{
+  "error": "Ollama request failed (404): {\"error\":\"model 'llama3.2:3b' not found\"}"
+}
 ```
 
 **Impact:** a green health endpoint while the product's core function was
@@ -467,33 +473,33 @@ Verified passing with a deliberately conflicting `.env`.
 
 ### K3. Verified working — no defect
 
-| Step | Evidence |
-|---|---|
-| Install / configure | `pnpm install` clean; `.env` from `.env.example` |
-| Start | `listening on 127.0.0.1:3000` |
-| Health | 200, `ok` when model present, `degraded` when not |
-| Chat inference | real generation returned; `modelUsed` echoed correctly |
-| Profiles | `balanced`, `fast`, `reasoning` all routed to real inference |
-| Role + custom instruction | custom system instruction honoured |
-| generate-content | real Arabic multi-platform content generated |
-| Validation | empty messages → 400; bad body → 400; missing topic → 400 |
-| Guards | >100 messages → 400; >120k chars → 400 |
-| Unknown route | 404 |
-| Vision unconfigured | 503 with actionable Arabic message |
+| Step                      | Evidence                                                     |
+| ------------------------- | ------------------------------------------------------------ |
+| Install / configure       | `pnpm install` clean; `.env` from `.env.example`             |
+| Start                     | `listening on 127.0.0.1:3000`                                |
+| Health                    | 200, `ok` when model present, `degraded` when not            |
+| Chat inference            | real generation returned; `modelUsed` echoed correctly       |
+| Profiles                  | `balanced`, `fast`, `reasoning` all routed to real inference |
+| Role + custom instruction | custom system instruction honoured                           |
+| generate-content          | real Arabic multi-platform content generated                 |
+| Validation                | empty messages → 400; bad body → 400; missing topic → 400    |
+| Guards                    | >100 messages → 400; >120k chars → 400                       |
+| Unknown route             | 404                                                          |
+| Vision unconfigured       | 503 with actionable Arabic message                           |
 | Ollama killed mid-session | health → `degraded`, chat → `fetch failed`, server stayed up |
-| Ollama restarted | health and chat recovered **without** runtime restart |
-| E2E (browser) | 34 tests: **24 passed**, 10 skipped pending Tauri binary |
-| typecheck | 5/5 |
-| Full suite | 509 passed |
+| Ollama restarted          | health and chat recovered **without** runtime restart        |
+| E2E (browser)             | 34 tests: **24 passed**, 10 skipped pending Tauri binary     |
+| typecheck                 | 5/5                                                          |
+| Full suite                | 509 passed                                                   |
 
 ### K4. Honest gaps — what could NOT be verified
 
-| Gap | Reason |
-|---|---|
+| Gap                            | Reason                                                                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
 | 10 `tauri-shell.spec.ts` tests | Need a built Tauri `.exe`; the SQLite persistence evidence behind DATA-01/WS-02/OPS-01 |
-| Live connector workflows | No Telegram/LinkedIn tokens (unchanged) |
-| Billing | No payment provider (unchanged) |
-| Arabic content **quality** | Only a 0.5B model available; output is coherent but weak. Not a code defect |
+| Live connector workflows       | No Telegram/LinkedIn tokens (unchanged)                                                |
+| Billing                        | No payment provider (unchanged)                                                        |
+| Arabic content **quality**     | Only a 0.5B model available; output is coherent but weak. Not a code defect            |
 
 `packages/web/out` is gitignored and empty in a clean checkout, so `pnpm test:e2e`
 fails until `pnpm build` runs. **This is correct and matches CI**

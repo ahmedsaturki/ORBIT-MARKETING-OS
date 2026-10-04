@@ -43,10 +43,14 @@ if (!existsSync(readinessPath)) {
  */
 const ALIASES = new Map([
   ["/release/readiness.json", readinessPath],
-  ["/release-gate-model.mjs", join(repoRoot, "scripts", "release-gate-model.mjs")],
+  [
+    "/release-gate-model.mjs",
+    join(repoRoot, "scripts", "release-gate-model.mjs"),
+  ],
 ]);
 
-const isInsideRepo = (target) => target === repoRoot || target.startsWith(repoRoot + sep);
+const isInsideRepo = (target) =>
+  target === repoRoot || target.startsWith(repoRoot + sep);
 
 /** Resolve a request path to a servable file, rejecting traversal outside the repo. */
 function resolveTarget(requestUrl) {
@@ -102,6 +106,8 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  process.stdout.write(`ORBIT gate dashboard listening on http://127.0.0.1:${port}\n`);
+  process.stdout.write(
+    `ORBIT gate dashboard listening on http://127.0.0.1:${port}\n`,
+  );
   process.stdout.write(`serving readiness from ${readinessPath}\n`);
 });

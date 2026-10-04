@@ -85,7 +85,13 @@ describe("database schema contract", () => {
       );
 
       expect(() =>
-        insertUngrounded.run("ungrounded", "workspace-a", "No source", "Empty", "[]"),
+        insertUngrounded.run(
+          "ungrounded",
+          "workspace-a",
+          "No source",
+          "Empty",
+          "[]",
+        ),
       ).toThrow();
 
       expect(() =>

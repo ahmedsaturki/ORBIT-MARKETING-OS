@@ -97,7 +97,10 @@ const FORMATS = {
       .join("\n");
 
     const blockers = blockedGates
-      .map((gate) => `- **${gate.name}** (\`${gate.key}\`) — ${gate.blockingReason || "(no notes recorded)"}`)
+      .map(
+        (gate) =>
+          `- **${gate.name}** (\`${gate.key}\`) — ${gate.blockingReason || "(no notes recorded)"}`,
+      )
       .join("\n");
 
     return `# ORBIT Release Gate Status

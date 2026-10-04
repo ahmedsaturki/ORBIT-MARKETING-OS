@@ -21,7 +21,10 @@ const promote = (document) => {
   const copy = JSON.parse(JSON.stringify(document));
   for (const gate of Object.values(copy.releaseCritical)) {
     gate.level = "L3_PRODUCTION_PROVEN";
-    gate.evidenceRefs = [...(gate.evidenceRefs ?? []), "https://example.test/evidence"];
+    gate.evidenceRefs = [
+      ...(gate.evidenceRefs ?? []),
+      "https://example.test/evidence",
+    ];
     gate.verifiedAt = "2026-10-04T00:00:00Z";
   }
   return copy;
@@ -67,9 +70,12 @@ try {
 
   // Exports must report the same verdict as the checker.
   for (const format of ["json", "csv", "md"]) {
-    const exported = run(["scripts/export-gate-status.mjs", "--format", format], {
-      ORBIT_READINESS_FILE: promotedPath,
-    });
+    const exported = run(
+      ["scripts/export-gate-status.mjs", "--format", format],
+      {
+        ORBIT_READINESS_FILE: promotedPath,
+      },
+    );
     assert.equal(exported.status, 0, `export ${format} succeeds`);
     assert.ok(exported.stdout.length > 0, `export ${format} produces output`);
   }
@@ -82,14 +88,24 @@ try {
   assert.equal(jsonExport.production_ready, true);
   assert.equal(jsonExport.stats.blocked, 0);
 
-  const blockedCsv = run(["scripts/export-gate-status.mjs", "--format", "csv"]).stdout
-    .trim()
+  const blockedCsv = run(["scripts/export-gate-status.mjs", "--format", "csv"])
+    .stdout.trim()
     .split("\n");
   assert.equal(blockedCsv.length, 14, "csv has a header plus 13 gates");
-  assert.equal(blockedCsv[1].split(",")[5], "yes", "csv marks the gate blocked");
+  assert.equal(
+    blockedCsv[1].split(",")[5],
+    "yes",
+    "csv marks the gate blocked",
+  );
 
   const outFile = join(tempDirectory, "gates.json");
-  const written = run(["scripts/export-gate-status.mjs", "--format", "json", "--output", outFile]);
+  const written = run([
+    "scripts/export-gate-status.mjs",
+    "--format",
+    "json",
+    "--output",
+    outFile,
+  ]);
   assert.equal(written.status, 0);
   assert.equal(JSON.parse(readFileSync(outFile, "utf8")).stats.total, 13);
 

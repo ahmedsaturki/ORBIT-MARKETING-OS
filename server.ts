@@ -497,9 +497,10 @@ app.get("/api/health", async (_req, res) => {
     });
     if (response.ok) {
       const payload: unknown = await response.json();
-      const models = isRecord(payload) && Array.isArray(payload.models)
-        ? payload.models
-        : [];
+      const models =
+        isRecord(payload) && Array.isArray(payload.models)
+          ? payload.models
+          : [];
       availableModels = models
         .filter(isRecord)
         .map((model) => getString(model.name) || getString(model.model))

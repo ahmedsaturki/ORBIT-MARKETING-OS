@@ -2,13 +2,7 @@ import { runTsx } from "./run-tsx.mjs";
 const env = { ...process.env, CI: "1" };
 
 const list = runTsx(
-  [
-    "scripts/orbit-cli.ts",
-    "commands",
-    "list",
-    "--surface",
-    "mcp",
-  ],
+  ["scripts/orbit-cli.ts", "commands", "list", "--surface", "mcp"],
   { encoding: "utf8", env },
 );
 if (list.status !== 0) {

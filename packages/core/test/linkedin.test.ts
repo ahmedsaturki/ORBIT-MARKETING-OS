@@ -319,7 +319,6 @@ describe("LinkedIn capability authorization scoping", () => {
       },
     });
 
-
     await expect(
       connector.execute(task, { accountId: "account-1", userConfirmed: false }),
     ).rejects.toThrow("Explicit user confirmation is required");

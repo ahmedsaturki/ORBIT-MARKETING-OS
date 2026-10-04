@@ -11,12 +11,12 @@ by running the command named beside it, not by reading a prior report.
 
 ## 1. Four-Part Status
 
-| Dimension | Status | Basis |
-|---|---|---|
-| **Engineering** | **PASS** | 537 JS tests (core 515, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
-| **Product** | **PARTIAL** | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code |
-| **Release** | **NOT READY** | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13 |
-| **Owner Gates** | **10 remaining** | Certificates, credentials, store accounts, human review, wall-clock time |
+| Dimension       | Status           | Basis                                                                                                                                                 |
+| --------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Engineering** | **PASS**         | 549 JS tests (core 527, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
+| **Product**     | **PARTIAL**      | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code                                                         |
+| **Release**     | **NOT READY**    | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
+| **Owner Gates** | **10 remaining** | Certificates, credentials, store accounts, human review, wall-clock time                                                                              |
 
 ### Overall
 
@@ -27,11 +27,11 @@ against a local `main` that had diverged from the remote: 40 commits ahead,
 **13 behind**. Comparing against `origin/main` falsifies three claims made
 earlier in this document.
 
-| Earlier claim | Reality against `origin/main` |
-|---|---|
-| `pnpm audit` was red in five workflows since 2026-09-25 | **False.** `3978c0fc` (PR #200, 2026-10-03) already added the `GHSA-vfj7-8cjw-p6xm` ignore upstream. The gate was green; the governed exception added here duplicates existing work |
-| `verify:workspace` was red repo-wide in eleven workflows since schema v17 | **False as stated.** The remote is at schema **v16** and its script correctly pins 16. Schema v17 exists only on this branch. The gate passes at `origin/main` |
-| Three duplicate Rust test helpers broke the name-uniqueness gate | **Not applicable upstream.** `origin/main` has none of those duplicates. The renames remain correct for this branch, which does have them |
+| Earlier claim                                                             | Reality against `origin/main`                                                                                                                                                       |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm audit` was red in five workflows since 2026-09-25                   | **False.** `3978c0fc` (PR #200, 2026-10-03) already added the `GHSA-vfj7-8cjw-p6xm` ignore upstream. The gate was green; the governed exception added here duplicates existing work |
+| `verify:workspace` was red repo-wide in eleven workflows since schema v17 | **False as stated.** The remote is at schema **v16** and its script correctly pins 16. Schema v17 exists only on this branch. The gate passes at `origin/main`                      |
+| Three duplicate Rust test helpers broke the name-uniqueness gate          | **Not applicable upstream.** `origin/main` has none of those duplicates. The renames remain correct for this branch, which does have them                                           |
 
 What survives, and is why this work still has value: the soak harness defects
 are real and unfixed upstream. `origin/main:scripts/soak.ts` still takes
@@ -56,21 +56,20 @@ additive and keep both sides. The acceptance matrix kept this branch's version
 because all four disagreeing statuses were checked: `AI-01` stays PASS on a
 test that runs green here, and `INBOX-01` stays PARTIAL because
 `TelegramConnector.sync` returns `this.connect(context)` and `connect` only
-validates credentials. Six governance gates, 537 JS tests, 182 Rust tests, and typecheck 5/5
+validates credentials. Six governance gates, 549 JS tests, 182 Rust tests, and typecheck 5/5
 pass on the result. See `RECONCILIATION.md` for the per-conflict record.
-
 
 ---
 
 ## 2. Requirement Reconciliation
 
-| Status | Count | Meaning |
-|---|---|---|
-| PASS | 77 | Named evidence exists and executes |
-| PARTIAL | 3 | Some evidence exists; a required capability does not |
-| UNVERIFIED | 3 | No executing evidence obtainable on this machine |
-| **FAIL** | **0** | — |
-| **Total** | **83** | |
+| Status     | Count  | Meaning                                              |
+| ---------- | ------ | ---------------------------------------------------- |
+| PASS       | 77     | Named evidence exists and executes                   |
+| PARTIAL    | 3      | Some evidence exists; a required capability does not |
+| UNVERIFIED | 3      | No executing evidence obtainable on this machine     |
+| **FAIL**   | **0**  | —                                                    |
+| **Total**  | **83** |                                                      |
 
 The previous `REL-02` FAIL was reclassified to UNVERIFIED: the pipeline
 deliberately builds unsigned and `docs/DISTRIBUTION.md` documents signing as an
@@ -78,19 +77,19 @@ owner-controlled gate. That is policy, not a defect in this repository.
 
 ### The three UNVERIFIED rows
 
-| ID | What is missing | Why it cannot be closed here |
-|---|---|---|
-| `OPS-02` | The 24-hour soak run | `stability-soak.yml` is `workflow_dispatch` on a `self-hosted` runner |
-| `REL-03` | A tagged release with checksums | No tag exists; checksums require a real release build |
-| `REL-02` | Signed, notarized artifacts | Requires owner-controlled certificates |
+| ID       | What is missing                 | Why it cannot be closed here                                          |
+| -------- | ------------------------------- | --------------------------------------------------------------------- |
+| `OPS-02` | The 24-hour soak run            | `stability-soak.yml` is `workflow_dispatch` on a `self-hosted` runner |
+| `REL-03` | A tagged release with checksums | No tag exists; checksums require a real release build                 |
+| `REL-02` | Signed, notarized artifacts     | Requires owner-controlled certificates                                |
 
 ### The three PARTIAL rows
 
-| ID | Evidence that exists | What is still missing |
-|---|---|---|
+| ID         | Evidence that exists                                   | What is still missing                                                 |
+| ---------- | ------------------------------------------------------ | --------------------------------------------------------------------- |
 | `INBOX-01` | Connector contracts, fixtures, challenge-stop behavior | No connector ingests conversations; `Connector.sync` is a placeholder |
-| `DOC-01` | Guide/env-var/loopback contract in CI | Prose and screenshots need human review |
-| `DOC-02` | Security exception register enforced by contract | No executed human review of the threat model |
+| `DOC-01`   | Guide/env-var/loopback contract in CI                  | Prose and screenshots need human review                               |
+| `DOC-02`   | Security exception register enforced by contract       | No executed human review of the threat model                          |
 
 ---
 
@@ -98,15 +97,15 @@ owner-controlled gate. That is policy, not a defect in this repository.
 
 Each was proven load-bearing by reverting it and observing the failure.
 
-| # | Defect | Class |
-|---|---|---|
-| 1 | `soak.ts` recorded **requested** minutes as elapsed; a 1-minute run wrote `"minutes": 1440, "ok": true` | Verification asserting what it hadn't measured |
-| 2 | Soak harness aborted at ~68 cycles on a claim-timestamp race | Test-harness bug |
-| 3 | `pnpm verify:workspace` failed repo-wide in **eleven** workflows since schema v17 | Gate red since 2026-10-04 |
-| 4 | Readiness evidence could cite files that no longer exist | Unenforced truth claim |
-| 5 | `pnpm audit` exited 1 in **five** workflows since 2026-09-25 | Security gate red |
-| 6 | `conversation_upsert` audited under the global workspace, not its argument | Cross-tenant audit write |
-| 7 | Duplicate Rust test helpers (`upsert`, `grant`, `assert_unauthorized`) broke a name-uniqueness gate | Naming collision |
+| #   | Defect                                                                                                  | Class                                          |
+| --- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| 1   | `soak.ts` recorded **requested** minutes as elapsed; a 1-minute run wrote `"minutes": 1440, "ok": true` | Verification asserting what it hadn't measured |
+| 2   | Soak harness aborted at ~68 cycles on a claim-timestamp race                                            | Test-harness bug                               |
+| 3   | `pnpm verify:workspace` failed repo-wide in **eleven** workflows since schema v17                       | Gate red since 2026-10-04                      |
+| 4   | Readiness evidence could cite files that no longer exist                                                | Unenforced truth claim                         |
+| 5   | `pnpm audit` exited 1 in **five** workflows since 2026-09-25                                            | Security gate red                              |
+| 6   | `conversation_upsert` audited under the global workspace, not its argument                              | Cross-tenant audit write                       |
+| 7   | Duplicate Rust test helpers (`upsert`, `grant`, `assert_unauthorized`) broke a name-uniqueness gate     | Naming collision                               |
 
 Two more were corrected in reporting rather than code: the workflow count was
 understated as five (it is eleven), and a prior audit's counts now conflict with
@@ -116,11 +115,11 @@ the matrix, so it is marked superseded.
 
 ## 4. Gates That Were Red and Are Now Green
 
-| Gate | Was | Now |
-|---|---|---|
-| `pnpm verify:workspace` | Failing repo-wide, 11 workflows | **PASS** |
-| `pnpm audit --audit-level=moderate` | Exit 1, 5 workflows | **PASS** (governed `braces` exception) |
-| Schema version pins | Expected v16, code at v17 | **Pinned to 17**, proved to bite at 18 |
+| Gate                                | Was                             | Now                                    |
+| ----------------------------------- | ------------------------------- | -------------------------------------- |
+| `pnpm verify:workspace`             | Failing repo-wide, 11 workflows | **PASS**                               |
+| `pnpm audit --audit-level=moderate` | Exit 1, 5 workflows             | **PASS** (governed `braces` exception) |
+| Schema version pins                 | Expected v16, code at v17       | **Pinned to 17**, proved to bite at 18 |
 
 The `braces` advisory has no upstream patch. Its exception is governed by
 `scripts/braces-audit-exception.test.mjs`, which asserts the allowlist contains
@@ -132,14 +131,14 @@ matches the latest published version, and that the exception expires after
 
 ## 5. Claims From Prior Reporting That Do Not Survive
 
-| Claim | Reality |
-|---|---|
-| "ALL CONDITIONS SATISFIED" | Unsupported. 0 of 13 gates at L3 |
-| "RELEASE READY" | Contradicts the repository's own release rule |
-| "1046 tests passing" | Its own parts sum to **1151**; no run produces 1046 |
-| "87 requirement IDs" | The matrix defines **83** |
-| "609 test files" | Actual: **59** |
-| "No engineering changes are needed" | **False** — seven defects were found in code |
+| Claim                               | Reality                                             |
+| ----------------------------------- | --------------------------------------------------- |
+| "ALL CONDITIONS SATISFIED"          | Unsupported. 0 of 13 gates at L3                    |
+| "RELEASE READY"                     | Contradicts the repository's own release rule       |
+| "1046 tests passing"                | Its own parts sum to **1151**; no run produces 1046 |
+| "87 requirement IDs"                | The matrix defines **83**                           |
+| "609 test files"                    | Actual: **59**                                      |
+| "No engineering changes are needed" | **False** — seven defects were found in code        |
 
 ---
 
