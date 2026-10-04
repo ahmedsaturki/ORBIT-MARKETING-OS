@@ -130,7 +130,7 @@ runtime. Nothing to fix.
 | WS-02 | PASS | `e2e/tauri-shell.spec.ts` :: native runtime restart preserves selected workspace state | — |
 | WS-03 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: workspace_membership_gate_tests (real create_campaign and upsert_opportunity paths refuse a non-member and a viewer before any row, link or success audit is written; an editor member is allowed through) | `workspace_role_authorization_tests` asserts against campaign_write_roles(); operator holds campaign.read, not campaign.manage |
 | QUE-01 | PASS | `e2e/tauri-shell.spec.ts` :: native queue recovery returns interrupted sync work to pending (simulates forced termination) | — |
-| QUE-02 | PASS | `test/retry.test.ts (3 tests)` | — |
+| QUE-02 | PASS | `packages/core/test/retry.test.ts (4 tests: bounded exponential delays, stops at the configured attempt budget, rejects unsafe retry policies consistently, rejects non-finite delay configuration)` | — |
 | QUE-03 | PASS | `src/security.test.ts` :: opens a circuit after consecutive failures | — |
 | QUE-04 | PASS | `src/queue/taskQueue.test.ts` :: parks user-action tasks and defers without consuming attempts | — |
 | RBAC-01 | PASS | `packages/desktop/src-tauri/src/lib.rs` :: workspace_role_authorization_tests (write roles authorized; reviewer/viewer/non-member/deactivated/cross-workspace refused) | `test/access.test.ts (role permission matrix tests)` |
