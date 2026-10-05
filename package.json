@@ -47,7 +47,7 @@
     "test:script-contracts": "node --test scripts/verify-workspace.test.mjs scripts/vercel-install.test.mjs scripts/build-all.test.mjs scripts/lib/spawn-pnpm.test.mjs && node scripts/verify-public-vercel-provenance.test.mjs",
     "verify:e2e-parses": "node scripts/verify-e2e-parses.mjs",
     "verify:release-docs": "node scripts/verify-release-docs.mjs",
-    "verify:production-observation": "node scripts/verify-live-production-observation.mjs",
+    "verify:production-observation": "node scripts/verify-live-production-observation.mjs && node scripts/production-observation-contract.test.mjs",
     "test:node-forge-audit-exception": "node scripts/node-forge-audit-exception.test.mjs",
     "test:user-guide-contract": "node scripts/user-guide-contract.test.mjs",
     "test:braces-audit-exception": "node scripts/braces-audit-exception.test.mjs",

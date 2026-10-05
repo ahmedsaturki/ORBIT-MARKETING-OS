@@ -4,7 +4,13 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const observationPath = join(root, "release", "OBSERVED_PRODUCTION.json");
+// ORBIT_OBSERVATION_FILE lets the contract test drive this script against a
+// fixture instead of the committed observation, so the guards can be exercised
+// in both directions without touching production. It mirrors the
+// ORBIT_READINESS_FILE override on scripts/verify-release-readiness.mjs.
+const observationPath =
+  process.env.ORBIT_OBSERVATION_FILE?.trim() ??
+  join(root, "release", "OBSERVED_PRODUCTION.json");
 const base = (
   process.env.ORBIT_LIVE_URL ?? "https://orbit-marketing-os.vercel.app"
 ).replace(/\/$/, "");
