@@ -529,10 +529,29 @@ itself is sound.
   `release/readiness.json` and are all still open — none of their backing gates
   had moved. The correction was confined to the one stale line.
 
-  The same drift existed in `docs/GATE_TRACKING.md` and is fixed separately in
-  the same session; that file also had two wrong owner columns and a wrong
-  engineering/commercial count. Issue #187 was checked and is already correct —
-  its SonarCloud item is marked `[x]`.
+  The same drift existed in `docs/GATE_TRACKING.md`, corrected in
+  `0d2f58db` (#233): that file had the stale blocker, `accessibility` and
+  `stability_soak` mis-owned as Engineering when the exporter reports Owner
+  Action, and a count line reading "10 engineering-owned, 3 commercial-owned"
+  against an actual 8 / 3 / 2. All 13 rows were compared to
+  `export-gate-status.mjs` and now agree on both level and owner. Issue #187 was
+  checked and is already correct — its SonarCloud item is marked `[x]`.
+
+- **A dated audit report keeps its findings; it gains a note.** A sweep of every
+  Sonar rating claim in the repository found the same closed B rating stated a
+  third time, in `docs/RE_AUDIT_REPORT.md` — headed `Date: 2026-10-04`, where B
+  was the observed value. `3cdbd6b1` (#235) extends that file's existing
+  `Superseded` banner to record the closure and name the real remaining blocker
+  for `source_integrity`, an exact-SHA L3 evidence reference rather than the
+  rating. The two B rows are deliberately unchanged: rewriting a point-in-time
+  observation would falsify the record of what the audit found. The edit is a
+  pure addition, confirmed by `git diff -w`.
+
+  A document asserting the present is wrong and gets corrected. A document
+  recording the past is accurate and gets marked. `docs/RELEASE_SCORECARD.md`
+  also mentions the B and needed no change — it already reads "was `B` … the
+  current state is A", so a sweep flagging it was a false positive to be
+  checked, not acted on.
 
 - **What an L3 evidence reference has to mean.** `scripts/verify-release-readiness.mjs`
   now refuses an L3 claim whose `verifiedAt` is older than 30 days or dated in
