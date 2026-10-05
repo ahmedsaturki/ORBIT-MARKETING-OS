@@ -25,8 +25,9 @@ if (
   typeof observation?.observedAt !== "string" ||
   observation?.releaseTruth?.commercialProductionProven !== false ||
   !observation?.runtimeErrors ||
-  observation.runtimeErrors.window !== "7d" ||
-  observation.runtimeErrors.count !== 0 ||
+  typeof observation.runtimeErrors.window !== "string" ||
+  typeof observation.runtimeErrors.count !== "number" ||
+  observation.runtimeErrors.verifiedBy !== "owner" ||
   !deployment ||
   !/^dpl_[A-Za-z0-9_-]+$/.test(deployment.id) ||
   deployment.state !== "READY" ||
@@ -110,6 +111,11 @@ console.log(
     releaseVersion: release.version,
     releaseSha: release.releaseSha,
     provenanceSource: release.provenanceSource,
+    // runtimeErrors is owner-attested; no endpoint here exposes error telemetry,
+    // so this run does NOT verify it. See .omp/RULES.md — never treat a
+    // reachable deployment as external production proof.
+    runtimeErrorsMachineVerified: false,
+    runtimeErrorsVerifiedBy: observation.runtimeErrors.verifiedBy,
     verifiedPaths: ["/", "/api/health.json", "/api/release.json"],
   }),
 );

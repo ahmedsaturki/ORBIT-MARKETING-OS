@@ -239,7 +239,10 @@
     ],
     "runtimeErrors": {
       "window": "7d",
-      "count": 0
+      "count": 0,
+      "verifiedBy": "owner",
+      "machineVerifiable": false,
+      "note": "Owner-attested from the Vercel dashboard; no endpoint here exposes error telemetry, so the live verifier checks the shape only."
     },
     "evidenceRefs": [
       "https://vercel.com/jmls-projects/orbit-marketing-os/9KyEbWzvAYvhvzZPmtXNJXrP16xV",
