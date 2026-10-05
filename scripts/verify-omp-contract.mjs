@@ -1,6 +1,10 @@
 import { access, readFile } from "node:fs/promises";
 
-const root = new URL("../", import.meta.url);
+// ORBIT_OMP_ROOT lets the contract test point this verifier at a fixture tree.
+// Unset, it resolves the repository the way the original did.
+const root = process.env.ORBIT_OMP_ROOT
+  ? new URL(`file:///${process.env.ORBIT_OMP_ROOT.replace(/\\/g, "/")}/`)
+  : new URL("../", import.meta.url);
 const requiredFiles = [
   ".omp/AGENTS.md",
   ".omp/RULES.md",

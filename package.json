@@ -37,7 +37,7 @@
     "test:commercial-proof": "node scripts/commercial-connector-proof.safe.test.mjs",
     "test:soak:evidence": "node scripts/soak-failure-evidence.test.mjs",
     "triage:release": "node scripts/agent-release-triage.mjs",
-    "verify:omp": "node scripts/verify-omp-contract.mjs",
+    "verify:omp": "node scripts/verify-omp-contract.mjs && node scripts/verify-omp-contract.test.mjs",
     "benchmark:startup-memory": "node scripts/startup-memory-benchmark.mjs",
     "test:release-evidence-collector": "node scripts/release-evidence-collector-contract.test.mjs",
     "test:recovery:evidence": "node scripts/recovery-evidence.mjs",
