@@ -188,7 +188,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
   test.setTimeout(60_000);
   test.skip(
     !exe,
-    "Tauri binary not built — run node scripts/build-tauri.mjs --release first",
+    "Tauri binary not built — run node scripts/build-icon.mjs && pnpm --dir packages/desktop tauri build --features e2e-cdp (or see docs/DESKTOP_NATIVE_TESTING.md)",
   );
 
   test.afterAll(async () => {
