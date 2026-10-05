@@ -584,6 +584,28 @@ itself is sound.
   200 with `releaseSha` matching the recorded `9ba07318` and provenance
   `VERCEL_GIT_COMMIT_SHA`.
 
+- **Ownership and priority live in code, not in `readiness.json`.**
+  `release/readiness.json` is the machine-readable release record, and it is
+  tempting to treat it as authoritative for every release-critical attribute.
+  It is not. Across all 13 `releaseCritical` entries the only fields present are
+  `level`, `evidence`, `notes`, `evidenceRefs` and `verifiedAt` — verified as the
+  union of every gate's keys, not read off one entry.
+
+  Owner and priority are declared per gate in `scripts/release-gate-model.mjs`,
+  which is where `export-gate-status.mjs` gets them. That file is the only place
+  in the repository containing the string `Owner Action`, and it carries the
+  reasoning inline: `accessibility` is an owner gate because "no engineer action
+  closes [the RTL audit] on its own", and `stability_soak` because it needs "a
+  self-hosted runner this repository cannot provision".
+
+  Nothing is currently wrong — no document attributes ownership to
+  `readiness.json`, and the counts derived from the model (8 Engineering / 3
+  Commercial / 2 Owner Action, and 6 high / 5 medium / 2 low) match
+  `GATE_TRACKING.md` and `export-gate-status.mjs`. It is recorded because
+  ownership decides who acts on a blocked gate, and because a future reader
+  deriving an owner split from the JSON would find the field absent and might
+  conclude the information does not exist at all.
+
 ## 7. Owner Actions to Close Release
 
 1. Run the 24-hour soak on the release SHA (`OPS-02`)
