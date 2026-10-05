@@ -57,15 +57,27 @@ returns `0`, and `git merge-base --is-ancestor v1.0.0 origin/main` exits
 non-zero. The gate therefore fails, `Build` never produces an artifact, and
 `Publish GitHub Release` is skipped — even with the E2E ordering fixed.
 
-So the release is blocked twice over, by two independent defects: the step
-ordering (fixed here) and a tag that points into an unmerged audit branch
-(not fixable in this branch). Re-running the workflow as-is will pass the
-quality gate and still fail to publish.
+**This is fixed by merging, not by re-tagging.** An earlier revision of this
+document said the tag "must be re-tagged". That is wrong, and re-tagging would
+be the more damaging remedy: it moves a published tag. `v1.0.0` is an ancestor
+of the audit branch's head — `git merge-base --is-ancestor v1.0.0 HEAD` exits
+zero — so merging `audit/verification-2026-10` into `main` places the tagged
+commit on the main line automatically, with the tag left where it is.
 
-Closing REL-03 requires the tag to point at a commit on the merged main line,
-then a real release run: build the desktop artifact, emit checksums, and verify
-them against what was published. Until that execution exists, the honest status
-is UNVERIFIED.
+Verified by merging in a scratch worktree rather than reasoning about it:
+`origin/main` is 0 commits ahead of the branch (120 behind), the merge produced
+**0 conflicts** ("Automatic merge went well"), and afterwards
+`git merge-base --is-ancestor v1.0.0 HEAD` — the exact predicate
+`release-desktop.yml:117` runs — exits `0`. The scratch worktree was removed.
+
+So the release is blocked twice over, by two independent defects: the step
+ordering (fixed here) and the tag pointing into an unmerged audit branch
+(resolved by the merge, not by a code change). Re-running the workflow before
+the merge passes the quality gate and still fails to publish.
+
+Closing REL-03 requires the merge to land, then a real release run: build the
+desktop artifact, emit checksums, and verify them against what was published.
+Until that execution exists, the honest status is UNVERIFIED.
 
 Because that gate sits in the `build` job, a mis-tagged release used to burn
 four Tauri builds across the OS matrix before failing. A pre-flight check now

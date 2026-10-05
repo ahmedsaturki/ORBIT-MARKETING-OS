@@ -354,14 +354,16 @@ and the matrix in `docs/FINAL_STATE_MODEL.md` keeps them separate for that reaso
 
 1. Run the 24-hour soak on the release SHA (`OPS-02`)
 2. Provide desktop signing certificates (`REL-02`)
-3. Merge the audit branch, then re-tag on the merged main line and re-run the
-   release workflow so `REL-03` checksums exist and can be verified against
-   published artifacts. Two independent failures block this today: the `v1.0.0`
-   run (`37205123765`) failed at `Browser E2E` because E2E ran before
-   `pnpm build` — fixed on this branch — and tag `v1.0.0` (`6e6787b6`) sits 89
-   commits ahead of `origin/main` on an unmerged branch, so the build job's
-   `git merge-base --is-ancestor "$GITHUB_SHA" origin/main` gate would still
-   reject it
+3. Merge the audit branch, then re-run the release workflow so `REL-03`
+   checksums exist and can be verified against published artifacts. **No
+   re-tag is needed.** Two independent failures blocked the `v1.0.0` run
+   (`37205123765`): the run failed at `Browser E2E` because E2E preceded
+   `pnpm build` — fixed on this branch — and the tag's commit sat 89 commits
+   ahead of `origin/main` on an unmerged branch, so the build job's
+   `git merge-base --is-ancestor "$GITHUB_SHA" origin/main` gate rejected it.
+   The second is resolved by the merge itself: `v1.0.0` is an ancestor of this
+   branch's head, so merging places it on the main line. Verified in a scratch
+   worktree — 0 conflicts, and the gate predicate exits `0` after the merge.
 4. Open mobile store accounts
 5. Activate a payment provider
 6. Complete legal/commercial publication review
