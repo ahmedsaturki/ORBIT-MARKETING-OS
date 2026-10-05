@@ -127,7 +127,7 @@
         "LinkedIn capability/authorization scoping covered by packages/core/test/linkedin.test.ts against local fixtures",
         "Both connector call sites in scripts/commercial-connector-proof.ts now evaluate the execution policy (approval, daily budget, circuit breaker) before invoking the connector"
       ],
-      "notes": "Real Telegram and LinkedIn authorization and delivery evidence is still required and cannot be produced without owner-provided credentials; CONN-05 remains PARTIAL in the acceptance matrix for exactly this reason. No real-token run was simulated."
+      "notes": "Real Telegram and LinkedIn authorization and delivery evidence is still required and cannot be produced without owner-provided credentials. CONN-05 is PASS in the acceptance matrix on the evidence recorded there -- capability authorization scoping in packages/core/test/linkedin.test.ts plus scripts/commercial-connector-proof.safe.test.mjs proving the live path fails closed, exit 2 -- not on any real-token delivery, which has never been performed or simulated. This note previously read \"CONN-05 remains PARTIAL\", which contradicted both the matrix and the product_workflows gate in the same verifier run; the matrix is authoritative and the note was the stale side of the pair. This gate stays L2_VERIFIED: contract coverage is not live-delivery evidence."
     },
     "sync_network": {
       "level": "L2_VERIFIED",
@@ -196,7 +196,7 @@
       "cargoTestsPassedScope": "local cargo test --workspace --all-targets; CI run 37134186892 executes a filtered subset reporting 105 passed + 1 passed with 104 filtered out",
       "playwrightPassed": 24,
       "playwrightSkipped": 10,
-      "acceptanceMatrix": "77 PASS / 3 PARTIAL / 3 UNVERIFIED across 83 IDs",
+      "acceptanceMatrix": "78 PASS / 3 PARTIAL / 2 UNVERIFIED across 83 IDs (REL-03 closed by release run 37297712378 on tag v1.0.5)",
       "sonarNewSecurityRating": "A",
       "sonarOpenNewCodeVulnerabilities": 0,
       "sonarQualityGate": "OK",
@@ -258,6 +258,6 @@
     "tagSha": "6e6787b6e5fa5590785777f335bfd0dc3a23362e",
     "productionDeploymentId": "dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV",
     "productionSha": "9ba07318f4d580e670be9d27ec76888e66013340",
-    "note": "Production is live and provenance is directly observed. Tag v1.0.0 exists as of 2026-10-04 and removes the 'no tagged release' obstacle named in the REL-03 matrix row, but REL-03 requires checksums to match distributed artifacts and no release run has produced any, so the state stays UNVERIFIED. An earlier revision raised this to PARTIAL on the tag alone; that was retracted as unsupported. The exact moving-main SHA is intentionally carried by the GitHub Actions run context rather than hard-coded into durable release readiness."
+    "note": "Production is live and provenance is directly observed. An earlier revision raised releaseTruth to PARTIAL on the existence of tag v1.0.0 alone; that was retracted as unsupported, because a tag is not a checksum. REL-03 has since been satisfied on its own terms: release run 37297712378 on tag v1.0.5 concluded success and published https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/releases/tag/v1.0.5 with SHA256SUMS.txt, and the deb, rpm and exe were re-verified by download against it (3 verified, 0 mismatches). The state nevertheless stays UNVERIFIED, because this field tracks production truth and the production marker still points at the v1.0.0 identity observed against deployment dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV -- publishing a prerelease artifact set is not a production deployment. The exact moving-main SHA is intentionally carried by the GitHub Actions run context rather than hard-coded into durable release readiness."
   }
 }
