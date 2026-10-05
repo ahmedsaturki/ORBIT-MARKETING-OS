@@ -346,6 +346,35 @@ an environment without a desktop host cannot run this suite, but the suite
 itself is sound.
 
 - **OMP "unknown model" warning.** Emitted when a primary model is unavailable and the runtime walks the fallback chain in `C:\Users\powertech\.omp\agent\config.yml`. This is a local harness condition, not an application defect. No repository change is warranted. Verified by reading RE_AUDIT_REPORT.md B6.
+- **Verifier test coverage is uneven, and the gaps are not CI gaps.** Nine
+  verifier-style scripts are wired into `package.json`. Five have dedicated
+  contract tests; four do not:
+
+  | Script                                   | Reachable from CI                                           |
+  | ---------------------------------------- | ----------------------------------------------------------- |
+  | `verify-live-production-observation.mjs` | yes — covered by `production-observation-contract.test.mjs` |
+  | `verify-release-readiness.mjs`           | yes (4 workflows) — covered by 2 test files                 |
+  | `verify-workspace.mjs`                   | yes (11 workflows) — covered                                |
+  | `check-release-gates.mjs`                | covered by `release-gate-tooling.test.mjs`                  |
+  | `gate-dashboard.mjs`                     | covered by `gate-dashboard.test.mjs`                        |
+  | `verify-e2e-parses.mjs`                  | **0 workflows**                                             |
+  | `verify-ipc.mjs`                         | **0 workflows**                                             |
+  | `verify-omp-contract.mjs`                | **0 workflows**                                             |
+  | `verify-release-docs.mjs`                | **0 workflows**                                             |
+
+  The four uncovered scripts are local conveniences, not CI gates, so the
+  missing tests are a maintenance risk rather than a release risk. All four were
+  run this session and pass. `verify-release-docs.mjs` is the notable one: it
+  enforces the `.omp/RULES.md` rule that durable release documents must never
+  describe a moving `main` commit by hard-coded SHA, and it self-tests its own
+  patterns against fixtures before checking the 9 durable files. It reports
+  `release-docs=PASS`, and no file this audit edited trips it.
+
+  The asymmetry is the part worth keeping. The verifier with **zero** test
+  coverage was the one wired into `ci.yml` on every pull request. Coverage
+  tracked importance inversely, because it had been added reactively rather
+  than by risk. `production-observation-contract.test.mjs` closes that gap.
+
 - **What an L3 evidence reference has to mean.** `scripts/verify-release-readiness.mjs`
   now refuses an L3 claim whose `verifiedAt` is older than 30 days or dated in
   the future, so the "exact verification timestamp" in `.omp/RULES.md:1` is
