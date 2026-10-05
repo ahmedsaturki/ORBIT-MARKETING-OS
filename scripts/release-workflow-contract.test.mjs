@@ -240,3 +240,73 @@ test("the release checksum step refuses to run with zero artifacts", async () =>
       "files match; the artifact count must gate it first",
   );
 });
+
+// Splits a workflow's raw text into its top-level jobs, so a test can assert
+// that a prerequisite and its consumer live in the same job. Cross-job ordering
+// is not sufficient: each job gets fresh runners with their own caches.
+function jobBlocks(workflow) {
+  const lines = workflow.split(/\r?\n/);
+  const jobs = [];
+  let name = null;
+  let body = [];
+
+  for (const line of lines) {
+    if (/^ {2}[A-Za-z0-9_-]+:\s*$/.test(line)) {
+      if (name !== null) jobs.push({ name, body: body.join("\n") });
+      name = line.trim().replace(":", "");
+      body = [];
+    } else if (name !== null) {
+      body.push(line);
+    }
+  }
+  if (name !== null) jobs.push({ name, body: body.join("\n") });
+  return jobs;
+}
+
+test("every job that builds the desktop installs Playwright browsers first", async () => {
+  // `tauri icon` and the desktop `beforeBuildCommand` both launch a headless
+  // Chromium (scripts/build-icon.mjs). Release run 37283724466 failed at
+  // `Build desktop` on all four platforms with "Executable doesn't exist at
+  // .../chrome-headless-shell" because the build job had no install step; the
+  // quality job's install does not carry over to separate runners.
+  const files = await workflowFiles();
+  const offenders = [];
+  const missing = [];
+  let covered = 0;
+
+  for (const file of files) {
+    for (const job of jobBlocks(await text(file))) {
+      // Match the command, not prose: comments mention `tauri icon` too.
+      const builds = /run:.*tauri build/.test(job.body);
+      if (!builds) continue;
+
+      covered++;
+      const install = job.body.search(/playwright install/);
+      const desktopBuild = job.body.search(/^\s*run:.*tauri (build|icon)/m);
+
+      if (install < 0) missing.push(`${file} job ${job.name}`);
+      else if (install > desktopBuild)
+        offenders.push(`${file} job ${job.name}`);
+    }
+  }
+
+  assert.deepEqual(
+    missing,
+    [],
+    "these jobs run `tauri build` but never `playwright install`, so " +
+      "scripts/build-icon.mjs cannot launch its headless Chromium",
+  );
+  assert.deepEqual(
+    offenders,
+    [],
+    "these jobs install Playwright after starting the desktop build",
+  );
+  // Exactly two today: desktop-native-validation.yml/bundle and
+  // release-desktop.yml/build. The floor exists so this cannot silently stop
+  // checking anything if job parsing breaks.
+  assert.equal(
+    covered,
+    2,
+    `expected 2 desktop-building jobs, found ${covered}`,
+  );
+});

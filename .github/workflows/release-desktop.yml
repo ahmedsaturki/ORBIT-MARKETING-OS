@@ -171,6 +171,14 @@ jobs:
       - name: Verify workspace
         run: pnpm verify:workspace
 
+      # `tauri icon` and the desktop `beforeBuildCommand` both launch a headless
+      # Chromium (scripts/build-icon.mjs). The build job runs on fresh runners
+      # with their own caches, so the quality job's install does not carry over.
+      # Without this, `Generate app icons` and `Build desktop` both fail with
+      # "Executable doesn't exist at .../chrome-headless-shell".
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Generate app icons
         run: pnpm --dir packages/desktop tauri icon src-tauri/icon-source.svg
 
