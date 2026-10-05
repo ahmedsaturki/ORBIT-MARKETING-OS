@@ -606,6 +606,28 @@ itself is sound.
   deriving an owner split from the JSON would find the field absent and might
   conclude the information does not exist at all.
 
+- **`release/PRODUCTION_RELEASE.json` carried an unvalidated readiness claim.**
+  The marker declares `status: "PRODUCTION_READY"` in a machine-readable file
+  while `release/readiness.json` reports `production_ready: false` with 13
+  blocked gates — and the marker's own `notes` field says "release-critical
+  gates remain open; production provenance UNVERIFIED". The contradiction was
+  already documented correctly in `RELEASE_SCORECARD.md`, including why the
+  marker pins `f65c153` by design; no document was wrong.
+
+  What was missing is enforcement. `resolve-production-release.mjs` and
+  `release-sanity.mjs` both validated `schemaVersion`, `releaseId` and `mode`,
+  and neither read `status` — confirmed by mutation rather than by reading, since
+  setting it to `READY_FOR_PRODUCTION` left the resolver exiting 0. So the field
+  could be changed to any value, including one asserting a stronger readiness
+  than the gates support, with nothing failing.
+
+  `release-sanity.mjs` now pins `status` to `PRODUCTION_READY` and rejects any
+  other value with a message stating that the field denotes the pinned v1.0.0
+  production identity rather than a release decision, and that readiness lives in
+  `release/readiness.json`. Four mutations confirm it both ways: the real tree
+  passes, and `READY_FOR_PRODUCTION`, `PRODUCTION_PROVEN`, `true`, and a
+  deleted field are each rejected.
+
 ## 7. Owner Actions to Close Release
 
 1. Run the 24-hour soak on the release SHA (`OPS-02`)
