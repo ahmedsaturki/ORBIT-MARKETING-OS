@@ -157,11 +157,11 @@ owner-controlled gate. That is policy, not a defect in this repository.
 
 ### The three UNVERIFIED rows
 
-| ID       | What is missing                 | Why it cannot be closed here                                          |
-| -------- | ------------------------------- | --------------------------------------------------------------------- |
-| `OPS-02` | The 24-hour soak run            | `stability-soak.yml` is `workflow_dispatch` on a `self-hosted` runner |
-| `REL-03` | A tagged release with checksums | No tag exists; checksums require a real release build                 |
-| `REL-02` | Signed, notarized artifacts     | Requires owner-controlled certificates                                |
+| ID       | What is missing             | Why it cannot be closed here                                                                                                                                                   |
+| -------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `OPS-02` | The 24-hour soak run        | `stability-soak.yml` is `workflow_dispatch` on a `self-hosted` runner                                                                                                          |
+| `REL-03` | A published release         | Four release runs have executed and two built all four desktop artifacts with 314 verified checksums, but no GitHub Release has ever been created — `gh release list` is empty |
+| `REL-02` | Signed, notarized artifacts | Requires owner-controlled certificates                                                                                                                                         |
 
 ### The three PARTIAL rows
 
@@ -193,6 +193,7 @@ Each was proven load-bearing by reverting it and observing the failure.
 | 12  | `release-mobile.yml` set `cancel-in-progress: true` — the only release workflow that would cancel a run mid-flight, discarding the artifact uploads the checksum step verifies. Its `concurrency:` block also sat before `on:`, and the group embedded the workflow's own filename. **Fixed**                                                                                                                                                                                                                                                                                                   | Mobile release discards its own evidence       |
 | 13  | The `build` job of `release-desktop.yml` had no `playwright install` step, so `Generate app icons` and `Build desktop` both launched a headless Chromium (`scripts/build-icon.mjs`) against a browser that was never downloaded. The quality job installs browsers, but each job gets fresh runners with their own caches, so the install did not carry over. Release run `37283724466` on `v1.0.1` failed at `Build desktop` on **all four platforms** with `Executable doesn't exist at .../chrome-headless-shell`. **Fixed** by installing Chromium in the build job before icon generation. | Release build produces no artifact             |
 | 14  | The `publish` job of `release-desktop.yml` never ran `actions/checkout`, so `gh release create` failed with `failed to run git: fatal: not a git repository`. Run `37286268618` on `v1.0.2` built **all four** desktop artifacts and verified **314** checksums, then died on that one line — nothing was published. `gh` resolves the repository from git, and `--generate-notes` reads history. **Fixed** by checking out in the `publish` job.                                                                                                                                               | Release produces no published artifact         |
+| 15  | The `publish` step uploaded **every file** under `release-assets`, including the AppImage's entire `AppDir/` tree. 314 paths resolved to only **268 unique basenames** — 31 names collided (seven `orbit-marketing-os.png`, ten `copyright`). GitHub rejects duplicate asset names on a release, so run `37289634184` failed on the first upload with `HTTP 404` against a release id that never resolved. **Fixed** by selecting distributable bundles by extension (7 files, 7 unique basenames) and refusing to start an upload whose basenames are not unique.                              | Release upload aborts on duplicate names       |
 
 Two more were corrected in reporting rather than code: the workflow count was
 understated as five (it is eleven), and a prior audit's counts now conflict with
@@ -273,7 +274,7 @@ order, or cognitive accessibility.
 | "1046 tests passing"                | Its own parts sum to **1151**; no run produces 1046                                                |
 | "87 requirement IDs"                | The matrix defines **83**                                                                          |
 | "609 test files"                    | Actual: **89** tracked test files: 61 in `packages/`, 23 contract tests in `scripts/`, 5 E2E specs |
-| "No engineering changes are needed" | **False** — thirteen defects were found in code                                                    |
+| "No engineering changes are needed" | **False** — fifteen defects were found in code                                                     |
 
 The prior figure of 59 came from
 `find packages -name "*.test.ts" -not -path "*/node_modules/*" | wc -l`, which
@@ -322,9 +323,9 @@ itself is sound.
 2. Provide desktop signing certificates (`REL-02`) — **confirmed blocked, not
    fixable by code.** Verified below.
 3. ~~Cut a tagged release to produce checksums~~ — **no longer owner-gated.**
-   Tag `v1.0.1` exists and the release pipeline runs end to end; `REL-03` now
-   waits only on the build-matrix fix landing and a green run, which is
-   engineering work. Remove this item from the owner count; see below.
+   Four tagged release runs have executed; `v1.0.2` and `v1.0.3` each built
+   all four desktop artifacts and verified 314 checksums. What `REL-03` still
+   needs is a re-run that actually publishes, which is engineering work.
 4. Build the connector ingestion path (`INBOX-01`) — **reclassified from an owner
    action to engineering work.** Credentials are not the blocker; see below.
 5. Open mobile store accounts — **narrowed.** The app is already configured for
@@ -347,8 +348,9 @@ have since been removed from this list: the SonarCloud new-code rating (issue
 #112 is closed on the remote and `release/readiness.json` records rating A with
 zero open new-code vulnerabilities); item 4, which is engineering work rather
 than an owner action; and item 3, which was owner-gated only while no tag
-existed. Tag `v1.0.1` is cut and the release pipeline executes, so producing
-checksums is now a matter of a green run rather than an owner decision. That
+existed. Four tagged release runs have since executed and two built
+every desktop artifact with verified checksums, so producing a published
+release is now a matter of a re-run rather than an owner decision. That
 leaves **seven owner actions**, none of which an engineer can complete alone.
 
 **Correction to that item.** An earlier draft of this file claimed "both the

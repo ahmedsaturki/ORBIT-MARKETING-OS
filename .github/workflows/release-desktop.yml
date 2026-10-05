@@ -255,6 +255,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          mapfile -d '' ASSETS < <(find release-assets -type f ! -name 'SHA256SUMS.txt' -print0)
+          # Upload the distributable bundles, not every file inside them. The
+          # artifact payloads include a full `AppDir/` tree, so a plain
+          # `find -type f` offered 314 paths of which only 268 basenames are
+          # unique -- 31 names collide (seven `orbit-marketing-os.png`, ten
+          # `copyright`, ...). GitHub rejects duplicate asset names on a
+          # release, and run 37289634184 failed on the first upload with
+          # `HTTP 404` against a release id that never resolved, because the
+          # release was rolled back when the asset upload aborted.
+          mapfile -d '' ASSETS < <(find release-assets -type f \
+            \( -name '*.AppImage' -o -name '*.dmg' -o -name '*.deb' \
+               -o -name '*.msi' -o -name '*.rpm' -o -name '*.exe' \) \
+            -print0)
           test "${#ASSETS[@]}" -gt 0
+          # Fail loudly rather than let the API reject a duplicate mid-upload.
+          test "$(printf '%s\n' "${ASSETS[@]}" | xargs -n1 basename | sort -u | wc -l)" \
+               -eq "${#ASSETS[@]}" \
+            || { echo "::error::duplicate asset basenames would abort the upload"; exit 1; }
           gh release create "${GITHUB_REF_NAME}"             --title "ORBIT Marketing OS ${{ github.ref_name }} — validation build"             --prerelease --generate-notes             release-assets/SHA256SUMS.txt             "${ASSETS[@]}"

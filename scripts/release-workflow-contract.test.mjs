@@ -349,3 +349,39 @@ test("every job that runs a git-dependent gh command checks out the repo", async
   );
   assert.ok(covered >= 1, `expected at least one such job, found ${covered}`);
 });
+
+test("the release publish step uploads bundles, not files inside them", async () => {
+  // The artifact payloads contain a full `AppDir/` tree, so `find -type f`
+  // offered 314 paths of which only 268 basenames are unique. GitHub rejects
+  // duplicate asset names, and run 37289634184 died on the first upload with
+  // `HTTP 404` against a release id that never resolved. Uploading the
+  // distributable bundles fixes it: 7 files, 7 unique basenames.
+  const body = await text("release-desktop.yml");
+  const publish = jobBlocks(body).find((j) => j.name === "publish");
+  assert.ok(publish, "release-desktop.yml has no publish job");
+
+  const step = publish.body.match(/gh release create[\s\S]*$/);
+  assert.ok(step, "the publish job never runs `gh release create`");
+
+  // The asset list must be filtered by extension, and must reject duplicates
+  // up front rather than discovering them mid-upload.
+  const mapfile = publish.body.match(/mapfile -d '' ASSETS[\s\S]*?-print0\)/);
+  assert.ok(mapfile, "the publish job does not build an ASSETS list");
+  for (const ext of [".AppImage", ".dmg", ".deb", ".msi", ".rpm", ".exe"]) {
+    assert.ok(
+      mapfile[0].includes(ext),
+      `the ASSETS filter does not select ${ext} bundles`,
+    );
+  }
+  assert.match(
+    publish.body,
+    /duplicate asset basenames/,
+    "the publish step does not guard against duplicate asset basenames",
+  );
+  assert.doesNotMatch(
+    mapfile[0],
+    /find release-assets -type f\s+-print0/,
+    "the ASSETS list still selects every file under release-assets, which " +
+      "includes AppImage internals and collides on asset names",
+  );
+});
