@@ -14,7 +14,7 @@ by running the command named beside it, not by reading a prior report.
 | Dimension       | Status        | Basis                                                                                                                                                 |
 | --------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Engineering** | **PASS**      | 379 JS tests (core 357, desktop 9, mobile 8, web 5), 182 Rust tests, typecheck 5/5, clippy `-D warnings` clean, fmt clean, all governance gates green |
-| **Product**     | **PARTIAL**   | 77 of 83 requirements PASS. Three gaps are capability that was never built, not untested code                                                         |
+| **Product**     | **PARTIAL**   | 78 of 83 requirements PASS. Three gaps are capability that was never built, not untested code                                                         |
 | **Release**     | **NOT READY** | 0 of 13 release-critical gates at L3_PRODUCTION_PROVEN. The repository's own rule requires all 13                                                     |
 | **Owner Gates** | **5 of 13**   | `external_connectors`, `accessibility`, `stability_soak`, `commercial_billing`, `legal_commercial`. Eight owner _actions_ remain, listed in section 7 |
 
@@ -155,13 +155,16 @@ The previous `REL-02` FAIL was reclassified to UNVERIFIED: the pipeline
 deliberately builds unsigned and `docs/DISTRIBUTION.md` documents signing as an
 owner-controlled gate. That is policy, not a defect in this repository.
 
-### The three UNVERIFIED rows
+### The two remaining UNVERIFIED rows
 
-| ID       | What is missing             | Why it cannot be closed here                                                                                                                                                     |
-| -------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPS-02` | The 24-hour soak run        | `stability-soak.yml` is `workflow_dispatch` on a `self-hosted` runner                                                                                                            |
-| `REL-03` | A published release         | Five release runs have executed and three built all four desktop artifacts with 314 verified checksums, but no GitHub Release has ever been created — `gh release list` is empty |
-| `REL-02` | Signed, notarized artifacts | Requires owner-controlled certificates                                                                                                                                           |
+`REL-03` was the third and is now **PASS**: run `37297712378` on tag `v1.0.5`
+concluded `success` end to end and published the first GitHub Release in this
+repository's history.
+
+| ID       | What is missing             | Why it cannot be closed here                                          |
+| -------- | --------------------------- | --------------------------------------------------------------------- |
+| `OPS-02` | The 24-hour soak run        | `stability-soak.yml` is `workflow_dispatch` on a `self-hosted` runner |
+| `REL-02` | Signed, notarized artifacts | Requires owner-controlled certificates                                |
 
 ### The three PARTIAL rows
 
@@ -323,10 +326,11 @@ itself is sound.
 1. Run the 24-hour soak on the release SHA (`OPS-02`)
 2. Provide desktop signing certificates (`REL-02`) — **confirmed blocked, not
    fixable by code.** Verified below.
-3. ~~Cut a tagged release to produce checksums~~ — **no longer owner-gated.**
-   Five tagged release runs have executed; `v1.0.2`, `v1.0.3` and `v1.0.4` each built
-   all four desktop artifacts and verified 314 checksums. What `REL-03` still
-   needs is a re-run that actually publishes, which is engineering work.
+3. ~~Cut a tagged release to produce checksums~~ — **closed.** Run
+   `37297712378` on tag `v1.0.5` published the first GitHub Release in
+   this repository's history: seven signed-format bundles plus
+   `SHA256SUMS.txt`, with three assets re-verified by download against
+   the published checksums. `REL-03` is **PASS**.
 4. Build the connector ingestion path (`INBOX-01`) — **reclassified from an owner
    action to engineering work.** Credentials are not the blocker; see below.
 5. Open mobile store accounts — **narrowed.** The app is already configured for
@@ -349,10 +353,9 @@ have since been removed from this list: the SonarCloud new-code rating (issue
 #112 is closed on the remote and `release/readiness.json` records rating A with
 zero open new-code vulnerabilities); item 4, which is engineering work rather
 than an owner action; and item 3, which was owner-gated only while no tag
-existed. Five tagged release runs have since executed and three built
-every desktop artifact with verified checksums, so producing a published
-release is now a matter of a re-run rather than an owner decision. That
-leaves **seven owner actions**, none of which an engineer can complete alone.
+existed. That item is now closed outright: six tagged release runs have
+executed and `v1.0.5` published the release. That leaves **six owner
+actions**, none of which an engineer can complete alone.
 
 **Correction to that item.** An earlier draft of this file claimed "both the
 analysis and the quality-gate check pass on this branch". That was wrong, and
@@ -451,7 +454,7 @@ not an integration one: set the three environment variables and checkout goes
 live. What cannot be short-circuited is that a provider requires a commercial
 account, and selling at all requires the legal review in item 7.
 
-This list of seven owner actions is not the same as gate ownership, and the two
+This list of six owner actions is not the same as gate ownership, and the two
 differ because the gate model was corrected. `scripts/release-gate-model.mjs`
 filed `accessibility` and `stability_soak` under the Engineering Team, but both
 close only on action this repository cannot perform: the manual WCAG/RTL audit
@@ -504,26 +507,31 @@ gate that can run locally is green. The verification machinery now fails when
 it should and passes when it should, which is what makes any future readiness
 claim worth reading.
 
-Three rows remain UNVERIFIED and three PARTIAL. None is closable by writing
-more code.
+Two rows remain UNVERIFIED and three PARTIAL. None is closable by writing more
+code. `REL-03` left the UNVERIFIED set when run `37297712378` published the
+first GitHub Release in this repository's history on tag `v1.0.5`.
 
 The operational tracker for all of this is issue **#187**, "release: L3
-production readiness closure board", which carries **17 open items**: release
-and production controls (rollback drill, release-tag checksums, production
-release identity), real-world product validation (Telegram and LinkedIn
-authorization with one real delivery each, challenge/manual-intervention,
-failure-retry-recovery on the real connector path, live multi-device CRDT
-convergence, manual WCAG/RTL audit, 24-hour soak), and distribution
-(signed/notarized desktop, production-signed mobile, store submission, SBOM and
-attestation). This document is the reconciled view; #187 is where the work is
-tracked, and the two should be read together.
+production readiness closure board", which carries **16 open items**: release
+and production controls (rollback drill, production release identity),
+real-world product validation (Telegram and LinkedIn authorization with one
+real delivery each, challenge/manual-intervention, failure-retry-recovery on
+the real connector path, live multi-device CRDT convergence, manual WCAG/RTL
+audit, 24-hour soak), and distribution (signed/notarized desktop,
+production-signed mobile, store submission, SBOM and attestation). This
+document is the reconciled view; #187 is where the work is tracked, and the two
+should be read together.
 
-**The board was stale and has been corrected.** It was opened at
+**The board was stale and has been corrected, twice.** It was opened at
 2026-10-03T00:51:02Z with 18 items unchecked and none checked, and it still
 listed "Current-main SonarCloud Security Rating on New Code reaches the required
 A threshold" as open even though issue #112 — the tracking issue for that exact
 rating — had been closed at 2026-10-03T16:04:43Z, about 15 hours after the board
 was opened. That checkbox has now been checked, with the closing issue, the
 timestamp and the `readiness.json` rating recorded inline so the next reader does
-not have to re-derive it. The board went from 18 open / 0 done to **17 open / 1
-done**; the remaining 17 are genuinely open and none is closable by code.
+not have to re-derive it.
+
+The second item closed on the same evidence that closed `REL-03`: "Final
+release-tag checksum/provenance drill completed", now checked with the
+`v1.0.5` run evidence inline. The board went from 18 open / 0 done to **16 open /
+2 done**; the remaining 16 are genuinely open and none is closable by code.

@@ -11,7 +11,7 @@ claims were checked against the repository.
 
 > **Superseded (2026-10-04, later pass).** A subsequent audit pass re-verified
 > this repository at commit `2493d4cd` and supersedes the counts in this
-> document. The current classification is **77 PASS, 3 PARTIAL, 3 UNVERIFIED,
+> document. The current classification is **78 PASS, 3 PARTIAL, 2 UNVERIFIED,
 > 0 FAIL** across 83 requirements, recorded in `ACCEPTANCE_MATRIX_V2.md`, which
 > is the authoritative source. Findings below remain valid as history; where a
 > count here differs, the matrix governs.

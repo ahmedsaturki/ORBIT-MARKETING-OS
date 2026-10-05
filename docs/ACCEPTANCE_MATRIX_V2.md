@@ -11,7 +11,7 @@ A feature cannot be marked PASS from source inspection alone when the requiremen
 ## Reconciliation (2026-10-04)
 
 Every requirement was classified against evidence that exists and executes. Result:
-**77 PASS, 3 PARTIAL, 3 UNVERIFIED** across 83 requirements. No row is FAIL: the sole previous FAIL (`REL-02`) was reclassified because the missing capability is owner-controlled by design rather than a defect in this repository. Each PARTIAL records executing evidence alongside a capability that is not built.
+**78 PASS, 3 PARTIAL, 2 UNVERIFIED** across 83 requirements. No row is FAIL: the sole previous FAIL (`REL-02`) was reclassified because the missing capability is owner-controlled by design rather than a defect in this repository. Each PARTIAL records executing evidence alongside a capability that is not built.
 
 Classification rules applied:
 
@@ -21,10 +21,11 @@ Classification rules applied:
 
 The tally is machine-checked rather than asserted. Selecting every row whose
 second column is a status keyword yields exactly 83 rows with 83 distinct IDs —
-no ID listed twice, none missing — and 77 `PASS`, 3 `PARTIAL`, 3 `UNVERIFIED`, 0
+no ID listed twice, none missing — and 78 `PASS`, 3 `PARTIAL`, 2 `UNVERIFIED`, 0
 `FAIL`. The non-PASS rows are `INBOX-01`, `DOC-01`, `DOC-02` (PARTIAL) and
-`REL-02`, `REL-03`, `OPS-02` (UNVERIFIED), each blocked on external action or an
-unexecuted long-running check rather than on code. Note that the source-
+`REL-02`, `OPS-02` (UNVERIFIED), each blocked on external action or an
+unexecuted long-running check rather than on code. `REL-03` moved from
+`UNVERIFIED` to `PASS` when run `37297712378` published tag `v1.0.5`. Note that the source-
 requirements table below repeats all 83 IDs by design, so a naive row count over
 the whole file returns 166.
 
@@ -102,9 +103,12 @@ has none of those duplicate helpers, and its gate passes. The upstream braces
 audit exception likewise already exists (`3978c0fc`), so the one added here is
 redundant against the remote. Read `FINAL_STATE_MODEL.md` before merging.
 
-`OPS-02` (24h stability) and `REL-03` (checksums) are `UNVERIFIED` because the
-soak workflow and checksum verification are defined but have no completed run.
-Both are already tracked as blocked gates in `release/readiness.json`.
+`OPS-02` (24h stability) is `UNVERIFIED` because the soak workflow is defined but
+has no completed 24-hour run; it needs a self-hosted runner and elapsed time.
+`REL-03` was in the same position until run `37297712378` published tag
+`v1.0.5` with real, independently re-verified checksums. Both remain tracked
+as gates in `release/readiness.json` — `stability_soak` is still open, which is
+why the release verdict has not moved.
 
 Per the gate rules below, the 3 `UNVERIFIED` runtime requirements block any
 "production ready" claim. Per-requirement evidence and gaps follow.
@@ -188,7 +192,7 @@ runtime. Nothing to fix.
 | MOB-01 | PASS | `.github/workflows/mobile-validation.yml (typecheck + expo prebuild + gradle assembleDebug)` | — |
 | REL-01 | PASS | `.github/workflows/ci.yml` :: requires frozen lockfile (pnpm install --frozen-lockfile) on clean checkout | — |
 | REL-02 | UNVERIFIED | — | **Reclassified from FAIL.** No code defect: the pipeline deliberately builds unsigned and `docs/DISTRIBUTION.md` states signing is a separate release gate that must never commit private keys. The requirement is unmet because it needs owner-controlled certificates, which cannot exist in this repository. Recorded as owner-gated rather than a code failure |
-| REL-03 | UNVERIFIED | `.github/workflows/release-desktop.yml` :: Build checksums (sha256sum -c after build) |Run `37293663120` on `v1.0.4` built all four desktop artifacts and verified all 314 checksums a third time, cleared the bundle-selection fix that `v1.0.3` failed on, and then failed on the duplicate-asset guard written to prevent defect 15: it used `xargs -n1 basename`, which word-splits names containing spaces, so seven bundles reported nine distinct names and the guard aborted a release with no real collision (defect 16). Fixed with NUL-delimited `xargs -0`, verified against the real bundle names in both directions. `gh release list` is still empty and `gh api .../releases` returns `0`. `REL-03` closes when a re-run publishes the seven bundles.|
+| REL-03 | PASS | `.github/workflows/release-desktop.yml` :: Build checksums (sha256sum -c after build), and the published `SHA256SUMS.txt` on release `v1.0.5` | **PASS.** Run `37297712378` on tag `v1.0.5` (2026-10-05T10:37:00Z) concluded `success` end to end: quality gate 29/29, all four desktop builds, and `Publish GitHub Release`. This is the first GitHub Release in the repository's history — `gh release list` returns exactly one entry, a prerelease with 8 assets (AppImage, deb, two dmg, msi, rpm, exe, plus `SHA256SUMS.txt`). `Build checksums` ran `sha256sum -c` over all 314 downloaded paths with every line `OK`. **Independently re-verified by download:** the published `SHA256SUMS.txt` and three assets (deb, rpm, exe) were fetched and each hash matched byte for byte — `6b8f4d81…`, `1171570d…`, `a63d3b02…`; 3 verified, 0 mismatches. Caveat for consumers: GitHub normalises spaces to dots in uploaded asset names, so `ORBIT Marketing OS_1.0.0_amd64.deb` is published as `ORBIT.Marketing.OS_1.0.0_amd64.deb` while the checksum file keeps the original spaced path. History: six release runs were needed — `v1.0.0` failed at `Browser E2E`, `v1.0.1` building, `v1.0.2` at the publish step, `v1.0.3` on the upload, `v1.0.4` on the duplicate-asset guard written to prevent the `v1.0.3` failure, and `v1.0.5` succeeded |
 | LIC-01 | PASS | `packages/desktop/src-tauri/src/license.rs` :: lifecycle_storage_installs_reads_and_deletes_the_token; rejects_a_structurally_valid_token_with_an_untrusted_signature; rejects_a_token_whose_signed_payload_was_mutated; account_limit_is_enforced_against_live_account_counts | — |
 | OPS-01 | PASS | `e2e/tauri-shell.spec.ts` :: native runtime restart preserves selected workspace state (forcefully terminates native process) | — |
 | OPS-02 | UNVERIFIED | `scripts/soak.ts` + `scripts/soak-failure-evidence.test.mjs` :: the harness reports the duration it actually ran (`requestedMinutes` vs `elapsedMinutes`) and fails a run that ended before its deadline; **two executed runs on this branch**: (1) 5 min on `90c005b4` — 111 cycles, healthOk 111, staticOk 111, chatChecks 27, zero failures, RSS 62–63 MB against a 600 MB budget, `ok: true`; (2) 55 min requested on `02b040a1` — 983 cycles, healthOk 983, healthFailures 0, chatChecks 245, chatFailures 0, RSS 53–55 MB, **but `ok: false`** | Still UNVERIFIED on two counts. First, the requirement is **24 hours**; the longest run here is 55 minutes requested, so slow leaks, connection exhaustion and day-scale memory growth remain uncovered. Second, the 55-minute run **failed**, and it was invalidated rather than recorded as a product defect: `staticFailures: 3` beginning at 21:13:26 correspond exactly to this audit moving `packages/web/out` aside to reproduce a CI failure, and the harness correctly refused to pass (`three consecutive static delivery failures`). The 41.59 min elapsed vs 55 requested is the harness's own honest reporting of an early abort. The passing 5-minute run remains the clean evidence. The 24-hour run is owner-triggered (`workflow_dispatch`, `github.actor == 'ahmedsaturki'`, `ref == 'main'`, self-hosted x64 Linux) and was not run |
