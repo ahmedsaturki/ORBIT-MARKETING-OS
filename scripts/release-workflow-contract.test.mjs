@@ -385,3 +385,30 @@ test("the release publish step uploads bundles, not files inside them", async ()
       "includes AppImage internals and collides on asset names",
   );
 });
+
+test("the release duplicate-asset guard does not word-split paths", async () => {
+  // Every bundle name contains spaces ("ORBIT Marketing OS_1.0.0_x64.dmg").
+  // A plain `xargs -n1 basename` splits each into three tokens, so 7 real
+  // files reported 9 distinct names and the guard aborted a release with no
+  // actual collision — run 37293663120 died there. `xargs -0` reports 7.
+  const body = await text("release-desktop.yml");
+  const publish = jobBlocks(body).find((j) => j.name === "publish");
+  assert.ok(publish, "release-desktop.yml has no publish job");
+
+  // Anchor to the command, not prose: the comment above it names the broken
+  // `xargs -n1 basename` form deliberately, to explain why `-0` is required.
+  const guard = publish.body.match(/^\s*\|?\s*xargs[^\n]*basename/m);
+  assert.ok(guard, "the publish job has no basename-based duplicate guard");
+  assert.match(
+    guard[0],
+    /xargs\s+-0/,
+    `the duplicate-asset guard uses ${JSON.stringify(guard[0])}, which ` +
+      "word-splits paths containing spaces and false-positives on every bundle",
+  );
+  assert.doesNotMatch(
+    guard[0],
+    /xargs\s+(?!--0)-n/,
+    "the duplicate-asset guard uses `xargs -n1`, which word-splits paths " +
+      "containing spaces",
+  );
+});

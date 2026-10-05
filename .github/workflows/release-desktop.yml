@@ -268,8 +268,18 @@ jobs:
                -o -name '*.msi' -o -name '*.rpm' -o -name '*.exe' \) \
             -print0)
           test "${#ASSETS[@]}" -gt 0
-          # Fail loudly rather than let the API reject a duplicate mid-upload.
-          test "$(printf '%s\n' "${ASSETS[@]}" | xargs -n1 basename | sort -u | wc -l)" \
-               -eq "${#ASSETS[@]}" \
-            || { echo "::error::duplicate asset basenames would abort the upload"; exit 1; }
+          # Refuse to start an upload whose basenames collide, so the failure
+          # is immediate instead of part-way through a multi-hundred-MB
+          # upload. `xargs -0` is load-bearing: every bundle name contains
+          # spaces ("ORBIT Marketing OS_1.0.0_x64.dmg"), and a plain
+          # `xargs -n1 basename` word-splits those into 3 tokens each, so two
+          # files reported four distinct names and this guard failed every
+          # release. Run 37293663120 died here, not on a real collision.
+          printf '%s\0' "${ASSETS[@]}" \
+            | xargs -0 -n1 basename \
+            | sort -u > /tmp/asset-names.txt
+          test "$(wc -l < /tmp/asset-names.txt)" -eq "${#ASSETS[@]}" \
+            || { echo "::error::duplicate asset basenames would abort the upload"; \
+                 echo "::error::colliding: $(sort /tmp/asset-names.txt | uniq -d | tr '\n' ' ')"; \
+                 exit 1; }
           gh release create "${GITHUB_REF_NAME}"             --title "ORBIT Marketing OS ${{ github.ref_name }} — validation build"             --prerelease --generate-notes             release-assets/SHA256SUMS.txt             "${ASSETS[@]}"
