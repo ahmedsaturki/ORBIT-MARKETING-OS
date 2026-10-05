@@ -199,6 +199,27 @@ export function isAllGatesL3(gates) {
 // evidence here while the verifier rejected it. A gate could therefore be
 // reported cleared by the dashboard and export, and then fail the verifier on
 // the same document. One definition, imported by both.
+/**
+ * Maximum age of L3 evidence. A production-proven claim is a statement about
+ * the world now; evidence that predates the current release line by more than
+ * this window cannot support it. 30 days matches the release cadence used by
+ * the desktop and mobile tag workflows.
+ */
+export const L3_EVIDENCE_MAX_AGE_DAYS = 30;
+
+/**
+ * True when a verifiedAt timestamp is too old to support an L3 claim.
+ * Rejects future timestamps as well: an L3 claim cannot have been verified
+ * before it was made.
+ */
+export function isStaleForL3(value, now = Date.now()) {
+  if (!isValidVerifiedAt(value)) return true;
+  const at = Date.parse(value);
+  if (Number.isNaN(at)) return true;
+  if (at > now) return true;
+  return now - at > L3_EVIDENCE_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+}
+
 export function isValidVerifiedAt(value) {
   if (typeof value !== "string") return false;
   const timestamp = value.trim();

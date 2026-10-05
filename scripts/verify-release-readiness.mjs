@@ -2,7 +2,11 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
-import { isValidVerifiedAt } from "./release-gate-model.mjs";
+import {
+  isValidVerifiedAt,
+  isStaleForL3,
+  L3_EVIDENCE_MAX_AGE_DAYS,
+} from "./release-gate-model.mjs";
 
 const modeIndex = process.argv.indexOf("--mode");
 const mode =
@@ -58,12 +62,17 @@ const invalid = entries.filter(
           (ref) => typeof ref === "string" && ref.trim().length > 0,
         ) ||
         typeof value.verifiedAt !== "string" ||
-        !isValidVerifiedAt(value.verifiedAt))),
+        !isValidVerifiedAt(value.verifiedAt) ||
+        // Evidence currency: a stale or future timestamp cannot support a
+        // production-proven claim. Previously only the format was checked, so
+        // any past date -- including one predating the release line entirely --
+        // satisfied .omp/RULES.md's "exact verification timestamp".
+        isStaleForL3(value.verifiedAt))),
 );
 if (invalid.length > 0) {
   console.error("release-readiness=FAIL");
   console.error(
-    `Invalid gate levels: ${invalid.map(([key]) => key).join(", ")}`,
+    `Invalid gate levels: ${invalid.map(([key]) => key).join(", ")} (L3 evidence must be no older than ${L3_EVIDENCE_MAX_AGE_DAYS} days, and not dated in the future)`,
   );
   process.exit(1);
 }
