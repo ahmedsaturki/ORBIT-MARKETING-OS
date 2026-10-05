@@ -1,0 +1,94 @@
+name: Production Health Monitor
+
+on:
+  schedule:
+    - cron: "10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orbit-production-health
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Public production health
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Probe public production
+        env:
+          ORBIT_LIVE_URL: https://orbit-marketing-os.vercel.app
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$\{ORBIT_LIVE_URL%/}"
+          headers="$(mktemp)"
+          health="$(mktemp)"
+          release="$(mktemp)"
+          trap 'rm -f "$headers" "$health" "$release"' EXIT
+
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 20 \
+            -D "$headers" -o /dev/null "$root/"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 20 \
+            -o "$health" "$root/api/health.json"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 20 \
+            -o "$release" "$root/api/release.json"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 20 \
+            -o /dev/null "$root/manifest.json"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 20 \
+            -o /dev/null "$root/sw.js"
+
+          grep -iq '^HTTP/[0-9.]* 200' "$headers"
+          grep -Fq 'x-content-type-options: nosniff' <(tr '[:upper:]' '[:lower:]' < "$headers")
+          grep -Fq 'x-frame-options: DENY' <(tr '[:upper:]' '[:lower:]' < "$headers")
+          grep -Fq 'content-security-policy:' <(tr '[:upper:]' '[:lower:]' < "$headers")
+
+          HEALTH_FILE="$health" RELEASE_FILE="$release" node <<'NODE'
+          const fs = require("node:fs");
+          const health = JSON.parse(fs.readFileSync(process.env.HEALTH_FILE, "utf8"));
+          const release = JSON.parse(fs.readFileSync(process.env.RELEASE_FILE, "utf8"));
+          if (health.status !== "ok") throw new Error("health status=" + health.status);
+          if (health.version !== "1.0.0") throw new Error("health version=" + health.version);
+          if (!/^[0-9a-f]{40}$/.test(health.releaseSha)) {
+            throw new Error("health releaseSha is not a full commit SHA");
+          }
+          if (!["VERCEL_GIT_COMMIT_SHA", "NEXT_PUBLIC_ORBIT_RELEASE_SHA"].includes(health.provenanceSource)) {
+            throw new Error("unexpected health provenance source");
+          }
+          if (release.version !== "1.0.0") throw new Error("release version=" + release.version);
+          if (release.releaseSha !== health.releaseSha) throw new Error("health/release SHA mismatch");
+          console.log(JSON.stringify({
+            status: "PASS",
+            releaseSha: health.releaseSha,
+            provenanceSource: health.provenanceSource
+          }));
+          NODE
+
+      - name: WCAG 2.2 accessibility audit
+        uses: AccessLint/audit@ed90abdd631a044d622a4a0db9078bc750a5069b # v0.3.2
+        with:
+          urls: |
+            https://orbit-marketing-os.vercel.app/
+            https://orbit-marketing-os.vercel.app/pricing/
+            https://orbit-marketing-os.vercel.app/legal/privacy/
+            https://orbit-marketing-os.vercel.app/legal/terms/
+            https://orbit-marketing-os.vercel.app/legal/refunds/
+            https://orbit-marketing-os.vercel.app/legal/eula/
+          wcag-level: AA
+          min-impact: serious
+          fail-on: serious
+
+      - name: Upload accessibility report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: production-accessibility-${{ github.run_id }}
+          path: |
+            accesslint-report.json
+            accesslint-report.md
+            accesslint-report.sarif
+          if-no-files-found: ignore
+          retention-days: 30
