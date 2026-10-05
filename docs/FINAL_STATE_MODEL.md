@@ -305,10 +305,36 @@ git ls-files | grep -E '\.(test|spec)\.(ts|tsx|mjs)$' | grep -v node_modules | w
 'ahmedsaturki'` with `ref == 'main'` and hard-fails unless `hours` is exactly
   `24`, so a shorter run cannot be recorded as evidence. What is missing is a
   self-hosted x64 Linux runner and the run itself.
-- **Node engine warning.** `Unsupported engine: wanted {"node":">=22 <25"}` on
-  a local v26 runtime. Advisory only: no `.npmrc` sets `engine-strict`, CI pins
-  Node 22 in all 24 places that use Node, and `rebuild-rust.yml` is Rust-only.
-  Every result above was produced on the out-of-range runtime.
+- **Node engine warning, and one script it actually breaks.**
+  `Unsupported engine: wanted {"node":">=22 <25"}` on a local v26 runtime. No
+  `.npmrc` sets `engine-strict`, CI pins Node 22 in all 24 places that use Node,
+  and `rebuild-rust.yml` is Rust-only — so CI is unaffected.
+
+  An earlier revision of this entry called the warning "advisory only". That was
+  true of the pnpm warning and false of the runtime, and the distinction was
+  never drawn. Checked this session by running all three smoke scripts on
+  v26.7.0:
+
+  | Script                    | On v26    |
+  | ------------------------- | --------- |
+  | `runtime-smoke.mjs`       | OK        |
+  | `orbit-surface-smoke.mjs` | OK        |
+  | `performance-smoke.mjs`   | **fails** |
+
+  `performance-smoke.mjs` dies with
+  `SyntaxError [ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX]: TypeScript parameter
+property is not supported in strip-only mode` at
+  `packages/core/src/queue/taskQueue.ts:36`. Node 22 strips TypeScript via
+  `tsx`; Node 26 strips it natively and native stripping does not support
+  parameter properties (`private readonly` in a constructor). The script is
+  therefore **not runnable on Node >= 25**, which the package's own engine range
+  already excludes.
+
+  This is not a repository defect and needs no code change: `Performance smoke`
+  is **success** on the latest `main` CI run `37307326606`, which uses Node 22,
+  and the same step passes in all five workflows that run `test:performance`.
+  It is recorded because anyone reproducing this audit's commands on Node 26 will
+  hit a hard failure and reasonably assume something is broken.
 
 Desktop E2E was previously listed here as unverifiable on this host, because
 WebView2 never opened the CDP port the spec attaches through. That caveat is
