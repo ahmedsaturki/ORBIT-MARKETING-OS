@@ -57,27 +57,45 @@ returns `0`, and `git merge-base --is-ancestor v1.0.0 origin/main` exits
 non-zero. The gate therefore fails, `Build` never produces an artifact, and
 `Publish GitHub Release` is skipped — even with the E2E ordering fixed.
 
-**This is fixed by merging, not by re-tagging.** An earlier revision of this
-document said the tag "must be re-tagged". That is wrong, and re-tagging would
-be the more damaging remedy: it moves a published tag. `v1.0.0` is an ancestor
-of the audit branch's head — `git merge-base --is-ancestor v1.0.0 HEAD` exits
-zero — so merging `audit/verification-2026-10` into `main` places the tagged
-commit on the main line automatically, with the tag left where it is.
+**A merge fixes this — but only one that preserves history.** An earlier
+revision of this document said the tag "must be re-tagged". That was wrong:
+`v1.0.0` is an ancestor of the audit branch's head, so a history-preserving
+merge places the tagged commit on the main line with the tag left where it is.
 
-Verified by merging in a scratch worktree rather than reasoning about it:
-`origin/main` is 0 commits ahead of the branch (120 behind), the merge produced
-**0 conflicts** ("Automatic merge went well"), and afterwards
-`git merge-base --is-ancestor v1.0.0 HEAD` — the exact predicate
-`release-desktop.yml:117` runs — exits `0`. The scratch worktree was removed.
+**It was merged as a squash on 2026-10-05 (`07cac578`), and that does not
+satisfy the gate.** A squash merge creates one new commit; the 22 branch
+commits never enter `main`'s history, so `v1.0.0` — which pointed at one of
+them — is not on `main`. Verified against the merged remote:
 
-So the release is blocked twice over, by two independent defects: the step
-ordering (fixed here) and the tag pointing into an unmerged audit branch
-(resolved by the merge, not by a code change). Re-running the workflow before
-the merge passes the quality gate and still fails to publish.
+```
+$ git merge-base --is-ancestor v1.0.0 origin/main
+exit=1
+$ git branch -r --contains v1.0.0
+  origin/audit/verification-2026-10      # main is absent
+```
 
-Closing REL-03 requires the merge to land, then a real release run: build the
-desktop artifact, emit checksums, and verify them against what was published.
-Until that execution exists, the honest status is UNVERIFIED.
+My scratch-worktree check that justified the original claim was sound but
+narrow: it merged `ea95a14c` with `--no-ff`, which preserves ancestry. I then
+generalised it to "merging" without qualifying the merge _style_. Squashing
+discards exactly the ancestry the gate tests. The claim was verified and still
+misleading.
+
+So the release is blocked twice over: the step ordering (fixed, now on `main`),
+and the tag pointing at a commit that only ever existed on an unmerged branch.
+Closing the second now requires one of:
+
+1. Move `v1.0.0` to a commit on `main` — the tag is on a failed, unpublished
+   release, so nothing was ever consumed downstream. Destructive but low risk.
+2. Cut a new tag (`v1.0.1`) at `07cac578` and release from that, leaving
+   `v1.0.0` as the historical record of the failed run.
+
+Option 2 is preferable: it keeps the audit trail intact and does not rewrite
+anything that was pushed.
+
+Closing REL-03 requires a tag on `main` (see the two options above), then a real
+release run: build the desktop artifact, emit checksums, and verify them
+against what was published. Until that execution exists, the honest status is
+UNVERIFIED.
 
 Because that gate sits in the `build` job, a mis-tagged release used to burn
 four Tauri builds across the OS matrix before failing. A pre-flight check now
