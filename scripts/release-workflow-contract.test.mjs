@@ -212,3 +212,31 @@ test("no workflow embeds its own filename in the concurrency group", async () =>
     );
   }
 });
+
+test("the release checksum step refuses to run with zero artifacts", async () => {
+  // `xargs -0 sha256sum` invoked with no file arguments reads stdin instead and
+  // emits the checksum of empty input, so a build that produced no bundle used
+  // to write a SHA256SUMS.txt that passed both `test -s` and `sha256sum -c`.
+  // The publish step's own guard caught it, but the checksum step must refuse
+  // on its own rather than depend on a later job.
+  const body = await text("release-desktop.yml");
+  const step = body.split("- name: Build checksums")[1] ?? "";
+  const block = step.split("- name:")[0];
+
+  assert.match(
+    block,
+    /if \[ "\$\{#ARTIFACTS\[@\]\}" -eq 0 \]/,
+    "Build checksums must refuse when no artifacts were collected",
+  );
+  assert.match(
+    block,
+    /exit 1/,
+    "the empty-artifact guard must fail the step, not warn and continue",
+  );
+  assert.doesNotMatch(
+    block,
+    /^\s*find release-assets .*\|.*xargs -0 sha256sum/m,
+    "the bare find|xargs pipeline emits a checksum of empty input when no " +
+      "files match; the artifact count must gate it first",
+  );
+});

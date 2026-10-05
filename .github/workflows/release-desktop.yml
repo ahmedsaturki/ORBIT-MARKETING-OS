@@ -215,9 +215,23 @@ jobs:
       - name: Build checksums
         shell: bash
         run: |
-          find release-assets -type f -not -name 'SHA256SUMS.txt' -print0             | sort -z             | xargs -0 sha256sum > release-assets/SHA256SUMS.txt
-          test -s release-assets/SHA256SUMS.txt
-          (cd release-assets && sha256sum -c SHA256SUMS.txt)
+          # Count the artifacts first, from inside the directory so the paths
+          # recorded in SHA256SUMS.txt stay relative to it. `xargs -0 sha256sum`
+          # with no file arguments falls back to reading stdin and emits the
+          # checksum of empty input, which passes both `test -s` and
+          # `sha256sum -c` — a build that produced no bundle would emit a
+          # plausible-looking checksum file. Verified in a scratch directory:
+          # artifacts present exits 0 per file, zero artifacts exits 1 here,
+          # and a tampered download fails `sha256sum -c`.
+          cd release-assets
+          mapfile -d '' ARTIFACTS < <(find . -type f -not -name 'SHA256SUMS.txt' -print0)
+          if [ "${#ARTIFACTS[@]}" -eq 0 ]; then
+            echo "::error::No release artifacts found under release-assets; refusing to emit checksums."
+            exit 1
+          fi
+          printf '%s\0' "${ARTIFACTS[@]}" | sed -z 's|^\./||' | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+          test -s SHA256SUMS.txt
+          sha256sum -c SHA256SUMS.txt
 
       - name: Publish release
         env:

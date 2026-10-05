@@ -89,6 +89,28 @@ clone. The `build` job keeps its own copy of the check as defence in depth.
 Both directions were checked against this repository's real history: tag
 `v1.0.0` exits 1, `origin/main`'s head and a mid-history commit exit 0.
 
+The publish path past that gate was exercised locally rather than assumed.
+With artifacts present, `find … | xargs sha256sum` then `sha256sum -c`
+reports `OK` per file and exits 0; corrupting one artifact makes the same
+command report `FAILED` and exit 1, so a tampered download cannot pass
+verification.
+
+One weakness worth recording: with **zero** artifacts the checksum step still
+writes a valid-looking `SHA256SUMS.txt`. `xargs -0 sha256sum` receives no
+filename arguments, so GNU `sha256sum` falls back to reading stdin — the empty
+pipe — and emits `e3b0c442…  -`, the checksum of empty input. `test -s` passes
+and `sha256sum -c` reports `OK`. The run is still safe, because the publish step
+independently refuses it with `test "${#ASSETS[@]}" -gt 0` before calling
+`gh release create`. The guard is in the right place but the checksum step's own
+`test -s` does not prove artifacts exist.
+
+That is now closed. `Build checksums` counts the artifacts first and exits 1
+with an explicit error when there are none, so the step no longer depends on a
+downstream guard to be safe. Re-verified against the committed step body in a
+scratch directory: artifacts present reports `OK` per file and exits 0; zero
+artifacts exits 1 without writing a misleading file; a download modified after
+checksums were published fails `sha256sum -c` with exit 1.
+
 ### What the tag does provide
 
 - A stable release identifier for audit trails
