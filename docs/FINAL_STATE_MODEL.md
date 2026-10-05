@@ -359,7 +359,7 @@ itself is sound.
   | `gate-dashboard.mjs`                     | covered by `gate-dashboard.test.mjs`                             |
   | `verify-e2e-parses.mjs`                  | `ci.yml` — **no test**                                           |
   | `verify-ipc.mjs`                         | **5 workflows** — now covered by `verify-ipc-contract.test.mjs`  |
-  | `verify-omp-contract.mjs`                | `ci.yml` — **no test**                                           |
+  | `verify-omp-contract.mjs`                | `ci.yml` — now covered by `verify-omp-contract.test.mjs`         |
   | `verify-release-docs.mjs`                | `ci.yml` — **no test**                                           |
 
   An earlier revision of this entry listed all four uncovered scripts as
@@ -405,13 +405,22 @@ itself is sound.
   first rather than the one under test. A rejection test that passes for the
   wrong reason is worse than no test, because it certifies nothing.
 
-  Three verifiers remain untested — `verify-e2e-parses.mjs`,
-  `verify-omp-contract.mjs` and `verify-release-docs.mjs`. Each runs in
-  `ci.yml` only, none in a release workflow, and none has shown a defect.
-  `verify:release-docs.mjs` was proved load-bearing this session by injecting
-  all three forbidden claim shapes into `docs/DISTRIBUTION.md`: each was
-  rejected with the file and line named, and the file restored byte-identical.
-  That is evidence the guard works, not that it cannot regress.
+  `verify-omp-contract.mjs` is now covered too, by `verify-omp-contract.test.mjs`
+  through an `ORBIT_OMP_ROOT` override: 15 cases covering the eleven required
+  files, every mandatory marker, and the three frontmatter failure modes, each
+  proved to fail under mutation of the required-file check, the marker check,
+  the frontmatter check and the name-uniqueness check. One of its own lessons
+  repeats the IPC one: deleting a required file surfaces as `ENOENT` from
+  `access()` rather than as a curated message, so the assertion matches the
+  error code and the path it names.
+
+  Two verifiers remain untested — `verify-e2e-parses.mjs` and
+  `verify-release-docs.mjs`. Each runs in `ci.yml` only, neither in a release
+  workflow, and neither has shown a defect. `verify:release-docs.mjs` was proved
+  load-bearing this session by injecting all three forbidden claim shapes into
+  `docs/DISTRIBUTION.md`: each was rejected with the file and line named, and
+  the file restored byte-identical. That is evidence the guard works, not that
+  it cannot regress.
 
 - **What an L3 evidence reference has to mean.** `scripts/verify-release-readiness.mjs`
   now refuses an L3 claim whose `verifiedAt` is older than 30 days or dated in
