@@ -483,6 +483,39 @@ itself is sound.
   for a Playwright run — these suites prove the gates reject bad input, not that
   the browser tests pass.
 
+- **Twenty-two unmerged pull requests carry work that is not on `main`.** 23 PRs
+  are open, all predating this audit, the oldest from 2026-09-30. Every one is
+  32–34 commits behind `main`, so none can merge cleanly without a rebase and
+  re-verification. Comparing each PR head's blob against `main` for every file
+  it touches:
+
+  - **1 of 23 has landed** — #181 (`Content-Security-Policy`,
+    `X-Frame-Options`, HSTS, `Permissions-Policy`) reached `main` by another
+    route; `vercel.json` on `main` is byte-identical to that PR's version.
+  - **22 still carry work absent from `main`**, including two security
+    workflows: `dependency-review.yml` and `scorecard.yml`, proposed in #190 and
+    #196 and present on neither.
+
+  None of these can be merged as-is, and two are the reason:
+
+  - `scorecard.yml` sets `publish_results: true`, which needs a
+    `SCORECARD_TOKEN` secret. `gh secret list` returns nothing — the repository
+    has **no secrets at all** — so that workflow would fail on every run until
+    the token exists. That is an owner action, and it is a plausible reason it
+    was never merged rather than an oversight.
+  - #196 also edits `ci.yml` to replace
+    `pnpm test:node-forge-audit-exception` with
+    `pnpm test:dependency-audit-exceptions`. Neither that script nor
+    `scripts/dependency-audit-exceptions.test.mjs` exists on `main`, so merging
+    #196 as it stands would break `ci.yml` rather than improve it.
+
+  `dependency-review.yml` alone is self-contained: it needs no secrets, runs on
+  `pull_request` against `main`, and its action is pinned by digest. It is the
+  one item here that could land without owner input or new code — but it is
+  bundled in #196 with the Scorecard workflow and the CI rename, so it has to be
+  separated first. Recorded rather than done, because unbundling someone else's
+  stale PR is a judgement call the owner should make.
+
 - **What an L3 evidence reference has to mean.** `scripts/verify-release-readiness.mjs`
   now refuses an L3 claim whose `verifiedAt` is older than 30 days or dated in
   the future, so the "exact verification timestamp" in `.omp/RULES.md:1` is
