@@ -31,7 +31,12 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const specDir = join(repoRoot, "e2e");
+// ORBIT_E2E_SPEC_DIR lets the contract test point this gate at a fixture
+// directory. The compiler is still resolved through the real workspace,
+// because what is under test is the diagnostic filtering, not tsc lookup.
+const specDir = process.env.ORBIT_E2E_SPEC_DIR
+  ? resolve(process.env.ORBIT_E2E_SPEC_DIR)
+  : join(repoRoot, "e2e");
 
 function collectSpecs(dir) {
   const found = [];
@@ -74,7 +79,13 @@ function findTsc() {
   return null;
 }
 
-const tscBin = findTsc();
+// ORBIT_TSC_BIN lets the contract test substitute a stub compiler, so the
+// "tsc exited without reporting anything" guard can be exercised. That guard
+// is the one that stops this gate reporting success when the compiler never
+// ran, and it is unreachable through a fixture spec alone.
+const tscBin = process.env.ORBIT_TSC_BIN
+  ? resolve(process.env.ORBIT_TSC_BIN)
+  : findTsc();
 if (!tscBin) {
   console.error(
     "verify-e2e-parses: could not locate the TypeScript compiler under any " +
@@ -152,6 +163,26 @@ for (const line of output.split(/\r?\n/)) {
   const match = /error (TS\d+):/.exec(line);
   if (!match || RESOLVE_NOISE.has(match[1])) continue;
   real.push(line.trim());
+}
+
+// tsc exits 2 to mean "I reported errors", and under --noResolve a spec full of
+// unresolved imports exits 2 with every diagnostic being resolve noise. That is
+// normal, so exit 2 alone says nothing about whether the specs are clean.
+//
+// What would be unsafe is exit 2 with output that could not be classified at
+// all -- no line carried a TS code. Then neither the pass nor the fail decision
+// is informed, and reporting success would mean a gate that could not read
+// itself is vouching for the specs. The check therefore counts any diagnostic
+// line, filtered or not, rather than only the real ones.
+const anyDiagnostic = [...output.matchAll(/error (TS\d+):/g)].length;
+if (result.status === 2 && anyDiagnostic === 0) {
+  const firstLine = output.split(/\r?\n/).find((line) => line.trim());
+  console.error(
+    `verify-e2e-parses: tsc exited 2 reporting errors, but none of its ` +
+      `output parsed as a diagnostic, so the result cannot be trusted. ` +
+      `First stderr line: ${firstLine ?? ""}`,
+  );
+  process.exit(1);
 }
 
 if (real.length > 0) {

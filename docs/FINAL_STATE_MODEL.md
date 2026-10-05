@@ -357,7 +357,7 @@ itself is sound.
   | `verify-workspace.mjs`                   | 11 workflows — covered                                            |
   | `check-release-gates.mjs`                | covered by `release-gate-tooling.test.mjs`                        |
   | `gate-dashboard.mjs`                     | covered by `gate-dashboard.test.mjs`                              |
-  | `verify-e2e-parses.mjs`                  | `ci.yml` — **no test**                                            |
+  | `verify-e2e-parses.mjs`                  | `ci.yml` — now covered, and a defect fixed (see below)            |
   | `verify-ipc.mjs`                         | **5 workflows** — now covered by `verify-ipc-contract.test.mjs`   |
   | `verify-omp-contract.mjs`                | `ci.yml` — now covered by `verify-omp-contract.test.mjs`          |
   | `verify-release-docs.mjs`                | `ci.yml` — now covered by `verify-release-docs-contract.test.mjs` |
@@ -432,12 +432,36 @@ itself is sound.
   The self-test is real defence in the script itself; what is untested is the
   guarantee that it still fires.
 
-  One verifier remains untested: `verify-e2e-parses.mjs`. It runs in `ci.yml`
-  only, in no release workflow, and has shown no defect. It exists because
-  `pnpm typecheck` runs `turbo run typecheck`, which visits only workspace
-  packages — `e2e/` is not one — so a syntax or binding error in a spec would
-  otherwise survive until the browser run. Closing it needs a Playwright
-  harness rather than fixture trees, so it is recorded rather than forced.
+  The last one, `verify-e2e-parses.mjs`, is now covered too — and writing the
+  test found a real defect rather than confirming a working gate.
+
+  The gate runs `tsc --noResolve` over the specs and reports only diagnostics
+  that are not artifacts of unresolved imports. It already refused any exit
+  status other than 0 or 2, on the reasoning that tsc exits 2 when it reports
+  errors and 0 when clean, so any other status means it never started. That
+  left one hole: **tsc exiting 2 with no output this gate could classify made it
+  report `PASS`.** A gate that ran but could not read its own result was
+  vouching for the specs. Reproduced with a stub compiler that exits 2 silently.
+
+  The fix counts _any_ diagnostic line rather than only the real ones, because
+  under `--noResolve` a spec full of unresolved imports legitimately exits 2
+  with every diagnostic being filtered noise. My first attempt keyed the guard
+  on `real.length` and broke the real `e2e/` run for exactly that reason — the
+  repo's own specs failed until I counted filtered diagnostics too. That is the
+  third time in this audit a correct-looking guard broke the passing case, and
+  the reason every fix here is proven in both directions.
+
+  `verify-e2e-parses-contract.test.mjs` drives the real script through an
+  `ORBIT_E2E_SPEC_DIR` override plus an `ORBIT_TSC_BIN` stub, both inert when
+  unset: 11 cases covering the duplicate-`const` binding error this gate was
+  written for, a genuine type error, resolve noise _not_ being reported,
+  recursive spec collection, an empty or missing directory, and three
+  compiler-failure modes. All four guards proved to fail under mutation.
+
+  All nine verifiers are now covered. Two claims of coverage are explicitly not
+  made: the release-docs pattern self-test above, and nothing here standing in
+  for a Playwright run — these suites prove the gates reject bad input, not that
+  the browser tests pass.
 
 - **What an L3 evidence reference has to mean.** `scripts/verify-release-readiness.mjs`
   now refuses an L3 claim whose `verifiedAt` is older than 30 days or dated in
