@@ -3,7 +3,11 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+// ORBIT_DOCS_ROOT lets the contract test point this verifier at a fixture tree.
+// Unset, it resolves the repository the way the original did.
+const root = process.env.ORBIT_DOCS_ROOT
+  ? resolve(process.env.ORBIT_DOCS_ROOT)
+  : resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const durableReleaseFiles = [
   "docs/ACCEPTANCE_MATRIX_V2.md",
   "docs/COMMERCIAL_PRODUCTION_PROVEN_RUNBOOK.md",

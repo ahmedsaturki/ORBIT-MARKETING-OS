@@ -350,17 +350,17 @@ itself is sound.
   verifier-style scripts are wired into `package.json`. Five have dedicated
   contract tests; four do not:
 
-  | Script                                   | Runs in CI                                                       |
-  | ---------------------------------------- | ---------------------------------------------------------------- |
-  | `verify-live-production-observation.mjs` | `ci.yml` — covered by `production-observation-contract.test.mjs` |
-  | `verify-release-readiness.mjs`           | 4 workflows — covered by 2 test files                            |
-  | `verify-workspace.mjs`                   | 11 workflows — covered                                           |
-  | `check-release-gates.mjs`                | covered by `release-gate-tooling.test.mjs`                       |
-  | `gate-dashboard.mjs`                     | covered by `gate-dashboard.test.mjs`                             |
-  | `verify-e2e-parses.mjs`                  | `ci.yml` — **no test**                                           |
-  | `verify-ipc.mjs`                         | **5 workflows** — now covered by `verify-ipc-contract.test.mjs`  |
-  | `verify-omp-contract.mjs`                | `ci.yml` — now covered by `verify-omp-contract.test.mjs`         |
-  | `verify-release-docs.mjs`                | `ci.yml` — **no test**                                           |
+  | Script                                   | Runs in CI                                                        |
+  | ---------------------------------------- | ----------------------------------------------------------------- |
+  | `verify-live-production-observation.mjs` | `ci.yml` — covered by `production-observation-contract.test.mjs`  |
+  | `verify-release-readiness.mjs`           | 4 workflows — covered by 2 test files                             |
+  | `verify-workspace.mjs`                   | 11 workflows — covered                                            |
+  | `check-release-gates.mjs`                | covered by `release-gate-tooling.test.mjs`                        |
+  | `gate-dashboard.mjs`                     | covered by `gate-dashboard.test.mjs`                              |
+  | `verify-e2e-parses.mjs`                  | `ci.yml` — **no test**                                            |
+  | `verify-ipc.mjs`                         | **5 workflows** — now covered by `verify-ipc-contract.test.mjs`   |
+  | `verify-omp-contract.mjs`                | `ci.yml` — now covered by `verify-omp-contract.test.mjs`          |
+  | `verify-release-docs.mjs`                | `ci.yml` — now covered by `verify-release-docs-contract.test.mjs` |
 
   An earlier revision of this entry listed all four uncovered scripts as
   reachable from **0 workflows**, on the reasoning that missing tests there
@@ -414,13 +414,30 @@ itself is sound.
   `access()` rather than as a curated message, so the assertion matches the
   error code and the path it names.
 
-  Two verifiers remain untested — `verify-e2e-parses.mjs` and
-  `verify-release-docs.mjs`. Each runs in `ci.yml` only, neither in a release
-  workflow, and neither has shown a defect. `verify:release-docs.mjs` was proved
-  load-bearing this session by injecting all three forbidden claim shapes into
-  `docs/DISTRIBUTION.md`: each was rejected with the file and line named, and
-  the file restored byte-identical. That is evidence the guard works, not that
-  it cannot regress.
+  `verify-release-docs.mjs` is now covered as well, by
+  `verify-release-docs-contract.test.mjs` through an `ORBIT_DOCS_ROOT` override:
+  12 cases covering all six forbidden claim shapes, the historical-evidence
+  shapes that must stay allowed, the fact that a non-durable file is not
+  scanned at all, and the scorecard cross-check against `readiness.json` in
+  both directions. Three of its four mutations fail the suite — disabling the
+  scan loop, removing the scorecard cross-check, and suppressing the failure
+  report.
+
+  **One mutation does not, and the gap is real.** Bypassing the script's own
+  pattern self-test leaves this suite passing, because the fixtures hard-code
+  the same claim shapes the patterns are built from: a broken pattern fails
+  them identically. Covering it requires fixtures generated from the patterns
+  themselves, which is circular — the test would assert the pattern against
+  itself. The suite says so in a comment rather than implying full coverage.
+  The self-test is real defence in the script itself; what is untested is the
+  guarantee that it still fires.
+
+  One verifier remains untested: `verify-e2e-parses.mjs`. It runs in `ci.yml`
+  only, in no release workflow, and has shown no defect. It exists because
+  `pnpm typecheck` runs `turbo run typecheck`, which visits only workspace
+  packages — `e2e/` is not one — so a syntax or binding error in a spec would
+  otherwise survive until the browser run. Closing it needs a Playwright
+  harness rather than fixture trees, so it is recorded rather than forced.
 
 - **What an L3 evidence reference has to mean.** `scripts/verify-release-readiness.mjs`
   now refuses an L3 claim whose `verifiedAt` is older than 30 days or dated in
