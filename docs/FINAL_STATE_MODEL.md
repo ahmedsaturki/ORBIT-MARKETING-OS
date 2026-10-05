@@ -628,6 +628,22 @@ itself is sound.
   passes, and `READY_FOR_PRODUCTION`, `PRODUCTION_PROVEN`, `true`, and a
   deleted field are each rejected.
 
+- **`release/readiness.json`'s `releaseTruth.state` was also unvalidated.** The
+  file's own summary field (`state: "UNVERIFIED"`) could be set to
+  `PRODUCTION_READY` or deleted entirely and all three verifiers accepted it.
+  `verify-release-readiness.mjs` now rejects any state other than `UNVERIFIED`
+  while a release-critical gate is below L3, and ignores the field entirely when
+  every gate is L3 -- so contract fixtures that model a gate at L3 without
+  `releaseTruth` stay valid, and the test that models an impossible verifiedAt
+  date still gets the `Invalid gate levels` error it asserts. Five mutations
+  confirmed three rejections and one control pass; deleting the whole
+  `releaseTruth` object is rejected separately because the schema shape is still
+  required.
+
+  `OBSERVED_PRODUCTION.json` carries the same-named field but with a different
+  shape (`commercialProductionProven: false`) and it _is_ enforced by the live
+  verifier. Nothing in the repository reads the `readiness.json` version.
+
 ## 7. Owner Actions to Close Release
 
 1. Run the 24-hour soak on the release SHA (`OPS-02`)

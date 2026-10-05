@@ -84,6 +84,27 @@ const blockers = entries.filter(
   ([, value]) => value.level !== "L3_PRODUCTION_PROVEN",
 );
 
+// `releaseTruth.state` is the file's own summary of production truth. Nothing
+// else reads it, so without this it could assert a stronger state than the
+// gate set supports. It must be no stronger than UNVERIFIED while any
+// release-critical gate is below L3_PRODUCTION_PROVEN; once every gate is L3 it
+// is unconstrained. Absent releaseTruth data is ignored -- fixtures that model a
+// gate at L3 without it stay valid.
+const truthState = document.releaseTruth?.state;
+if (
+  blockers.length > 0 &&
+  truthState !== undefined &&
+  truthState !== "UNVERIFIED"
+) {
+  console.error("release-readiness=FAIL");
+  console.error(
+    `Invalid releaseTruth.state: ${JSON.stringify(truthState)}. ` +
+      "While any release-critical gate is below L3_PRODUCTION_PROVEN the file " +
+      "must not assert a stronger release state than UNVERIFIED.",
+  );
+  process.exit(1);
+}
+
 console.log(`release-readiness=PASS mode=${mode}`);
 console.log(`release-critical-gates=${entries.length}`);
 console.log(`production-proven=${l3.length}`);
