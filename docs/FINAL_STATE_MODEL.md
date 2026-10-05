@@ -516,6 +516,24 @@ itself is sound.
   separated first. Recorded rather than done, because unbundling someone else's
   stale PR is a judgement call the owner should make.
 
+- **Two tracking issues carried a closed item as remaining work.** Issues #6 and
+  #24 both list twelve remaining release-critical items, and both list
+  "SonarCloud Security Rating A on New Code (latest observed remains B;
+  required A)" as the first. That closed on 2026-10-03: issue #112 is closed,
+  and `release/readiness.json` records `sonarNewSecurityRating: "A"`,
+  `sonarOpenNewCodeVulnerabilities: 0` and `sonarQualityGate: "OK"`. Both
+  bodies were edited on 2026-10-05 to strike the line and say what closed it,
+  rather than leaving a completed item to read as outstanding.
+
+  The other eleven items in both issues were re-checked against
+  `release/readiness.json` and are all still open — none of their backing gates
+  had moved. The correction was confined to the one stale line.
+
+  The same drift existed in `docs/GATE_TRACKING.md` and is fixed separately in
+  the same session; that file also had two wrong owner columns and a wrong
+  engineering/commercial count. Issue #187 was checked and is already correct —
+  its SonarCloud item is marked `[x]`.
+
 - **What an L3 evidence reference has to mean.** `scripts/verify-release-readiness.mjs`
   now refuses an L3 claim whose `verifiedAt` is older than 30 days or dated in
   the future, so the "exact verification timestamp" in `.omp/RULES.md:1` is
