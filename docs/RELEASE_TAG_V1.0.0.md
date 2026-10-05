@@ -5,6 +5,12 @@
 **Commit:** `6e6787b6e5fa5590785777f335bfd0dc3a23362e`  
 **Branch:** `audit/verification-2026-10` → merged to `main`
 
+> **Superseded in practice by `v1.0.1`.** This tag never reached the build
+> matrix. PR #213 was squash-merged, so `v1.0.0` is not an ancestor of `main`
+> and its release gate can no longer pass. `v1.0.1` was cut at `07cac578` and
+> released instead; run `37283724466` is the current attempt. This document
+> retains `v1.0.0` as the record of the first failure.
+
 ---
 
 ## What This Tag Does and Does Not Unblock
@@ -57,27 +63,80 @@ returns `0`, and `git merge-base --is-ancestor v1.0.0 origin/main` exits
 non-zero. The gate therefore fails, `Build` never produces an artifact, and
 `Publish GitHub Release` is skipped — even with the E2E ordering fixed.
 
-**This is fixed by merging, not by re-tagging.** An earlier revision of this
-document said the tag "must be re-tagged". That is wrong, and re-tagging would
-be the more damaging remedy: it moves a published tag. `v1.0.0` is an ancestor
-of the audit branch's head — `git merge-base --is-ancestor v1.0.0 HEAD` exits
-zero — so merging `audit/verification-2026-10` into `main` places the tagged
-commit on the main line automatically, with the tag left where it is.
+**A merge fixes this — but only one that preserves history.** An earlier
+revision of this document said the tag "must be re-tagged". That was wrong:
+`v1.0.0` is an ancestor of the audit branch's head, so a history-preserving
+merge places the tagged commit on the main line with the tag left where it is.
 
-Verified by merging in a scratch worktree rather than reasoning about it:
-`origin/main` is 0 commits ahead of the branch (120 behind), the merge produced
-**0 conflicts** ("Automatic merge went well"), and afterwards
-`git merge-base --is-ancestor v1.0.0 HEAD` — the exact predicate
-`release-desktop.yml:117` runs — exits `0`. The scratch worktree was removed.
+**It was merged as a squash on 2026-10-05 (`07cac578`), and that does not
+satisfy the gate.** A squash merge creates one new commit; the 22 branch
+commits never enter `main`'s history, so `v1.0.0` — which pointed at one of
+them — is not on `main`. Verified against the merged remote:
 
-So the release is blocked twice over, by two independent defects: the step
-ordering (fixed here) and the tag pointing into an unmerged audit branch
-(resolved by the merge, not by a code change). Re-running the workflow before
-the merge passes the quality gate and still fails to publish.
+```
+$ git merge-base --is-ancestor v1.0.0 origin/main
+exit=1
+$ git branch -r --contains v1.0.0
+  origin/audit/verification-2026-10      # main is absent
+```
 
-Closing REL-03 requires the merge to land, then a real release run: build the
-desktop artifact, emit checksums, and verify them against what was published.
-Until that execution exists, the honest status is UNVERIFIED.
+My scratch-worktree check that justified the original claim was sound but
+narrow: it merged `ea95a14c` with `--no-ff`, which preserves ancestry. I then
+generalised it to "merging" without qualifying the merge _style_. Squashing
+discards exactly the ancestry the gate tests. The claim was verified and still
+misleading.
+
+So the release is blocked twice over: the step ordering (fixed, now on `main`),
+and the tag pointing at a commit that only ever existed on an unmerged branch.
+Closing the second now requires one of:
+
+1. Move `v1.0.0` to a commit on `main` — the tag is on a failed, unpublished
+   release, so nothing was ever consumed downstream. Destructive but low risk.
+2. Cut a new tag (`v1.0.1`) at `07cac578` and release from that, leaving
+   `v1.0.0` as the historical record of the failed run.
+
+Option 2 is preferable: it keeps the audit trail intact and does not rewrite
+anything that was pushed.
+
+**Option 2 was taken.** `v1.0.1` was cut at `07cac5784a212e7f2a9672029bd9c2ac330f725a`
+(`git merge-base --is-ancestor v1.0.1 origin/main` → exit 0), and `v1.0.0` was left
+in place as the record of the failed run. It has not been moved or deleted.
+
+### What the second run proved
+
+Run `37283724466`, push on `v1.0.1`, 2026-10-05T08:27:14Z:
+
+- `Verify tag is on the main release line` — **success**. The gate that `v1.0.0`
+  would have failed now passes.
+- `Release quality gate` — **29/29 steps success**, including **`Browser E2E`**.
+  That is the exact step that failed in `37205123765`, so the ordering fix is
+  confirmed in a real release and not only locally.
+- All four `build` jobs — **failure** at `Build desktop`.
+
+The build failures are a defect the first run could not have found, because that
+run never reached this job: the `build` job had no `playwright install` step, so
+`scripts/build-icon.mjs` could not launch the headless Chromium that generates
+the app icons. `Build ubuntu-24.04` log:
+
+```
+browserType.launch: Executable doesn't exist at
+/home/runner/.cache/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell
+    at /home/runner/work/.../scripts/build-icon.mjs:20:32
+beforeBuildCommand `pnpm --filter @orbit/core build && pnpm build` failed with exit code 1
+```
+
+The quality job does install Chromium, but each job runs on fresh runners with
+their own caches, so the install does not carry over. Fixed by installing
+Chromium in the build job before icon generation, and guarded by a contract test
+that walks every workflow's jobs rather than a hand-picked list.
+
+`Publish GitHub Release` and `Build checksums` were skipped again, so `REL-03`
+remains `UNVERIFIED` — no run has yet produced checksums.
+
+Closing REL-03 requires a tag on `main` (see the two options above), then a real
+release run: build the desktop artifact, emit checksums, and verify them
+against what was published. Until that execution exists, the honest status is
+UNVERIFIED.
 
 Because that gate sits in the `build` job, a mis-tagged release used to burn
 four Tauri builds across the OS matrix before failing. A pre-flight check now
