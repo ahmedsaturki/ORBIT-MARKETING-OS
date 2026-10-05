@@ -401,8 +401,11 @@ as "open mobile store accounts", which implies packaging work remains. It does n
   `ios.bundleIdentifier` are `com.orbitmarketing.os`, with `version 1.0.0`,
   `scheme: orbit`, and the `expo-router` and `expo-secure-store` plugins.
 - `@orbit/mobile` typechecks clean and its 8 tests pass.
-- `MOB-01` is PASS on the strength of the `mobile-validation` workflow
-  (typecheck + `expo prebuild` + `gradle assembleDebug`).
+- `MOB-01` is PASS on the strength of run `37297712257`, which fired on tag
+  `v1.0.5` alongside the desktop workflow and concluded `success`: quality gate
+  11/11, then `Generate Android native project` and `Build debug APK`. The
+  76 MB run artifact was downloaded and checked as a genuine APK — `PK` magic,
+  `AndroidManifest.xml`, `classes.dex`, `resources.arsc`, both native ABIs.
 
 What is missing is only the external half: the Apple Developer and Google Play
 Console accounts, and the signing credentials that belong to them. There is no

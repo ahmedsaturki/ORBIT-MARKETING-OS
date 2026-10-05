@@ -144,12 +144,18 @@ moment `REL-03` remained `UNVERIFIED` — no run had yet produced checksums.
 
 ### Runs three through six, and what each one fixed
 
-| Run           | Tag      | Reached                  | Defect it exposed                              |
-| ------------- | -------- | ------------------------ | ---------------------------------------------- |
-| `37286268618` | `v1.0.2` | `Publish GitHub Release` | no `actions/checkout`, so `gh` had no repo     |
-| `37289634184` | `v1.0.3` | asset upload             | 314 files → 268 basenames, 31 collisions       |
-| `37293663120` | `v1.0.4` | the new duplicate guard  | `xargs -n1` word-split names containing spaces |
-| `37297712378` | `v1.0.5` | —                        | **success**                                    |
+| Run           | Tag      | Reached                  | Defect it exposed                              | Mobile run                                 |
+| ------------- | -------- | ------------------------ | ---------------------------------------------- | ------------------------------------------ |
+| `37286268618` | `v1.0.2` | `Publish GitHub Release` | no `actions/checkout`, so `gh` had no repo     | —                                          |
+| `37289634184` | `v1.0.3` | asset upload             | 314 files → 268 basenames, 31 collisions       | `37289634265` success                      |
+| `37293663120` | `v1.0.4` | the new duplicate guard  | `xargs -n1` word-split names containing spaces | `37293663524` success                      |
+| `37297712378` | `v1.0.5` | —                        | **success**                                    | `37297712257` success — first APK on a tag |
+
+`release-mobile.yml` fired on `v1.0.3`, `v1.0.4` and `v1.0.5` and succeeded
+on all three — the Android path was never what broke. Run `37297712257` on
+`v1.0.5` built the first APK on a tag: the 76 MB artifact was downloaded and
+confirmed to be a real APK (`PK` magic, `AndroidManifest.xml`, `classes.dex`,
+`resources.arsc`, both native ABIs), unsigned as a debug build should be.
 
 Each defect got a fix plus a contract test that walks every workflow rather than
 a hand-picked list, and each fix is itself the next defect: `v1.0.4` failed on
