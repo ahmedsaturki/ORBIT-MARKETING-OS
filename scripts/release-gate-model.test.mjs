@@ -18,6 +18,8 @@ import {
   deriveGateStatus,
   isAllGatesL3,
   isReleaseReady,
+  isStaleForL3,
+  L3_EVIDENCE_MAX_AGE_DAYS,
   levelClass,
   levelLabel,
 } from "./release-gate-model.mjs";
@@ -287,6 +289,100 @@ for (const gate of Object.values(readiness.releaseCritical)) {
         `readiness gate cites missing evidence file: ${relative}`,
       );
     }
+  }
+}
+
+// A production-proven claim is a statement about the world now. Evidence
+// currency has to be enforced, not just evidence shape: a well-formed
+// verifiedAt from last year satisfies a format check and supports nothing.
+{
+  const day = 24 * 60 * 60 * 1000;
+  const now = Date.parse("2026-10-05T00:00:00Z");
+  const ago = (days) =>
+    new Date(now - days * day).toISOString().replace(/\.\d+Z$/, "Z");
+
+  assert.equal(
+    isStaleForL3(ago(0), now),
+    false,
+    "evidence verified today is current",
+  );
+  assert.equal(
+    isStaleForL3(ago(L3_EVIDENCE_MAX_AGE_DAYS - 1), now),
+    false,
+    "evidence one day inside the window is still current",
+  );
+  assert.equal(
+    isStaleForL3(ago(L3_EVIDENCE_MAX_AGE_DAYS + 1), now),
+    true,
+    "evidence one day past the window is stale",
+  );
+  assert.equal(
+    isStaleForL3(ago(400), now),
+    true,
+    "evidence from over a year ago is stale",
+  );
+  assert.equal(
+    isStaleForL3(new Date(now + 2 * day).toISOString(), now),
+    true,
+    "a future timestamp is refused: a claim cannot be verified before it is made",
+  );
+  assert.equal(
+    isStaleForL3("not-a-timestamp", now),
+    true,
+    "an unparseable timestamp is refused rather than defaulted to current",
+  );
+  assert.equal(
+    isStaleForL3(undefined, now),
+    true,
+    "a missing timestamp is stale, never accidentally fresh",
+  );
+}
+
+// The verifier must reject a gate promoted to L3 on stale evidence. Proved by
+// execution, since the guard lives in the verifier's validation branch.
+{
+  const day = 24 * 60 * 60 * 1000;
+  const stale = new Date(Date.now() - (L3_EVIDENCE_MAX_AGE_DAYS + 5) * day)
+    .toISOString()
+    .replace(/\.\d+Z$/, "Z");
+
+  const promoted = JSON.parse(JSON.stringify(readiness));
+  const target = promoted.releaseCritical.build;
+  target.level = L3;
+  target.evidenceRefs = ["https://example.test/evidence"];
+  target.verifiedAt = stale;
+
+  const dir = mkdtempSync(join(tmpdir(), "orbit-l3-stale-"));
+  const fixture = join(dir, "readiness.json");
+  writeFileSync(fixture, JSON.stringify(promoted, null, 2));
+
+  let stderr = "";
+  try {
+    execFileSync(
+      process.execPath,
+      [join(repoRoot, "scripts", "verify-release-readiness.mjs")],
+      {
+        env: { ...process.env, ORBIT_READINESS_FILE: fixture },
+        encoding: "utf8",
+        stdio: "pipe",
+      },
+    );
+    rmSync(dir, { recursive: true, force: true });
+    assert.fail(`verifier accepted L3 on stale evidence dated ${stale}`);
+  } catch (error) {
+    stderr = `${error.stderr ?? ""}${error.stdout ?? ""}`;
+    rmSync(dir, { recursive: true, force: true });
+    // Reaching here means the verifier exited non-zero, which is the point.
+    assert.match(
+      stderr,
+      /Invalid gate levels: build/,
+      "the rejection must name the offending gate, not fail generically",
+    );
+    assert.match(
+      stderr,
+      new RegExp(`no older than ${L3_EVIDENCE_MAX_AGE_DAYS} days`),
+      "the rejection must state the freshness limit it enforced",
+    );
   }
 }
 
