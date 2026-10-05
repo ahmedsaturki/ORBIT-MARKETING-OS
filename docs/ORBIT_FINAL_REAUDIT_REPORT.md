@@ -519,14 +519,14 @@ measure of how much a self-written summary can be trusted without re-verificatio
 Six release runs have now executed. Each got further than the last. The first
 five each died one step later than the last; the sixth completed:
 
-| Run           | Tag      | Reached                  | Outcome                                    |
-| ------------- | -------- | ------------------------ | ------------------------------------------ |
-| `37205123765` | `v1.0.0` | `Browser E2E`            | failed — E2E ran before the build          |
-| `37283724466` | `v1.0.1` | all four `Build` jobs    | failed — no Playwright install (defect 13) |
-| `37286268618` | `v1.0.2` | `Publish GitHub Release` | failed — no checkout (defect 14)           |
-| `37289634184` | `v1.0.3` | asset upload             | failed — duplicate basenames (defect 15)   |
-| `37293663120` | `v1.0.4` | my own duplicate guard   | failed — word-split names (defect 16)      |
-| `37297712378` | `v1.0.5` | —                        | **success** — published the first release  |
+| Run           | Tag      | Reached                  | Outcome                                    | Mobile run                                         |
+| ------------- | -------- | ------------------------ | ------------------------------------------ | -------------------------------------------------- |
+| `37205123765` | `v1.0.0` | `Browser E2E`            | failed — E2E ran before the build          | —                                                  |
+| `37283724466` | `v1.0.1` | all four `Build` jobs    | failed — no Playwright install (defect 13) | —                                                  |
+| `37286268618` | `v1.0.2` | `Publish GitHub Release` | failed — no checkout (defect 14)           | —                                                  |
+| `37289634184` | `v1.0.3` | asset upload             | failed — duplicate basenames (defect 15)   | `37289634265` success                              |
+| `37293663120` | `v1.0.4` | my own duplicate guard   | failed — word-split names (defect 16)      | `37293663524` success                              |
+| `37297712378` | `v1.0.5` | —                        | **success** — published the first release  | `37297712257` success — first Android APK on a tag |
 
 The last three runs are the substantive ones. **`v1.0.2`, `v1.0.3` and `v1.0.4`
 each built all four desktop artifacts successfully** — `windows-2025`,
