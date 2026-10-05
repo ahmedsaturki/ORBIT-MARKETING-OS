@@ -1,8 +1,13 @@
 import { readFile, readdir } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
+// ORBIT_IPC_ROOT lets the contract test point this verifier at a fixture tree.
+// The check reads real sources and has no other seam, and a security guard that
+// runs in five release workflows needs to be provable without editing the repo.
+const root = process.env.ORBIT_IPC_ROOT
+  ? resolve(process.env.ORBIT_IPC_ROOT)
+  : join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const rustRoot = join(root, "packages", "desktop", "src-tauri", "src");
 const uiRoot = join(root, "packages", "desktop", "src");
 

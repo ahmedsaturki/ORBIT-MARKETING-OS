@@ -346,34 +346,72 @@ an environment without a desktop host cannot run this suite, but the suite
 itself is sound.
 
 - **OMP "unknown model" warning.** Emitted when a primary model is unavailable and the runtime walks the fallback chain in `C:\Users\powertech\.omp\agent\config.yml`. This is a local harness condition, not an application defect. No repository change is warranted. Verified by reading RE_AUDIT_REPORT.md B6.
-- **Verifier test coverage is uneven, and the gaps are not CI gaps.** Nine
+- **Verifier test coverage, and a wrong claim corrected in place.** Nine
   verifier-style scripts are wired into `package.json`. Five have dedicated
   contract tests; four do not:
 
-  | Script                                   | Reachable from CI                                           |
-  | ---------------------------------------- | ----------------------------------------------------------- |
-  | `verify-live-production-observation.mjs` | yes — covered by `production-observation-contract.test.mjs` |
-  | `verify-release-readiness.mjs`           | yes (4 workflows) — covered by 2 test files                 |
-  | `verify-workspace.mjs`                   | yes (11 workflows) — covered                                |
-  | `check-release-gates.mjs`                | covered by `release-gate-tooling.test.mjs`                  |
-  | `gate-dashboard.mjs`                     | covered by `gate-dashboard.test.mjs`                        |
-  | `verify-e2e-parses.mjs`                  | **0 workflows**                                             |
-  | `verify-ipc.mjs`                         | **0 workflows**                                             |
-  | `verify-omp-contract.mjs`                | **0 workflows**                                             |
-  | `verify-release-docs.mjs`                | **0 workflows**                                             |
+  | Script                                   | Runs in CI                                                       |
+  | ---------------------------------------- | ---------------------------------------------------------------- |
+  | `verify-live-production-observation.mjs` | `ci.yml` — covered by `production-observation-contract.test.mjs` |
+  | `verify-release-readiness.mjs`           | 4 workflows — covered by 2 test files                            |
+  | `verify-workspace.mjs`                   | 11 workflows — covered                                           |
+  | `check-release-gates.mjs`                | covered by `release-gate-tooling.test.mjs`                       |
+  | `gate-dashboard.mjs`                     | covered by `gate-dashboard.test.mjs`                             |
+  | `verify-e2e-parses.mjs`                  | `ci.yml` — **no test**                                           |
+  | `verify-ipc.mjs`                         | **5 workflows** — now covered by `verify-ipc-contract.test.mjs`  |
+  | `verify-omp-contract.mjs`                | `ci.yml` — **no test**                                           |
+  | `verify-release-docs.mjs`                | `ci.yml` — **no test**                                           |
 
-  The four uncovered scripts are local conveniences, not CI gates, so the
-  missing tests are a maintenance risk rather than a release risk. All four were
-  run this session and pass. `verify-release-docs.mjs` is the notable one: it
-  enforces the `.omp/RULES.md` rule that durable release documents must never
-  describe a moving `main` commit by hard-coded SHA, and it self-tests its own
-  patterns against fixtures before checking the 9 durable files. It reports
-  `release-docs=PASS`, and no file this audit edited trips it.
+  An earlier revision of this entry listed all four uncovered scripts as
+  reachable from **0 workflows**, on the reasoning that missing tests there
+  were a maintenance risk rather than a release risk. That was wrong, and wrong
+  in the reassuring direction. The survey grepped `.github/workflows/` for
+  script filenames such as `verify-ipc.mjs`, but workflows invoke the npm
+  aliases — `pnpm verify:ipc` — and never mention the file. Re-checked by
+  alias:
 
-  The asymmetry is the part worth keeping. The verifier with **zero** test
-  coverage was the one wired into `ci.yml` on every pull request. Coverage
-  tracked importance inversely, because it had been added reactively rather
-  than by risk. `production-observation-contract.test.mjs` closes that gap.
+  ```
+  verify:e2e-parses    1 workflow  (ci.yml)
+  verify:ipc           5 workflows (ci, release-desktop, release-evidence,
+                                    release-mobile, self-hosted-verify)
+  verify:omp           1 workflow  (ci.yml)
+  verify:release-docs  1 workflow  (ci.yml)
+  ```
+
+  So all four gate CI, and `verify:ipc` gates five workflows. The real gap is
+  worse than the retracted version claimed, not better: four untested verifiers
+  sit in the merge path, one of them in every release workflow.
+
+  `verify-e2e-parses.mjs` is the one to understand. It exists because
+  `pnpm typecheck` runs `turbo run typecheck`, which only visits workspace
+  packages — `e2e/` is not one, so nothing else would catch a syntax or binding
+  error in a spec until the browser run. `verify:release-docs.mjs` was proved
+  load-bearing this session by injecting all three forbidden claim shapes into
+  `docs/DISTRIBUTION.md`: each was rejected with the file and line named, and
+  the file restored byte-identical.
+
+  `verify-ipc.mjs` was the highest-value gap and is now closed. It gates five
+  workflows and enforces two security-relevant properties: that every command in
+  `generate_handler!` carries `#[tauri::command]`, and that actor identity for
+  `approval_request` / `approval_decide` is derived inside the runtime rather
+  than asserted by the desktop UI. `verify-ipc-contract.test.mjs` drives the
+  real script against fixture trees through a new `ORBIT_IPC_ROOT` override and
+  covers all four guards, each proved to fail under mutation. Three of its own
+  mistakes are worth recording, because all three produced a green-looking
+  result for the wrong reason: a fixture missing the approval functions trips
+  the mandatory check first; a fixture with no UI files leaves the `src`
+  directory absent and the verifier dies with `ENOENT` rather than the rule
+  under test; and a fixture leaving _two_ functions undecorated rejects on the
+  first rather than the one under test. A rejection test that passes for the
+  wrong reason is worse than no test, because it certifies nothing.
+
+  Three verifiers remain untested — `verify-e2e-parses.mjs`,
+  `verify-omp-contract.mjs` and `verify-release-docs.mjs`. Each runs in
+  `ci.yml` only, none in a release workflow, and none has shown a defect.
+  `verify:release-docs.mjs` was proved load-bearing this session by injecting
+  all three forbidden claim shapes into `docs/DISTRIBUTION.md`: each was
+  rejected with the file and line named, and the file restored byte-identical.
+  That is evidence the guard works, not that it cannot regress.
 
 - **What an L3 evidence reference has to mean.** `scripts/verify-release-readiness.mjs`
   now refuses an L3 claim whose `verifiedAt` is older than 30 days or dated in
