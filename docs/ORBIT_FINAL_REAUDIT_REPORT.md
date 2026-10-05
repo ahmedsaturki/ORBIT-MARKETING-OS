@@ -17,11 +17,11 @@ All 10 approved plan phases completed. Every claim grounded in command output. N
 > **FINAL DELIVERY: NOT READY — READY WITH OWNER GATES**
 
 - **Engineering:** PASS (379 JS tests, 182 Rust tests, typecheck 5/5, clippy clean, fmt clean, all governance gates green)
-- **Product:** PARTIAL (77 of 83 requirements PASS; 3 PARTIAL, 3 UNVERIFIED)
+- **Product:** PARTIAL (78 of 83 requirements PASS; 3 PARTIAL, 2 UNVERIFIED)
 - **Release:** NOT READY (0 of 13 gates at L3_PRODUCTION_PROVEN; 5 owner-gated)
 - **Owner Gates:** 5 of 13 (accessibility, stability_soak, commercial_billing, legal_commercial, external_connectors)
 
-The operational tracker is issue **#187**, "release: L3 production readiness closure board" — now 17 genuinely open items.
+The operational tracker is issue **#187**, "release: L3 production readiness closure board" — now 16 genuinely open items, 2 done. The release-tag checksum drill closed when `v1.0.5` published.
 
 ---
 
@@ -335,7 +335,7 @@ and the matrix in `docs/FINAL_STATE_MODEL.md` keeps them separate for that reaso
 | Dimension       | Status        | Basis                                                                                                            |
 | --------------- | ------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **Engineering** | **PASS**      | 379 JS tests, 182 Rust tests, typecheck 5/5, clippy clean, fmt clean, all governance gates green                 |
-| **Product**     | **PARTIAL**   | 77 of 83 requirements PASS; 3 PARTIAL (capability never built), 3 UNVERIFIED (no executing evidence)             |
+| **Product**     | **PARTIAL**   | 78 of 83 requirements PASS; 3 PARTIAL (capability never built), 2 UNVERIFIED (no executing evidence)             |
 | **Release**     | **NOT READY** | 0 of 13 gates at L3_PRODUCTION_PROVEN; 5 owner-gated                                                             |
 | **Owner Gates** | **5 of 13**   | accessibility, stability_soak, commercial_billing, legal_commercial, external_connectors; 8 owner actions remain |
 
@@ -346,7 +346,7 @@ and the matrix in `docs/FINAL_STATE_MODEL.md` keeps them separate for that reaso
 **Reasoning:**
 
 1. Engineering is sound — all locally runnable gates are green.
-2. Product has capability gaps — 3 PARTIAL (capability never built), 3 UNVERIFIED (no executing evidence).
+2. Product has capability gaps — 3 PARTIAL (capability never built), 2 UNVERIFIED (no executing evidence).
 3. Release is blocked — 0 of 13 gates at L3_PRODUCTION_PROVEN; 5 owner-gated.
 4. No premature completion signals — docs explicitly deny "ALL CONDITIONS SATISFIED" and "RELEASE READY".
 
@@ -383,7 +383,7 @@ description of the work changed.
 
 ### Board Tracking
 
-Issue **#187**, "release: L3 production readiness closure board", carries **17 open items**:
+Issue **#187**, "release: L3 production readiness closure board", carries **16 open items**:
 
 - Release and production controls (rollback drill, production release identity)
 - Real-world product validation (Telegram, LinkedIn, mobile store accounts, payment provider)
@@ -483,7 +483,7 @@ lesson as defects 13–15, applied to code written minutes earlier.
 3. `docs/ACCEPTANCE_MATRIX_V2.md` — Already at correct 83-row count
 4. `release/readiness.json` — Fixed run naming (both CI, not SonarCloud), added `cargoTestsPassedScope`
 5. `docs/RECONCILIATION.md` — Clarified Rust count discrepancy (182 vs 106)
-6. Issue #187 body — Updated to 17 open checkboxes
+6. Issue #187 body — Updated to 16 open checkboxes
 
 ---
 
@@ -503,7 +503,7 @@ listed here so the corrections are findable:
 
 | Retracted claim                          | Correction                                                                                                                                                                                                                        |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The `v1.0.0` tag unblocked `REL-03`      | A tag is not a checksum. `REL-03` stays UNVERIFIED                                                                                                                                                                                |
+| The `v1.0.0` tag unblocked `REL-03`      | Correct at the time — a tag is not a checksum. `REL-03` did eventually close, but only when run `37297712378` published `v1.0.5` with verified checksums, five release runs later                                                 |
 | "15 total gates"                         | 13 — matches `releaseCritical` keys and `GATES.length`                                                                                                                                                                            |
 | "Engineering 8 / Owner 5 / Governance 1" | Two taxonomies conflated. Correct class split is 5 owner / 8 engineering; the nine `verify:*`/coverage checks are not gates                                                                                                       |
 | "L0: 6, L2: 3, L3: 4"                    | Actual is 10 at `L2_VERIFIED`, 3 at `L1_IMPLEMENTED`, 0 at L3; no gate is at L0                                                                                                                                                   |
@@ -516,8 +516,8 @@ measure of how much a self-written summary can be trusted without re-verificatio
 
 ### How far the release pipeline has actually got
 
-Five release runs have now executed. Each got further than the last, and each
-failed one step later than the last:
+Six release runs have now executed. Each got further than the last. The first
+five each died one step later than the last; the sixth completed:
 
 | Run           | Tag      | Reached                  | Outcome                                    |
 | ------------- | -------- | ------------------------ | ------------------------------------------ |
@@ -526,6 +526,7 @@ failed one step later than the last:
 | `37286268618` | `v1.0.2` | `Publish GitHub Release` | failed — no checkout (defect 14)           |
 | `37289634184` | `v1.0.3` | asset upload             | failed — duplicate basenames (defect 15)   |
 | `37293663120` | `v1.0.4` | my own duplicate guard   | failed — word-split names (defect 16)      |
+| `37297712378` | `v1.0.5` | —                        | **success** — published the first release  |
 
 The last three runs are the substantive ones. **`v1.0.2`, `v1.0.3` and `v1.0.4`
 each built all four desktop artifacts successfully** — `windows-2025`,
@@ -539,17 +540,38 @@ fixed. `v1.0.4` cleared the upload selection that `v1.0.3` failed on, confirming
 defect 15 fixed — and then failed on the guard written to prevent defect 15,
 confirming that a fix is not a fix until it has run.
 
-**No GitHub Release exists yet.** `gh release list` returns empty and
-`gh api .../releases` returns `0`. `REL-03` therefore stays `UNVERIFIED` — the
-artifacts exist and are hashed, but a consumer has nothing to verify against.
+**A GitHub Release now exists.** `gh release list` returns exactly one entry:
+`v1.0.5`, a prerelease with 8 assets — seven bundles plus `SHA256SUMS.txt`.
+The published checksums were re-verified independently by downloading the
+file and three assets: every hash matched (`6b8f4d81…`, `1171570d…`,
+`a63d3b02…`), 0 mismatches. **`REL-03` is now `PASS`.**
 
-This does not change the verdict:
+One caveat worth recording: GitHub normalises spaces to dots in uploaded
+asset names, so `ORBIT Marketing OS_1.0.0_amd64.deb` is published as
+`ORBIT.Marketing.OS_1.0.0_amd64.deb` while the checksum file keeps the
+original path. A consumer verifying by filename alone must account for that.
+
+The release verdict is unchanged, and it is worth being explicit about why.
+`REL-03` is a matrix row, not a gate. The 13 release gates live in
+`release/readiness.json` under `releaseCritical` and none of them is
+`REL-03`, so closing it promotes nothing. `stability_soak` — the gate that
+`OPS-02` would satisfy — still needs a self-hosted runner and 24 elapsed
+hours. `REL-02` still needs owner certificates. So:
 
 ```
 production_ready: false
 13 gates · 0 at L3_PRODUCTION_PROVEN · 13 blocked
 ```
 
-Three rows remain UNVERIFIED and three PARTIAL. None is closable by writing more code.
+Two rows remain UNVERIFIED and three PARTIAL. None is closable by writing more code.
 
-The operational tracker is issue **#187**, which carries **17 genuinely open items** — release and production controls, real-world product validation, and operational practices — all of which require actions outside engineering control.
+`REL-03` left the UNVERIFIED set when run `37297712378` published `v1.0.5`, so
+the honest summary of this audit is narrower than it was an hour ago: the
+release pipeline is now known to work end to end, and what remains blocked is
+the set of things this repository cannot do for itself.
+
+The operational tracker is issue **#187**, which carries **16 genuinely open
+items** — release and production controls, real-world product validation, and
+operational practices — all of which require actions outside engineering
+control. The release-tag checksum drill was checked off when `v1.0.5`
+published; the board stands at 16 open / 2 done.

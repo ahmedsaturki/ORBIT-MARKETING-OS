@@ -5,11 +5,18 @@
 **Commit:** `6e6787b6e5fa5590785777f335bfd0dc3a23362e`  
 **Branch:** `audit/verification-2026-10` → merged to `main`
 
-> **Superseded in practice by `v1.0.1`.** This tag never reached the build
+> **Superseded by `v1.0.5`, which published.** This tag never reached the build
 > matrix. PR #213 was squash-merged, so `v1.0.0` is not an ancestor of `main`
-> and its release gate can no longer pass. `v1.0.1` was cut at `07cac578` and
-> released instead; run `37283724466` is the current attempt. This document
-> retains `v1.0.0` as the record of the first failure.
+> and its release gate can no longer pass. Five further tags were cut on the
+> `main` line — `v1.0.1` at `07cac578`, `v1.0.2` at `ad5638ee`, `v1.0.3` at
+> `ea041160`, `v1.0.4` at `3e25a74a`, and `v1.0.5` at `869ecff1`. Run
+> `37297712378` on `v1.0.5` concluded `success` end to end and published the
+> first GitHub Release in this repository's history:
+> https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/releases/tag/v1.0.5
+>
+> This document retains `v1.0.0` as the record of the first failure, and the
+> run-by-run history below as the record of the five defects that stood
+> between it and a published release.
 
 ---
 
@@ -17,9 +24,11 @@
 
 ### REL-03: Checksums match distributed artifacts
 
-**Status: UNVERIFIED (unchanged).** An earlier revision of this document claimed
-the tag unblocked REL-03 and moved `releaseTruth.state` to `PARTIAL`. That was
-wrong and is retracted.
+**Status: PASS.** An earlier revision of this document claimed the tag unblocked
+REL-03 and moved `releaseTruth.state` to `PARTIAL`. That was wrong and is
+retracted — a tag is not a checksum. `REL-03` did eventually close, but only when
+run `37297712378` on tag `v1.0.5` published a real release whose checksums were
+verified independently. Five release runs were required after `v1.0.0`.
 
 `REL-03` reads "Checksums match distributed artifacts", with verification
 method `release verification` and evidence
@@ -130,13 +139,40 @@ their own caches, so the install does not carry over. Fixed by installing
 Chromium in the build job before icon generation, and guarded by a contract test
 that walks every workflow's jobs rather than a hand-picked list.
 
-`Publish GitHub Release` and `Build checksums` were skipped again, so `REL-03`
-remains `UNVERIFIED` — no run has yet produced checksums.
+`Publish GitHub Release` and `Build checksums` were skipped again, so at that
+moment `REL-03` remained `UNVERIFIED` — no run had yet produced checksums.
 
-Closing REL-03 requires a tag on `main` (see the two options above), then a real
-release run: build the desktop artifact, emit checksums, and verify them
-against what was published. Until that execution exists, the honest status is
-UNVERIFIED.
+### Runs three through six, and what each one fixed
+
+| Run           | Tag      | Reached                  | Defect it exposed                              |
+| ------------- | -------- | ------------------------ | ---------------------------------------------- |
+| `37286268618` | `v1.0.2` | `Publish GitHub Release` | no `actions/checkout`, so `gh` had no repo     |
+| `37289634184` | `v1.0.3` | asset upload             | 314 files → 268 basenames, 31 collisions       |
+| `37293663120` | `v1.0.4` | the new duplicate guard  | `xargs -n1` word-split names containing spaces |
+| `37297712378` | `v1.0.5` | —                        | **success**                                    |
+
+Each defect got a fix plus a contract test that walks every workflow rather than
+a hand-picked list, and each fix is itself the next defect: `v1.0.4` failed on
+the guard written for `v1.0.3`. Every build that reached the matrix produced
+valid artifacts and `Build checksums` verified all 314 paths `OK`.
+
+### What `v1.0.5` proved
+
+`REL-03` is now **PASS**, on evidence no earlier claim could rest on:
+
+- A published GitHub Release exists — `gh release list` returns exactly one
+  entry, a prerelease at
+  https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/releases/tag/v1.0.5
+- with 8 assets: AppImage, deb, two dmg, msi, rpm, exe, plus `SHA256SUMS.txt`
+- `Build checksums` ran `sha256sum -c` over every downloaded path, all `OK`
+- **the published checksums were re-verified independently by download** — the
+  `SHA256SUMS.txt` file plus the deb, rpm and exe were fetched and each matched
+  byte for byte: 3 verified, 0 mismatches
+
+One consumer-facing caveat: GitHub normalises spaces to dots in uploaded asset
+names, so `ORBIT Marketing OS_1.0.0_amd64.deb` is published as
+`ORBIT.Marketing.OS_1.0.0_amd64.deb` while the checksum file keeps the original
+spaced path. Verifying by filename alone needs to account for that.
 
 Because that gate sits in the `build` job, a mis-tagged release used to burn
 four Tauri builds across the OS matrix before failing. A pre-flight check now
@@ -204,7 +240,7 @@ Date: Sun Oct 4 16:17:44 2026 +0300
 Release v1.0.0 - Production Proven Readiness Audit Complete
 
 - Engineering: PASS (379 JS, 182 Rust tests, 88.28% coverage)
-- Product: PARTIAL (77 of 83 requirements PASS)
+- Product: PARTIAL (78 of 83 requirements PASS)
 - Release: NOT READY - READY WITH OWNER GATES (0 of 13 gates at L3_PRODUCTION_PROVEN)
 - 5 owner-gated gates: accessibility, stability_soak, commercial_billing, legal_commercial, external_connectors
 ```
@@ -215,7 +251,7 @@ Release v1.0.0 - Production Proven Readiness Audit Complete
 - **Aurora Score:** Not available (no SonarCloud workflow)
 - **Final Delivery Report:** `docs/ORBIT_FINAL_REAUDIT_REPORT.md`
 - **State Model:** `docs/FINAL_STATE_MODEL.md`
-- **Acceptance Matrix:** `docs/ACCEPTANCE_MATRIX_V2.md` (83 rows: 77 PASS, 3 PARTIAL, 3 UNVERIFIED)
+- **Acceptance Matrix:** `docs/ACCEPTANCE_MATRIX_V2.md` (83 IDs: 78 PASS, 3 PARTIAL, 2 UNVERIFIED)
 
 ---
 
@@ -292,6 +328,6 @@ The v1.0.0 tag provides the **first checksum evidence** (REL-03) that can be gen
 
 **FINAL DELIVERY: NOT READY — READY WITH OWNER GATES**
 
-The operational tracker is **issue #187**, which carries **17 genuinely open items**. The tag creation unblocks one of them (REL-03), but five remain at L3 requiring owner action before production release.
+The operational tracker is **issue #187**, which carries **16 genuinely open items**. The tag creation unblocks one of them (REL-03), but five remain at L3 requiring owner action before production release.
 
 All 10 audit phases are complete and documented. Every claim is grounded in command output. No premature completion signals found.
