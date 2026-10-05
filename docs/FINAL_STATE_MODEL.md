@@ -635,10 +635,12 @@ itself is sound.
   while a release-critical gate is below L3, and ignores the field entirely when
   every gate is L3 -- so contract fixtures that model a gate at L3 without
   `releaseTruth` stay valid, and the test that models an impossible verifiedAt
-  date still gets the `Invalid gate levels` error it asserts. Five mutations
-  confirmed three rejections and one control pass; deleting the whole
-  `releaseTruth` object is rejected separately because the schema shape is still
-  required.
+  date still gets the `Invalid gate levels` error it asserts. Six mutations
+  confirmed three rejections and three accepts: `PRODUCTION_READY`, `VERIFIED`,
+  and `PASS` are rejected while blocked, and `UNVERIFIED`, a deleted
+  `releaseTruth.state`, and a missing `releaseTruth` object are each accepted.
+  The schema itself is still validated elsewhere; this guard adds only the
+  state-value constraint while a blocker exists.
 
   `OBSERVED_PRODUCTION.json` carries the same-named field but with a different
   shape (`commercialProductionProven: false`) and it _is_ enforced by the live
