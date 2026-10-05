@@ -16,6 +16,15 @@ claims were checked against the repository.
 > is the authoritative source. Findings below remain valid as history; where a
 > count here differs, the matrix governs.
 >
+> One finding below has since closed: this document records SonarCloud **B** on
+> new code at `source_integrity` and rates it MED severity. That was true on
+> 2026-10-04. Issue #112 closed on 2026-10-03 and `release/readiness.json`
+> records `sonarNewSecurityRating: "A"` with zero open new-code vulnerabilities
+> and the quality gate OK, so `source_integrity`'s real blocker is an exact-SHA
+> L3 evidence reference, not the rating. The B rows below are left as written
+> rather than rewritten; `ACCEPTANCE_MATRIX_V2.md` and `release/readiness.json`
+> govern.
+>
 > Defects closed after this report was written, on this branch: `verify:workspace`
 > was red here (schema pin and three duplicate test helpers); the soak summary
 > reported requested minutes as elapsed; the soak harness aborted on a
