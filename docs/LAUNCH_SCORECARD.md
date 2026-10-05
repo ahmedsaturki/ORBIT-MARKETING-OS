@@ -2,6 +2,17 @@
 
 Updated: 2026-09-29.
 
+> **Superseded (state as of 2026-09-29).** One row below has since closed: the
+> SonarCloud main quality gate reads B on new code, required A. Issue #112 closed
+> on 2026-10-03 and `release/readiness.json` now records
+> `sonarNewSecurityRating: "A"` with zero open new-code vulnerabilities and the
+> quality gate OK, so that row is no longer accurate as current state. The row is
+> left as written because this scorecard is a dated snapshot, and `source_integrity`
+> remains blocked regardless — on an exact-SHA L3 evidence reference, not the
+> rating. For the current gate distribution see `release/readiness.json` and
+> `GATE_TRACKING.md`: 13 gates, 3 at L1, 10 at L2, 0 at L3, 13 blocked,
+> `production_ready: false`.
+
 Legend: IMPLEMENTED = source capability exists; VERIFIED = fresh execution evidence exists; UNVERIFIED = required runtime evidence is missing; PARTIAL = mixed evidence; BLOCKED = external prerequisite prevents completion.
 
 | Gate                                         | State      | Evidence / blocker                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
