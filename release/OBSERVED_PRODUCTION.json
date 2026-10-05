@@ -35,7 +35,10 @@
   ],
   "runtimeErrors": {
     "window": "7d",
-    "count": 0
+    "count": 0,
+    "verifiedBy": "owner",
+    "machineVerifiable": false,
+    "note": "Owner-attested from the Vercel dashboard. No endpoint in this repository exposes error telemetry, so scripts/verify-live-production-observation.mjs cannot and does not check this figure; it validates the shape only. Treat 7d/0 as an attested claim, not a verified one."
   },
   "evidenceRefs": [
     "https://vercel.com/jmls-projects/orbit-marketing-os/9KyEbWzvAYvhvzZPmtXNJXrP16xV",
