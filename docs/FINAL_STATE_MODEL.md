@@ -320,6 +320,36 @@ an environment without a desktop host cannot run this suite, but the suite
 itself is sound.
 
 - **OMP "unknown model" warning.** Emitted when a primary model is unavailable and the runtime walks the fallback chain in `C:\Users\powertech\.omp\agent\config.yml`. This is a local harness condition, not an application defect. No repository change is warranted. Verified by reading RE_AUDIT_REPORT.md B6.
+- **What an L3 evidence reference has to mean.** `scripts/verify-release-readiness.mjs`
+  now refuses an L3 claim whose `verifiedAt` is older than 30 days or dated in
+  the future, so the "exact verification timestamp" in `.omp/RULES.md:1` is
+  enforced rather than merely formatted. Two properties remain unenforced, and
+  both are deliberate stopping points rather than oversights:
+
+  - **Substance.** Any non-empty string passes as an `evidenceRefs` entry. The
+    verifier cannot know whether a reference supports the gate it is attached
+    to without fetching and interpreting it, so a ref to an unrelated run
+    satisfies the check. Enforcing relevance needs either per-gate ref schemas
+    or an explicit maintainer assertion; a URL-pattern heuristic would give
+    false assurance, which is worse than the honest gap.
+  - **Currency is checked, relevance is not.** The 30-day window bounds how old
+    evidence may be, not whether it is the right evidence. A claim can therefore
+    cite fresh, well-formed, entirely irrelevant references.
+
+  In practice the current gate set is unaffected: all 13 gates sit below L3, so
+  no claim depends on this. It is recorded because the next person to promote a
+  gate will meet a verifier that is stricter than it was and looser than
+  `.omp/RULES.md` reads.
+
+- **The 7-day production runtime error count.** `release/OBSERVED_PRODUCTION.json`
+  records `runtimeErrors: {window: "7d", count: 0}`. No endpoint in this
+  repository exposes error telemetry, so that figure is owner-attested from the
+  Vercel dashboard and the live verifier checks its shape only — it reports
+  `"runtimeErrorsMachineVerified": false` and now refuses any `verifiedBy` other
+  than `owner`. The deployment itself is genuinely verified: `/`,
+  `/api/health.json` and `/api/release.json` were re-requested and all return
+  200 with `releaseSha` matching the recorded `9ba07318` and provenance
+  `VERCEL_GIT_COMMIT_SHA`.
 
 ## 7. Owner Actions to Close Release
 
