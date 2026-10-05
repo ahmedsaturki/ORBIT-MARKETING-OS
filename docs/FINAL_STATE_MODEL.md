@@ -503,18 +503,20 @@ itself is sound.
     has **no secrets at all** — so that workflow would fail on every run until
     the token exists. That is an owner action, and it is a plausible reason it
     was never merged rather than an oversight.
-  - #196 also edits `ci.yml` to replace
-    `pnpm test:node-forge-audit-exception` with
-    `pnpm test:dependency-audit-exceptions`. Neither that script nor
-    `scripts/dependency-audit-exceptions.test.mjs` exists on `main`, so merging
-    #196 as it stands would break `ci.yml` rather than improve it.
 
+- #196 renames the ci.yml step from `test:node-forge-audit-exception` to
+  `test:dependency-audit-exceptions` and adds both the script and the test
+  file in the same PR, so that rename does not break CI. The PR is still
+  unmerged because the scorecard workflow declares `publish_results: true`,
+  which needs a `SCORECARD_TOKEN` secret that does not exist in this
+  repository. The owner must either create the secret or set the flag to
+  false before the workflow can succeed.
   `dependency-review.yml` alone is self-contained: it needs no secrets, runs on
   `pull_request` against `main`, and its action is pinned by digest. It is the
   one item here that could land without owner input or new code — but it is
-  bundled in #196 with the Scorecard workflow and the CI rename, so it has to be
-  separated first. Recorded rather than done, because unbundling someone else's
-  stale PR is a judgement call the owner should make.
+  bundled in #196 with the Scorecard workflow, so it has to be separated first.
+  Recorded rather than done, because unbundling someone else's stale PR is a
+  judgement call the owner should make.
 
 - **Two tracking issues carried a closed item as remaining work.** Issues #6 and
   #24 both list twelve remaining release-critical items, and both list
