@@ -310,3 +310,42 @@ test("every job that builds the desktop installs Playwright browsers first", asy
     `expected 2 desktop-building jobs, found ${covered}`,
   );
 });
+
+test("every job that runs a git-dependent gh command checks out the repo", async () => {
+  // `gh release create` resolves the repository from git and `--generate-notes`
+  // reads history. Run 37286268618 built all four desktop artifacts and
+  // verified 314 checksums, then failed on the publish line with
+  // "failed to run git: fatal: not a git repository" because the job never
+  // checked out. Scanning every job, not a hand-picked list, so the same gap
+  // cannot appear in another workflow.
+  const files = await workflowFiles();
+  const offenders = [];
+  let covered = 0;
+
+  for (const file of files) {
+    for (const job of jobBlocks(await text(file))) {
+      // `gh release create` sits on a continuation line of a `run: |`
+      // block, so scan the whole job and drop comment lines.
+      const commands = job.body
+        .split("\n")
+        .filter((l) => !/^\s*#/.test(l))
+        .join("\n");
+      // `gh release`, `gh api` and `gh pr` all shell out to git for repo
+      // resolution; `gh run`/`gh auth` do not need a working tree.
+      const needsGit = /\bgh (release|api|pr|issue|workflow)\b/.test(commands);
+      if (!needsGit) continue;
+
+      covered++;
+      if (!/actions\/checkout@/.test(job.body))
+        offenders.push(`${file} job ${job.name}`);
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    "these jobs run git-dependent `gh` commands but never `actions/checkout`, " +
+      "so they fail with 'fatal: not a git repository'",
+  );
+  assert.ok(covered >= 1, `expected at least one such job, found ${covered}`);
+});

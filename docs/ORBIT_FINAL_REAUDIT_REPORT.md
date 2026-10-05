@@ -397,21 +397,22 @@ The seven owner actions above and the remaining checkboxes are tracked together;
 
 ### Appendix A: Defects Found and Fixed During This Audit
 
-| #   | Defect                                                                                                                             | Class                                          | Status |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------ |
-| 1   | `soak.ts` recorded **requested** minutes as elapsed                                                                                | Verification asserting what it hadn't measured | Fixed  |
-| 2   | Soak harness aborted on a claim-timestamp race                                                                                     | Test-harness bug                               | Fixed  |
-| 3   | Readiness evidence could cite files that no longer exist                                                                           | Unenforced truth claim                         | Fixed  |
-| 4   | `conversation_upsert` audited under the global workspace, not its argument                                                         | Cross-tenant audit write                       | Fixed  |
-| 5   | `vitest.config.ts` missing `include` made the core suite double-count                                                              | Test-scope defect                              | Fixed  |
-| 6   | Build ran before `playwright install` in four workflows                                                                            | Ordering bug — build could not succeed         | Fixed  |
-| 7   | `spawnSync` with `shell: true` at `scripts/build-tauri.mjs:83`                                                                     | PATH injection vector (Sonar S4036)            | Fixed  |
-| 8   | Public web pages had no skip link (WCAG 2.4.1)                                                                                     | Accessibility                                  | Fixed  |
-| 9   | Public web pages exposed no `banner`/`navigation`/`contentinfo` landmarks (WCAG 1.3.1)                                             | Accessibility                                  | Fixed  |
-| 10  | Release workflow ran `Browser E2E` before `pnpm build`; run `37205123765` failed on tag `v1.0.0`                                   | Release pipeline never reaches publish         | Fixed  |
-| 11  | `release-mobile.yml`, `self-hosted-verify.yml` and `web-release-selfhosted.yml` each contained `\r\r\n`                            | Three workflows unloadable                     | Fixed  |
-| 12  | `release-mobile.yml` set `cancel-in-progress: true`; group embedded the workflow's own filename                                    | Mobile release discards its own evidence       | Fixed  |
-| 13  | `release-desktop.yml`'s `build` job had no `playwright install`; run `37283724466` failed at `Build desktop` on all four platforms | Release build produces no artifact             | Fixed  |
+| #   | Defect                                                                                                                                                                                            | Class                                          | Status |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------ |
+| 1   | `soak.ts` recorded **requested** minutes as elapsed                                                                                                                                               | Verification asserting what it hadn't measured | Fixed  |
+| 2   | Soak harness aborted on a claim-timestamp race                                                                                                                                                    | Test-harness bug                               | Fixed  |
+| 3   | Readiness evidence could cite files that no longer exist                                                                                                                                          | Unenforced truth claim                         | Fixed  |
+| 4   | `conversation_upsert` audited under the global workspace, not its argument                                                                                                                        | Cross-tenant audit write                       | Fixed  |
+| 5   | `vitest.config.ts` missing `include` made the core suite double-count                                                                                                                             | Test-scope defect                              | Fixed  |
+| 6   | Build ran before `playwright install` in four workflows                                                                                                                                           | Ordering bug — build could not succeed         | Fixed  |
+| 7   | `spawnSync` with `shell: true` at `scripts/build-tauri.mjs:83`                                                                                                                                    | PATH injection vector (Sonar S4036)            | Fixed  |
+| 8   | Public web pages had no skip link (WCAG 2.4.1)                                                                                                                                                    | Accessibility                                  | Fixed  |
+| 9   | Public web pages exposed no `banner`/`navigation`/`contentinfo` landmarks (WCAG 1.3.1)                                                                                                            | Accessibility                                  | Fixed  |
+| 10  | Release workflow ran `Browser E2E` before `pnpm build`; run `37205123765` failed on tag `v1.0.0`                                                                                                  | Release pipeline never reaches publish         | Fixed  |
+| 11  | `release-mobile.yml`, `self-hosted-verify.yml` and `web-release-selfhosted.yml` each contained `\r\r\n`                                                                                           | Three workflows unloadable                     | Fixed  |
+| 12  | `release-mobile.yml` set `cancel-in-progress: true`; group embedded the workflow's own filename                                                                                                   | Mobile release discards its own evidence       | Fixed  |
+| 13  | `release-desktop.yml`'s `build` job had no `playwright install`; run `37283724466` failed at `Build desktop` on all four platforms                                                                | Release build produces no artifact             | Fixed  |
+| 14  | `release-desktop.yml`'s `publish` job had no `actions/checkout`; run `37286268618` built all four artifacts and 314 checksums, then `gh release create` failed with `fatal: not a git repository` | Release produces no published artifact         | Fixed  |
 
 Three further items that appeared in an earlier revision of this appendix —
 "`pnpm audit` red in five workflows", "`verify:workspace` red in eleven
@@ -428,9 +429,20 @@ The count is therefore **four** fixed defects carried into this audit
 (1, 2, 3, 4) plus three found by CI (5, 6, 7), plus five found later in this
 audit (8–12: two WCAG defects, the release workflow step-ordering failure on
 tag `v1.0.0`, the `\r\r\n` corruption that made three workflows unloadable, and
-`release-mobile.yml` cancelling its own release runs mid-flight) —
-**twelve in total**, not "seven defects found in code", which an earlier
-revision of this document asserted.
+`release-mobile.yml` cancelling its own release runs mid-flight), plus two more
+found by the first release runs that ever executed (13–14: the `build` job
+never installed Playwright browsers, and the `publish` job never checked out the
+repository) — **fourteen in total**, not "seven defects found in code", which an
+earlier revision of this document asserted.
+
+Defects 13 and 14 are the strongest evidence in this report for why reading a
+pipeline is not the same as running it. Both sat in code paths that no prior run
+had reached: run `37205123765` died at `Browser E2E` and never built, and run
+`37283724466` died building. Only after both were fixed did run `37286268618`
+reach the end of the workflow — producing all four desktop artifacts and 314
+verified checksums before failing on the checkout. A pipeline that has never
+completed is not a pipeline that works; it is a pipeline that has not been
+observed past its last known-good point.
 
 ### Appendix B: Claims From Prior Reporting That Do Not Survive
 
@@ -468,18 +480,46 @@ This document was re-checked against command output after its first revision and
 five of its own claims did not survive. They are corrected in place above and
 listed here so the corrections are findable:
 
-| Retracted claim                          | Correction                                                                                                                  |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| The `v1.0.0` tag unblocked `REL-03`      | A tag is not a checksum. `REL-03` stays UNVERIFIED                                                                          |
-| "15 total gates"                         | 13 — matches `releaseCritical` keys and `GATES.length`                                                                      |
-| "Engineering 8 / Owner 5 / Governance 1" | Two taxonomies conflated. Correct class split is 5 owner / 8 engineering; the nine `verify:*`/coverage checks are not gates |
-| "L0: 6, L2: 3, L3: 4"                    | Actual is 10 at `L2_VERIFIED`, 3 at `L1_IMPLEMENTED`, 0 at L3; no gate is at L0                                             |
-| "14 of 15" and "16 of 17" checks pass    | 16 checks total: 11 pass, 1 fail (Snyk quota), 3 pending, 1 skipped                                                         |
+| Retracted claim                          | Correction                                                                                                                                                                                                                        |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The `v1.0.0` tag unblocked `REL-03`      | A tag is not a checksum. `REL-03` stays UNVERIFIED                                                                                                                                                                                |
+| "15 total gates"                         | 13 — matches `releaseCritical` keys and `GATES.length`                                                                                                                                                                            |
+| "Engineering 8 / Owner 5 / Governance 1" | Two taxonomies conflated. Correct class split is 5 owner / 8 engineering; the nine `verify:*`/coverage checks are not gates                                                                                                       |
+| "L0: 6, L2: 3, L3: 4"                    | Actual is 10 at `L2_VERIFIED`, 3 at `L1_IMPLEMENTED`, 0 at L3; no gate is at L0                                                                                                                                                   |
+| "14 of 15" and "16 of 17" checks pass    | Re-checked against the Checks API on `524f20e3`: **13 check runs — 8 success, 4 cancelled, 1 neutral**. CodeRabbit and Snyk register no check run at all, so a PR body claiming "13 checks incl. CodeRabbit" overstated it by one |
 
 The recurring failure is the one this audit exists to catch: a number asserted
 beside a real artefact and never checked against it. Five instances were found in
 this report _after_ it was written as the audit's final word, which is the honest
 measure of how much a self-written summary can be trusted without re-verification.
+
+### The pipeline has now reached its end for the first time
+
+Run `37286268618` (tag `v1.0.2`, 2026-10-05T08:51:36Z) is the first release
+run in this repository's history to reach the last step of the workflow:
+
+| Job                      | Conclusion | Note                                          |
+| ------------------------ | ---------- | --------------------------------------------- |
+| `Release quality gate`   | success    | 29/29 steps, including `Browser E2E`          |
+| `Build ubuntu-24.04`     | success    | first artifact ever built                     |
+| `Build macos-15`         | success    | first artifact ever built                     |
+| `Build macos-15-intel`   | success    | first artifact ever built                     |
+| `Build windows-2025`     | success    | first artifact ever built                     |
+| `Publish GitHub Release` | failure    | `gh release create` — no checkout (defect 14) |
+
+`Build checksums` inside that job **succeeded**: `sha256sum -c` ran over the
+downloaded artifacts and every one of the **314** paths returned `OK`, covering
+dmg, msi, nsis, rpm and AppImage bundles. The checksum machinery is therefore
+proven against real artifacts, not fixtures.
+
+This does not change the verdict. `REL-03` stays `UNVERIFIED` because the
+artifacts were never attached to a release, so a consumer has nothing to verify
+against. Everything else is unchanged:
+
+```
+production_ready: false
+13 gates · 0 at L3_PRODUCTION_PROVEN · 13 blocked
+```
 
 Three rows remain UNVERIFIED and three PARTIAL. None is closable by writing more code.
 
