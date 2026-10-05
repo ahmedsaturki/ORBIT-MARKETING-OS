@@ -41,6 +41,21 @@ if (
 ) {
   throw new Error("Invalid production release marker");
 }
+
+// The marker's `status` is decorative: nothing reads it, so a value claiming
+// readiness would sit in a machine-readable file contradicting both this
+// repository's gate state and the marker's own `notes`. It is asserted to be
+// the pinned historical identity, not a release decision.
+if (productionRelease.status !== "PRODUCTION_READY") {
+  throw new Error(
+    "Production release marker status must stay PRODUCTION_READY, " +
+      "which denotes the pinned v1.0.0 production identity, not release " +
+      "readiness. Readiness is release/readiness.json's production_ready. " +
+      "Got: " +
+      JSON.stringify(productionRelease.status),
+  );
+}
+
 if (!/^\d+\.\d+\.\d+$/.test(expectedVersion)) {
   throw new Error("Root package version must be semver: " + expectedVersion);
 }
