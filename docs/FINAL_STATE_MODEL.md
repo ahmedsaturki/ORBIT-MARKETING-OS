@@ -166,6 +166,26 @@ repository's history.
 | `OPS-02` | The 24-hour soak run        | `stability-soak.yml` is `workflow_dispatch` on a `self-hosted` runner |
 | `REL-02` | Signed, notarized artifacts | Requires owner-controlled certificates                                |
 
+**A completed 24-hour soak run exists, and it is not evidence.** Run `36260302282`
+("ops: add one-shot push trigger for 24h main soak evidence") started
+2026-09-26T17:48:00Z and its `soak` job ran until 2026-09-27T17:48:00Z — the
+full 24 hours — before the run was cancelled. It is the only run of
+`ORBIT Stability Soak` that has ever executed, and its duration is exactly what
+`OPS-02` asks for, so it is easy to mistake for a closed item. It is not:
+
+- it was triggered by a `push` to `ops/soak-trigger-20260926`, a branch that
+  still exists on the remote and is not `main`;
+- it predates `c3e4ac16` ("make 24h evidence fail-closed and durable", #105),
+  which landed the next day and added the `test "${{ hours }}" = "24"`
+  fail-closed assertion, the `github.actor == 'ahmedsaturki'` and `ref == 'main'`
+  gates, and `pnpm test:soak:evidence`;
+- it therefore carries none of the durability or exact-SHA binding those changes
+  exist to enforce.
+
+Until a dispatch run of the _current_ workflow completes on `main`, `OPS-02`
+stays UNVERIFIED. A 24-hour wall-clock duration is not the requirement; durable,
+fail-closed evidence bound to an exact SHA is.
+
 ### The three PARTIAL rows
 
 | ID         | Evidence that exists                                   | What is still missing                                                 |
