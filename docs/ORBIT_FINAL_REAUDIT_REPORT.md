@@ -413,6 +413,7 @@ The seven owner actions above and the remaining checkboxes are tracked together;
 | 12  | `release-mobile.yml` set `cancel-in-progress: true`; group embedded the workflow's own filename                                                                                                   | Mobile release discards its own evidence       | Fixed  |
 | 13  | `release-desktop.yml`'s `build` job had no `playwright install`; run `37283724466` failed at `Build desktop` on all four platforms                                                                | Release build produces no artifact             | Fixed  |
 | 14  | `release-desktop.yml`'s `publish` job had no `actions/checkout`; run `37286268618` built all four artifacts and 314 checksums, then `gh release create` failed with `fatal: not a git repository` | Release produces no published artifact         | Fixed  |
+| 15  | `publish` uploaded every file under `release-assets` including the AppImage `AppDir/` tree; 314 paths → 268 unique basenames, 31 collisions, so run `37289634184` died on `HTTP 404`              | Release upload aborts on duplicate names       | Fixed  |
 
 Three further items that appeared in an earlier revision of this appendix —
 "`pnpm audit` red in five workflows", "`verify:workspace` red in eleven
@@ -429,31 +430,40 @@ The count is therefore **four** fixed defects carried into this audit
 (1, 2, 3, 4) plus three found by CI (5, 6, 7), plus five found later in this
 audit (8–12: two WCAG defects, the release workflow step-ordering failure on
 tag `v1.0.0`, the `\r\r\n` corruption that made three workflows unloadable, and
-`release-mobile.yml` cancelling its own release runs mid-flight), plus two more
-found by the first release runs that ever executed (13–14: the `build` job
-never installed Playwright browsers, and the `publish` job never checked out the
-repository) — **fourteen in total**, not "seven defects found in code", which an
-earlier revision of this document asserted.
+`release-mobile.yml` cancelling its own release runs mid-flight), plus three more
+found by the first release runs that ever executed (13–15: the `build` job
+never installed Playwright browsers, the `publish` job never checked out the
+repository, and the publish step uploaded every file inside the bundles so
+duplicate asset names aborted the upload) — **fifteen in total**, not "seven
+defects found in code", which an earlier revision of this document asserted.
 
-Defects 13 and 14 are the strongest evidence in this report for why reading a
-pipeline is not the same as running it. Both sat in code paths that no prior run
-had reached: run `37205123765` died at `Browser E2E` and never built, and run
-`37283724466` died building. Only after both were fixed did run `37286268618`
-reach the end of the workflow — producing all four desktop artifacts and 314
-verified checksums before failing on the checkout. A pipeline that has never
-completed is not a pipeline that works; it is a pipeline that has not been
-observed past its last known-good point.
+Defects 13–15 are the strongest evidence in this report for why reading a
+pipeline is not the same as running it. All three sat in code paths that no
+prior run had reached, and each surfaced only because the run got one step
+further than any run before it:
+
+| Run           | Reached                  | Died because                         |
+| ------------- | ------------------------ | ------------------------------------ |
+| `37205123765` | `Browser E2E`            | E2E ran before the build (defect 10) |
+| `37283724466` | all four `Build` jobs    | no Playwright install (defect 13)    |
+| `37286268618` | `Publish GitHub Release` | no checkout (defect 14)              |
+| `37289634184` | asset upload             | duplicate basenames (defect 15)      |
+
+A pipeline that has never completed is not a pipeline that works; it is a
+pipeline that has not been observed past its last known-good point. Four runs
+were needed to reach the final line of this workflow, and the last one still
+failed on it.
 
 ### Appendix B: Claims From Prior Reporting That Do Not Survive
 
-| Claim                               | Reality                                                                                        |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------- |
-| "ALL CONDITIONS SATISFIED"          | Unsupported. 0 of 13 gates at L3                                                               |
-| "RELEASE READY"                     | Contradicts the repository's own release rule                                                  |
-| "1046 tests passing"                | Its own parts sum to **1151**; no run produces 1046                                            |
-| "87 requirement IDs"                | The matrix defines **83**                                                                      |
-| "609 test files"                    | Actual: **89** tracked test files                                                              |
-| "No engineering changes are needed" | **False** — thirteen defects listed in Appendix A were found in code, three of them only by CI |
+| Claim                               | Reality                                                                                                                 |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| "ALL CONDITIONS SATISFIED"          | Unsupported. 0 of 13 gates at L3                                                                                        |
+| "RELEASE READY"                     | Contradicts the repository's own release rule                                                                           |
+| "1046 tests passing"                | Its own parts sum to **1151**; no run produces 1046                                                                     |
+| "87 requirement IDs"                | The matrix defines **83**                                                                                               |
+| "609 test files"                    | Actual: **89** tracked test files                                                                                       |
+| "No engineering changes are needed" | **False** — fifteen defects listed in Appendix A were found in code, three of them only by running the release pipeline |
 
 ### Appendix C: Files Modified in This Audit
 
@@ -493,28 +503,34 @@ beside a real artefact and never checked against it. Five instances were found i
 this report _after_ it was written as the audit's final word, which is the honest
 measure of how much a self-written summary can be trusted without re-verification.
 
-### The pipeline has now reached its end for the first time
+### How far the release pipeline has actually got
 
-Run `37286268618` (tag `v1.0.2`, 2026-10-05T08:51:36Z) is the first release
-run in this repository's history to reach the last step of the workflow:
+Four release runs have now executed. Each got further than the last, and each
+failed one step later than the last:
 
-| Job                      | Conclusion | Note                                          |
-| ------------------------ | ---------- | --------------------------------------------- |
-| `Release quality gate`   | success    | 29/29 steps, including `Browser E2E`          |
-| `Build ubuntu-24.04`     | success    | first artifact ever built                     |
-| `Build macos-15`         | success    | first artifact ever built                     |
-| `Build macos-15-intel`   | success    | first artifact ever built                     |
-| `Build windows-2025`     | success    | first artifact ever built                     |
-| `Publish GitHub Release` | failure    | `gh release create` — no checkout (defect 14) |
+| Run           | Tag      | Reached                  | Outcome                                    |
+| ------------- | -------- | ------------------------ | ------------------------------------------ |
+| `37205123765` | `v1.0.0` | `Browser E2E`            | failed — E2E ran before the build          |
+| `37283724466` | `v1.0.1` | all four `Build` jobs    | failed — no Playwright install (defect 13) |
+| `37286268618` | `v1.0.2` | `Publish GitHub Release` | failed — no checkout (defect 14)           |
+| `37289634184` | `v1.0.3` | asset upload             | failed — duplicate basenames (defect 15)   |
 
-`Build checksums` inside that job **succeeded**: `sha256sum -c` ran over the
-downloaded artifacts and every one of the **314** paths returned `OK`, covering
-dmg, msi, nsis, rpm and AppImage bundles. The checksum machinery is therefore
-proven against real artifacts, not fixtures.
+The last two runs are the substantive ones. **`v1.0.2` and `v1.0.3` both built
+all four desktop artifacts successfully** — `windows-2025`, `macos-15`,
+`macos-15-intel` and `ubuntu-24.04` — and both ran `Build checksums`, where
+`sha256sum -c` verified **every** one of the 314 downloaded paths `OK`. The
+checksum machinery is proven against real artifacts, not fixtures.
 
-This does not change the verdict. `REL-03` stays `UNVERIFIED` because the
-artifacts were never attached to a release, so a consumer has nothing to verify
-against. Everything else is unchanged:
+`v1.0.3` additionally cleared the checkout that `v1.0.2` failed on, so defect 14
+is confirmed fixed in a real run; it then failed on the upload for a reason that
+was never reachable before, because no prior run had produced artifacts to
+upload.
+
+**No GitHub Release exists yet.** `gh release list` returns empty and
+`gh api .../releases` returns `0`. `REL-03` therefore stays `UNVERIFIED` — the
+artifacts exist and are hashed, but a consumer has nothing to verify against.
+
+This does not change the verdict:
 
 ```
 production_ready: false
