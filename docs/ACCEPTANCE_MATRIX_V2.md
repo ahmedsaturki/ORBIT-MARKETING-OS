@@ -103,8 +103,14 @@ has none of those duplicate helpers, and its gate passes. The upstream braces
 audit exception likewise already exists (`3978c0fc`), so the one added here is
 redundant against the remote. Read `FINAL_STATE_MODEL.md` before merging.
 
-`OPS-02` (24h stability) is `UNVERIFIED` because the soak workflow is defined but
-has no completed 24-hour run; it needs a self-hosted runner and elapsed time.
+`OPS-02` (24h stability) is `UNVERIFIED` because the soak workflow has no
+completed 24-hour run **of the current workflow on `main`**. One run,
+`36260302282`, did execute for the full 24 hours and was then cancelled, but it
+was triggered by a push to `ops/soak-trigger-20260926` and predates `c3e4ac16`
+(#105), which added the fail-closed `hours = 24` assertion, the actor/ref gates
+and the evidence-durability test. Elapsed time alone was never the requirement;
+durable evidence bound to an exact SHA is. It needs a self-hosted runner and a
+dispatch run that completes.
 `REL-03` was in the same position until run `37297712378` published tag
 `v1.0.5` with real, independently re-verified checksums. Both remain tracked
 as gates in `release/readiness.json` — `stability_soak` is still open, which is
