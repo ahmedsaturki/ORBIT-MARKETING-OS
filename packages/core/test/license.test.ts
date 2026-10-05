@@ -260,4 +260,124 @@ describe("offline license verification", () => {
     expect(result.valid).toBe(false);
     expect(result.reason).toBe("expired");
   });
+
+  it("rejects a license whose signed payload was mutated", async () => {
+    const keyPair = (await crypto.subtle.generateKey(
+      { name: "Ed25519" },
+      true,
+      ["sign", "verify"],
+    )) as CryptoKeyPair;
+    const payload = {
+      licenseId: "lic-3",
+      plan: "basic" as const,
+      subject: "customer-1",
+      issuedAt: "2026-01-01T00:00:00.000Z",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      maxDevices: 1,
+      accountLimit: 5,
+      features: [],
+    };
+    const publicKey = new Uint8Array(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    );
+    const canonical = new TextEncoder().encode(
+      JSON.stringify({
+        licenseId: payload.licenseId,
+        plan: payload.plan,
+        subject: payload.subject,
+        issuedAt: payload.issuedAt,
+        expiresAt: payload.expiresAt,
+        maxDevices: payload.maxDevices,
+        accountLimit: payload.accountLimit,
+        features: [...payload.features],
+      }),
+    );
+    const signature = new Uint8Array(
+      await crypto.subtle.sign("Ed25519", keyPair.privateKey, canonical),
+    );
+    const token = createLicenseToken(payload, signature);
+
+    const untampered = await verifyLicenseToken(token, publicKey, {
+      deviceCount: 1,
+      accountCount: 1,
+      now: new Date("2027-01-01T00:00:00.000Z"),
+    });
+    expect(untampered.valid).toBe(true);
+
+    const [body, signaturePart] = token.split(".") as [string, string];
+    const decoded = JSON.parse(
+      Buffer.from(body, "base64url").toString("utf8"),
+    ) as typeof payload;
+    const elevated = Buffer.from(
+      JSON.stringify({ ...decoded, plan: "pro", accountLimit: 500 }),
+      "utf8",
+    ).toString("base64url");
+
+    const tampered = await verifyLicenseToken(
+      `${elevated}.${signaturePart}`,
+      publicKey,
+      {
+        deviceCount: 1,
+        accountCount: 1,
+        now: new Date("2027-01-01T00:00:00.000Z"),
+      },
+    );
+
+    expect(tampered.valid).toBe(false);
+    expect(tampered.reason).toBe("bad_signature");
+  });
+
+  it("rejects a license signed by an untrusted key", async () => {
+    const trusted = (await crypto.subtle.generateKey(
+      { name: "Ed25519" },
+      true,
+      ["sign", "verify"],
+    )) as CryptoKeyPair;
+    const attacker = (await crypto.subtle.generateKey(
+      { name: "Ed25519" },
+      true,
+      ["sign", "verify"],
+    )) as CryptoKeyPair;
+    const payload = {
+      licenseId: "lic-4",
+      plan: "pro" as const,
+      subject: "customer-1",
+      issuedAt: "2026-01-01T00:00:00.000Z",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      maxDevices: 99,
+      accountLimit: 9999,
+      features: ["analytics"],
+    };
+    const trustedPublicKey = new Uint8Array(
+      await crypto.subtle.exportKey("raw", trusted.publicKey),
+    );
+    const canonical = new TextEncoder().encode(
+      JSON.stringify({
+        licenseId: payload.licenseId,
+        plan: payload.plan,
+        subject: payload.subject,
+        issuedAt: payload.issuedAt,
+        expiresAt: payload.expiresAt,
+        maxDevices: payload.maxDevices,
+        accountLimit: payload.accountLimit,
+        features: [...payload.features],
+      }),
+    );
+    const forgedSignature = new Uint8Array(
+      await crypto.subtle.sign("Ed25519", attacker.privateKey, canonical),
+    );
+
+    const result = await verifyLicenseToken(
+      createLicenseToken(payload, forgedSignature),
+      trustedPublicKey,
+      {
+        deviceCount: 1,
+        accountCount: 1,
+        now: new Date("2027-01-01T00:00:00.000Z"),
+      },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe("bad_signature");
+  });
 });

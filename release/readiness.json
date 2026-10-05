@@ -13,11 +13,11 @@
       "level": "L2_VERIFIED",
       "evidence": [
         "CI run 37134186892 on the provenance-origin-taint change: ci and security:scan both green",
-        "SonarCloud analysis run 37133543482 completed success on merged main b3327242",
+        "CI run 37133543482 (push to main) completed success on b3327242 with jobs ci, security:scan and Rust quality all green",
         "pnpm audit --audit-level=moderate green under the governed node-forge exception (2 allowlisted advisories, hash-pinned patch, review dates 2026-10-03)",
-        "SonarCloud quality gate on main is OK: new_security_rating A, zero open new-code vulnerabilities (issue #112 closed)"
+        "SonarCloud quality gate on main is OK: new_security_rating A, zero open new-code vulnerabilities (issue #112 closed 2026-10-03T16:04:43Z). SonarCloud status is reported by an external GitHub App, not by a workflow in this repository, so it cannot be re-derived from these CI runs"
       ],
-      "notes": "Current main passed the full local gate battery on Windows (frozen install, verify:workspace, verify:release, verify:readiness, security:scan, typecheck, lint, test, test:surface, test:runtime, test:performance, test:exec-trusted, test:script-contracts, test:security:scan, build, test:e2e, triage:release, cargo test 105/105, cargo clippy -D warnings, cargo fmt --check) and the matching CI/security cycle on run 37134186892. Local `pnpm format:check` fails only because core.autocrlf=true rewrites 325 files to CRLF; the same command passes in CI on Ubuntu and is the authoritative signal. The SonarCloud prerequisite is met: the quality gate on main reports new_security_rating A with zero open new-code vulnerabilities, verified on merged main 992e1b64. The originating finding was jssecurity:S5145 (log injection, not SSRF) in the production-provenance verifier; it was fixed in PR #211 with a behavioral contract that fails on any future unsanitized log site, and #112 is closed with that evidence.",
+      "notes": "Current main passed the full local gate battery on Windows (frozen install, verify:workspace, verify:release, verify:readiness, security:scan, typecheck, lint, test, test:surface, test:runtime, test:performance, test:exec-trusted, test:script-contracts, test:security:scan, build, test:e2e, triage:release, cargo test 182/182, cargo clippy -D warnings, cargo fmt --check) and the matching CI/security cycle on run 37134186892. Local `pnpm format:check` fails only because core.autocrlf=true rewrites 325 files to CRLF; the same command passes in CI on Ubuntu and is the authoritative signal. The SonarCloud prerequisite is met: the quality gate on main reports new_security_rating A with zero open new-code vulnerabilities, verified on merged main 992e1b64. The originating finding was jssecurity:S5145 (log injection, not SSRF) in the production-provenance verifier; it was fixed in PR #211 with a behavioral contract that fails on any future unsanitized log site, and #112 is closed with that evidence.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37134186892",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37133543482",
@@ -62,9 +62,9 @@
         "pnpm test passed",
         "pnpm test:surface passed (orbit_cli_mcp_surface_smoke=PASS) after repairing the Windows pnpm spawn",
         "pnpm test:e2e passed: 24 passed, 10 skipped",
-        "Acceptance matrix restructured: all 87 IDs carry Status (76 PASS / 10 PARTIAL / 1 UNVERIFIED)"
+        "Acceptance matrix reconciled at 83 IDs (77 PASS / 3 PARTIAL / 3 UNVERIFIED); 379 JS tests and 182 Rust tests execute, and core vitest collection is pinned so local runs cannot double-count compiled copies in dist/ (an earlier 549/527 figure did exactly that)"
       ],
-      "notes": "The four rows previously reported as PASS without a test of the stated requirement (UI-01, UI-02, AI-01, CONN-05) were downgraded to PARTIAL after an independent evidence pass, so the matrix now reflects what is actually exercised. Real external connector workflows remain separate gates.",
+      "notes": "Four rows previously reported as PASS without a test of the stated requirement (UI-01, UI-02, AI-01, CONN-05) were downgraded during an independent evidence pass, and this reconciliation settled the rest against executing evidence. UI-01, UI-02, AI-01 and CONN-05 carry PASS again on the evidence now recorded in the matrix. Real external connector workflows remain separate gates.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37134186892",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37133543482"
@@ -86,7 +86,7 @@
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37134186892",
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37133543482",
-        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/24",
+        "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/issues/24 (open release-gate tracker, cited as the board these gates are tracked on rather than as a security artifact)",
         "https://sonarcloud.io/dashboard?id=ahmedsaturki_ORBIT-MARKETING-OS&branch=main"
       ],
       "verifiedAt": "2026-10-03T00:00:00Z"
@@ -133,7 +133,7 @@
       "level": "L2_VERIFIED",
       "evidence": [
         "packages/core/test/sync-network.test.ts drives two devices over a real node:http loopback relay with convergence and tampering rejection before state is applied",
-        "cargo test 105/105 and CI run 37134186892 green"
+        "cargo test --workspace --all-targets 182/182 locally (src/ and tests/ carry exactly 182 #[test] attributes), and CI run 37134186892 green on its Rust tests step"
       ],
       "notes": "Local encrypted convergence and tamper-resistance are verified over a real HTTP transport. Live multi-device CRDT network operation still requires real-world evidence, and encryptSyncUpdate still has no shipped replication caller, so trust boundary 4 remains unproven for a real network.",
       "evidenceRefs": [
@@ -156,9 +156,12 @@
       "level": "L2_VERIFIED",
       "evidence": [
         "Verified 10-minute soak harness/run from the validated release line",
-        "Startup and memory budgets are now enforced fail-closed (STARTUP_BUDGET_MS 8000, RSS_BUDGET_MB 200); local run measured 3780.67ms / 80.49MB"
+        "Startup and memory budgets are now enforced fail-closed (STARTUP_BUDGET_MS 8000, RSS_BUDGET_MB 200); local run measured 3780.67ms / 80.49MB",
+        "logs/soak-summary.json :: runId 2026-09-24T21-29-51-046Z, minutes=10, 295 cycles, ok=true, zero failures",
+        "scripts/soak.ts :: the harness records requestedMinutes vs elapsedMinutes and fails any run ending before its deadline; proved load-bearing by removing the guard",
+        "2-minute run on this audit machine: 48 cycles, zero invariant failures (the harness previously aborted at ~68 cycles on a claim-timestamp race)"
       ],
-      "notes": "The 10-minute soak harness is verified and the separate 600MB soak ceiling recorded in logs/soak-summary.json is unchanged. A complete 24-hour stability soak on the exact release SHA remains open, so OPS-02 stays UNVERIFIED in the acceptance matrix rather than being marked PASS.",
+      "notes": "The 10-minute soak harness is verified and the separate 600MB soak ceiling recorded in logs/soak-summary.json is unchanged. The committed artifact records minutes and finishedAt but no startedAt or gitSha, so it is neither independently time-bracketed nor bound to a specific commit; the harness now emits elapsed time and gitSha so future runs will be. A complete 24-hour stability soak on the exact release SHA remains open and cannot be produced on an audit machine: the workflow is actor-gated and requires a self-hosted runner. OPS-02 therefore stays UNVERIFIED in the acceptance matrix rather than being marked PASS.",
       "evidenceRefs": [
         "https://github.com/ahmedsaturki/ORBIT-MARKETING-OS/actions/runs/37134186892"
       ],
@@ -189,13 +192,21 @@
       "peakRssMb": 80.49,
       "startupBudgetMs": 8000,
       "rssBudgetMb": 200,
-      "cargoTestsPassed": 105,
+      "cargoTestsPassed": 182,
+      "cargoTestsPassedScope": "local cargo test --workspace --all-targets; CI run 37134186892 executes a filtered subset reporting 105 passed + 1 passed with 104 filtered out",
       "playwrightPassed": 24,
       "playwrightSkipped": 10,
-      "acceptanceMatrix": "76 PASS / 10 PARTIAL / 1 UNVERIFIED across 87 IDs",
+      "acceptanceMatrix": "77 PASS / 3 PARTIAL / 3 UNVERIFIED across 83 IDs",
       "sonarNewSecurityRating": "A",
       "sonarOpenNewCodeVulnerabilities": 0,
-      "sonarQualityGate": "OK"
+      "sonarQualityGate": "OK",
+      "javascriptTests": 379,
+      "coreCoverageLinesPct": 88.28,
+      "playwrightNativePassed": 35,
+      "playwrightNativeSkipped": 0,
+      "playwrightNativeJob": "Windows native E2E",
+      "matrixStatusRows": 83,
+      "matrixFail": 0
     },
     "note": "Point-in-time observation of the moving main branch, measured by running the gates locally on Windows and cross-checked against CI. The exact SHA is bound by the immutable GitHub Actions run context rather than hard-coded here. Local `pnpm format:check` is CRLF-noisy under core.autocrlf=true; CI on Ubuntu is authoritative and passed.",
     "ref": "main",
@@ -243,8 +254,10 @@
     "state": "UNVERIFIED",
     "releaseId": "orbit-v1.0.0-prod",
     "releaseVersion": "1.0.0",
+    "tag": "v1.0.0",
+    "tagSha": "6e6787b6e5fa5590785777f335bfd0dc3a23362e",
     "productionDeploymentId": "dpl_9KyEbWzvAYvhvzZPmtXNJXrP16xV",
     "productionSha": "9ba07318f4d580e670be9d27ec76888e66013340",
-    "note": "Production is live and provenance is directly observed; exact moving-main SHA is intentionally carried by the GitHub Actions run context rather than hard-coded into durable release readiness."
+    "note": "Production is live and provenance is directly observed. Tag v1.0.0 exists as of 2026-10-04 and removes the 'no tagged release' obstacle named in the REL-03 matrix row, but REL-03 requires checksums to match distributed artifacts and no release run has produced any, so the state stays UNVERIFIED. An earlier revision raised this to PARTIAL on the tag alone; that was retracted as unsupported. The exact moving-main SHA is intentionally carried by the GitHub Actions run context rather than hard-coded into durable release readiness."
   }
 }

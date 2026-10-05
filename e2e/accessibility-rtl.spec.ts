@@ -120,4 +120,65 @@ test.describe("ORBIT accessibility and RTL", () => {
 
     expect(duplicateIds).toEqual([]);
   });
+
+  test("every public route exposes a working skip link to main content", async ({
+    page,
+  }) => {
+    for (const path of ["/", "/pricing/", "/legal/privacy/", "/legal/terms/"]) {
+      await page.goto(path);
+
+      const skipLink = page.locator('a.skip-link[href="#main-content"]');
+      await expect(skipLink).toHaveCount(1);
+
+      // WCAG 2.4.1: the bypass mechanism must actually reach the target,
+      // not merely exist.
+      const targetId = await skipLink.getAttribute("href");
+      expect(targetId).toBe("#main-content");
+      await expect(page.locator("#main-content")).toHaveCount(1);
+
+      // It must be hidden out of the visual flow until focused. In an RTL
+      // document `inset-inline-start: -9999px` resolves to the inline END,
+      // i.e. off-screen to the right, so the correct off-screen predicate is
+      // "entirely past the right viewport edge", not "off the left".
+      const box = await skipLink.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, width: window.innerWidth };
+      });
+      expect(box.left).toBeGreaterThanOrEqual(box.width);
+
+      await page.keyboard.press("Tab");
+      await expect(skipLink).toBeFocused();
+
+      // Once focused it must actually be on screen, or it is not a usable
+      // bypass mechanism.
+      const focusedBox = await skipLink.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, width: window.innerWidth };
+      });
+      expect(focusedBox.right).toBeLessThanOrEqual(focusedBox.width);
+      expect(focusedBox.left).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  test("every public route exposes banner, navigation and contentinfo landmarks", async ({
+    page,
+  }) => {
+    // WCAG 1.3.1 / 2.4.1: sub-pages previously rendered <main> only, so
+    // assistive tech had no site-wide navigation or footer landmark to jump to.
+    for (const path of [
+      "/",
+      "/pricing/",
+      "/legal/privacy/",
+      "/legal/terms/",
+      "/legal/eula/",
+      "/legal/refunds/",
+    ]) {
+      await page.goto(path);
+      await expect(page.locator("main#main-content")).toHaveCount(1);
+      await expect(page.getByRole("main")).toHaveCount(1);
+      await expect(page.getByRole("banner")).toHaveCount(1);
+      await expect(page.getByRole("navigation")).toHaveCount(1);
+      await expect(page.getByRole("contentinfo")).toHaveCount(1);
+    }
+  });
 });

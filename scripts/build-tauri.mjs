@@ -2,6 +2,8 @@
  * Build the production Tauri desktop shell with the correct MSVC environment on machines
  * where a standalone GNU Rust install shadows rustup on PATH.
  *
+ * - builds the desktop frontend first; `tauri::generate_context!` embeds
+ *   frontendDist ("../dist") and aborts the whole build when it is missing
  * - forces the rustup stable-x86_64-pc-windows-msvc toolchain (RUSTC + PATH)
  * - loads vcvars64.bat so link.exe/lib.exe resolve
  * - redirects CARGO_TARGET_DIR to another drive when C: is nearly full
@@ -13,6 +15,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, statfsSync, writeFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
+import { spawnPnpm } from "./lib/spawn-pnpm.mjs";
 
 const release = process.argv.includes("--release");
 const root = join(import.meta.dirname, "..");
@@ -67,6 +70,37 @@ function pickTargetDir() {
     /* fall through to default */
   }
   return null;
+}
+
+// tauri::generate_context! embeds frontendDist at compile time and fails with
+// `the frontendDist configuration is set to "../dist" but this path doesn't
+// exist` when it is absent. Build the renderer (and the workspace packages it
+// imports, which resolve through their own dist/) before invoking cargo.
+
+// A bare existence check is not enough. `tauri::generate_context!` embeds
+// frontendDist at compile time, so a dist left over from an earlier build
+// would be baked into the binary with no error. Rebuild whenever the script is
+// run, unless the caller explicitly opts out and a real entrypoint exists.
+const distDir = join(root, "packages", "desktop", "dist");
+const distIndex = join(distDir, "index.html");
+const skipFrontend =
+  process.env.ORBIT_SKIP_FRONTEND_BUILD === "1" && existsSync(distIndex);
+if (skipFrontend) {
+  console.log(
+    "ORBIT_SKIP_FRONTEND_BUILD=1 and dist/index.html exists — skipping rebuild",
+  );
+} else {
+  console.log("building desktop frontend");
+  const frontend = spawnPnpm(["--filter", "@orbit/desktop...", "build"], {
+    cwd: root,
+    stdio: "inherit",
+  });
+  if (frontend.status !== 0 || !existsSync(distIndex)) {
+    console.error(
+      "desktop frontend build failed; cannot proceed to cargo build.",
+    );
+    process.exit(1);
+  }
 }
 
 const vcvars = findVcvars();

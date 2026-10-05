@@ -1,11 +1,15 @@
 name: Rebuild Rust
 
-
-concurrency:
-  group: orbit-.github-workflows-rebuild-rust.yml-${{ github.ref }}
-  cancel-in-progress: true
 on:
   workflow_dispatch:
+
+concurrency:
+  # The group previously embedded this file's own path
+  # ("orbit-.github-workflows-rebuild-rust.yml-${{ github.ref }}"), a
+  # generator artefact rather than an intent to serialise runs. Matches the
+  # naming used by the other workflows.
+  group: orbit-rebuild-rust-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

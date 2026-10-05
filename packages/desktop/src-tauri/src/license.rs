@@ -394,4 +394,131 @@ mod tests {
             .expect("public key base64");
         assert_eq!(bytes.len(), 32);
     }
+
+    fn build_token(payload: &LicensePayload, signature: &[u8]) -> String {
+        let body =
+            URL_SAFE_NO_PAD.encode(serde_json::to_vec(payload).expect("payload should serialize"));
+        let signature_part = URL_SAFE_NO_PAD.encode(signature);
+        format!("{body}.{signature_part}")
+    }
+
+    fn sample_payload() -> LicensePayload {
+        LicensePayload {
+            license_id: "lic-lifecycle".to_string(),
+            plan: "pro".to_string(),
+            subject: "customer-1".to_string(),
+            issued_at: "2026-01-01T00:00:00Z".to_string(),
+            expires_at: Some("2030-01-01T00:00:00Z".to_string()),
+            max_devices: 3,
+            account_limit: 10,
+            features: vec!["analytics".to_string()],
+        }
+    }
+
+    #[test]
+    fn rejects_a_structurally_valid_token_with_an_untrusted_signature() {
+        let token = build_token(&sample_payload(), &[7u8; 64]);
+        let rejection = decode_token(&token).expect_err("an untrusted signature must be rejected");
+        assert!(
+            rejection.contains("signature"),
+            "unexpected rejection reason: {rejection}"
+        );
+    }
+
+    #[test]
+    fn rejects_a_token_whose_signed_payload_was_mutated() {
+        let mut elevated = sample_payload();
+        elevated.plan = "lifetime".to_string();
+        elevated.account_limit = 100_000;
+        elevated.expires_at = None;
+        let token = build_token(&elevated, &[9u8; 64]);
+        let rejection = decode_token(&token).expect_err("a forged token must be rejected");
+        assert!(
+            rejection.contains("signature"),
+            "unexpected rejection reason: {rejection}"
+        );
+    }
+
+    #[test]
+    fn rejects_a_token_with_a_truncated_signature() {
+        let token = build_token(&sample_payload(), &[1u8; 8]);
+        assert!(decode_token(&token).is_err());
+    }
+
+    #[test]
+    fn lifecycle_storage_installs_reads_and_deletes_the_token() {
+        let connection = Connection::open_in_memory().expect("sqlite should be available");
+        ensure_license_table(&connection).expect("license table should be created");
+
+        assert!(
+            load_token(&connection)
+                .expect("load should succeed")
+                .is_none(),
+            "no license should be stored initially"
+        );
+
+        let stored = "payload.signature";
+        connection
+            .execute(
+                "INSERT INTO license_records(id, token, updated_at)
+                 VALUES (1, ?1, '2026-10-04T00:00:00Z')
+                 ON CONFLICT(id) DO UPDATE SET token=excluded.token",
+                params![stored],
+            )
+            .expect("license should be installed");
+
+        assert_eq!(
+            load_token(&connection)
+                .expect("load should succeed")
+                .as_deref(),
+            Some(stored)
+        );
+
+        connection
+            .execute(
+                "INSERT INTO license_records(id, token, updated_at)
+                 VALUES (1, 'replacement.signature', '2026-10-05T00:00:00Z')
+                 ON CONFLICT(id) DO UPDATE SET token=excluded.token",
+                [],
+            )
+            .expect("license should be replaced");
+        assert_eq!(
+            load_token(&connection)
+                .expect("load should succeed")
+                .as_deref(),
+            Some("replacement.signature"),
+            "a second install must replace, not duplicate, the stored license"
+        );
+
+        let deleted = connection
+            .execute("DELETE FROM license_records WHERE id=1", [])
+            .expect("license should be removable");
+        assert_eq!(deleted, 1);
+        assert!(
+            load_token(&connection)
+                .expect("load should succeed")
+                .is_none(),
+            "removing the license must clear it"
+        );
+        assert_eq!(
+            connection
+                .execute("DELETE FROM license_records WHERE id=1", [])
+                .expect("second remove should not error"),
+            0,
+            "removing an absent license must be a no-op"
+        );
+    }
+
+    #[test]
+    fn account_limit_is_enforced_against_live_account_counts() {
+        let payload = sample_payload();
+        assert!(
+            evaluate_payload(&payload, 10).is_ok(),
+            "an account count at the limit must be allowed"
+        );
+        assert!(
+            evaluate_payload(&payload, 11).is_err(),
+            "an account count past the limit must be rejected"
+        );
+    }
 }

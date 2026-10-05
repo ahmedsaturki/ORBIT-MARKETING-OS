@@ -1,18 +1,9 @@
-import { spawnPnpm } from "./lib/spawn-pnpm.mjs";
-
+import { runTsx } from "./run-tsx.mjs";
 const env = { ...process.env, CI: "1" };
 
-const list = spawnPnpm(
-  [
-    "exec",
-    "tsx",
-    "scripts/orbit-cli.ts",
-    "commands",
-    "list",
-    "--surface",
-    "mcp",
-  ],
-  { env },
+const list = runTsx(
+  ["scripts/orbit-cli.ts", "commands", "list", "--surface", "mcp"],
+  { encoding: "utf8", env },
 );
 if (list.status !== 0) {
   process.stderr.write(list.stderr || list.stdout);
@@ -28,10 +19,8 @@ if (
   throw new Error("orbit_mcp_surface_smoke_failed");
 }
 
-const preview = spawnPnpm(
+const preview = runTsx(
   [
-    "exec",
-    "tsx",
     "scripts/orbit-cli.ts",
     "command",
     "preview",
@@ -43,7 +32,7 @@ const preview = spawnPnpm(
     "--scopes",
     "task:execute",
   ],
-  { env },
+  { encoding: "utf8", env },
 );
 if (preview.status !== 0) {
   process.stderr.write(preview.stderr || preview.stdout);
@@ -59,7 +48,8 @@ if (
 }
 
 function runMcp(input) {
-  const result = spawnPnpm(["exec", "tsx", "scripts/orbit-mcp.ts"], {
+  const result = runTsx(["scripts/orbit-mcp.ts"], {
+    encoding: "utf8",
     env,
     input: input.trim() + "\n",
   });

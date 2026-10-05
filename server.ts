@@ -488,30 +488,62 @@ ${extraPrompt ? `\nطلبات إضافية:\n${extraPrompt}` : ""}`;
 });
 
 app.get("/api/health", async (_req, res) => {
-  let ollamaStatus: "ok" | "degraded" = "ok";
+  let ollamaStatus: "ok" | "degraded" = "degraded";
+  let configuredModelsPresent = false;
+  let availableModels: string[] = [];
   try {
     const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
       signal: AbortSignal.timeout(5_000),
     });
-    ollamaStatus = response.ok ? "ok" : "degraded";
+    if (response.ok) {
+      const payload: unknown = await response.json();
+      const models =
+        isRecord(payload) && Array.isArray(payload.models)
+          ? payload.models
+          : [];
+      availableModels = models
+        .filter(isRecord)
+        .map((model) => getString(model.name) || getString(model.model))
+        .filter((name) => name.length > 0);
+      const requiredModels = [
+        OLLAMA_MODEL,
+        OLLAMA_FAST_MODEL,
+        OLLAMA_REASONING_MODEL,
+      ];
+      configuredModelsPresent = requiredModels.every((name) =>
+        availableModels.includes(name),
+      );
+      ollamaStatus = configuredModelsPresent ? "ok" : "degraded";
+    }
   } catch {
     ollamaStatus = "degraded";
   }
 
   return res.status(200).json({
-    status: ollamaStatus === "ok" ? "ok" : "degraded",
+    status: ollamaStatus,
     service: "Orbit Marketing OS Local Runtime",
     host: RUNTIME_HOST,
     provider: "ollama-local",
     ai: {
       status: ollamaStatus,
       model: OLLAMA_MODEL,
+      modelAvailable: ollamaStatus === "ok",
       profiles: {
         balanced: OLLAMA_MODEL,
         fast: OLLAMA_FAST_MODEL,
         reasoning: OLLAMA_REASONING_MODEL,
       },
       visionConfigured: Boolean(OLLAMA_VISION_MODEL),
+      ...(ollamaStatus === "ok"
+        ? {}
+        : {
+            requiredModels: [
+              OLLAMA_MODEL,
+              OLLAMA_FAST_MODEL,
+              OLLAMA_REASONING_MODEL,
+            ],
+            availableModels,
+          }),
     },
   });
 });

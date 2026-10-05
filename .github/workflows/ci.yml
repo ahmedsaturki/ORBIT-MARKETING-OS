@@ -100,6 +100,8 @@ jobs:
         run: node scripts/vercel-ignore.test.mjs
       - name: Production release trigger contract
         run: node scripts/production-release-trigger.test.mjs
+      - name: Release workflow contract
+        run: node scripts/release-workflow-contract.test.mjs
       - name: Stability soak runner resilience contract
         run: pnpm test:soak-runner-resilience
       - name: Workspace sanity
@@ -108,14 +110,28 @@ jobs:
       - name: Reproducible install
         run: pnpm install --frozen-lockfile
 
+      # Immediately after install, because resolving the TypeScript compiler
+      # requires packages/core/node_modules to exist. Before the build, because a
+      # spec that does not parse otherwise surfaces only when Playwright loads
+      # it, after build and browser install. e2e/ is not a workspace package, so
+      # `turbo run typecheck` never sees it.
+      - name: E2E spec parse gate
+        run: pnpm verify:e2e-parses
+
       - name: Commercial connector proof safety
         run: pnpm test:commercial-proof
 
       - name: Governed node-forge audit exception
         run: pnpm test:node-forge-audit-exception
 
+      - name: Governed braces audit exception
+        run: pnpm test:braces-audit-exception
+
       - name: Dependency audit
         run: pnpm audit --audit-level=moderate
+
+      - name: User guide matches product
+        run: pnpm test:user-guide-contract
 
       - name: Typecheck
         run: pnpm typecheck
@@ -143,11 +159,17 @@ jobs:
         timeout-minutes: 3
         run: pnpm test:performance
 
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Build
         run: pnpm build
 
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+
+      # AI-01 cites this script as its only evidence, but nothing ran it: it is
+      # in no workflow and not in `pnpm test`, so it could rot unnoticed.
+      - name: Health reports only installed models
+        run: pnpm test:health-model-availability
 
       - name: Web E2E
         timeout-minutes: 5
@@ -199,6 +221,9 @@ jobs:
         run: pnpm test:exec-trusted
       - name: Script contract tests (verify-workspace, vercel-install, build-all)
         run: pnpm test:script-contracts
+
+      - name: Gate dashboard HTTP contract
+        run: pnpm test:gate-dashboard
 
   rust:
     name: Rust quality

@@ -1,0 +1,23 @@
+# Normalize text files in the repository to LF so that checksums, patch
+# application and shell execution are identical on every platform.
+#
+# This matters concretely here:
+#   * patches/*.patch is hashed by pnpm in its LF form; a CRLF checkout makes
+#     the governed node-forge audit exception look tampered with.
+#   * *.sh must stay LF or bash fails with "set: -: invalid option" and
+#     "syntax error: unexpected end of file".
+* text=auto eol=lf
+
+# Binary assets must never be line-ending converted.
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.zip binary
+*.pdf binary

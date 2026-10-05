@@ -1189,4 +1189,233 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     expect(violations.some((v) => v.startsWith("script-src"))).toBe(true);
     expect(violations.join(",")).toContain("https://example.com/probe.js");
   });
+
+  test("Mission Control reflects current workspace state and carries no secrets", async () => {
+    expect(page, "boot test must run first").not.toBeNull();
+
+    const suffix = Date.now();
+    const before = (await page!.evaluate(() =>
+      window.__TAURI_INTERNALS__.invoke("workspace_current"),
+    )) as { id: string; name: string };
+
+    const missionWorkspace = (await page!.evaluate(
+      async (id) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_create", {
+          id,
+          name: "E2E Mission Control",
+        }),
+      `e2e-mission-workspace-${suffix}`,
+    )) as { id: string };
+
+    await page!.evaluate(
+      (workspaceId) =>
+        window.__TAURI_INTERNALS__.invoke("workspace_select", {
+          id: workspaceId,
+        }),
+      missionWorkspace.id,
+    );
+
+    // Everything below runs against a workspace this test created. If any
+    // assertion fails first, the active workspace stays pointed at it and the
+    // serial tests that follow inherit that state, turning one real failure into
+    // several misleading ones. Restore in a finally block instead.
+    try {
+      // Create real operational state inside this workspace: an account, a
+      // campaign, content and a pending approval.
+      // account_upsert takes `session` and `password`, not a prebuilt payload:
+      // the Rust side seals the pair together and derives the stored blob itself.
+      // Passing `sessionPayloadJson`/`workspaceId` instead did not throw, because
+      // Tauri ignores arguments the command does not declare, so the account was
+      // stored with no session at all and the positive control below correctly
+      // reported has_encrypted_session=false. The workspace is not a parameter
+      // either: account_upsert always writes to the active workspace, which is
+      // missionWorkspace here.
+      const account = (await page!.evaluate(
+        async (id) =>
+          window.__TAURI_INTERNALS__.invoke("account_upsert", {
+            id,
+            platform: "linkedin",
+            displayName: "Mission Control Account",
+            username: "mission-control-e2e",
+            session: "mission-control-session-fixture",
+            password: "must-not-surface",
+          }),
+        `e2e-mission-account-${suffix}`,
+      )) as { id: string; status: string; has_encrypted_session: boolean };
+
+      // The command derives status from whether it sealed a payload, so assert it
+      // here too: it is what tells a silent no-session upsert apart from a broken
+      // one at the source rather than three assertions later.
+      expect(account.status, "the seeded account must be connected").toBe(
+        "connected",
+      );
+
+      const campaign = (await page!.evaluate(
+        async ({ id, accountId }) =>
+          window.__TAURI_INTERNALS__.invoke("campaign_create", {
+            id,
+            name: "Mission Control Campaign " + id,
+            accountIds: [accountId],
+          }),
+        { id: `e2e-mission-campaign-${suffix}`, accountId: account.id },
+      )) as { id: string };
+
+      const content = (await page!.evaluate(
+        async (id) =>
+          window.__TAURI_INTERNALS__.invoke("content_upsert", {
+            id,
+            title: "Mission Control Content",
+            body: "Content awaiting approval in Mission Control",
+            approvalStatus: "draft",
+            tagsJson: JSON.stringify(["mission-control"]),
+          }),
+        `e2e-mission-content-${suffix}`,
+      )) as { id: string };
+
+      const approval = (await page!.evaluate(
+        async ({ contentId, approvalId }) =>
+          window.__TAURI_INTERNALS__.invoke("approval_request", {
+            id: approvalId,
+            contentId,
+            reviewerIdsJson: JSON.stringify(["local-user"]),
+            note: "Mission Control pending approval",
+          }),
+        {
+          contentId: content.id,
+          approvalId: `e2e-mission-approval-${suffix}`,
+        },
+      )) as { id: string; status: string };
+      expect(approval.status).toBe("pending");
+
+      // The state Mission Control reads must be present in this workspace.
+      const approvals = (await page!.evaluate(() =>
+        window.__TAURI_INTERNALS__.invoke("approval_list", {}),
+      )) as Array<{ id: string; status: string }>;
+      expect(approvals.map((entry) => entry.id)).toContain(approval.id);
+
+      const campaigns = (await page!.evaluate(() =>
+        window.__TAURI_INTERNALS__.invoke("campaign_list", {}),
+      )) as Array<{ id: string }>;
+      expect(campaigns.map((entry) => entry.id)).toContain(campaign.id);
+
+      // Switch to a second workspace: this workspace's state must disappear.
+      const otherWorkspace = (await page!.evaluate(
+        async (id) =>
+          window.__TAURI_INTERNALS__.invoke("workspace_create", {
+            id,
+            name: "E2E Mission Control Other",
+          }),
+        `e2e-mission-other-${suffix}`,
+      )) as { id: string };
+
+      await page!.evaluate(
+        (workspaceId) =>
+          window.__TAURI_INTERNALS__.invoke("workspace_select", {
+            id: workspaceId,
+          }),
+        otherWorkspace.id,
+      );
+
+      const otherApprovals = (await page!.evaluate(() =>
+        window.__TAURI_INTERNALS__.invoke("approval_list", {}),
+      )) as Array<{ id: string }>;
+      expect(otherApprovals.map((entry) => entry.id)).not.toContain(
+        approval.id,
+      );
+
+      const otherCampaigns = (await page!.evaluate(() =>
+        window.__TAURI_INTERNALS__.invoke("campaign_list", {}),
+      )) as Array<{ id: string }>;
+      expect(otherCampaigns.map((entry) => entry.id)).not.toContain(
+        campaign.id,
+      );
+
+      // Restore the mission workspace and assert the state is still there.
+      await page!.evaluate(
+        (workspaceId) =>
+          window.__TAURI_INTERNALS__.invoke("workspace_select", {
+            id: workspaceId,
+          }),
+        missionWorkspace.id,
+      );
+
+      const restoredApprovals = (await page!.evaluate(() =>
+        window.__TAURI_INTERNALS__.invoke("approval_list", {}),
+      )) as Array<{ id: string }>;
+      expect(restoredApprovals.map((entry) => entry.id)).toContain(approval.id);
+
+      // Nothing the Mission Control surface reads may carry session secrets. The
+      // account carries a secretToken in its session payload; the views the
+      // operational surface consumes must not expose it.
+      //
+      // This must serialize the surface as the *mission* workspace sees it.
+      // Another workspace's campaign list was serialized here before, which made
+      // the assertion vacuous: a different workspace's rows cannot possibly carry
+      // this session's token, so the check passed whether or not the redaction
+      // worked. otherCampaigns stays as the isolation assertion above, which is
+      // what it actually proves.
+      // missionWorkspace is already bound above by the test's own setup, and the
+      // mission workspace is re-selected before this point, so it is reused
+      // rather than re-read.
+      const missionApprovals = (await page!.evaluate(() =>
+        window.__TAURI_INTERNALS__.invoke("approval_list", {}),
+      )) as Array<{ id: string }>;
+      const missionCampaigns = (await page!.evaluate(() =>
+        window.__TAURI_INTERNALS__.invoke("campaign_list", {}),
+      )) as Array<{ id: string }>;
+      const accountList = (await page!.evaluate(() =>
+        window.__TAURI_INTERNALS__.invoke("account_list", {}),
+      )) as unknown;
+
+      // Positive control first, without which the negative assertions below are
+      // vacuous: if account_upsert silently failed to store the session payload,
+      // the secret would exist nowhere and every assertion would pass.
+      // AccountView exposes only has_encrypted_session: bool, which is exactly why
+      // the secret must not appear here, so the flag is the proof the row landed.
+      const storedAccount = (
+        accountList as Array<{ id: string; has_encrypted_session: boolean }>
+      ).find((entry) => entry.id === account.id);
+      expect(
+        storedAccount,
+        "the seeded account must be present in account_list",
+      ).toBeDefined();
+      expect(
+        storedAccount?.has_encrypted_session,
+        "the seeded session payload must actually be stored, or this test proves nothing",
+      ).toBe(true);
+
+      const surface = JSON.stringify({
+        accountList,
+        missionWorkspace,
+        approvals: missionApprovals,
+        campaigns: missionCampaigns,
+      });
+      expect(surface.toLowerCase()).not.toContain("must-not-surface");
+      expect(surface.toLowerCase()).not.toContain("sessionpayload");
+      // The sealed payload holds both the session and the password. Check each,
+      // not just the one flagged by name in the seed: a redaction that covered
+      // one and leaked the other would still satisfy a single check.
+      expect(surface.toLowerCase()).not.toContain(
+        "mission-control-session-fixture",
+      );
+      // seal() builds {version, algorithm, salt, nonce, ciphertext}; none of that
+      // may reach the operational surface. Checking "secrettoken" here, as this
+      // test did before, asserted against a field that the payload never had.
+      expect(surface.toLowerCase()).not.toContain("ciphertext");
+    } finally {
+      // Restore the original workspace so later tests do not inherit state,
+      // even when an assertion above threw.
+      await page.evaluate(
+        (workspaceId) =>
+          window.__TAURI_INTERNALS__.invoke("workspace_select", {
+            id: workspaceId,
+          }),
+        before.id,
+      );
+      const restored = (await page.evaluate(() =>
+        window.__TAURI_INTERNALS__.invoke("workspace_current"),
+      )) as { id: string; name: string };
+      expect(restored.id).toBe(before.id);
+    }
+  });
 });

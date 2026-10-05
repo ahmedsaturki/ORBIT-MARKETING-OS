@@ -34,6 +34,26 @@ select:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * WCAG 2.4.1 (Bypass Blocks). Hidden from the visual flow until it takes
+ * focus, then pinned to the inline-start edge and raised above the sticky
+ * topbar so it is never clipped.
+ */
+.skip-link {
+  position: absolute;
+  inset-inline-start: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 12px 16px;
+  background: #34d399;
+  color: #020617;
+  font-weight: 700;
+  border-radius: 0 0 8px 8px;
+}
+.skip-link:focus {
+  inset-inline-start: 0;
+}
 .container {
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;

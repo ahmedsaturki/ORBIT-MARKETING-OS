@@ -1,13 +1,18 @@
 name: Mobile Validation Artifact
 
-
-concurrency:
-  group: orbit-.github-workflows-release-mobile.yml-${{ github.ref }}
-  cancel-in-progress: true
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+
+concurrency:
+  group: orbit-release-mobile-${{ github.ref }}
+  # A mobile release must run to completion. Cancelling one mid-flight
+  # produces the same partial-evidence state that left REL-03 without
+  # checksums on the desktop release, since the artifact uploads are what
+  # the checksum step verifies. Matches release-desktop, release-evidence
+  # and stability-soak, all of which pin this to false.
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -45,9 +50,9 @@ jobs:
       - name: Secret scan
         run: pnpm security:scan
 
-      - name: Governed audit exceptions
-        run: pnpm test:node-forge-audit-exception
-
+      - name: Governed audit exceptions
+        run: pnpm test:node-forge-audit-exception
+
       - name: Dependency audit
         run: pnpm audit --audit-level=moderate
 

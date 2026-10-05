@@ -20,13 +20,34 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
+      # fetch-depth 0 so the tag ancestry pre-flight has the full graph to
+      # reason over; a shallow clone makes `merge-base --is-ancestor` unreliable.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
         with:
           version: 10.17.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
+      # Cheap pre-flight, before the ~5 minute gate battery. The build job
+      # repeats this as `Verify release commit belongs to main release line`,
+      # but only after four Tauri builds have already been dispatched across
+      # the matrix. A tag pushed from a branch that is not merged to main fails
+      # there, wasting the whole matrix — tag v1.0.0 is currently in exactly
+      # that state, 89 commits ahead of origin/main on an audit branch.
+      - name: Verify tag is on the main release line
+        shell: bash
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag ${GITHUB_REF_NAME} points at ${GITHUB_SHA}, which is not an ancestor of origin/main."
+            echo "::error::Merge the commit to main, then re-run the release; no re-tag is needed if the tag's commit is on this branch."
+            git log --oneline -5 origin/main.."$GITHUB_SHA" || true
+            exit 1
+          fi
+          echo "Tag ${GITHUB_REF_NAME} (${GITHUB_SHA}) is on the main release line."
       - name: Require committed lockfiles
         run: test -f pnpm-lock.yaml
       - name: Require desktop Cargo.lock
@@ -38,9 +59,12 @@ jobs:
 
       - name: Secret scan
         run: pnpm security:scan
-      - name: Governed audit exceptions
-        run: pnpm test:node-forge-audit-exception
-
+      - name: Governed audit exceptions
+
+        run: pnpm test:node-forge-audit-exception
+
+
+
       - name: Dependency audit
         run: pnpm audit --audit-level=moderate
 
@@ -64,14 +88,22 @@ jobs:
       - name: Runtime smoke
         run: pnpm test:runtime
 
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Performance smoke
         run: pnpm test:performance
 
-      - name: Browser E2E
-        run: pnpm test:e2e
-
+      # The E2E suite serves packages/web/out through scripts/static-server.mjs,
+      # so the web export must exist before Playwright starts. Running this
+      # before the build made the quality gate fail with
+      # "Timed out waiting 30000ms from config.webServer" on run 37205123765.
+      # ci.yml orders Build (163) before Web E2E (174); match that.
       - name: Build
         run: pnpm build
+
+      - name: Browser E2E
+        run: pnpm test:e2e
       - name: Format check
         run: pnpm format:check
 
@@ -183,9 +215,23 @@ jobs:
       - name: Build checksums
         shell: bash
         run: |
-          find release-assets -type f -not -name 'SHA256SUMS.txt' -print0             | sort -z             | xargs -0 sha256sum > release-assets/SHA256SUMS.txt
-          test -s release-assets/SHA256SUMS.txt
-          (cd release-assets && sha256sum -c SHA256SUMS.txt)
+          # Count the artifacts first, from inside the directory so the paths
+          # recorded in SHA256SUMS.txt stay relative to it. `xargs -0 sha256sum`
+          # with no file arguments falls back to reading stdin and emits the
+          # checksum of empty input, which passes both `test -s` and
+          # `sha256sum -c` — a build that produced no bundle would emit a
+          # plausible-looking checksum file. Verified in a scratch directory:
+          # artifacts present exits 0 per file, zero artifacts exits 1 here,
+          # and a tampered download fails `sha256sum -c`.
+          cd release-assets
+          mapfile -d '' ARTIFACTS < <(find . -type f -not -name 'SHA256SUMS.txt' -print0)
+          if [ "${#ARTIFACTS[@]}" -eq 0 ]; then
+            echo "::error::No release artifacts found under release-assets; refusing to emit checksums."
+            exit 1
+          fi
+          printf '%s\0' "${ARTIFACTS[@]}" | sed -z 's|^\./||' | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+          test -s SHA256SUMS.txt
+          sha256sum -c SHA256SUMS.txt
 
       - name: Publish release
         env:

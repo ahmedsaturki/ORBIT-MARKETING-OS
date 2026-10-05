@@ -37,6 +37,14 @@ export default function RootLayout({
     <html lang="ar" dir="rtl">
       <body>
         <ServiceWorkerRegister />
+        {/*
+          WCAG 2.4.1 (Bypass Blocks): keyboard and screen-reader users must be
+          able to jump past repeated navigation. Visually hidden until focused,
+          then pinned to the top edge in the reading direction of the document.
+        */}
+        <a className="skip-link" href="#main-content">
+          تخطَّ إلى المحتوى الرئيسي
+        </a>
         {children}
       </body>
     </html>

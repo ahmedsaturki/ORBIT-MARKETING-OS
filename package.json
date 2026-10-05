@@ -31,6 +31,7 @@
     "mobile:typecheck": "pnpm --dir packages/mobile typecheck",
     "mobile:build": "pnpm --dir packages/mobile build",
     "tauri:build": "pnpm --dir packages/desktop tauri build",
+    "build:icons": "node scripts/build-icon.mjs",
     "verify:readiness": "node scripts/verify-release-readiness.mjs",
     "release:evidence": "node scripts/collect-release-evidence.mjs",
     "test:commercial-proof": "node scripts/commercial-connector-proof.safe.test.mjs",
@@ -44,9 +45,19 @@
     "test:security:scan": "node scripts/security-scan.test.mjs",
     "test:exec-trusted": "node --test scripts/lib/exec.test.mjs",
     "test:script-contracts": "node --test scripts/verify-workspace.test.mjs scripts/vercel-install.test.mjs scripts/build-all.test.mjs scripts/lib/spawn-pnpm.test.mjs && node scripts/verify-public-vercel-provenance.test.mjs",
+    "verify:e2e-parses": "node scripts/verify-e2e-parses.mjs",
     "verify:release-docs": "node scripts/verify-release-docs.mjs",
     "verify:production-observation": "node scripts/verify-live-production-observation.mjs",
-    "test:node-forge-audit-exception": "node scripts/node-forge-audit-exception.test.mjs"
+    "test:node-forge-audit-exception": "node scripts/node-forge-audit-exception.test.mjs",
+    "test:user-guide-contract": "node scripts/user-guide-contract.test.mjs",
+    "test:braces-audit-exception": "node scripts/braces-audit-exception.test.mjs",
+    "test:release-gate-model": "node scripts/release-gate-model.test.mjs",
+    "test:release-gate-tooling": "node scripts/release-gate-tooling.test.mjs",
+    "gate:check": "node scripts/check-release-gates.mjs",
+    "gate:export": "node scripts/export-gate-status.mjs",
+    "gate:dashboard": "node scripts/gate-dashboard.mjs",
+    "test:health-model-availability": "node --import tsx scripts/health-model-availability.test.mjs",
+    "test:gate-dashboard": "node scripts/gate-dashboard.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
