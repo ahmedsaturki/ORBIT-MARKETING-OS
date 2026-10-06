@@ -954,6 +954,32 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     );
     expect(attached).toBe(true);
 
+    // The good bulk item must target a conversation this workspace tracks,
+    // otherwise task_enqueue_bulk rejects it as outside the workspace.
+    const destination = "e2e-bulk-chat-" + suffix;
+    const conversation = (await page!.evaluate(
+      async ({ id, accountId, threadId }) =>
+        window.__TAURI_INTERNALS__.invoke("conversation_upsert", {
+          id,
+          accountId,
+          contactId: null,
+          platform: "telegram",
+          externalThreadId: threadId,
+          status: "new",
+        }),
+      {
+        id: "e2e-bulk-conversation-" + suffix,
+        accountId: account.id,
+        threadId: destination,
+      },
+    )) as { id: string; external_thread_id: string | null };
+    // conversation_upsert returns ConversationView, a plain #[derive(Serialize)]
+    // struct with no rename_all, so its keys stay snake_case on the wire. Command
+    // ARGUMENTS travel the other direction and are camelCase (Tauri deserializes
+    // them), so externalThreadId above is correct while external_thread_id here is
+    // what the command actually returns. Matches App.tsx ConversationView.
+    expect(conversation.external_thread_id).toBe(destination);
+
     const approval = (await page!.evaluate(
       async ({ contentId, approvalId }) =>
         window.__TAURI_INTERNALS__.invoke("approval_request", {
@@ -985,7 +1011,10 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
     )) as Array<{ id: string }>;
     const auditBefore = (await page!.evaluate(() =>
       window.__TAURI_INTERNALS__.invoke("audit_list", { limit: 200 }),
-    )) as Array<{ action: string; entityId?: string | null }>;
+    )) as Array<{ action: string; entity_id?: string | null }>;
+    // audit_list returns AuditView, snake_case on the wire like every other view.
+    // Typing this as entityId left the negative assertion below reading an always
+    // undefined property, so it passed without ever checking an audit row.
 
     let error = "";
     try {
@@ -1006,7 +1035,7 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
             maxAttempts: 3,
             idempotencyKey: "e2e-bulk-good-" + suffix,
             contentId: content.id,
-            destinationId: "@e2e-bulk",
+            destinationId: destination,
           },
           {
             id: "e2e-bulk-bad-" + suffix,
@@ -1037,13 +1066,13 @@ test.describe("Tauri renderer capability isolation (SEC-03)", () => {
 
     const auditAfter = (await page!.evaluate(() =>
       window.__TAURI_INTERNALS__.invoke("audit_list", { limit: 200 }),
-    )) as Array<{ action: string; entityId?: string | null }>;
+    )) as Array<{ action: string; entity_id?: string | null }>;
     expect(auditAfter.length).toBe(auditBefore.length);
     expect(
       auditAfter.some(
         (entry) =>
           entry.action === "enqueue_bulk" &&
-          String(entry.entityId ?? "").includes("e2e-bulk-good-" + suffix),
+          String(entry.entity_id ?? "").includes("e2e-bulk-good-" + suffix),
       ),
     ).toBe(false);
 

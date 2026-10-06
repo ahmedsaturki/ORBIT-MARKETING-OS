@@ -1526,6 +1526,7 @@ export function App(): ReactElement {
         accounts={accounts}
         campaigns={campaigns}
         contentItems={contentItems}
+        conversations={conversations}
         onTasksChanged={loadTasks}
       />
 
