@@ -24,7 +24,7 @@ e2e-cdp = []
 aes-gcm = "0.10"
 argon2 = "0.6"
 base64 = "0.23"
-ed25519-dalek = "2"
+ed25519-dalek = "3"
 rand = "0.9"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 sha2 = "0.11"
